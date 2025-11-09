@@ -30,15 +30,15 @@ export default function DroppableStatusColumn({
         isOver && "ring-2 ring-primary"
       )}
     >
-      <CardHeader className={cn("p-4", color)}>
+      <CardHeader className={cn("p-2", color)}>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-          <Badge variant="secondary" className="ml-2">
+          <CardTitle className="text-xs font-semibold">{title}</CardTitle>
+          <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
             {count}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="p-4 pt-2 min-h-[400px]">
+      <CardContent className="p-2 pt-1 min-h-[300px]">
         {children}
       </CardContent>
     </Card>

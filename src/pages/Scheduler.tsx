@@ -598,42 +598,42 @@ export default function Scheduler() {
       )}
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
-        <div className="grid grid-cols-[1fr_350px] gap-6">
-          <div className="space-y-4">
+        <div className="grid grid-cols-[1fr_300px] gap-3">
+          <div className="space-y-2">
         {/* Compact Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <Card className="shadow-sm">
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Today's Jobs</p>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="text-[11px] text-muted-foreground">Today</p>
                 </div>
-                <p className="text-lg font-bold">{todayAppointments.length}</p>
+                <p className="text-base font-bold">{todayAppointments.length}</p>
               </div>
             </CardContent>
           </Card>
           
           <Card className="shadow-sm">
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Active Workers</p>
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="text-[11px] text-muted-foreground">Workers</p>
                 </div>
-                <p className="text-lg font-bold">{activeWorkers}</p>
+                <p className="text-base font-bold">{activeWorkers}</p>
               </div>
             </CardContent>
           </Card>
           
           <Card className="shadow-sm">
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Checked In</p>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="text-[11px] text-muted-foreground">Active</p>
                 </div>
-                <p className="text-lg font-bold">{checkedInAppointments.length}</p>
+                <p className="text-base font-bold">{checkedInAppointments.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -641,18 +641,20 @@ export default function Scheduler() {
 
         {/* Calendar Controls */}
         <Card className="shadow-md">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <CardHeader className="p-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-8 w-8"
                   onClick={handlePrevious}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant="outline"
+                  className="h-8 text-xs px-3"
                   onClick={handleToday}
                 >
                   Today
@@ -660,47 +662,48 @@ export default function Scheduler() {
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-8 w-8"
                   onClick={handleNext}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold">{getDateRangeLabel()}</h3>
-                </div>
+                <h3 className="text-sm font-semibold ml-2">{getDateRangeLabel()}</h3>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="default"
                   size="sm"
+                  className="h-8 text-xs"
                   onClick={handlePublishAllDraft}
                   disabled={!appointments.some(apt => apt.status === "draft")}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Publish Draft Appointments
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  Publish Drafts
                 </Button>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Switch 
                     id="service-order-view" 
                     checked={showServiceOrderView}
                     onCheckedChange={setShowServiceOrderView}
+                    className="scale-90"
                   />
-                  <Label htmlFor="service-order-view" className="text-sm cursor-pointer">
-                    <List className="h-4 w-4 inline mr-1" />
-                    Service Order View
+                  <Label htmlFor="service-order-view" className="text-xs cursor-pointer">
+                    <List className="h-3.5 w-3.5 inline mr-1" />
+                    SO View
                   </Label>
                 </div>
                 <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
-                  <TabsList>
-                    <TabsTrigger value="day">Day</TabsTrigger>
-                    <TabsTrigger value="week">Week</TabsTrigger>
-                    <TabsTrigger value="month">Month</TabsTrigger>
-                    <TabsTrigger value="kanban">Kanban</TabsTrigger>
+                  <TabsList className="h-8">
+                    <TabsTrigger value="day" className="text-xs px-2.5">Day</TabsTrigger>
+                    <TabsTrigger value="week" className="text-xs px-2.5">Week</TabsTrigger>
+                    <TabsTrigger value="month" className="text-xs px-2.5">Month</TabsTrigger>
+                    <TabsTrigger value="kanban" className="text-xs px-2.5">Kanban</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2">
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
             ) : showServiceOrderView ? (

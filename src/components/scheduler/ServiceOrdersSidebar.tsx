@@ -68,20 +68,20 @@ export default function ServiceOrdersSidebar() {
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="text-lg">
-          Service Orders Needing Appointments
+      <CardHeader className="p-3">
+        <CardTitle className="text-sm">
+          Service Orders
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Drag orders to calendar to create appointments
+        <p className="text-xs text-muted-foreground">
+          Drag to calendar
         </p>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100vh-300px)] px-4 pb-4">
-          <div className="space-y-2">
+        <ScrollArea className="h-[calc(100vh-180px)] px-2 pb-2">
+          <div className="space-y-1.5">
             {ordersNeedingAppointments.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                All service orders have sufficient appointments scheduled
+              <div className="text-center py-6 text-muted-foreground text-xs">
+                All service orders scheduled
               </div>
             ) : (
               ordersNeedingAppointments.map((order) => (

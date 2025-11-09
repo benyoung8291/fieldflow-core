@@ -26,30 +26,30 @@ export default function DraggableServiceOrder({ serviceOrder, remainingHours, li
       {...listeners}
       {...attributes}
       className={cn(
-        "p-3 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow",
+        "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
         isDragging && "opacity-50",
         // Priority color indicators
-        serviceOrder.priority === "urgent" && "border-l-4 border-l-destructive",
-        serviceOrder.priority === "high" && "border-l-4 border-l-orange-500",
-        serviceOrder.priority === "normal" && "border-l-4 border-l-primary"
+        serviceOrder.priority === "urgent" && "border-l-2 border-l-destructive",
+        serviceOrder.priority === "high" && "border-l-2 border-l-orange-500",
+        serviceOrder.priority === "normal" && "border-l-2 border-l-primary"
       )}
     >
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
+      <div className="space-y-1.5">
+        <div className="flex items-start justify-between gap-1.5">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 {serviceOrder.order_number}
               </Badge>
-              <Badge variant={serviceOrder.priority === "urgent" ? "destructive" : "secondary"} className="text-xs">
+              <Badge variant={serviceOrder.priority === "urgent" ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0">
                 {serviceOrder.priority}
               </Badge>
             </div>
-            <h4 className="font-semibold text-sm mt-1 truncate">{serviceOrder.title}</h4>
+            <h4 className="font-semibold text-xs mt-1 truncate">{serviceOrder.title}</h4>
           </div>
         </div>
         
-        <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="space-y-0.5 text-[11px] text-muted-foreground">
           {serviceOrder.customers && (
             <div className="truncate font-medium text-foreground">
               {serviceOrder.customers.name}
@@ -59,14 +59,14 @@ export default function DraggableServiceOrder({ serviceOrder, remainingHours, li
           {serviceOrder.estimated_hours && (
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              <span>Est: {serviceOrder.estimated_hours}h | Need {remainingHours.toFixed(1)}h more</span>
+              <span>Need {remainingHours.toFixed(1)}h</span>
             </div>
           )}
 
           {serviceOrder.preferred_date && (
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>{format(new Date(serviceOrder.preferred_date), "MMM d, yyyy")}</span>
+              <span>{format(new Date(serviceOrder.preferred_date), "MMM d")}</span>
             </div>
           )}
 
@@ -80,9 +80,9 @@ export default function DraggableServiceOrder({ serviceOrder, remainingHours, li
           )}
 
           {lineItemsSummary && (
-            <div className="flex items-start gap-1 pt-1">
+            <div className="flex items-start gap-1 pt-0.5">
               <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
-              <span className="line-clamp-2 text-xs italic">{lineItemsSummary}</span>
+              <span className="line-clamp-2 italic">{lineItemsSummary}</span>
             </div>
           )}
         </div>

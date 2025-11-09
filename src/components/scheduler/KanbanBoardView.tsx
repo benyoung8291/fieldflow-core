@@ -94,7 +94,7 @@ export default function KanbanBoardView({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
         {STATUSES.map(status => (
           <DroppableStatusColumn
             key={status.id}
@@ -103,7 +103,7 @@ export default function KanbanBoardView({
             color={status.color}
             count={appointmentsByStatus[status.id]?.length || 0}
           >
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {appointmentsByStatus[status.id]?.map(appointment => (
                 <AppointmentCard
                   key={appointment.id}
@@ -116,7 +116,7 @@ export default function KanbanBoardView({
                 />
               ))}
               {appointmentsByStatus[status.id]?.length === 0 && (
-                <div className="text-center py-8 text-sm text-muted-foreground">
+                <div className="text-center py-6 text-xs text-muted-foreground">
                   No appointments
                 </div>
               )}
@@ -164,8 +164,8 @@ function AppointmentCard({
     >
       <Card 
         className={cn(
-          "cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200",
-          "border-l-4",
+          "cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200",
+          "border-l-2",
           appointment.status === "draft" && "border-l-muted",
           appointment.status === "published" && "border-l-info",
           appointment.status === "checked_in" && "border-l-warning",
@@ -174,16 +174,16 @@ function AppointmentCard({
         )}
         onClick={onClick}
       >
-        <CardHeader className="p-3 pb-2">
-          <CardTitle className="text-sm font-medium truncate">{appointment.title}</CardTitle>
+        <CardHeader className="p-2 pb-1">
+          <CardTitle className="text-xs font-medium truncate">{appointment.title}</CardTitle>
         </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <CardContent className="p-2 pt-0 space-y-1">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
+            <span>{format(new Date(appointment.start_time), "MMM d")}</span>
           </div>
           
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>
               {format(new Date(appointment.start_time), "HH:mm")} - 
@@ -192,7 +192,7 @@ function AppointmentCard({
           </div>
 
           {appointment.profiles && (
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5 text-[10px]">
               <User className="h-3 w-3" />
               <span className="truncate">
                 {appointment.profiles.first_name} {appointment.profiles.last_name}
@@ -201,14 +201,14 @@ function AppointmentCard({
           )}
 
           {appointment.location_address && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <MapPin className="h-3 w-3" />
               <span className="truncate">{appointment.location_address.split(',')[0]}</span>
             </div>
           )}
 
           {appointment.service_orders && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
               {appointment.service_orders.order_number}
             </Badge>
           )}
