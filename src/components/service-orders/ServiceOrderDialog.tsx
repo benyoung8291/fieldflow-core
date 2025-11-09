@@ -13,6 +13,7 @@ import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 
 interface ServiceOrderDialogProps {
   open: boolean;
@@ -479,6 +480,14 @@ export default function ServiceOrderDialog({
           )}
 
           <div className="flex gap-2 justify-end">
+            {orderId && (
+              <CreateTaskButton
+                linkedModule="service_order"
+                linkedRecordId={orderId}
+                variant="outline"
+                size="default"
+              />
+            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

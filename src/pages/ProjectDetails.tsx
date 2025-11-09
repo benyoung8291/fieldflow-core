@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Edit, Calendar, DollarSign, TrendingUp, ClipboardList, Users } from "lucide-react";
 import ProjectDialog from "@/components/projects/ProjectDialog";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
@@ -160,10 +161,17 @@ export default function ProjectDetails() {
             </div>
             <p className="text-muted-foreground">{project.customer?.name}</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Project
-          </Button>
+          <div className="flex gap-2">
+            <CreateTaskButton
+              linkedModule="project"
+              linkedRecordId={id!}
+              variant="outline"
+            />
+            <Button onClick={() => setDialogOpen(true)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Project
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">

@@ -17,6 +17,7 @@ import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText } from "lu
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 
 export default function ServiceContractDetails() {
   const { id } = useParams();
@@ -159,9 +160,16 @@ export default function ServiceContractDetails() {
           <h1 className="text-3xl font-bold">{contract.contract_number}</h1>
           <p className="text-muted-foreground">{contract.title}</p>
         </div>
-        <Badge variant={contract.status === "active" ? "default" : "secondary"}>
-          {contract.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <CreateTaskButton
+            linkedModule="contract"
+            linkedRecordId={id!}
+            variant="outline"
+          />
+          <Badge variant={contract.status === "active" ? "default" : "secondary"}>
+            {contract.status}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

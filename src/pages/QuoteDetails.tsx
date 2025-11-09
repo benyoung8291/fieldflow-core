@@ -22,6 +22,7 @@ import {
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
 import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -230,6 +231,11 @@ export default function QuoteDetails() {
               <Download className="mr-2 h-4 w-4" />
               PDF / Email
             </Button>
+            <CreateTaskButton
+              linkedModule="quote"
+              linkedRecordId={id!}
+              variant="outline"
+            />
             <Button onClick={() => setDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit

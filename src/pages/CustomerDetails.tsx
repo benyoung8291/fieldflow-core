@@ -12,6 +12,7 @@ import CustomerDialog from "@/components/customers/CustomerDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
 import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 
 const mockCustomer = {
   id: "1",
@@ -176,10 +177,17 @@ export default function CustomerDetails() {
                 ABN: {mockCustomer.abn}
               </p>
             </div>
-            <Button onClick={() => setIsEditDialogOpen(true)} className="gap-2">
-              <Edit className="h-4 w-4" />
-              Edit Customer
-            </Button>
+            <div className="flex gap-2">
+              <CreateTaskButton
+                linkedModule="customer"
+                linkedRecordId={id!}
+                variant="outline"
+              />
+              <Button onClick={() => setIsEditDialogOpen(true)} className="gap-2">
+                <Edit className="h-4 w-4" />
+                Edit Customer
+              </Button>
+            </div>
           </div>
         </div>
 

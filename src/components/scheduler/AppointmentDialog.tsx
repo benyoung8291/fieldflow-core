@@ -18,6 +18,7 @@ import RecurringEditDialog from "./RecurringEditDialog";
 import SaveTemplateDialog from "./SaveTemplateDialog";
 import { generateRecurringInstances, checkRecurringConflicts } from "@/hooks/useRecurringAppointments";
 import { Badge } from "@/components/ui/badge";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 
 interface AppointmentDialogProps {
   open: boolean;
@@ -655,6 +656,14 @@ export default function AppointmentDialog({
           )}
 
           <div className="flex items-end gap-2">
+            {appointmentId && (
+              <CreateTaskButton
+                linkedModule="appointment"
+                linkedRecordId={appointmentId}
+                variant="outline"
+                size="default"
+              />
+            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
