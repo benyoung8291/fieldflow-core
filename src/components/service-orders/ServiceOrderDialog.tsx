@@ -497,6 +497,7 @@ export default function ServiceOrderDialog({
       const totals = calculateTotals();
 
       const orderData: any = {
+        tenant_id: profile?.tenant_id,
         customer_id: formData.customer_id,
         customer_location_id: formData.customer_location_id || null,
         customer_contact_id: formData.customer_contact_id || null,
