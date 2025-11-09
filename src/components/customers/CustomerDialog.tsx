@@ -20,7 +20,7 @@ import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -31,6 +31,9 @@ interface CustomerDialogProps {
 export default function CustomerDialog({ open, onOpenChange, customer }: CustomerDialogProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [validatingABN, setValidatingABN] = useState(false);
+  const [abnValidated, setAbnValidated] = useState(false);
+  const [availableTradingNames, setAvailableTradingNames] = useState<string[]>([]);
   const [currentField, setCurrentField] = useState<string>("");
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
     page: "customer-dialog",
@@ -69,6 +72,72 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
     notes: "",
   });
 
+  const formatABN = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Limit to 11 digits
+    const limited = digits.slice(0, 11);
+    
+    // Format as XX XXX XXX XXX
+    if (limited.length <= 2) return limited;
+    if (limited.length <= 5) return `${limited.slice(0, 2)} ${limited.slice(2)}`;
+    if (limited.length <= 8) return `${limited.slice(0, 2)} ${limited.slice(2, 5)} ${limited.slice(5)}`;
+    return `${limited.slice(0, 2)} ${limited.slice(2, 5)} ${limited.slice(5, 8)} ${limited.slice(8)}`;
+  };
+
+  const handleABNChange = (value: string) => {
+    const formatted = formatABN(value);
+    setFormData({ ...formData, abn: formatted });
+    setAbnValidated(false); // Reset validation when ABN changes
+  };
+
+  const handleValidateABN = async () => {
+    if (!formData.abn) {
+      toast.error('Please enter an ABN first');
+      return;
+    }
+
+    setValidatingABN(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-abn', {
+        body: { abn: formData.abn },
+      });
+
+      if (error) throw error;
+
+      if (!data.valid) {
+        toast.error(data.error || 'ABN is not valid');
+        setAbnValidated(false);
+        return;
+      }
+
+      // ABN is valid - update form with returned data
+      setAbnValidated(true);
+      setAvailableTradingNames(data.tradingNames || []);
+      
+      setFormData(prev => ({
+        ...prev,
+        legalName: data.legalName || prev.legalName,
+      }));
+
+      toast.success(
+        <div>
+          <div className="font-medium">ABN Validated Successfully</div>
+          <div className="text-sm text-muted-foreground">
+            {data.entityType} • GST {data.gstRegistered ? 'Registered' : 'Not Registered'}
+          </div>
+        </div>
+      );
+    } catch (error: any) {
+      console.error('ABN validation error:', error);
+      toast.error(error.message || 'Failed to validate ABN');
+      setAbnValidated(false);
+    } finally {
+      setValidatingABN(false);
+    }
+  };
+
   useEffect(() => {
     if (customer) {
       setFormData({
@@ -90,6 +159,8 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
         isActive: customer.is_active ?? true,
         notes: customer.notes || "",
       });
+      setAbnValidated(false);
+      setAvailableTradingNames([]);
     } else {
       // Reset form for new customer
       setFormData({
@@ -111,6 +182,8 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
         isActive: true,
         notes: "",
       });
+      setAbnValidated(false);
+      setAvailableTradingNames([]);
     }
   }, [customer, open]);
 
@@ -277,29 +350,70 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
                         setCurrentField("");
                         updateField("");
                       }}
+                      disabled={abnValidated}
                     />
                   </div>
                 </FieldPresenceWrapper>
                 <FieldPresenceWrapper fieldName="abn" onlineUsers={onlineUsers}>
                   <div className="space-y-2">
                     <Label htmlFor="abn">ABN</Label>
-                    <Input
-                      id="abn"
-                      placeholder="12 345 678 901"
-                      value={formData.abn}
-                      onChange={(e) => setFormData({ ...formData, abn: e.target.value })}
-                      onFocus={() => {
-                        setCurrentField("abn");
-                        updateField("abn");
-                      }}
-                      onBlur={() => {
-                        setCurrentField("");
-                        updateField("");
-                      }}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="abn"
+                        placeholder="12 345 678 901"
+                        value={formData.abn}
+                        onChange={(e) => handleABNChange(e.target.value)}
+                        onFocus={() => {
+                          setCurrentField("abn");
+                          updateField("abn");
+                        }}
+                        onBlur={() => {
+                          setCurrentField("");
+                          updateField("");
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant={abnValidated ? "default" : "outline"}
+                        size="sm"
+                        onClick={handleValidateABN}
+                        disabled={validatingABN || !formData.abn}
+                      >
+                        {validatingABN ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : abnValidated ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          "Check"
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </FieldPresenceWrapper>
               </div>
+
+              {/* Trading Name Selection - Show if ABN validated and trading names available */}
+              {abnValidated && availableTradingNames.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="tradingNameSelect">Select Trading Name</Label>
+                  <Select
+                    value={formData.tradingName}
+                    onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
+                  >
+                    <SelectTrigger id="tradingNameSelect">
+                      <SelectValue placeholder="Select a trading name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTradingNames.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
