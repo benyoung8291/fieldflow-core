@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
-import { Clock, MapPin, MoreVertical } from "lucide-react";
+import { Clock, MapPin, MoreVertical, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ interface DraggableAppointmentProps {
   onEdit: () => void;
   onGPSCheckIn: () => void;
   onViewHistory: () => void;
+  onDelete?: () => void;
   showFullDetails?: boolean;
 }
 
@@ -27,6 +28,7 @@ export default function DraggableAppointment({
   onEdit,
   onGPSCheckIn,
   onViewHistory,
+  onDelete,
   showFullDetails = false,
 }: DraggableAppointmentProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -62,7 +64,12 @@ export default function DraggableAppointment({
       <div className={cn(!showFullDetails && "font-medium truncate", showFullDetails && "space-y-2")}>
         {showFullDetails ? (
           <>
-            <h4 className="font-semibold text-sm truncate">{appointment.title}</h4>
+            <div className="flex items-center gap-1">
+              <h4 className="font-semibold text-sm truncate">{appointment.title}</h4>
+              {(appointment.is_recurring || appointment.parent_appointment_id) && (
+                <Repeat className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               <span>
@@ -84,7 +91,12 @@ export default function DraggableAppointment({
           </>
         ) : (
           <>
-            <div className="font-medium truncate">{appointment.title}</div>
+            <div className="flex items-center gap-1">
+              <span className="font-medium truncate">{appointment.title}</span>
+              {(appointment.is_recurring || appointment.parent_appointment_id) && (
+                <Repeat className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
             <div className="flex items-center gap-1 mt-1">
               <Clock className="h-3 w-3" />
               <span>{format(new Date(appointment.start_time), "HH:mm")}</span>
@@ -125,6 +137,17 @@ export default function DraggableAppointment({
             }}>
               View History
             </DropdownMenuItem>
+            {onDelete && (
+              <DropdownMenuItem 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onDelete(); 
+                }}
+                className="text-destructive"
+              >
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

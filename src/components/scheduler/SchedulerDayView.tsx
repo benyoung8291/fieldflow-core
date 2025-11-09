@@ -11,9 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import GPSCheckInDialog from "./GPSCheckInDialog";
+import RecurringEditDialog from "./RecurringEditDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DraggableAppointment from "./DraggableAppointment";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface SchedulerDayViewProps {
   currentDate: Date;
@@ -39,8 +42,11 @@ export default function SchedulerDayView({
   onEditAppointment
 }: SchedulerDayViewProps) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [gpsDialogOpen, setGpsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [showRecurringDeleteDialog, setShowRecurringDeleteDialog] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null);
 
   const todayAppointments = appointments.filter(apt =>
     isSameDay(new Date(apt.start_time), currentDate)
@@ -51,6 +57,49 @@ export default function SchedulerDayView({
   const handleGPSCheckIn = (appointment: any) => {
     setSelectedAppointment(appointment);
     setGpsDialogOpen(true);
+  };
+
+  const handleDeleteClick = (appointment: any) => {
+    if (appointment.is_recurring || appointment.parent_appointment_id) {
+      setAppointmentToDelete(appointment);
+      setShowRecurringDeleteDialog(true);
+    } else {
+      handleDelete(appointment.id, "single");
+    }
+  };
+
+  const handleDelete = async (appointmentId: string, deleteType: "single" | "series") => {
+    try {
+      const appointment = appointments.find(a => a.id === appointmentId);
+      
+      if (deleteType === "series" && (appointment?.is_recurring || appointment?.parent_appointment_id)) {
+        const targetId = appointment.parent_appointment_id || appointmentId;
+        const { error } = await supabase
+          .from("appointments")
+          .delete()
+          .or(`id.eq.${targetId},parent_appointment_id.eq.${targetId}`)
+          .gte("start_time", appointment.start_time);
+
+        if (error) throw error;
+        toast({ title: "Recurring series deleted successfully" });
+      } else {
+        const { error } = await supabase
+          .from("appointments")
+          .delete()
+          .eq("id", appointmentId);
+
+        if (error) throw error;
+        toast({ title: "Appointment deleted successfully" });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting appointment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -65,6 +114,18 @@ export default function SchedulerDayView({
           }}
         />
       )}
+
+      <RecurringEditDialog
+        open={showRecurringDeleteDialog}
+        onOpenChange={setShowRecurringDeleteDialog}
+        onConfirm={(type) => {
+          if (appointmentToDelete) {
+            handleDelete(appointmentToDelete.id, type);
+          }
+          setShowRecurringDeleteDialog(false);
+        }}
+        action="delete"
+      />
       
       <div className="space-y-4">
         {/* Timeline view */}
@@ -103,6 +164,7 @@ export default function SchedulerDayView({
                       onEdit={() => onEditAppointment(apt.id)}
                       onGPSCheckIn={() => handleGPSCheckIn(apt)}
                       onViewHistory={() => onAppointmentClick(apt.id)}
+                      onDelete={() => handleDeleteClick(apt)}
                       showFullDetails
                     />
                   ))}

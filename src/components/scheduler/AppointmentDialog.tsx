@@ -8,11 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, Repeat } from "lucide-react";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
+import RecurrenceDialog from "./RecurrenceDialog";
+import RecurringEditDialog from "./RecurringEditDialog";
+import { generateRecurringInstances, checkRecurringConflicts } from "@/hooks/useRecurringAppointments";
+import { Badge } from "@/components/ui/badge";
 
 interface AppointmentDialogProps {
   open: boolean;
@@ -64,6 +68,12 @@ export default function AppointmentDialog({
     gps_check_in_radius: "100",
     notes: "",
   });
+
+  const [recurrenceConfig, setRecurrenceConfig] = useState<any>(null);
+  const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
+  const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [parentAppointmentId, setParentAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -182,6 +192,17 @@ export default function AppointmentDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If editing recurring appointment, show dialog
+    if (appointmentId && (isRecurring || parentAppointmentId)) {
+      setShowRecurringEditDialog(true);
+      return;
+    }
+    
+    await saveAppointment("single");
+  };
+
+  const saveAppointment = async (editType: "single" | "series") => {
     setLoading(true);
 
     try {
@@ -204,6 +225,11 @@ export default function AppointmentDialog({
         location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
         gps_check_in_radius: parseInt(formData.gps_check_in_radius),
         notes: formData.notes,
+        is_recurring: recurrenceConfig ? true : false,
+        recurrence_pattern: recurrenceConfig?.pattern || null,
+        recurrence_frequency: recurrenceConfig?.frequency || null,
+        recurrence_end_date: recurrenceConfig?.endDate ? recurrenceConfig.endDate.toISOString().split('T')[0] : null,
+        recurrence_days_of_week: recurrenceConfig?.daysOfWeek || null,
       };
 
       if (!appointmentId) {
@@ -211,20 +237,109 @@ export default function AppointmentDialog({
       }
 
       if (appointmentId) {
-        const { error } = await supabase
-          .from("appointments")
-          .update(appointmentData)
-          .eq("id", appointmentId);
+        // Editing existing appointment
+        if (editType === "series" && (isRecurring || parentAppointmentId)) {
+          // Update all future appointments in the series
+          const targetId = parentAppointmentId || appointmentId;
+          const { error } = await supabase
+            .from("appointments")
+            .update(appointmentData)
+            .or(`id.eq.${targetId},parent_appointment_id.eq.${targetId}`)
+            .gte("start_time", formData.start_time);
 
-        if (error) throw error;
-        toast({ title: "Appointment updated successfully" });
+          if (error) throw error;
+          toast({ title: "Recurring series updated successfully" });
+        } else {
+          // Update single appointment
+          const { error } = await supabase
+            .from("appointments")
+            .update(appointmentData)
+            .eq("id", appointmentId);
+
+          if (error) throw error;
+          toast({ title: "Appointment updated successfully" });
+        }
       } else {
-        const { error } = await supabase
-          .from("appointments")
-          .insert([appointmentData]);
+        // Creating new appointment(s)
+        if (recurrenceConfig) {
+          // Generate recurring instances
+          const template = {
+            start_time: new Date(formData.start_time),
+            end_time: new Date(formData.end_time),
+            title: formData.title,
+            description: formData.description,
+            assigned_to: formData.assigned_to,
+            location_address: formData.location_address,
+            location_lat: formData.location_lat ? parseFloat(formData.location_lat) : undefined,
+            location_lng: formData.location_lng ? parseFloat(formData.location_lng) : undefined,
+          };
 
-        if (error) throw error;
-        toast({ title: "Appointment created successfully" });
+          const instances = generateRecurringInstances(template, recurrenceConfig);
+
+          // Check for conflicts
+          if (formData.assigned_to) {
+            const { data: existingAppointments } = await supabase
+              .from("appointments")
+              .select("*")
+              .eq("assigned_to", formData.assigned_to)
+              .neq("status", "cancelled");
+
+            const conflicts = checkRecurringConflicts(
+              instances,
+              existingAppointments || [],
+              formData.assigned_to
+            );
+
+            if (conflicts.length > 0) {
+              toast({
+                title: "Conflicts detected",
+                description: `${conflicts.length} appointments conflict with existing schedule`,
+                variant: "destructive",
+              });
+              setLoading(false);
+              return;
+            }
+          }
+
+          // Create parent appointment
+          const { data: parentAppt, error: parentError } = await supabase
+            .from("appointments")
+            .insert([{ ...appointmentData, created_by: user.id }])
+            .select()
+            .single();
+
+          if (parentError) throw parentError;
+
+          // Create recurring instances
+          const recurringData = instances.slice(1).map(instance => ({
+            ...appointmentData,
+            start_time: instance.start_time.toISOString(),
+            end_time: instance.end_time.toISOString(),
+            created_by: user.id,
+            parent_appointment_id: parentAppt.id,
+          }));
+
+          if (recurringData.length > 0) {
+            const { error: instanceError } = await supabase
+              .from("appointments")
+              .insert(recurringData);
+
+            if (instanceError) throw instanceError;
+          }
+
+          toast({ 
+            title: "Recurring appointments created", 
+            description: `Created ${instances.length} appointments`
+          });
+        } else {
+          // Single appointment
+          const { error } = await supabase
+            .from("appointments")
+            .insert([{ ...appointmentData, created_by: user.id }]);
+
+          if (error) throw error;
+          toast({ title: "Appointment created successfully" });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -500,6 +615,43 @@ export default function AppointmentDialog({
             </div>
           </FieldPresenceWrapper>
 
+          {!appointmentId && (
+            <div className="space-y-2">
+              <Label>Recurrence</Label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowRecurrenceDialog(true)}
+                className="w-full justify-start gap-2"
+              >
+                <Repeat className="h-4 w-4" />
+                {recurrenceConfig ? (
+                  <div className="flex items-center gap-2">
+                    <span>Repeats {recurrenceConfig.pattern}</span>
+                    <Badge variant="secondary" className="ml-auto">
+                      {recurrenceConfig.frequency > 1 && `Every ${recurrenceConfig.frequency} `}
+                      {recurrenceConfig.pattern}
+                    </Badge>
+                  </div>
+                ) : (
+                  "Does not repeat"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {(isRecurring || parentAppointmentId) && (
+            <div className="p-3 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                <Repeat className="h-4 w-4" />
+                <span className="font-medium">This is a recurring appointment</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Changes will affect this appointment only unless you choose to edit the series
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
@@ -511,6 +663,20 @@ export default function AppointmentDialog({
           </div>
         </form>
       </DialogContent>
+
+      <RecurrenceDialog
+        open={showRecurrenceDialog}
+        onOpenChange={setShowRecurrenceDialog}
+        onSave={setRecurrenceConfig}
+        initialConfig={recurrenceConfig}
+      />
+
+      <RecurringEditDialog
+        open={showRecurringEditDialog}
+        onOpenChange={setShowRecurringEditDialog}
+        onConfirm={saveAppointment}
+        action="edit"
+      />
     </Dialog>
   );
 }

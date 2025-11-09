@@ -27,10 +27,16 @@ export type Database = {
           end_time: string
           gps_check_in_radius: number | null
           id: string
+          is_recurring: boolean | null
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
           notes: string | null
+          parent_appointment_id: string | null
+          recurrence_days_of_week: string[] | null
+          recurrence_end_date: string | null
+          recurrence_frequency: number | null
+          recurrence_pattern: string | null
           service_order_id: string | null
           start_time: string
           status: Database["public"]["Enums"]["appointment_status"] | null
@@ -50,10 +56,16 @@ export type Database = {
           end_time: string
           gps_check_in_radius?: number | null
           id?: string
+          is_recurring?: boolean | null
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          parent_appointment_id?: string | null
+          recurrence_days_of_week?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_frequency?: number | null
+          recurrence_pattern?: string | null
           service_order_id?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
@@ -73,10 +85,16 @@ export type Database = {
           end_time?: string
           gps_check_in_radius?: number | null
           id?: string
+          is_recurring?: boolean | null
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          parent_appointment_id?: string | null
+          recurrence_days_of_week?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_frequency?: number | null
+          recurrence_pattern?: string | null
           service_order_id?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
@@ -85,6 +103,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_parent_appointment_id_fkey"
+            columns: ["parent_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_service_order_id_fkey"
             columns: ["service_order_id"]
@@ -448,9 +473,15 @@ export type Database = {
           fixed_amount: number | null
           hourly_rate: number | null
           id: string
+          is_recurring: boolean | null
           order_number: string
+          parent_service_order_id: string | null
           priority: string | null
           project_id: string | null
+          recurrence_days_of_week: string[] | null
+          recurrence_end_date: string | null
+          recurrence_frequency: number | null
+          recurrence_pattern: string | null
           scheduled_date: string | null
           status: Database["public"]["Enums"]["service_order_status"] | null
           tenant_id: string
@@ -469,9 +500,15 @@ export type Database = {
           fixed_amount?: number | null
           hourly_rate?: number | null
           id?: string
+          is_recurring?: boolean | null
           order_number: string
+          parent_service_order_id?: string | null
           priority?: string | null
           project_id?: string | null
+          recurrence_days_of_week?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_frequency?: number | null
+          recurrence_pattern?: string | null
           scheduled_date?: string | null
           status?: Database["public"]["Enums"]["service_order_status"] | null
           tenant_id: string
@@ -490,9 +527,15 @@ export type Database = {
           fixed_amount?: number | null
           hourly_rate?: number | null
           id?: string
+          is_recurring?: boolean | null
           order_number?: string
+          parent_service_order_id?: string | null
           priority?: string | null
           project_id?: string | null
+          recurrence_days_of_week?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_frequency?: number | null
+          recurrence_pattern?: string | null
           scheduled_date?: string | null
           status?: Database["public"]["Enums"]["service_order_status"] | null
           tenant_id?: string
@@ -505,6 +548,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_parent_service_order_id_fkey"
+            columns: ["parent_service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
             referencedColumns: ["id"]
           },
           {
