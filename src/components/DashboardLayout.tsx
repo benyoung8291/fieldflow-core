@@ -1,14 +1,63 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, Pencil, Check, X, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface DashboardLayoutProps {
   children: ReactNode;
+}
+
+interface SortableMenuItemProps {
+  item: any;
+  isActive: boolean;
+  isEditMode: boolean;
+  isMobile?: boolean;
+  onNavigate: (path: string) => void;
+}
+
+function SortableMenuItem({ item, isActive, isEditMode, isMobile, onNavigate }: SortableMenuItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const Icon = item.iconComponent;
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      {isEditMode && (
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+      <button
+        onClick={() => !isEditMode && item.path && onNavigate(item.path)}
+        disabled={isEditMode}
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
+          isEditMode ? "cursor-default" : "",
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        {item.label}
+      </button>
+    </div>
+  );
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -17,6 +66,42 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { menuItems } = useCustomMenu();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [isEditMode, setIsEditMode] = useState(false);
+  const queryClient = useQueryClient();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = menuItems.findIndex((item) => item.id === active.id);
+    const newIndex = menuItems.findIndex((item) => item.id === over.id);
+
+    const reordered = [...menuItems];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    // Update order in database
+    try {
+      for (let i = 0; i < reordered.length; i++) {
+        await supabase
+          .from("menu_items")
+          .update({ item_order: i })
+          .eq("id", reordered[i].id);
+      }
+      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+      toast.success("Menu order updated");
+    } catch (error) {
+      toast.error("Failed to update menu order");
+    }
+  };
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -28,57 +113,34 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setExpandedFolders(newExpanded);
   };
 
-  const renderMenuItem = (item: any, isMobile = false) => {
-    const Icon = item.iconComponent;
-    const isActive = item.path && location.pathname === item.path;
-    const isExpanded = expandedFolders.has(item.id);
+  const handleNavigate = (path: string, isMobile = false) => {
+    navigate(path);
+    if (isMobile) setSidebarOpen(false);
+  };
 
-    if (item.is_folder) {
-      return (
-        <div key={item.id}>
-          <button
-            onClick={() => toggleFolder(item.id)}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full",
-              "text-sidebar-foreground hover:bg-sidebar-accent"
-            )}
-          >
-            <Icon className="h-5 w-5" />
-            <span className="flex-1 text-left">{item.label}</span>
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
-          {isExpanded && item.children && (
-            <div className="ml-8 mt-1 space-y-1">
-              {item.children.map((child: any) => renderMenuItem(child, isMobile))}
-            </div>
-          )}
-        </div>
-      );
-    }
+  const renderMenuContent = (isMobile = false) => {
+    const topLevelItems = menuItems.filter(item => !item.parent_id);
 
     return (
-      <button
-        key={item.id}
-        onClick={() => {
-          if (item.path) {
-            navigate(item.path);
-            if (isMobile) setSidebarOpen(false);
-          }
-        }}
-        className={cn(
-          "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full",
-          isActive
-            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        )}
-      >
-        <Icon className="h-5 w-5" />
-        {item.label}
-      </button>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={topLevelItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1">
+            {topLevelItems.map((item) => {
+              const isActive = item.path && location.pathname === item.path;
+              return (
+                <SortableMenuItem
+                  key={item.id}
+                  item={item}
+                  isActive={isActive}
+                  isEditMode={isEditMode}
+                  isMobile={isMobile}
+                  onNavigate={(path) => handleNavigate(path, isMobile)}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
     );
   };
 
@@ -87,14 +149,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col bg-sidebar border-r border-sidebar-border">
         <div className="flex flex-1 flex-col gap-y-5 px-6 py-8">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">FF</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">FF</span>
+              </div>
+              <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
             </div>
-            <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsEditMode(!isEditMode)}
+              className="h-8 w-8"
+            >
+              {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+            </Button>
           </div>
           <nav className="flex flex-1 flex-col gap-2">
-            {menuItems.map((item) => renderMenuItem(item))}
+            {renderMenuContent()}
           </nav>
           <Button
             variant="outline"
@@ -126,14 +198,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border">
             <div className="flex flex-1 flex-col gap-y-5 px-6 py-8">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-lg">FF</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-lg">FF</span>
+                  </div>
+                  <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
                 </div>
-                <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className="h-8 w-8"
+                >
+                  {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                </Button>
               </div>
               <nav className="flex flex-1 flex-col gap-2">
-                {menuItems.map((item) => renderMenuItem(item, true))}
+                {renderMenuContent(true)}
               </nav>
             </div>
           </aside>
