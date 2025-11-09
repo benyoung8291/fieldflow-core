@@ -362,7 +362,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_primary: boolean | null
+          latitude: number | null
           location_notes: string | null
+          longitude: number | null
           name: string
           postcode: string | null
           state: string | null
@@ -380,7 +382,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_primary?: boolean | null
+          latitude?: number | null
           location_notes?: string | null
+          longitude?: number | null
           name: string
           postcode?: string | null
           state?: string | null
@@ -398,7 +402,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_primary?: boolean | null
+          latitude?: number | null
           location_notes?: string | null
+          longitude?: number | null
           name?: string
           postcode?: string | null
           state?: string | null
