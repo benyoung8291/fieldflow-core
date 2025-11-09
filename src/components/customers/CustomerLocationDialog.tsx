@@ -72,9 +72,16 @@ export default function CustomerLocationDialog({
     if (!open || !addressInputRef.current) return;
 
     const initAutocomplete = async () => {
+      const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+      
+      if (!apiKey) {
+        console.warn("Google Places API key not found. Address autocomplete disabled.");
+        return;
+      }
+
       try {
         const loader = new Loader({
-          apiKey: import.meta.env.VITE_GOOGLE_PLACES_API_KEY || "",
+          apiKey,
           version: "weekly",
           libraries: ["places"],
         });
