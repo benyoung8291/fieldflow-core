@@ -7,22 +7,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Trash2, Search, Package } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AssemblyDialog from "./AssemblyDialog";
 
 interface PriceBookDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectItem?: (item: any) => void;
+  onSelectAssembly?: (assembly: any) => void;
 }
 
-export default function PriceBookDialog({ open, onOpenChange, onSelectItem }: PriceBookDialogProps) {
+export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSelectAssembly }: PriceBookDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [assemblyDialogOpen, setAssemblyDialogOpen] = useState(false);
+  const [selectedAssemblyId, setSelectedAssemblyId] = useState<string | undefined>();
 
   const [formData, setFormData] = useState({
     code: "",
@@ -55,10 +60,32 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem }: Pr
     enabled: open,
   });
 
+  const { data: assemblies } = useQuery({
+    queryKey: ["price-book-assemblies", searchQuery],
+    queryFn: async () => {
+      let query = supabase
+        .from("price_book_assemblies")
+        .select("*")
+        .eq("is_active", true)
+        .order("code");
+
+      if (searchQuery) {
+        query = query.or(`code.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   useEffect(() => {
     if (!open) {
       setShowForm(false);
       setEditingItem(null);
+      setAssemblyDialogOpen(false);
+      setSelectedAssemblyId(undefined);
       resetForm();
     }
   }, [open]);
@@ -190,7 +217,43 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem }: Pr
     }
   };
 
+  const handleDeleteAssembly = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this assembly?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("price_book_assemblies")
+        .update({ is_active: false })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast({ title: "Assembly deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["price-book-assemblies"] });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting assembly",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSelectAssembly = async (assembly: any) => {
+    if (!onSelectAssembly) return;
+
+    // Fetch assembly items
+    const { data: items } = await supabase
+      .from("price_book_assembly_items")
+      .select("*")
+      .eq("assembly_id", assembly.id)
+      .order("item_order");
+
+    onSelectAssembly({ ...assembly, items });
+    onOpenChange(false);
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -198,84 +261,172 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem }: Pr
         </DialogHeader>
 
         {!showForm ? (
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by code or description..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button onClick={() => setShowForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
+          <Tabs defaultValue="items" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="items">Items</TabsTrigger>
+              <TabsTrigger value="assemblies">Assemblies</TabsTrigger>
+            </TabsList>
 
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Unit</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Margin %</TableHead>
-                    <TableHead className="text-right">Sell</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items?.map((item) => (
-                    <TableRow key={item.id} className={onSelectItem ? "cursor-pointer hover:bg-muted/50" : ""}>
-                      <TableCell className="font-mono">{item.code}</TableCell>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell className="text-right">${item.cost_price.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{item.margin_percentage.toFixed(2)}%</TableCell>
-                      <TableCell className="text-right font-medium">${item.sell_price.toFixed(2)}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {onSelectItem && (
+            <TabsContent value="items" className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by code or description..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button onClick={() => setShowForm(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Item
+                </Button>
+              </div>
+
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                      <TableHead className="text-right">Margin %</TableHead>
+                      <TableHead className="text-right">Sell</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items?.map((item) => (
+                      <TableRow key={item.id} className={onSelectItem ? "cursor-pointer hover:bg-muted/50" : ""}>
+                        <TableCell className="font-mono">{item.code}</TableCell>
+                        <TableCell>{item.description}</TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell className="text-right">${item.cost_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{item.margin_percentage.toFixed(2)}%</TableCell>
+                        <TableCell className="text-right font-medium">${item.sell_price.toFixed(2)}</TableCell>
+                        <TableCell>{item.category}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          {onSelectItem && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                onSelectItem(item);
+                                onOpenChange(false);
+                              }}
+                            >
+                              Select
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => handleEdit(item)}>
+                            Edit
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!items || items.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
+                          No items found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="assemblies" className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search assemblies..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button onClick={() => {
+                  setSelectedAssemblyId(undefined);
+                  setAssemblyDialogOpen(true);
+                }}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Assembly
+                </Button>
+              </div>
+
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assemblies?.map((assembly) => (
+                      <TableRow key={assembly.id} className={onSelectAssembly ? "cursor-pointer hover:bg-muted/50" : ""}>
+                        <TableCell className="font-mono">{assembly.code}</TableCell>
+                        <TableCell className="font-medium">{assembly.name}</TableCell>
+                        <TableCell>{assembly.description}</TableCell>
+                        <TableCell>{assembly.category}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          {onSelectAssembly && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleSelectAssembly(assembly)}
+                            >
+                              <Package className="mr-2 h-4 w-4" />
+                              Select
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
                             onClick={() => {
-                              onSelectItem(item);
-                              onOpenChange(false);
+                              setSelectedAssemblyId(assembly.id);
+                              setAssemblyDialogOpen(true);
                             }}
                           >
-                            Select
+                            Edit
                           </Button>
-                        )}
-                        <Button size="sm" variant="ghost" onClick={() => handleEdit(item)}>
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!items || items.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        No items found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteAssembly(assembly.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!assemblies || assemblies.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          No assemblies found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -376,5 +527,17 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem }: Pr
         )}
       </DialogContent>
     </Dialog>
+    <AssemblyDialog
+      open={assemblyDialogOpen}
+      onOpenChange={(open) => {
+        setAssemblyDialogOpen(open);
+        if (!open) {
+          setSelectedAssemblyId(undefined);
+          queryClient.invalidateQueries({ queryKey: ["price-book-assemblies"] });
+        }
+      }}
+      assemblyId={selectedAssemblyId}
+    />
+    </>
   );
 }

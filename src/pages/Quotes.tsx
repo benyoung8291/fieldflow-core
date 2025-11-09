@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -7,23 +7,47 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, DollarSign, Calendar, Eye } from "lucide-react";
+import { Plus, Search, DollarSign, Calendar, Eye, Copy, Archive, Trash2 } from "lucide-react";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 export default function Quotes() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [quoteToDelete, setQuoteToDelete] = useState<any>(null);
 
   const { data: quotes, isLoading } = useQuery({
-    queryKey: ["quotes"],
+    queryKey: ["quotes", showArchived],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
         .select("*")
+        .eq("is_archived", showArchived)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -67,6 +91,153 @@ export default function Quotes() {
   const handleCreateQuote = () => {
     setSelectedQuoteId(undefined);
     setDialogOpen(true);
+  };
+
+  const handleDuplicate = async (quote: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      // Get line items
+      const { data: lineItems } = await supabase
+        .from("quote_line_items")
+        .select("*")
+        .eq("quote_id", quote.id)
+        .order("item_order");
+
+      // Create new quote
+      const newQuoteData = {
+        tenant_id: profile?.tenant_id,
+        customer_id: quote.customer_id,
+        title: `${quote.title} (Copy)`,
+        description: quote.description,
+        quote_number: `QT-${Date.now()}`,
+        quote_type: quote.quote_type,
+        subtotal: quote.subtotal,
+        tax_rate: quote.tax_rate,
+        tax_amount: quote.tax_amount,
+        discount_amount: quote.discount_amount,
+        total_amount: quote.total_amount,
+        notes: quote.notes,
+        terms_conditions: quote.terms_conditions,
+        internal_notes: quote.internal_notes,
+        created_by: user.id,
+        duplicated_from_quote_id: quote.id,
+        status: "draft",
+      };
+
+      const { data: newQuote, error } = await supabase
+        .from("quotes")
+        .insert([newQuoteData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Copy line items
+      if (lineItems && lineItems.length > 0) {
+        const newLineItems = lineItems.map((item: any) => ({
+          quote_id: newQuote.id,
+          tenant_id: profile?.tenant_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          cost_price: item.cost_price,
+          margin_percentage: item.margin_percentage,
+          sell_price: item.sell_price,
+          line_total: item.line_total,
+          item_order: item.item_order,
+          parent_line_item_id: item.parent_line_item_id,
+        }));
+
+        await supabase.from("quote_line_items").insert(newLineItems);
+      }
+
+      toast({ title: "Quote duplicated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      navigate(`/quotes/${newQuote.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Error duplicating quote",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleArchive = async (quote: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("quotes")
+        .update({
+          is_archived: !quote.is_archived,
+          archived_at: !quote.is_archived ? new Date().toISOString() : null,
+          archived_by: !quote.is_archived ? user.id : null,
+        })
+        .eq("id", quote.id);
+
+      if (error) throw error;
+
+      toast({ title: `Quote ${!quote.is_archived ? "archived" : "unarchived"} successfully` });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (error: any) {
+      toast({
+        title: "Error archiving quote",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteClick = (quote: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (quote.status !== "draft") {
+      toast({
+        title: "Cannot delete quote",
+        description: "Only draft quotes can be deleted. Archive this quote instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setQuoteToDelete(quote);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!quoteToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .delete()
+        .eq("id", quoteToDelete.id);
+
+      if (error) throw error;
+
+      toast({ title: "Quote deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      setDeleteDialogOpen(false);
+      setQuoteToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: "Error deleting quote",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const stats = {
@@ -130,32 +301,52 @@ export default function Quotes() {
           </div>
           <div className="flex gap-2">
             <Button
-              variant={statusFilter === "all" ? "default" : "outline"}
-              onClick={() => setStatusFilter("all")}
+              variant={!showArchived && statusFilter === "all" ? "default" : "outline"}
+              onClick={() => {
+                setShowArchived(false);
+                setStatusFilter("all");
+              }}
               size="sm"
             >
               All
             </Button>
             <Button
-              variant={statusFilter === "draft" ? "default" : "outline"}
-              onClick={() => setStatusFilter("draft")}
+              variant={!showArchived && statusFilter === "draft" ? "default" : "outline"}
+              onClick={() => {
+                setShowArchived(false);
+                setStatusFilter("draft");
+              }}
               size="sm"
             >
               Draft
             </Button>
             <Button
-              variant={statusFilter === "sent" ? "default" : "outline"}
-              onClick={() => setStatusFilter("sent")}
+              variant={!showArchived && statusFilter === "sent" ? "default" : "outline"}
+              onClick={() => {
+                setShowArchived(false);
+                setStatusFilter("sent");
+              }}
               size="sm"
             >
               Sent
             </Button>
             <Button
-              variant={statusFilter === "approved" ? "default" : "outline"}
-              onClick={() => setStatusFilter("approved")}
+              variant={!showArchived && statusFilter === "approved" ? "default" : "outline"}
+              onClick={() => {
+                setShowArchived(false);
+                setStatusFilter("approved");
+              }}
               size="sm"
             >
               Approved
+            </Button>
+            <Button
+              variant={showArchived ? "default" : "outline"}
+              onClick={() => setShowArchived(!showArchived)}
+              size="sm"
+            >
+              <Archive className="mr-2 h-4 w-4" />
+              Archived
             </Button>
           </div>
         </div>
@@ -214,16 +405,44 @@ export default function Quotes() {
                           {quote.total_amount.toLocaleString()}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/quotes/${quote.id}`);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/quotes/${quote.id}`);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => handleDuplicate(quote, e)}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleArchive(quote, e)}>
+                              <Archive className="mr-2 h-4 w-4" />
+                              {quote.is_archived ? "Unarchive" : "Archive"}
+                            </DropdownMenuItem>
+                            {quote.status === "draft" && (
+                              <DropdownMenuItem 
+                                onClick={(e) => handleDeleteClick(quote, e)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -238,6 +457,23 @@ export default function Quotes() {
         onOpenChange={setDialogOpen}
         quoteId={selectedQuoteId}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this quote? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

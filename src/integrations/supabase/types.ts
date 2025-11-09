@@ -467,6 +467,99 @@ export type Database = {
           },
         ]
       }
+      price_book_assemblies: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      price_book_assembly_items: {
+        Row: {
+          assembly_id: string
+          cost_price: number
+          created_at: string | null
+          description: string
+          id: string
+          item_order: number
+          margin_percentage: number
+          price_book_item_id: string | null
+          quantity: number
+          sell_price: number
+        }
+        Insert: {
+          assembly_id: string
+          cost_price?: number
+          created_at?: string | null
+          description: string
+          id?: string
+          item_order?: number
+          margin_percentage?: number
+          price_book_item_id?: string | null
+          quantity?: number
+          sell_price?: number
+        }
+        Update: {
+          assembly_id?: string
+          cost_price?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          item_order?: number
+          margin_percentage?: number
+          price_book_item_id?: string | null
+          quantity?: number
+          sell_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_book_assembly_items_assembly_id_fkey"
+            columns: ["assembly_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_assemblies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_assembly_items_price_book_item_id_fkey"
+            columns: ["price_book_item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_book_items: {
         Row: {
           category: string | null
@@ -650,6 +743,53 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          is_internal: boolean | null
+          quote_id: string
+          tenant_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          is_internal?: boolean | null
+          quote_id: string
+          tenant_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          is_internal?: boolean | null
+          quote_id?: string
+          tenant_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_attachments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_line_items: {
         Row: {
           cost_price: number | null
@@ -718,9 +858,82 @@ export type Database = {
           },
         ]
       }
+      quote_versions: {
+        Row: {
+          change_description: string | null
+          changed_by: string
+          created_at: string | null
+          description: string | null
+          discount_amount: number
+          id: string
+          line_items: Json
+          notes: string | null
+          quote_id: string
+          quote_type: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          tenant_id: string
+          terms_conditions: string | null
+          title: string
+          total_amount: number
+          version_number: number
+        }
+        Insert: {
+          change_description?: string | null
+          changed_by: string
+          created_at?: string | null
+          description?: string | null
+          discount_amount: number
+          id?: string
+          line_items: Json
+          notes?: string | null
+          quote_id: string
+          quote_type: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          tenant_id: string
+          terms_conditions?: string | null
+          title: string
+          total_amount: number
+          version_number: number
+        }
+        Update: {
+          change_description?: string | null
+          changed_by?: string
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number
+          id?: string
+          line_items?: Json
+          notes?: string | null
+          quote_id?: string
+          quote_type?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          tenant_id?: string
+          terms_conditions?: string | null
+          title?: string
+          total_amount?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_versions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           approved_at: string | null
+          archived_at: string | null
+          archived_by: string | null
           converted_to_project_id: string | null
           converted_to_service_order_id: string | null
           created_at: string | null
@@ -728,7 +941,10 @@ export type Database = {
           customer_id: string
           description: string | null
           discount_amount: number | null
+          duplicated_from_quote_id: string | null
           id: string
+          internal_notes: string | null
+          is_archived: boolean | null
           notes: string | null
           quote_number: string
           quote_type: string | null
@@ -747,6 +963,8 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           converted_to_project_id?: string | null
           converted_to_service_order_id?: string | null
           created_at?: string | null
@@ -754,7 +972,10 @@ export type Database = {
           customer_id: string
           description?: string | null
           discount_amount?: number | null
+          duplicated_from_quote_id?: string | null
           id?: string
+          internal_notes?: string | null
+          is_archived?: boolean | null
           notes?: string | null
           quote_number: string
           quote_type?: string | null
@@ -773,6 +994,8 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           converted_to_project_id?: string | null
           converted_to_service_order_id?: string | null
           created_at?: string | null
@@ -780,7 +1003,10 @@ export type Database = {
           customer_id?: string
           description?: string | null
           discount_amount?: number | null
+          duplicated_from_quote_id?: string | null
           id?: string
+          internal_notes?: string | null
+          is_archived?: boolean | null
           notes?: string | null
           quote_number?: string
           quote_type?: string | null
@@ -797,7 +1023,15 @@ export type Database = {
           updated_at?: string | null
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quotes_duplicated_from_quote_id_fkey"
+            columns: ["duplicated_from_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_order_templates: {
         Row: {
