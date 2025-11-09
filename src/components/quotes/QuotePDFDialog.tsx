@@ -22,7 +22,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [showSubItems, setShowSubItems] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("default");
   const [emailMode, setEmailMode] = useState(false);
   const [emailData, setEmailData] = useState({
     to: customerEmail || "",
@@ -52,7 +52,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
       const { data, error } = await supabase.functions.invoke('generate-quote-pdf', {
         body: {
           quote_id: quoteId,
-          template_id: selectedTemplate || null,
+          template_id: selectedTemplate === "default" ? null : selectedTemplate,
           show_sub_items: showSubItems,
         },
       });
@@ -90,7 +90,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-quote-pdf', {
         body: {
           quote_id: quoteId,
-          template_id: selectedTemplate || null,
+          template_id: selectedTemplate === "default" ? null : selectedTemplate,
           show_sub_items: showSubItems,
         },
       });
@@ -135,7 +135,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
                 <SelectValue placeholder="Select template (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Default Template</SelectItem>
+                <SelectItem value="default">Default Template</SelectItem>
                 {templates.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name}

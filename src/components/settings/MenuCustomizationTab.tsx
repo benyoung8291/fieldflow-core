@@ -290,12 +290,13 @@ export default function MenuCustomizationTab() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const parentId = formData.get("parent_id") as string;
 
     saveMenuItem.mutate({
       label: formData.get("label") as string,
       icon: formData.get("icon") as string,
       path: isCreatingFolder ? null : (formData.get("path") as string),
-      parent_id: formData.get("parent_id") as string || null,
+      parent_id: parentId === "none" ? null : parentId || null,
       is_folder: isCreatingFolder,
       is_visible: formData.get("is_visible") === "on",
       item_order: editingItem?.item_order || menuItems.length,
@@ -443,12 +444,12 @@ export default function MenuCustomizationTab() {
 
             <div>
               <Label htmlFor="parent_id">Parent Folder</Label>
-              <Select name="parent_id" defaultValue={editingItem?.parent_id || ""}>
+              <Select name="parent_id" defaultValue={editingItem?.parent_id || "none"}>
                 <SelectTrigger>
                   <SelectValue placeholder="None (top level)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (top level)</SelectItem>
+                  <SelectItem value="none">None (top level)</SelectItem>
                   {menuItems
                     .filter((item) => item.is_folder && item.id !== editingItem?.id)
                     .map((folder) => (
