@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Menu, Pencil, Check, X, GripVertical } from "lucide-react";
+import { LogOut, Menu, Pencil, Check, GripVertical, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -156,26 +157,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsEditMode(!isEditMode)}
-              className="h-8 w-8"
-            >
-              {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditMode(!isEditMode)}
+                className="h-8 w-8"
+              >
+                {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      navigate("/auth");
+                      toast.success("Signed out successfully");
+                    }}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <nav className="flex flex-1 flex-col gap-2">
             {renderMenuContent()}
           </nav>
-          <Button
-            variant="outline"
-            className="justify-start gap-3 border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={() => navigate("/auth")}
-          >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </Button>
         </div>
       </aside>
 
@@ -205,14 +224,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </div>
                   <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsEditMode(!isEditMode)}
-                  className="h-8 w-8"
-                >
-                  {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    className="h-8 w-8"
+                  >
+                    {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <User className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => { navigate("/settings"); setSidebarOpen(false); }}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          await supabase.auth.signOut();
+                          navigate("/auth");
+                          setSidebarOpen(false);
+                          toast.success("Signed out successfully");
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
               <nav className="flex flex-1 flex-col gap-2">
                 {renderMenuContent(true)}

@@ -1564,6 +1564,36 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          module: Database["public"]["Enums"]["app_module"]
+          permission: Database["public"]["Enums"]["permission_type"]
+          role: Database["public"]["Enums"]["user_role"]
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          module: Database["public"]["Enums"]["app_module"]
+          permission: Database["public"]["Enums"]["permission_type"]
+          role: Database["public"]["Enums"]["user_role"]
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          module?: Database["public"]["Enums"]["app_module"]
+          permission?: Database["public"]["Enums"]["permission_type"]
+          role?: Database["public"]["Enums"]["user_role"]
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       service_contract_attachments: {
         Row: {
           contract_id: string
@@ -2145,6 +2175,13 @@ export type Database = {
     }
     Functions: {
       get_user_tenant_id: { Args: never; Returns: string }
+      has_permission: {
+        Args: {
+          _module: Database["public"]["Enums"]["app_module"]
+          _permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
@@ -2154,12 +2191,25 @@ export type Database = {
       }
     }
     Enums: {
+      app_module:
+        | "customers"
+        | "leads"
+        | "quotes"
+        | "projects"
+        | "service_orders"
+        | "appointments"
+        | "workers"
+        | "service_contracts"
+        | "analytics"
+        | "settings"
+        | "price_book"
       appointment_status:
         | "draft"
         | "published"
         | "checked_in"
         | "completed"
         | "cancelled"
+      permission_type: "view" | "create" | "edit" | "delete"
       recurrence_frequency:
         | "daily"
         | "weekly"
@@ -2311,6 +2361,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_module: [
+        "customers",
+        "leads",
+        "quotes",
+        "projects",
+        "service_orders",
+        "appointments",
+        "workers",
+        "service_contracts",
+        "analytics",
+        "settings",
+        "price_book",
+      ],
       appointment_status: [
         "draft",
         "published",
@@ -2318,6 +2381,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      permission_type: ["view", "create", "edit", "delete"],
       recurrence_frequency: [
         "daily",
         "weekly",

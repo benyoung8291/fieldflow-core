@@ -1,0 +1,271 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { UserPlus, Shield } from "lucide-react";
+
+const UserManagement = () => {
+  const queryClient = useQueryClient();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users", profile?.tenant_id],
+    queryFn: async () => {
+      if (!profile?.tenant_id) return [];
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id);
+
+      if (profilesError) throw profilesError;
+
+      // Fetch roles separately
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("tenant_id", profile.tenant_id);
+
+      if (rolesError) throw rolesError;
+
+      // Combine data
+      const data = profilesData?.map((profile) => ({
+        ...profile,
+        user_roles: rolesData?.filter((role) => role.user_id === profile.id) || [],
+      }));
+
+      return data || [];
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  const assignRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      if (!profile?.tenant_id) throw new Error("No tenant ID");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: userId,
+          role: role as any,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+        } as any);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Role assigned successfully");
+      setIsDialogOpen(false);
+      setSelectedUserId(null);
+      setSelectedRole("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to assign role");
+    },
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", role as any);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Role removed successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove role");
+    },
+  });
+
+  const handleAssignRole = () => {
+    if (!selectedUserId || !selectedRole) {
+      toast.error("Please select a user and role");
+      return;
+    }
+
+    assignRoleMutation.mutate({ userId: selectedUserId, role: selectedRole });
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "tenant_admin":
+        return "destructive";
+      case "supervisor":
+        return "default";
+      case "worker":
+        return "secondary";
+      default:
+        return "outline";
+    }
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">User Management</h1>
+            <p className="text-muted-foreground">
+              Manage users and assign roles
+            </p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Assign Role
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Assign Role to User</DialogTitle>
+                <DialogDescription>
+                  Select a user and assign them a role
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">User</label>
+                  <Select value={selectedUserId || ""} onValueChange={setSelectedUserId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users?.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.first_name} {user.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Role</label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="worker">Worker</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleAssignRole} className="w-full">
+                  Assign Role
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Users</CardTitle>
+            <CardDescription>
+              All users in your organization
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div>Loading...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Roles</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users?.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        {user.first_name} {user.last_name}
+                      </TableCell>
+                      <TableCell>{user.id}</TableCell>
+                      <TableCell>{user.phone || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 flex-wrap">
+                          {user.user_roles && user.user_roles.length > 0 ? (
+                            user.user_roles.map((ur: any, idx: number) => (
+                              <Badge
+                                key={idx}
+                                variant={getRoleBadgeVariant(ur.role)}
+                                className="cursor-pointer"
+                                onClick={() =>
+                                  removeRoleMutation.mutate({
+                                    userId: user.id,
+                                    role: ur.role,
+                                  })
+                                }
+                              >
+                                <Shield className="h-3 w-3 mr-1" />
+                                {ur.role}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No roles</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.is_active ? "default" : "secondary"}>
+                          {user.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default UserManagement;
