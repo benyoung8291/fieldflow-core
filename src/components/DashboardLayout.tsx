@@ -132,14 +132,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {!sidebarCollapsed && (
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-lg">FF</span>
+                    <span className="text-primary-foreground font-bold text-lg">SP</span>
                   </div>
-                  <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
+                  <h1 className="text-xl font-bold text-sidebar-foreground">Service Pulse</h1>
                 </div>
               )}
               {sidebarCollapsed && (
                 <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-lg">FF</span>
+                  <span className="text-primary-foreground font-bold text-lg">SP</span>
                 </div>
               )}
             </div>
@@ -226,9 +226,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex-shrink-0 flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-lg">FF</span>
+                    <span className="text-primary-foreground font-bold text-lg">SP</span>
                   </div>
-                  <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
+                  <h1 className="text-xl font-bold text-sidebar-foreground">Service Pulse</h1>
                 </div>
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
