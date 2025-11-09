@@ -368,7 +368,7 @@ export default function Tasks() {
           description: selectedTask.description || "",
           status: selectedTask.status,
           priority: selectedTask.priority,
-          assigned_to: selectedTask.assigned_to || "",
+          assigned_to: selectedTask.assigned_to || undefined,
           due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined,
         } : undefined}
         workers={workers}

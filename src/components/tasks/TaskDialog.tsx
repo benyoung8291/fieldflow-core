@@ -29,7 +29,7 @@ export interface TaskFormData {
   description: string;
   status: string;
   priority: string;
-  assigned_to: string;
+  assigned_to: string | undefined;
   due_date: Date | undefined;
 }
 
@@ -48,7 +48,7 @@ export default function TaskDialog({
     description: defaultValues?.description || "",
     status: defaultValues?.status || "pending",
     priority: defaultValues?.priority || "medium",
-    assigned_to: defaultValues?.assigned_to || "",
+    assigned_to: defaultValues?.assigned_to || undefined,
     due_date: defaultValues?.due_date,
   });
 
@@ -60,7 +60,7 @@ export default function TaskDialog({
         description: defaultValues?.description || "",
         status: defaultValues?.status || "pending",
         priority: defaultValues?.priority || "medium",
-        assigned_to: defaultValues?.assigned_to || "",
+        assigned_to: defaultValues?.assigned_to || undefined,
         due_date: defaultValues?.due_date,
       });
     }
@@ -150,13 +150,14 @@ export default function TaskDialog({
             <div>
               <Label htmlFor="assigned_to">Assign To</Label>
               <Select
-                value={formData.assigned_to}
-                onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
+                value={formData.assigned_to || "unassigned"}
+                onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? undefined : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select assignee" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {workers.map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
@@ -281,13 +282,14 @@ export default function TaskDialog({
               <div>
                 <Label htmlFor="assigned_to">Assign To</Label>
                 <Select
-                  value={formData.assigned_to}
-                  onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
+                  value={formData.assigned_to || "unassigned"}
+                  onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? undefined : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {workers.map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.first_name} {worker.last_name}
