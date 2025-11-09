@@ -475,7 +475,7 @@ export default function MenuCustomizationTab() {
             </div>
 
             <div>
-              <Label htmlFor="color">Color</Label>
+              <Label htmlFor="color">Icon Color (Optional)</Label>
               <div className="flex gap-2">
                 <Input
                   id="color"
@@ -493,6 +493,9 @@ export default function MenuCustomizationTab() {
                   placeholder="#3b82f6"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave default to use standard icon color
+              </p>
             </div>
 
             <div className="flex items-center gap-2">

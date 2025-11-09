@@ -60,7 +60,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
-              style={item.color && !isActive ? { borderLeft: `3px solid ${item.color}` } : undefined}
             >
               {item.is_folder && (
                 <div className="mr-1">
@@ -88,7 +87,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         ? "bg-sidebar-primary text-sidebar-primary-foreground"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
-                    style={child.color && !childIsActive ? { borderLeft: `3px solid ${child.color}` } : undefined}
                   >
                     <ChildIcon className="h-4 w-4" style={child.color ? { color: child.color } : undefined} />
                     {child.label}
