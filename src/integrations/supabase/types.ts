@@ -1821,6 +1821,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string
+          estimated_hours: number
           id: string
           is_from_price_book: boolean | null
           item_order: number
@@ -1837,6 +1838,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description: string
+          estimated_hours?: number
           id?: string
           is_from_price_book?: boolean | null
           item_order?: number
@@ -1853,6 +1855,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string
+          estimated_hours?: number
           id?: string
           is_from_price_book?: boolean | null
           item_order?: number
