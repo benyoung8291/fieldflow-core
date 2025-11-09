@@ -19,6 +19,7 @@ import SaveTemplateDialog from "./SaveTemplateDialog";
 import { generateRecurringInstances, checkRecurringConflicts } from "@/hooks/useRecurringAppointments";
 import { Badge } from "@/components/ui/badge";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import WorkerSuggestions from "./WorkerSuggestions";
 
 interface AppointmentDialogProps {
   open: boolean;
@@ -716,6 +717,18 @@ export default function AppointmentDialog({
               </Select>
             </div>
           </FieldPresenceWrapper>
+
+          {formData.service_order_id && (
+            <WorkerSuggestions
+              serviceOrderId={formData.service_order_id}
+              onSelectWorker={(workerId) => {
+                setFormData({ ...formData, assigned_to: workerId });
+                setCurrentField("assigned_to");
+                updateField("assigned_to");
+              }}
+              selectedWorkerId={formData.assigned_to}
+            />
+          )}
 
           <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
             <div className="space-y-2">
