@@ -415,70 +415,25 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
                     </FieldPresenceWrapper>
                   </div>
 
-                  {/* Trading Name - Always show for companies */}
+                  {/* Trading Name - Always editable input for companies */}
                   <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
                     <div className="space-y-2">
                       <Label htmlFor="tradingName">Trading Name *</Label>
-                      {abnValidated && (formData.legalName || availableTradingNames.length > 0) ? (
-                        <Select
-                          value={formData.tradingName}
-                          onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
-                          required
-                        >
-                          <SelectTrigger 
-                            id="tradingName"
-                            className="bg-background z-50"
-                            onFocus={() => {
-                              setCurrentField("tradingName");
-                              updateField("tradingName");
-                            }}
-                            onBlur={() => {
-                              setCurrentField("");
-                              updateField("");
-                            }}
-                          >
-                            <SelectValue placeholder="Select a name" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-background border border-border shadow-lg z-[100]">
-                            {formData.legalName && (
-                              <SelectItem 
-                                key={formData.legalName} 
-                                value={formData.legalName}
-                                className="cursor-pointer hover:bg-accent"
-                              >
-                                {formData.legalName} <span className="text-muted-foreground text-xs">(Legal Name)</span>
-                              </SelectItem>
-                            )}
-                            {availableTradingNames.map((name) => (
-                              <SelectItem 
-                                key={name} 
-                                value={name}
-                                className="cursor-pointer hover:bg-accent"
-                              >
-                                {name} <span className="text-muted-foreground text-xs">(Trading Name)</span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          id="tradingName"
-                          value={formData.tradingName}
-                          onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
-                          onFocus={() => {
-                            setCurrentField("tradingName");
-                            updateField("tradingName");
-                          }}
-                          onBlur={() => {
-                            setCurrentField("");
-                            updateField("");
-                          }}
-                          placeholder={abnValidated ? "No trading names found" : "Enter trading name or validate ABN"}
-                          disabled={abnValidated && availableTradingNames.length === 0}
-                          className={abnValidated && availableTradingNames.length === 0 ? "bg-muted" : ""}
-                          required
-                        />
-                      )}
+                      <Input
+                        id="tradingName"
+                        value={formData.tradingName}
+                        onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("tradingName");
+                          updateField("tradingName");
+                        }}
+                        onBlur={() => {
+                          setCurrentField("");
+                          updateField("");
+                        }}
+                        placeholder="Enter trading name"
+                        required
+                      />
                     </div>
                   </FieldPresenceWrapper>
                 </>
