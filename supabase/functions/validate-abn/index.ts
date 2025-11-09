@@ -92,13 +92,14 @@ serve(async (req) => {
       throw new Error('No business entity found for this ABN');
     }
 
-    // Extract ABN status - it's an attribute on the ABN tag, not identifierStatus
-    const abnTagMatch = xmlText.match(/<ABN[^>]*>/i);
-    console.log('ABN tag:', abnTagMatch ? abnTagMatch[0] : 'not found');
-    
-    // The status is typically in identifierStatus within the ABN tag
-    const identifierStatusMatch = xmlText.match(/<identifierStatus>([^<]*)<\/identifierStatus>/i);
-    const abn_status = identifierStatusMatch ? identifierStatusMatch[1].trim() : null;
+    // Extract ABN status from entityStatusCode
+    const entityStatusMatch = xmlText.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
+    let abn_status = null;
+    if (entityStatusMatch) {
+      const entityStatusSection = entityStatusMatch[1];
+      const statusCodeMatch = entityStatusSection.match(/<entityStatusCode>([^<]*)<\/entityStatusCode>/i);
+      abn_status = statusCodeMatch ? statusCodeMatch[1].trim() : null;
+    }
     
     console.log('ABN status:', abn_status);
     
@@ -146,12 +147,17 @@ serve(async (req) => {
     }
     console.log('Entity type:', entityType);
 
-    // Extract GST registration
-    const gstValue = extractXMLValue(xmlText, 'effectiveTo');
-    // If GST effectiveTo is empty/null, it means GST is currently active
-    const gstFromDate = extractXMLValue(xmlText, 'effectiveFrom');
-    const gstRegistered = gstFromDate !== null && gstValue === null;
-    console.log('GST registered:', gstRegistered, 'effectiveFrom:', gstFromDate, 'effectiveTo:', gstValue);
+    // Extract GST registration - look for goodsAndServicesTax section
+    const gstMatch = xmlText.match(/<goodsAndServicesTax[^>]*>([\s\S]*?)<\/goodsAndServicesTax>/i);
+    let gstRegistered = false;
+    if (gstMatch) {
+      const gstSection = gstMatch[1];
+      const gstFromDate = extractXMLValue(gstSection, 'effectiveFrom');
+      const gstToDate = extractXMLValue(gstSection, 'effectiveTo');
+      // GST is active if effectiveFrom exists and effectiveTo is either null, empty, or 0001-01-01
+      gstRegistered = gstFromDate !== null && (!gstToDate || gstToDate === '0001-01-01');
+      console.log('GST registered:', gstRegistered, 'effectiveFrom:', gstFromDate, 'effectiveTo:', gstToDate);
+    }
 
     // Extract last updated date
     const recordLastUpdatedDate = extractXMLValue(xmlText, 'recordLastUpdatedDate');
