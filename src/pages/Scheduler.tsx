@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
 import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
+import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
@@ -23,7 +24,7 @@ import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
 import { toast } from "sonner";
 
 export default function Scheduler() {
-  const [viewType, setViewType] = useState<"day" | "week" | "month">("week");
+  const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
@@ -396,6 +397,7 @@ export default function Scheduler() {
                   <TabsTrigger value="day">Day</TabsTrigger>
                   <TabsTrigger value="week">Week</TabsTrigger>
                   <TabsTrigger value="month">Month</TabsTrigger>
+                  <TabsTrigger value="kanban">Kanban</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -436,6 +438,12 @@ export default function Scheduler() {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
                     }}
+                  />
+                )}
+                {viewType === "kanban" && (
+                  <KanbanBoardView
+                    appointments={appointments}
+                    onAppointmentClick={(id) => setSelectedAppointment(id)}
                   />
                 )}
               </>
