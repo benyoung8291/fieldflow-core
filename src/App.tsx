@@ -29,6 +29,8 @@ import Analytics from "./pages/Analytics";
 import QuotePipeline from "./pages/QuotePipeline";
 import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
+import Skills from "./pages/Skills";
+import TrainingMatrix from "./pages/TrainingMatrix";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +82,8 @@ const App = () => (
           <Route path="/leads/:id" element={<ProtectedRoute><LeadDetails /></ProtectedRoute>} />
           <Route path="/workers" element={<ProtectedRoute><Workers /></ProtectedRoute>} />
           <Route path="/workers/:id" element={<ProtectedRoute><WorkerDetails /></ProtectedRoute>} />
+          <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
+          <Route path="/training-matrix" element={<ProtectedRoute><TrainingMatrix /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/pipeline" element={<ProtectedRoute><QuotePipeline /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

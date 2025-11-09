@@ -1879,6 +1879,27 @@ export type Database = {
           },
         ]
       }
+      service_order_skills: {
+        Row: {
+          created_at: string | null
+          id: string
+          service_order_id: string
+          skill_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          service_order_id: string
+          skill_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          service_order_id?: string
+          skill_id?: string
+        }
+        Relationships: []
+      }
       service_order_templates: {
         Row: {
           billing_type: string | null
@@ -2129,6 +2150,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      skills: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       task_checklist_items: {
         Row: {
@@ -2554,6 +2608,177 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      worker_certificates: {
+        Row: {
+          certificate_name: string
+          certificate_number: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          issue_date: string | null
+          issuing_organization: string | null
+          notes: string | null
+          status: string | null
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          certificate_name: string
+          certificate_number?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_organization?: string | null
+          notes?: string | null
+          status?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          certificate_name?: string
+          certificate_number?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_organization?: string | null
+          notes?: string | null
+          status?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      worker_licenses: {
+        Row: {
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          issue_date: string | null
+          issuing_authority: string | null
+          license_name: string
+          license_number: string | null
+          notes: string | null
+          status: string | null
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_authority?: string | null
+          license_name: string
+          license_number?: string | null
+          notes?: string | null
+          status?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_authority?: string | null
+          license_name?: string
+          license_number?: string | null
+          notes?: string | null
+          status?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      worker_skills: {
+        Row: {
+          created_at: string | null
+          date_acquired: string | null
+          id: string
+          notes: string | null
+          proficiency_level: string | null
+          skill_id: string
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date_acquired?: string | null
+          id?: string
+          notes?: string | null
+          proficiency_level?: string | null
+          skill_id: string
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date_acquired?: string | null
+          id?: string
+          notes?: string | null
+          proficiency_level?: string | null
+          skill_id?: string
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      worker_training: {
+        Row: {
+          completion_date: string | null
+          created_at: string | null
+          expiry_date: string | null
+          hours_completed: number | null
+          id: string
+          notes: string | null
+          status: string | null
+          tenant_id: string
+          training_name: string
+          training_provider: string | null
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          completion_date?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          hours_completed?: number | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          tenant_id: string
+          training_name: string
+          training_provider?: string | null
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          completion_date?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          hours_completed?: number | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          tenant_id?: string
+          training_name?: string
+          training_provider?: string | null
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

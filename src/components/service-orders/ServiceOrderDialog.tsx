@@ -21,6 +21,7 @@ import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
 import QuickContactDialog from "@/components/customers/QuickContactDialog";
 import PriceBookDialog from "@/components/quotes/PriceBookDialog";
 import { Badge } from "@/components/ui/badge";
+import SkillsMultiSelect from "@/components/skills/SkillsMultiSelect";
 
 interface LineItem {
   id?: string;
@@ -70,6 +71,7 @@ export default function ServiceOrderDialog({
   const [quickLocationOpen, setQuickLocationOpen] = useState(false);
   const [quickContactOpen, setQuickContactOpen] = useState(false);
   const [taxRate, setTaxRate] = useState<number>(10);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
     page: "service-order-dialog",
@@ -221,6 +223,16 @@ export default function ServiceOrderDialog({
         .select("id, title, start_time, status")
         .eq("service_order_id", orderId)
         .order("start_time");
+
+      // Fetch required skills
+      const { data: skillsData } = await supabase
+        .from("service_order_skills")
+        .select("skill_id")
+        .eq("service_order_id", orderId);
+
+      if (skillsData) {
+        setSelectedSkills(skillsData.map((s: any) => s.skill_id));
+      }
       
       if (orderData) {
         setFormData({
@@ -291,6 +303,7 @@ export default function ServiceOrderDialog({
     setLineItems([]);
     setAttachments([]);
     setAppointments([]);
+    setSelectedSkills([]);
     setProjects([]);
     setLocations([]);
     setContacts([]);
@@ -572,6 +585,29 @@ export default function ServiceOrderDialog({
           .insert(lineItemsData);
 
         if (lineError) throw lineError;
+      }
+
+      // Handle skills
+      if (orderId) {
+        // Delete existing skills
+        await supabase
+          .from("service_order_skills")
+          .delete()
+          .eq("service_order_id", orderId);
+      }
+
+      // Insert new skills
+      if (selectedSkills.length > 0) {
+        const skillsData = selectedSkills.map((skillId) => ({
+          service_order_id: savedOrderId,
+          skill_id: skillId,
+        }));
+
+        const { error: skillsError } = await supabase
+          .from("service_order_skills")
+          .insert(skillsData);
+
+        if (skillsError) throw skillsError;
       }
 
       toast({ title: orderId ? "Service order updated successfully" : "Service order created successfully" });
@@ -915,18 +951,16 @@ export default function ServiceOrderDialog({
                     </div>
                   </FieldPresenceWrapper>
 
-                  <FieldPresenceWrapper fieldName="skill_required" onlineUsers={onlineUsers}>
+                  <FieldPresenceWrapper fieldName="required_skills" onlineUsers={onlineUsers}>
                     <div className="space-y-2">
-                      <Label htmlFor="skill_required">Skill Required</Label>
-                      <Input
-                        id="skill_required"
-                        value={formData.skill_required}
-                        onChange={(e) => setFormData({ ...formData, skill_required: e.target.value })}
-                        onFocus={() => {
-                          setCurrentField("skill_required");
-                          updateField("skill_required");
+                      <Label htmlFor="required_skills">Required Skills</Label>
+                      <SkillsMultiSelect
+                        value={selectedSkills}
+                        onChange={(skills) => {
+                          setSelectedSkills(skills);
+                          setCurrentField("required_skills");
+                          updateField("required_skills");
                         }}
-                        placeholder="e.g., Electrician"
                       />
                     </div>
                   </FieldPresenceWrapper>
