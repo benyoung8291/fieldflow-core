@@ -29,7 +29,7 @@ serve(async (req) => {
       .select(`
         *,
         customers!service_orders_customer_id_fkey(address, city, state),
-        customer_locations!service_orders_customer_location_id_fkey(address, latitude, longitude)
+        customer_locations:customer_location_id(address, latitude, longitude)
       `)
       .eq("id", serviceOrderId)
       .maybeSingle();
