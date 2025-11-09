@@ -17,9 +17,11 @@ import {
   Download,
   Lock,
   Mail,
+  RefreshCw,
 } from "lucide-react";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
+import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -41,7 +43,6 @@ export default function QuoteDetails() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [convertType, setConvertType] = useState<"service_order" | "project">("service_order");
 
   const { data: quote, isLoading } = useQuery({
     queryKey: ["quote", id],
@@ -147,90 +148,6 @@ export default function QuoteDetails() {
     }
   };
 
-  const handleConvert = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.tenant_id) throw new Error("Tenant not found");
-
-      if (convertType === "service_order") {
-        const { data: newOrder, error } = await supabase
-          .from("service_orders")
-          .insert([
-            {
-              tenant_id: profile.tenant_id,
-              customer_id: quote.customer_id,
-              title: quote.title,
-              description: quote.description,
-              order_number: `SO-${Date.now()}`,
-              created_by: user.id,
-              status: "draft",
-            },
-          ])
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        await supabase
-          .from("quotes")
-          .update({
-            status: "converted",
-            converted_to_service_order_id: newOrder.id,
-          })
-          .eq("id", id);
-
-        toast({ title: "Quote converted to service order" });
-        navigate("/service-orders");
-      } else {
-        const { data: newProject, error } = await supabase
-          .from("projects")
-          .insert([
-            {
-              tenant_id: profile.tenant_id,
-              customer_id: quote.customer_id,
-              name: quote.title,
-              description: quote.description,
-              budget: quote.total_amount,
-              created_by: user.id,
-              status: "planning",
-            },
-          ])
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        await supabase
-          .from("quotes")
-          .update({
-            status: "converted",
-            converted_to_project_id: newProject.id,
-          })
-          .eq("id", id);
-
-        toast({ title: "Quote converted to project" });
-        navigate("/projects");
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["quote", id] });
-      queryClient.invalidateQueries({ queryKey: ["quotes"] });
-    } catch (error: any) {
-      toast({
-        title: "Error converting quote",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -300,15 +217,13 @@ export default function QuoteDetails() {
                 </Button>
               </>
             )}
-            {(quote.status === "approved" || quote.status === "sent") && !quote.converted_to_service_order_id && !quote.converted_to_project_id && (
-              <Button
-                onClick={() => {
-                  setConvertType("service_order");
-                  setConvertDialogOpen(true);
-                }}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Convert to Order
+            {(quote.status === "approved" || quote.status === "sent") && 
+             !quote.converted_to_service_order_id && 
+             !quote.converted_to_project_id && 
+             !quote.converted_to_contract_id && (
+              <Button onClick={() => setConvertDialogOpen(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Convert Quote
               </Button>
             )}
             <Button variant="outline" onClick={() => setPdfDialogOpen(true)}>
@@ -554,36 +469,12 @@ export default function QuoteDetails() {
         customerEmail={quote.customer?.email}
       />
 
-      <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Convert Quote</AlertDialogTitle>
-            <AlertDialogDescription>
-              Would you like to convert this quote to a service order or project?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex gap-2 my-4">
-            <Button
-              variant={convertType === "service_order" ? "default" : "outline"}
-              onClick={() => setConvertType("service_order")}
-              className="flex-1"
-            >
-              Service Order
-            </Button>
-            <Button
-              variant={convertType === "project" ? "default" : "outline"}
-              onClick={() => setConvertType("project")}
-              className="flex-1"
-            >
-              Project
-            </Button>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConvert}>Convert</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConvertQuoteDialog
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        quote={quote}
+        lineItems={lineItems || []}
+      />
     </DashboardLayout>
   );
 }

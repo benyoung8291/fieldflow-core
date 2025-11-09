@@ -1332,6 +1332,7 @@ export type Database = {
           approved_at: string | null
           archived_at: string | null
           archived_by: string | null
+          converted_to_contract_id: string | null
           converted_to_project_id: string | null
           converted_to_service_order_id: string | null
           created_at: string | null
@@ -1365,6 +1366,7 @@ export type Database = {
           approved_at?: string | null
           archived_at?: string | null
           archived_by?: string | null
+          converted_to_contract_id?: string | null
           converted_to_project_id?: string | null
           converted_to_service_order_id?: string | null
           created_at?: string | null
@@ -1398,6 +1400,7 @@ export type Database = {
           approved_at?: string | null
           archived_at?: string | null
           archived_by?: string | null
+          converted_to_contract_id?: string | null
           converted_to_project_id?: string | null
           converted_to_service_order_id?: string | null
           created_at?: string | null
@@ -1429,6 +1432,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "quotes_converted_to_contract_id_fkey"
+            columns: ["converted_to_contract_id"]
+            isOneToOne: false
+            referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "quotes_duplicated_from_quote_id_fkey"
             columns: ["duplicated_from_quote_id"]
             isOneToOne: false
@@ -1440,6 +1450,146 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_contract_line_items: {
+        Row: {
+          contract_id: string
+          created_at: string | null
+          description: string
+          first_generation_date: string
+          generation_day_of_month: number | null
+          generation_day_of_week: number | null
+          id: string
+          is_active: boolean | null
+          item_order: number
+          last_generated_date: string | null
+          line_total: number
+          next_generation_date: string | null
+          notes: string | null
+          quantity: number
+          recurrence_frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          unit_price: number
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string | null
+          description: string
+          first_generation_date: string
+          generation_day_of_month?: number | null
+          generation_day_of_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          item_order?: number
+          last_generated_date?: string | null
+          line_total?: number
+          next_generation_date?: string | null
+          notes?: string | null
+          quantity?: number
+          recurrence_frequency?: Database["public"]["Enums"]["recurrence_frequency"]
+          unit_price?: number
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string | null
+          description?: string
+          first_generation_date?: string
+          generation_day_of_month?: number | null
+          generation_day_of_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          item_order?: number
+          last_generated_date?: string | null
+          line_total?: number
+          next_generation_date?: string | null
+          notes?: string | null
+          quantity?: number
+          recurrence_frequency?: Database["public"]["Enums"]["recurrence_frequency"]
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contract_line_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_contracts: {
+        Row: {
+          auto_generate: boolean | null
+          billing_frequency: string | null
+          contract_number: string
+          created_at: string | null
+          created_by: string
+          customer_id: string
+          description: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          quote_id: string | null
+          start_date: string
+          status: string
+          tenant_id: string
+          title: string
+          total_contract_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          auto_generate?: boolean | null
+          billing_frequency?: string | null
+          contract_number: string
+          created_at?: string | null
+          created_by: string
+          customer_id: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          quote_id?: string | null
+          start_date: string
+          status?: string
+          tenant_id: string
+          title: string
+          total_contract_value?: number
+          updated_at?: string | null
+        }
+        Update: {
+          auto_generate?: boolean | null
+          billing_frequency?: string | null
+          contract_number?: string
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          quote_id?: string | null
+          start_date?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          total_contract_value?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contracts_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -1809,6 +1959,15 @@ export type Database = {
         | "checked_in"
         | "completed"
         | "cancelled"
+      recurrence_frequency:
+        | "daily"
+        | "weekly"
+        | "bi_weekly"
+        | "monthly"
+        | "quarterly"
+        | "semi_annually"
+        | "annually"
+        | "one_time"
       service_order_status:
         | "draft"
         | "scheduled"
@@ -1957,6 +2116,16 @@ export const Constants = {
         "checked_in",
         "completed",
         "cancelled",
+      ],
+      recurrence_frequency: [
+        "daily",
+        "weekly",
+        "bi_weekly",
+        "monthly",
+        "quarterly",
+        "semi_annually",
+        "annually",
+        "one_time",
       ],
       service_order_status: [
         "draft",
