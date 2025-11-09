@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen, Upload, X, FileText } from "lucide-react";
+import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen, Upload, X, FileText, Sparkles, UserPlus } from "lucide-react";
 import { z } from "zod";
 import PriceBookDialog from "./PriceBookDialog";
+import AILineItemMatcher from "./AILineItemMatcher";
+import CreateLeadDialog from "../leads/CreateLeadDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 
@@ -21,7 +24,6 @@ const quoteSchema = z.object({
   description: z.string().max(1000, "Description must be less than 1000 characters").optional(),
   valid_until: z.string().optional(),
   tax_rate: z.string().optional(),
-  discount_amount: z.string().optional(),
   notes: z.string().max(2000, "Notes must be less than 2000 characters").optional(),
   terms_conditions: z.string().max(2000, "Terms must be less than 2000 characters").optional(),
 }).refine((data) => data.customer_id || data.lead_id, {
@@ -59,6 +61,9 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   const [priceBookOpen, setPriceBookOpen] = useState(false);
   const [selectedParentIndex, setSelectedParentIndex] = useState<number | null>(null);
   const [isComplexQuote, setIsComplexQuote] = useState(false);
+  const [aiMatcherOpen, setAiMatcherOpen] = useState(false);
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [tenantId, setTenantId] = useState("");
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -67,7 +72,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     description: "",
     valid_until: "",
     tax_rate: "10",
-    discount_amount: "0",
     notes: "",
     terms_conditions: "",
     internal_notes: "",
@@ -120,13 +124,35 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   useEffect(() => {
     if (open) {
       fetchCustomersAndLeads();
+      fetchTenantId();
       if (quoteId) {
         fetchQuote();
       } else {
         resetForm();
+        // Set default valid_until to 30 days from now
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 30);
+        setFormData(prev => ({
+          ...prev,
+          valid_until: defaultDate.toISOString().split('T')[0]
+        }));
       }
     }
   }, [open, quoteId]);
+
+  const fetchTenantId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+      if (profile?.tenant_id) {
+        setTenantId(profile.tenant_id);
+      }
+    }
+  };
 
   const fetchCustomersAndLeads = async () => {
     const { data: customersData, error: customersError } = await supabase
@@ -189,7 +215,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         description: quoteData.description || "",
         valid_until: quoteData.valid_until || "",
         tax_rate: quoteData.tax_rate?.toString() || "10",
-        discount_amount: quoteData.discount_amount?.toString() || "0",
         notes: quoteData.notes || "",
         terms_conditions: quoteData.terms_conditions || "",
         internal_notes: quoteData.internal_notes || "",
@@ -243,6 +268,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   };
 
   const resetForm = () => {
+    setIsForLead(false);
+    setIsComplexQuote(false);
     setFormData({
       customer_id: "",
       lead_id: "",
@@ -250,7 +277,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       description: "",
       valid_until: "",
       tax_rate: "10",
-      discount_amount: "0",
       notes: "",
       terms_conditions: "",
       internal_notes: "",
@@ -534,8 +560,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     const subtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
     const taxRate = parseFloat(formData.tax_rate) || 0;
     const taxAmount = (subtotal * taxRate) / 100;
-    const discount = parseFloat(formData.discount_amount) || 0;
-    const total = subtotal + taxAmount - discount;
+    const total = subtotal + taxAmount;
 
     return { subtotal, taxAmount, total };
   };
@@ -586,7 +611,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         subtotal,
         tax_rate: parseFloat(formData.tax_rate) || 0,
         tax_amount: taxAmount,
-        discount_amount: parseFloat(formData.discount_amount) || 0,
         total_amount: total,
         notes: formData.notes || null,
         terms_conditions: formData.terms_conditions || null,
@@ -738,7 +762,20 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
+                  {isForLead && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreateLeadOpen(true)}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Create Lead
+                    </Button>
+                  )}
+                </div>
                 <Select
                   value={isForLead ? formData.lead_id : formData.customer_id}
                   onValueChange={(value) => setFormData({ 
@@ -798,12 +835,10 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={2}
-                className={errors.description ? "border-red-500" : ""}
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                placeholder="Enter a description..."
               />
               {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
             </div>
@@ -831,25 +866,10 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                   </Select>
                 )}
               </div>
-              <Textarea
-                id="customer_message"
+              <RichTextEditor
                 value={formData.customer_message}
-                onChange={(e) => setFormData({ ...formData, customer_message: e.target.value })}
-                rows={8}
-                placeholder="Thank you for the opportunity to quote...
-
-SCOPE OF WORKS:
-- Item 1
-- Item 2
-
-INCLUSIONS:
-- Included item 1
-
-EXCLUSIONS:
-- Excluded item 1
-
-PRODUCTS:
-- Product 1"
+                onChange={(value) => setFormData({ ...formData, customer_message: value })}
+                placeholder="Thank you for the opportunity to quote..."
               />
               <p className="text-xs text-muted-foreground">
                 This message will appear on the PDF above the line items
@@ -1137,16 +1157,6 @@ PRODUCTS:
                   onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="discount_amount">Discount ($)</Label>
-                <Input
-                  id="discount_amount"
-                  type="number"
-                  step="0.01"
-                  value={formData.discount_amount}
-                  onChange={(e) => setFormData({ ...formData, discount_amount: e.target.value })}
-                />
-              </div>
             </div>
 
             <div className="bg-muted p-4 rounded-lg space-y-2">
@@ -1158,10 +1168,6 @@ PRODUCTS:
                 <span>Tax ({formData.tax_rate}%):</span>
                 <span className="font-medium">${taxAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Discount:</span>
-                <span className="font-medium">-${parseFloat(formData.discount_amount || "0").toFixed(2)}</span>
-              </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
                 <span>${total.toFixed(2)}</span>
@@ -1170,11 +1176,10 @@ PRODUCTS:
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
+              <RichTextEditor
                 value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={2}
+                onChange={(value) => setFormData({ ...formData, notes: value })}
+                placeholder="Add notes..."
               />
             </div>
 
@@ -1201,11 +1206,10 @@ PRODUCTS:
                   </Select>
                 )}
               </div>
-              <Textarea
-                id="terms_conditions"
+              <RichTextEditor
                 value={formData.terms_conditions}
-                onChange={(e) => setFormData({ ...formData, terms_conditions: e.target.value })}
-                rows={3}
+                onChange={(value) => setFormData({ ...formData, terms_conditions: value })}
+                placeholder="Enter terms and conditions..."
               />
             </div>
 
@@ -1217,11 +1221,9 @@ PRODUCTS:
 
               <div className="space-y-2">
                 <Label htmlFor="internal_notes">Internal Notes</Label>
-                <Textarea
-                  id="internal_notes"
+                <RichTextEditor
                   value={formData.internal_notes}
-                  onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
-                  rows={3}
+                  onChange={(value) => setFormData({ ...formData, internal_notes: value })}
                   placeholder="Add internal notes, comments, or reminders..."
                 />
               </div>

@@ -129,3 +129,38 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Rich text editor styles */
+.rich-text-editor .ql-toolbar {
+  @apply rounded-t-md border-border bg-muted/50;
+}
+
+.rich-text-editor .ql-container {
+  @apply rounded-b-md border-border bg-background;
+  min-height: 120px;
+}
+
+.rich-text-editor .ql-editor {
+  @apply text-sm;
+  min-height: 120px;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+  @apply text-muted-foreground italic;
+}
+
+.dark .rich-text-editor .ql-toolbar {
+  @apply bg-muted/30;
+}
+
+.dark .rich-text-editor .ql-stroke {
+  @apply stroke-foreground;
+}
+
+.dark .rich-text-editor .ql-fill {
+  @apply fill-foreground;
+}
+
+.dark .rich-text-editor .ql-picker-label {
+  @apply text-foreground;
+}

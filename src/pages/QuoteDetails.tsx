@@ -398,12 +398,6 @@ export default function QuoteDetails() {
                   <span>Tax ({quote.tax_rate}%):</span>
                   <span className="font-medium">${quote.tax_amount.toFixed(2)}</span>
                 </div>
-                {quote.discount_amount > 0 && (
-                  <div className="flex justify-between">
-                    <span>Discount:</span>
-                    <span className="font-medium">-${quote.discount_amount.toFixed(2)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
                   <span>${quote.total_amount.toFixed(2)}</span>

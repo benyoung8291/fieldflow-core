@@ -123,7 +123,6 @@ export default function Quotes() {
         subtotal: quote.subtotal,
         tax_rate: quote.tax_rate,
         tax_amount: quote.tax_amount,
-        discount_amount: quote.discount_amount,
         total_amount: quote.total_amount,
         notes: quote.notes,
         terms_conditions: quote.terms_conditions,

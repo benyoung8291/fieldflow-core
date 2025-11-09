@@ -1247,7 +1247,6 @@ export type Database = {
           customer_id: string
           customer_message: string | null
           description: string | null
-          discount_amount: number | null
           duplicated_from_quote_id: string | null
           id: string
           internal_notes: string | null
@@ -1281,7 +1280,6 @@ export type Database = {
           customer_id: string
           customer_message?: string | null
           description?: string | null
-          discount_amount?: number | null
           duplicated_from_quote_id?: string | null
           id?: string
           internal_notes?: string | null
@@ -1315,7 +1313,6 @@ export type Database = {
           customer_id?: string
           customer_message?: string | null
           description?: string | null
-          discount_amount?: number | null
           duplicated_from_quote_id?: string | null
           id?: string
           internal_notes?: string | null
