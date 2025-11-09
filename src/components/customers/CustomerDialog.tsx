@@ -26,9 +26,10 @@ interface CustomerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customer?: any;
+  parentCustomerId?: string;
 }
 
-export default function CustomerDialog({ open, onOpenChange, customer }: CustomerDialogProps) {
+export default function CustomerDialog({ open, onOpenChange, customer, parentCustomerId }: CustomerDialogProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [validatingABN, setValidatingABN] = useState(false);
@@ -228,6 +229,7 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
         is_active: formData.isActive,
         notes: formData.notes || null,
         tenant_id: profile.tenant_id,
+        parent_customer_id: parentCustomerId || null,
       };
 
       if (customer) {
@@ -251,6 +253,7 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
 
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-sub-accounts"] });
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error saving customer:", error);
@@ -277,10 +280,10 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle>
-                {customer ? "Edit Customer" : "New Customer"}
+                {customer ? "Edit Customer" : parentCustomerId ? "New Sub-Account" : "New Customer"}
               </DialogTitle>
               <DialogDescription>
-                {customer ? "Update customer information and billing details" : "Add a new customer to your system"}
+                {customer ? "Update customer information and billing details" : parentCustomerId ? "Add a new sub-account under this customer" : "Add a new customer to your system"}
               </DialogDescription>
             </div>
             <PresenceIndicator users={onlineUsers} />

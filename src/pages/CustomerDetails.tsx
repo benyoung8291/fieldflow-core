@@ -29,6 +29,7 @@ export default function CustomerDetails() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [isSubAccountDialogOpen, setIsSubAccountDialogOpen] = useState(false);
 
   const { data: session } = useQuery({
     queryKey: ["session"],
@@ -452,7 +453,13 @@ export default function CustomerDetails() {
               </TabsContent>
 
               <TabsContent value="sub-accounts" className="space-y-4 mt-0">
-                <h3 className="text-lg font-semibold">Sub-Accounts</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Sub-Accounts</h3>
+                  <Button onClick={() => setIsSubAccountDialogOpen(true)} size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Sub-Account
+                  </Button>
+                </div>
                 {subAccounts.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No sub-accounts found for this customer.
@@ -509,6 +516,12 @@ export default function CustomerDetails() {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         customer={customer}
+      />
+
+      <CustomerDialog
+        open={isSubAccountDialogOpen}
+        onOpenChange={setIsSubAccountDialogOpen}
+        parentCustomerId={id}
       />
 
       <ContactDialog
