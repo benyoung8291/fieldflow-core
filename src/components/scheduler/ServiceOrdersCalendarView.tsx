@@ -128,11 +128,11 @@ export default function ServiceOrdersCalendarView({
                                       ).join(', ')}
                                     </span>
                                   </div>
-                                ) : apt.profiles && (
+                                ) : apt.assigned_to_profile && (
                                   <div className="flex items-center gap-1 text-xs">
                                     <User className="h-3 w-3" />
                                     <span className="truncate">
-                                      {apt.profiles.first_name} {apt.profiles.last_name}
+                                      {apt.assigned_to_profile.first_name} {apt.assigned_to_profile.last_name}
                                     </span>
                                   </div>
                                 )}

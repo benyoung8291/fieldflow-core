@@ -25,7 +25,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
         .from("appointments")
         .select(`
           *,
-          profiles!appointments_assigned_to_fkey(first_name, last_name, email)
+          assigned_to_profile:profiles!assigned_to(first_name, last_name, email)
         `)
         .eq("service_order_id", serviceOrderId)
         .order("start_time", { ascending: false });

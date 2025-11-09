@@ -191,11 +191,11 @@ function AppointmentCard({
             </span>
           </div>
 
-          {appointment.profiles && (
+          {appointment.assigned_to_profile && (
             <div className="flex items-center gap-1.5 text-[10px]">
               <User className="h-3 w-3" />
               <span className="truncate">
-                {appointment.profiles.first_name} {appointment.profiles.last_name}
+                {appointment.assigned_to_profile.first_name} {appointment.assigned_to_profile.last_name}
               </span>
             </div>
           )}
