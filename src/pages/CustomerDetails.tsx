@@ -13,6 +13,7 @@ import ContactDialog from "@/components/customers/ContactDialog";
 import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 
 const mockCustomer = {
   id: "1",
@@ -249,6 +250,7 @@ export default function CustomerDetails() {
                 <TabsTrigger value="locations">Locations</TabsTrigger>
                 <TabsTrigger value="service-history">Service History</TabsTrigger>
                 <TabsTrigger value="sub-accounts">Sub-Accounts</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
               </TabsList>
             </CardHeader>
 
@@ -479,6 +481,10 @@ export default function CustomerDetails() {
                     </Card>
                   ))}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="tasks" className="mt-0">
+                <LinkedTasksList linkedModule="customer" linkedRecordId={id!} />
               </TabsContent>
             </CardContent>
           </Tabs>

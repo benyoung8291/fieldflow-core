@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Edit, Calendar, DollarSign, TrendingUp, ClipboardList, Users } from "lucide-react";
 import ProjectDialog from "@/components/projects/ProjectDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
@@ -233,6 +234,7 @@ export default function ProjectDetails() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="service-orders">Service Orders ({totalServiceOrders})</TabsTrigger>
             <TabsTrigger value="appointments">Appointments ({appointments?.length || 0})</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -361,6 +363,10 @@ export default function ProjectDetails() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <LinkedTasksList linkedModule="project" linkedRecordId={id!} />
           </TabsContent>
         </Tabs>
       </div>

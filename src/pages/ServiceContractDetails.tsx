@@ -18,6 +18,7 @@ import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 
 export default function ServiceContractDetails() {
   const { id } = useParams();
@@ -228,6 +229,7 @@ export default function ServiceContractDetails() {
           <TabsTrigger value="service-orders">Service Orders</TabsTrigger>
           <TabsTrigger value="details">Contract Details</TabsTrigger>
           <TabsTrigger value="audit">Change Log</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="line-items" className="space-y-4">
@@ -554,6 +556,10 @@ export default function ServiceContractDetails() {
               <AuditTimeline recordId={id!} tableName="service_contracts" />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="tasks">
+          <LinkedTasksList linkedModule="service_contract" linkedRecordId={id!} />
         </TabsContent>
       </Tabs>
     </div>

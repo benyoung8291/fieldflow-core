@@ -23,6 +23,7 @@ import QuoteDialog from "@/components/quotes/QuoteDialog";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
 import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -465,6 +466,8 @@ export default function QuoteDetails() {
           </div>
         </div>
       </div>
+
+      <LinkedTasksList linkedModule="quote" linkedRecordId={id!} />
 
       <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quoteId={id} />
 
