@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import GPSCheckInDialog from "./GPSCheckInDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import DroppableTimeSlot from "./DroppableTimeSlot";
+import DraggableAppointment from "./DraggableAppointment";
 
 interface SchedulerDayViewProps {
   currentDate: Date;
@@ -86,80 +88,25 @@ export default function SchedulerDayView({
                 </div>
 
                 {/* Appointments in this hour */}
-                <div className="p-2 min-h-[60px] space-y-2">
+                <DroppableTimeSlot
+                  id={`slot-day-${hour}`}
+                  date={currentDate}
+                  workerId={null}
+                  hour={hour}
+                  className="p-2 min-h-[60px] space-y-2"
+                >
                   {hourAppointments.map(apt => (
-                    <div
+                    <DraggableAppointment
                       key={apt.id}
-                      className={cn(
-                        "p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow group relative",
-                        statusColors[apt.status as keyof typeof statusColors]
-                      )}
-                      onClick={() => onAppointmentClick(apt.id)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm truncate">{apt.title}</h4>
-                          <div className="flex items-center gap-3 mt-2 text-xs">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {format(new Date(apt.start_time), "HH:mm")} - 
-                              {format(new Date(apt.end_time), "HH:mm")}
-                            </span>
-                            {apt.profiles && (
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {apt.profiles.first_name} {apt.profiles.last_name}
-                              </span>
-                            )}
-                            {apt.location_address && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {apt.location_address.split(',')[0]}
-                              </span>
-                            )}
-                          </div>
-                          {apt.service_orders && (
-                            <div className="mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {apt.service_orders.order_number}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onEditAppointment(apt.id);
-                              }}>
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleGPSCheckIn(apt);
-                              }}>
-                                {apt.check_in_time ? "Check Out" : "GPS Check In"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onAppointmentClick(apt.id);
-                              }}>
-                                View History
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </div>
+                      appointment={apt}
+                      statusColor={statusColors[apt.status as keyof typeof statusColors]}
+                      onEdit={() => onEditAppointment(apt.id)}
+                      onGPSCheckIn={() => handleGPSCheckIn(apt)}
+                      onViewHistory={() => onAppointmentClick(apt.id)}
+                      showFullDetails
+                    />
                   ))}
-                </div>
+                </DroppableTimeSlot>
               </div>
             );
           })}

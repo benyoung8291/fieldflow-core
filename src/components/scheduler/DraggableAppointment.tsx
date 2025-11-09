@@ -1,0 +1,133 @@
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { format } from "date-fns";
+import { Clock, MapPin, MoreVertical } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface DraggableAppointmentProps {
+  appointment: any;
+  statusColor: string;
+  onEdit: () => void;
+  onGPSCheckIn: () => void;
+  onViewHistory: () => void;
+  showFullDetails?: boolean;
+}
+
+export default function DraggableAppointment({
+  appointment,
+  statusColor,
+  onEdit,
+  onGPSCheckIn,
+  onViewHistory,
+  showFullDetails = false,
+}: DraggableAppointmentProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `appointment-${appointment.id}`,
+    data: {
+      type: "appointment",
+      appointment,
+    },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={cn(
+        "p-2 rounded text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group relative",
+        statusColor,
+        isDragging && "opacity-50 cursor-grabbing"
+      )}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('[role="menuitem"]')) {
+          return;
+        }
+        onViewHistory();
+      }}
+    >
+      <div className={cn(!showFullDetails && "font-medium truncate", showFullDetails && "space-y-2")}>
+        {showFullDetails ? (
+          <>
+            <h4 className="font-semibold text-sm truncate">{appointment.title}</h4>
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>
+                {format(new Date(appointment.start_time), "HH:mm")} - 
+                {format(new Date(appointment.end_time), "HH:mm")}
+              </span>
+            </div>
+            {appointment.location_address && (
+              <div className="flex items-center gap-1 text-[10px]">
+                <MapPin className="h-3 w-3" />
+                <span className="truncate">{appointment.location_address.split(',')[0]}</span>
+              </div>
+            )}
+            {appointment.service_orders && (
+              <Badge variant="outline" className="text-xs">
+                {appointment.service_orders.order_number}
+              </Badge>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="font-medium truncate">{appointment.title}</div>
+            <div className="flex items-center gap-1 mt-1">
+              <Clock className="h-3 w-3" />
+              <span>{format(new Date(appointment.start_time), "HH:mm")}</span>
+            </div>
+            {appointment.location_address && (
+              <div className="flex items-center gap-1 mt-1 text-[10px]">
+                <MapPin className="h-3 w-3" />
+                <span className="truncate">{appointment.location_address.split(',')[0]}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+              <MoreVertical className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              onGPSCheckIn();
+            }}>
+              {appointment.check_in_time ? "Check Out" : "GPS Check In"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              onViewHistory();
+            }}>
+              View History
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}

@@ -444,6 +444,7 @@ export type Database = {
           created_by: string
           customer_id: string
           description: string | null
+          estimated_hours: number | null
           fixed_amount: number | null
           hourly_rate: number | null
           id: string
@@ -464,6 +465,7 @@ export type Database = {
           created_by: string
           customer_id: string
           description?: string | null
+          estimated_hours?: number | null
           fixed_amount?: number | null
           hourly_rate?: number | null
           id?: string
@@ -484,6 +486,7 @@ export type Database = {
           created_by?: string
           customer_id?: string
           description?: string | null
+          estimated_hours?: number | null
           fixed_amount?: number | null
           hourly_rate?: number | null
           id?: string

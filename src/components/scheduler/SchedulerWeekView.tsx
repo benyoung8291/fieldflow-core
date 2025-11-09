@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import GPSCheckInDialog from "./GPSCheckInDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import DroppableTimeSlot from "./DroppableTimeSlot";
+import DraggableAppointment from "./DraggableAppointment";
 
 interface SchedulerWeekViewProps {
   currentDate: Date;
@@ -120,8 +122,11 @@ export default function SchedulerWeekView({
                 );
 
                 return (
-                  <div
+                  <DroppableTimeSlot
                     key={day.toISOString()}
+                    id={`slot-${worker.id || 'unassigned'}-${day.toISOString()}`}
+                    date={day}
+                    workerId={worker.id}
                     className={cn(
                       "min-h-[100px] p-2 border-2 border-dashed rounded-lg space-y-1",
                       isSameDay(day, new Date()) 
@@ -130,63 +135,21 @@ export default function SchedulerWeekView({
                     )}
                   >
                     {dayAppointments.map(apt => (
-                      <div
+                      <DraggableAppointment
                         key={apt.id}
-                        className={cn(
-                          "p-2 rounded text-xs cursor-pointer hover:shadow-md transition-shadow group relative",
-                          statusColors[apt.status as keyof typeof statusColors]
-                        )}
-                        onClick={() => onAppointmentClick(apt.id)}
-                      >
-                        <div className="font-medium truncate">{apt.title}</div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{format(new Date(apt.start_time), "HH:mm")}</span>
-                        </div>
-                        {apt.location_address && (
-                          <div className="flex items-center gap-1 mt-1 text-[10px]">
-                            <MapPin className="h-3 w-3" />
-                            <span className="truncate">{apt.location_address.split(',')[0]}</span>
-                          </div>
-                        )}
-                        
-                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onEditAppointment(apt.id);
-                              }}>
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleGPSCheckIn(apt);
-                              }}>
-                                {apt.check_in_time ? "Check Out" : "GPS Check In"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onAppointmentClick(apt.id);
-                              }}>
-                                View History
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
+                        appointment={apt}
+                        statusColor={statusColors[apt.status as keyof typeof statusColors]}
+                        onEdit={() => onEditAppointment(apt.id)}
+                        onGPSCheckIn={() => handleGPSCheckIn(apt)}
+                        onViewHistory={() => onAppointmentClick(apt.id)}
+                      />
                     ))}
                     {dayAppointments.length === 0 && (
                       <div className="text-xs text-muted-foreground text-center py-4">
-                        No appointments
+                        Drop here
                       </div>
                     )}
-                  </div>
+                  </DroppableTimeSlot>
                 );
               })}
             </div>

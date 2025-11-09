@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react";
-import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
@@ -16,7 +16,11 @@ import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
+import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
+import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
+import { toast } from "sonner";
 
 export default function Scheduler() {
   const [viewType, setViewType] = useState<"day" | "week" | "month">("week");
@@ -24,9 +28,11 @@ export default function Scheduler() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
   const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
+  const { checkConflict, checkAvailability } = useAppointmentConflicts();
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -111,6 +117,172 @@ export default function Scheduler() {
     }
   }, [dialogOpen]);
 
+  const createAppointmentMutation = useMutation({
+    mutationFn: async ({ 
+      serviceOrderId, 
+      startTime, 
+      endTime, 
+      workerId 
+    }: { 
+      serviceOrderId: string; 
+      startTime: Date; 
+      endTime: Date; 
+      workerId: string | null;
+    }) => {
+      const { data: serviceOrder } = await supabase
+        .from("service_orders")
+        .select("title, description, customer_id")
+        .eq("id", serviceOrderId)
+        .single();
+
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("address")
+        .eq("id", serviceOrder?.customer_id)
+        .single();
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const { error } = await supabase.from("appointments").insert({
+        tenant_id: profile?.tenant_id,
+        service_order_id: serviceOrderId,
+        title: serviceOrder?.title || "New Appointment",
+        description: serviceOrder?.description,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        assigned_to: workerId,
+        location_address: customer?.address,
+        status: "published",
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["service-orders-with-appointments"] });
+      toast.success("Appointment created successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create appointment");
+    },
+  });
+
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async ({ 
+      appointmentId, 
+      startTime, 
+      endTime, 
+      workerId 
+    }: { 
+      appointmentId: string; 
+      startTime: Date; 
+      endTime: Date; 
+      workerId: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          assigned_to: workerId,
+        })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointment updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update appointment");
+    },
+  });
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const draggedItem = active.data.current;
+    const dropTarget = over.data.current;
+
+    if (dropTarget?.type !== "time-slot") return;
+
+    const { date, workerId, hour } = dropTarget;
+
+    // Calculate start and end times
+    const startTime = hour !== undefined 
+      ? setMinutes(setHours(date, hour), 0)
+      : setHours(date, 9); // Default to 9 AM if no hour specified
+
+    const endTime = addHours(startTime, 2); // Default 2 hour appointment
+
+    // Handle dropping a service order
+    if (draggedItem?.type === "service-order") {
+      const serviceOrder = draggedItem.serviceOrder;
+
+      // Check conflicts and availability
+      if (workerId) {
+        const conflict = checkConflict(workerId, startTime, endTime);
+        if (conflict.hasConflict) {
+          toast.error(conflict.reason);
+          return;
+        }
+
+        const availability = checkAvailability(workerId, startTime, endTime);
+        if (!availability.isAvailable) {
+          toast.warning(availability.reason || "Worker may not be available");
+        }
+      }
+
+      createAppointmentMutation.mutate({
+        serviceOrderId: serviceOrder.id,
+        startTime,
+        endTime,
+        workerId,
+      });
+    }
+
+    // Handle moving an existing appointment
+    if (draggedItem?.type === "appointment") {
+      const appointment = draggedItem.appointment;
+
+      // Calculate duration
+      const originalStart = new Date(appointment.start_time);
+      const originalEnd = new Date(appointment.end_time);
+      const durationMs = originalEnd.getTime() - originalStart.getTime();
+      const newEndTime = new Date(startTime.getTime() + durationMs);
+
+      // Check conflicts and availability
+      if (workerId) {
+        const conflict = checkConflict(workerId, startTime, newEndTime, appointment.id);
+        if (conflict.hasConflict) {
+          toast.error(conflict.reason);
+          return;
+        }
+
+        const availability = checkAvailability(workerId, startTime, newEndTime);
+        if (!availability.isAvailable) {
+          toast.warning(availability.reason || "Worker may not be available");
+        }
+      }
+
+      updateAppointmentMutation.mutate({
+        appointmentId: appointment.id,
+        startTime,
+        endTime: newEndTime,
+        workerId,
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <RemoteCursors users={onlineUsers} />
@@ -129,8 +301,10 @@ export default function Scheduler() {
         appointmentId={editingAppointmentId}
         defaultDate={currentDate}
       />
-      
-      <div className="space-y-6">
+
+      <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
+        <div className="grid grid-cols-[1fr_350px] gap-6">
+          <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -299,7 +473,14 @@ export default function Scheduler() {
             </div>
           </CardContent>
         </Card>
-      </div>
+          </div>
+
+          {/* Draggable Service Orders Sidebar */}
+          <div>
+            <ServiceOrdersSidebar />
+          </div>
+        </div>
+      </DndContext>
     </DashboardLayout>
   );
 }
