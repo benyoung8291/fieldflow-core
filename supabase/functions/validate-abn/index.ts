@@ -104,7 +104,18 @@ serve(async (req) => {
     
     const businessEntitySection = businessEntityTag[1];
     console.log('BusinessEntity section extracted, length:', businessEntitySection.length);
-    console.log('BusinessEntity section content (first 1000 chars):', businessEntitySection.substring(0, 1000));
+    
+    // Log more content to see the businessName tags
+    console.log('BusinessEntity section content (chars 600-1600):', businessEntitySection.substring(600, 1600));
+    
+    // Test if businessName exists in the section
+    const hasBusinessName = businessEntitySection.includes('<businessName');
+    console.log('Contains <businessName tag:', hasBusinessName);
+    if (hasBusinessName) {
+      const firstBusinessNameIndex = businessEntitySection.indexOf('<businessName');
+      console.log('First businessName found at index:', firstBusinessNameIndex);
+      console.log('Content around first businessName:', businessEntitySection.substring(firstBusinessNameIndex, firstBusinessNameIndex + 300));
+    }
 
     // Extract ABN status from entityStatusCode - search within businessEntity section
     const entityStatusMatch = businessEntitySection.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
