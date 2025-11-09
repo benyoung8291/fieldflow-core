@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { UserPlus, Shield, KeyRound, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +26,8 @@ export const UserManagementTab = () => {
   const [newPassword, setNewPassword] = useState("");
   const [isWorkerSetupDialogOpen, setIsWorkerSetupDialogOpen] = useState(false);
   const [selectedWorkerUserId, setSelectedWorkerUserId] = useState<string | null>(null);
+  const [linkToExisting, setLinkToExisting] = useState(false);
+  const [selectedExistingWorkerId, setSelectedExistingWorkerId] = useState<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -70,6 +73,33 @@ export const UserManagementTab = () => {
 
       const { users } = await response.json();
       return users || [];
+    },
+    enabled: !!profile?.tenant_id && isAdmin,
+  });
+
+  // Fetch existing workers for linking
+  const { data: existingWorkers } = useQuery({
+    queryKey: ["existing-workers", profile?.tenant_id],
+    queryFn: async () => {
+      if (!profile?.tenant_id) return [];
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, phone")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("is_active", true);
+
+      if (error) throw error;
+
+      // Filter to only those with worker role
+      const { data: workerRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("role", "worker");
+
+      const workerUserIds = new Set(workerRoles?.map(r => r.user_id) || []);
+      return data?.filter(p => workerUserIds.has(p.id)) || [];
     },
     enabled: !!profile?.tenant_id && isAdmin,
   });
@@ -240,13 +270,79 @@ export const UserManagementTab = () => {
 
   const handleSetupAsWorker = (userId: string) => {
     setSelectedWorkerUserId(userId);
+    setLinkToExisting(false);
+    setSelectedExistingWorkerId(null);
     setIsWorkerSetupDialogOpen(true);
   };
 
   const confirmSetupAsWorker = () => {
     if (!selectedWorkerUserId) return;
-    setupAsWorkerMutation.mutate(selectedWorkerUserId);
+    
+    if (linkToExisting && selectedExistingWorkerId) {
+      // Copy worker profile data from existing worker
+      linkToExistingWorkerMutation.mutate({
+        userId: selectedWorkerUserId,
+        existingWorkerId: selectedExistingWorkerId,
+      });
+    } else {
+      // Create new worker profile
+      setupAsWorkerMutation.mutate(selectedWorkerUserId);
+    }
   };
+
+  const linkToExistingWorkerMutation = useMutation({
+    mutationFn: async ({ userId, existingWorkerId }: { userId: string; existingWorkerId: string }) => {
+      if (!profile?.tenant_id) throw new Error("No tenant ID");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get existing worker profile data
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("pay_rate_category_id, preferred_start_time, preferred_end_time, preferred_days")
+        .eq("id", existingWorkerId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the new user's profile with worker data
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          pay_rate_category_id: existingProfile.pay_rate_category_id,
+          preferred_start_time: existingProfile.preferred_start_time,
+          preferred_end_time: existingProfile.preferred_end_time,
+          preferred_days: existingProfile.preferred_days,
+        })
+        .eq("id", userId);
+
+      if (updateError) throw updateError;
+
+      // Assign worker role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: userId,
+          role: 'worker' as any,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+        } as any);
+
+      if (roleError) throw roleError;
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("User linked to existing worker profile");
+      setIsWorkerSetupDialogOpen(false);
+      setSelectedWorkerUserId(null);
+      setSelectedExistingWorkerId(null);
+      navigate(`/workers/${userId}`);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to link to existing worker");
+    },
+  });
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -472,37 +568,101 @@ export const UserManagementTab = () => {
       </Dialog>
 
       <Dialog open={isWorkerSetupDialogOpen} onOpenChange={setIsWorkerSetupDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Link User as Worker</DialogTitle>
             <DialogDescription>
-              This will assign the worker role to this user and allow you to set up their worker profile details (pay rate, availability, etc.).
+              Choose to create a new worker profile or link to an existing worker's settings
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card
+                className={`cursor-pointer transition-all ${
+                  !linkToExisting ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setLinkToExisting(false)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-base">Create New Profile</CardTitle>
+                  <CardDescription>
+                    Set up worker details from scratch
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Custom pay rate</li>
+                    <li>• Custom availability</li>
+                    <li>• Individual settings</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card
+                className={`cursor-pointer transition-all ${
+                  linkToExisting ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setLinkToExisting(true)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-base">Link to Existing</CardTitle>
+                  <CardDescription>
+                    Copy settings from another worker
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Same pay rate</li>
+                    <li>• Same availability</li>
+                    <li>• Quick setup</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+
+            {linkToExisting && (
+              <div className="space-y-2">
+                <Label>Select Existing Worker</Label>
+                <Select value={selectedExistingWorkerId || ""} onValueChange={setSelectedExistingWorkerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a worker to copy settings from" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {existingWorkers?.map((worker) => (
+                      <SelectItem key={worker.id} value={worker.id}>
+                        {worker.first_name} {worker.last_name} {worker.phone && `(${worker.phone})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="rounded-md bg-muted p-4">
               <p className="text-sm text-muted-foreground">
-                After linking, you'll be redirected to the worker profile page where you can:
+                {linkToExisting
+                  ? "The user will be assigned the worker role and their profile will be populated with settings from the selected worker."
+                  : "The user will be assigned the worker role and you'll be redirected to set up their profile details."}
               </p>
-              <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside space-y-1">
-                <li>Set pay rate category</li>
-                <li>Configure work availability</li>
-                <li>Add emergency contact details</li>
-                <li>Set tax and superannuation information</li>
-              </ul>
             </div>
+
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
                   setIsWorkerSetupDialogOpen(false);
                   setSelectedWorkerUserId(null);
+                  setLinkToExisting(false);
+                  setSelectedExistingWorkerId(null);
                 }}
               >
                 Cancel
               </Button>
-              <Button onClick={confirmSetupAsWorker}>
-                Continue to Setup
+              <Button
+                onClick={confirmSetupAsWorker}
+                disabled={linkToExisting && !selectedExistingWorkerId}
+              >
+                {linkToExisting ? "Link to Worker" : "Continue to Setup"}
               </Button>
             </div>
           </div>

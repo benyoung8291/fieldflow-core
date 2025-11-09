@@ -23,6 +23,7 @@ import MenuCustomizationTab from "@/components/settings/MenuCustomizationTab";
 import TaskTemplatesTab from "@/components/settings/TaskTemplatesTab";
 import { RolePermissionsTab } from "@/components/settings/RolePermissionsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
+import { ChangeLogTab } from "@/components/settings/ChangeLogTab";
 
 interface PayRateCategory {
   id: string;
@@ -179,6 +180,7 @@ export default function Settings() {
             <TabsTrigger value="quote-templates">Quote Templates</TabsTrigger>
             <TabsTrigger value="message-templates">Messages</TabsTrigger>
             <TabsTrigger value="terms-templates">Terms & Conditions</TabsTrigger>
+            <TabsTrigger value="changelog">Change Log</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
@@ -319,6 +321,14 @@ export default function Settings() {
             <Card>
               <CardContent className="pt-6">
                 <TermsTemplatesTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="changelog">
+            <Card>
+              <CardContent className="pt-6">
+                <ChangeLogTab />
               </CardContent>
             </Card>
           </TabsContent>
