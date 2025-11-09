@@ -24,7 +24,7 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks" as any)
-        .select("*, assigned:profiles!tasks_assigned_to_fkey(first_name, last_name)")
+        .select("*")
         .eq("linked_module", linkedModule)
         .eq("linked_record_id", linkedRecordId)
         .order("due_date", { ascending: true });
@@ -32,6 +32,24 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
       if (error) throw error;
       return data || [];
     },
+  });
+
+  // Fetch assigned user data separately
+  const { data: assignedUsers = [] } = useQuery({
+    queryKey: ["assigned-users", tasks.map((t: any) => t?.assigned_to).filter(Boolean)],
+    queryFn: async () => {
+      const userIds = [...new Set(tasks.map((t: any) => t?.assigned_to).filter(Boolean))];
+      if (userIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", userIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: tasks.length > 0,
   });
 
   const { data: workers = [] } = useQuery({
@@ -89,7 +107,13 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
     );
   }
 
-  if (tasks.length === 0) {
+  // Merge assigned user data with tasks
+  const tasksWithAssigned = tasks.map((task: any) => ({
+    ...task,
+    assigned: assignedUsers.find((u: any) => u.id === task.assigned_to)
+  }));
+
+  if (tasksWithAssigned.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -111,11 +135,11 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <CheckSquare className="h-5 w-5" />
-            Linked Tasks ({tasks.length})
+            Linked Tasks ({tasksWithAssigned.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {tasks.map((task: any) => (
+          {tasksWithAssigned.map((task: any) => (
             <div
               key={task.id}
               className="flex items-start justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"

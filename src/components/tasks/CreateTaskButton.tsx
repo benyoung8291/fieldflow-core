@@ -7,8 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface CreateTaskButtonProps {
-  linkedModule: string;
-  linkedRecordId: string;
+  linkedModule?: string;
+  linkedRecordId?: string;
   variant?: "default" | "outline" | "ghost" | "link" | "destructive" | "secondary";
   size?: "default" | "sm" | "lg" | "icon";
 }
@@ -57,8 +57,8 @@ export default function CreateTaskButton({
         assigned_to: taskData.assigned_to || null,
         due_date: taskData.due_date?.toISOString() || null,
         created_by: user.id,
-        linked_module: linkedModule,
-        linked_record_id: linkedRecordId,
+        linked_module: linkedModule || null,
+        linked_record_id: linkedRecordId || null,
       });
 
       if (error) throw error;

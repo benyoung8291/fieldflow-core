@@ -48,11 +48,7 @@ export default function Tasks() {
     queryFn: async () => {
       let query = supabase
         .from("tasks" as any)
-        .select(`
-          *,
-          assigned_user:assigned_to(id, first_name, last_name),
-          creator:created_by(first_name, last_name)
-        `)
+        .select("*")
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("priority", { ascending: false });
 
@@ -83,6 +79,30 @@ export default function Tasks() {
       return data || [];
     },
   });
+
+  // Fetch assigned users data
+  const { data: assignedUsersData = [] } = useQuery({
+    queryKey: ["assigned-users-data", tasks.map((t: any) => t?.assigned_to).filter(Boolean)],
+    queryFn: async () => {
+      const userIds = [...new Set(tasks.map((t: any) => t?.assigned_to).filter(Boolean))];
+      if (userIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", userIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: tasks.length > 0,
+  });
+
+  // Merge assigned user data with tasks
+  const tasksWithUsers = tasks.map((task: any) => ({
+    ...task,
+    assigned_user: assignedUsersData.find((u: any) => u.id === task.assigned_to)
+  }));
 
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: TaskFormData) => {
@@ -277,7 +297,7 @@ export default function Tasks() {
               </Card>
             ))}
           </div>
-        ) : tasks.length === 0 ? (
+        ) : tasksWithUsers.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No tasks found</p>
@@ -286,7 +306,7 @@ export default function Tasks() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {tasks.map((task: any) => (
+            {tasksWithUsers.map((task: any) => (
               <Card
                 key={task.id}
                 className="hover:shadow-md transition-shadow cursor-pointer"
@@ -371,6 +391,8 @@ export default function Tasks() {
           assigned_to: selectedTask.assigned_to || undefined,
           due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined,
         } : undefined}
+        linkedModule={selectedTask?.linked_module}
+        linkedRecordId={selectedTask?.linked_record_id}
         workers={workers}
       />
     </DashboardLayout>
