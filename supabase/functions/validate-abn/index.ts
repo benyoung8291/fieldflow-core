@@ -93,14 +93,8 @@ serve(async (req) => {
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
-    // Check if business entity exists - try matching any businessEntity variant
-    let businessEntityTag = xmlText.match(/<businessEntity202001[^>]*>([\s\S]+)<\/businessEntity202001>/i);
-    
-    // Fallback: try matching any businessEntity tag with digits
-    if (!businessEntityTag) {
-      console.log('No businessEntity202001, trying generic businessEntity pattern');
-      businessEntityTag = xmlText.match(/<businessEntity\d+[^>]*>([\s\S]+)<\/businessEntity\d+>/i);
-    }
+    // Check if business entity exists - the XML uses <businessEntity> not <businessEntity202001>
+    let businessEntityTag = xmlText.match(/<businessEntity>([\s\S]+)<\/businessEntity>/i);
     
     if (!businessEntityTag) {
       console.error('No businessEntity tag found in response');
