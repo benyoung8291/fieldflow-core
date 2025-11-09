@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Upload, X } from "lucide-react";
 
 export default function GeneralSettingsTab() {
   const queryClient = useQueryClient();
@@ -27,6 +28,8 @@ export default function GeneralSettingsTab() {
     secondaryColor: "",
     renewalEmail: "",
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["tenant-settings"],
@@ -64,6 +67,72 @@ export default function GeneralSettingsTab() {
       });
     }
   }, [settings]);
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.tenant_id}/logo.${fileExt}`;
+
+      // Delete old logo if exists
+      if (formData.logoUrl) {
+        const oldPath = formData.logoUrl.split('/company-logos/')[1];
+        if (oldPath) {
+          await supabase.storage.from('company-logos').remove([oldPath]);
+        }
+      }
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('company-logos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, logoUrl: publicUrl });
+      toast.success("Logo uploaded successfully");
+    } catch (error: any) {
+      toast.error(`Failed to upload logo: ${error.message}`);
+    } finally {
+      setUploadingLogo(false);
+      setLogoFile(null);
+    }
+  };
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error("File must be an image");
+        return;
+      }
+      setLogoFile(file);
+      handleLogoUpload(file);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData({ ...formData, logoUrl: "" });
+    setLogoFile(null);
+  };
 
   const updateSettingsMutation = useMutation({
     mutationFn: async () => {
@@ -295,17 +364,50 @@ export default function GeneralSettingsTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="logo-url">Logo URL</Label>
-            <Input
-              id="logo-url"
-              type="url"
-              placeholder="https://example.com/logo.png"
-              value={formData.logoUrl}
-              onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-            />
-            <p className="text-sm text-muted-foreground">
-              Upload your logo to a hosting service and paste the URL here
-            </p>
+            <Label>Company Logo</Label>
+            {formData.logoUrl ? (
+              <div className="space-y-2">
+                <div className="relative w-32 h-32 border rounded-lg overflow-hidden bg-muted">
+                  <img
+                    src={formData.logoUrl}
+                    alt="Company logo"
+                    className="w-full h-full object-contain"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6"
+                    onClick={handleRemoveLogo}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <Label htmlFor="logo-upload" className="cursor-pointer">
+                  <span className="text-sm text-muted-foreground">
+                    Click to upload or drag and drop
+                  </span>
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    PNG, JPG up to 5MB
+                  </span>
+                </Label>
+                <Input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoFileChange}
+                  disabled={uploadingLogo}
+                />
+              </div>
+            )}
+            {uploadingLogo && (
+              <p className="text-sm text-muted-foreground">Uploading...</p>
+            )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
