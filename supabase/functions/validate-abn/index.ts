@@ -77,16 +77,14 @@ serve(async (req) => {
 
     const xmlText = await response.text();
     console.log('ABR API Response received, length:', xmlText.length);
-    console.log('Response preview:', xmlText.substring(0, 500));
     
-    // Also log the businessEntity section if it exists
-    const businessEntityMatch = xmlText.match(/<businessEntity202001[^>]*>([\s\S]*?)<\/businessEntity202001>/i);
-    if (businessEntityMatch) {
-      console.log('BusinessEntity section found, length:', businessEntityMatch[1].length);
-      console.log('First 500 chars of businessEntity:', businessEntityMatch[1].substring(0, 500));
-    } else {
-      console.log('No businessEntity202001 tag found');
-    }
+    // Log the opening businessEntity tag to see what we're dealing with
+    const businessEntityOpenMatch = xmlText.match(/<businessEntity[^>]*>/i);
+    console.log('BusinessEntity opening tag:', businessEntityOpenMatch ? businessEntityOpenMatch[0] : 'not found');
+    
+    // Also log the closing tag
+    const businessEntityCloseMatch = xmlText.match(/<\/businessEntity[^>]*>/i);
+    console.log('BusinessEntity closing tag:', businessEntityCloseMatch ? businessEntityCloseMatch[0] : 'not found');
 
     // Check for errors using regex
     if (hasXMLTag(xmlText, 'exception')) {
@@ -95,10 +93,17 @@ serve(async (req) => {
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
-    // Check if business entity exists - the tag is businessEntity202001
-    const businessEntityTag = xmlText.match(/<businessEntity202001[^>]*>([\s\S]+)<\/businessEntity202001>/i);
+    // Check if business entity exists - try matching any businessEntity variant
+    let businessEntityTag = xmlText.match(/<businessEntity202001[^>]*>([\s\S]+)<\/businessEntity202001>/i);
+    
+    // Fallback: try matching any businessEntity tag with digits
     if (!businessEntityTag) {
-      console.error('No businessEntity202001 tag found in response');
+      console.log('No businessEntity202001, trying generic businessEntity pattern');
+      businessEntityTag = xmlText.match(/<businessEntity\d+[^>]*>([\s\S]+)<\/businessEntity\d+>/i);
+    }
+    
+    if (!businessEntityTag) {
+      console.error('No businessEntity tag found in response');
       throw new Error('No business entity found for this ABN');
     }
     
