@@ -139,6 +139,29 @@ export default function CustomerDetails() {
     enabled: !!session?.user?.id,
   });
 
+  const { data: customer, isLoading } = useQuery({
+    queryKey: ["customer", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  if (isLoading) {
+    return <DashboardLayout><div className="p-8">Loading...</div></DashboardLayout>;
+  }
+
+  if (!customer) {
+    return <DashboardLayout><div className="p-8">Customer not found</div></DashboardLayout>;
+  }
+
   const handleEditContact = (contact: any) => {
     setSelectedContact(contact);
     setIsContactDialogOpen(true);
@@ -154,7 +177,7 @@ export default function CustomerDetails() {
       <AuditDrawer 
         tableName="customers" 
         recordId={id!} 
-        recordTitle={mockCustomer.name}
+        recordTitle={customer.name}
       />
       
       <div className="space-y-6">
@@ -170,12 +193,12 @@ export default function CustomerDetails() {
           </Button>
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{mockCustomer.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{customer.name}</h1>
               <p className="text-muted-foreground mt-2">
-                {mockCustomer.tradingName !== mockCustomer.name && (
-                  <>Trading as {mockCustomer.tradingName} • </>
+                {customer.trading_name && customer.trading_name !== customer.name && (
+                  <>Trading as {customer.trading_name} • </>
                 )}
-                ABN: {mockCustomer.abn}
+                {customer.abn && <>ABN: {customer.abn}</>}
               </p>
             </div>
             <div className="flex gap-2">
@@ -232,7 +255,7 @@ export default function CustomerDetails() {
               <div className="flex items-center gap-3">
                 <FileText className="h-8 w-8 text-warning" />
                 <div>
-                  <div className="text-2xl font-bold">{mockCustomer.paymentTerms}</div>
+                  <div className="text-2xl font-bold">{customer.payment_terms || 30}</div>
                   <div className="text-xs text-muted-foreground">Payment Terms (days)</div>
                 </div>
               </div>
@@ -263,19 +286,21 @@ export default function CustomerDetails() {
                     <div className="space-y-3">
                       <div>
                         <div className="text-sm text-muted-foreground">Legal Name</div>
-                        <div className="font-medium">{mockCustomer.legalName}</div>
+                        <div className="font-medium">{customer.legal_company_name || customer.name}</div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Trading Name</div>
-                        <div className="font-medium">{mockCustomer.tradingName}</div>
+                        <div className="font-medium">{customer.trading_name || "-"}</div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">ABN</div>
-                        <div className="font-medium">{mockCustomer.abn}</div>
+                        <div className="font-medium">{customer.abn || "-"}</div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Status</div>
-                        <Badge className="bg-success/10 text-success">Active</Badge>
+                        <Badge className={customer.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}>
+                          {customer.is_active ? "Active" : "Inactive"}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -284,30 +309,41 @@ export default function CustomerDetails() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Contact Information</h3>
                     <div className="space-y-3">
-                      <div className="flex items-start gap-2">
-                        <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm text-muted-foreground">Email</div>
-                          <div className="font-medium">{mockCustomer.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm text-muted-foreground">Phone</div>
-                          <div className="font-medium">{mockCustomer.phone}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm text-muted-foreground">Address</div>
-                          <div className="font-medium">
-                            {mockCustomer.address}<br />
-                            {mockCustomer.city}, {mockCustomer.state} {mockCustomer.postcode}
+                      {customer.email && (
+                        <div className="flex items-start gap-2">
+                          <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm text-muted-foreground">Email</div>
+                            <div className="font-medium">{customer.email}</div>
                           </div>
                         </div>
-                      </div>
+                      )}
+                      {customer.phone && (
+                        <div className="flex items-start gap-2">
+                          <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm text-muted-foreground">Phone</div>
+                            <div className="font-medium">{customer.phone}</div>
+                          </div>
+                        </div>
+                      )}
+                      {customer.address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm text-muted-foreground">Address</div>
+                            <div className="font-medium">
+                              {customer.address}
+                              {(customer.city || customer.state || customer.postcode) && (
+                                <>
+                                  <br />
+                                  {[customer.city, customer.state, customer.postcode].filter(Boolean).join(", ")}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -317,19 +353,19 @@ export default function CustomerDetails() {
                     <div className="space-y-3">
                       <div>
                         <div className="text-sm text-muted-foreground">Billing Email</div>
-                        <div className="font-medium">{mockCustomer.billingEmail}</div>
+                        <div className="font-medium">{customer.billing_email || "-"}</div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Billing Phone</div>
-                        <div className="font-medium">{mockCustomer.billingPhone}</div>
+                        <div className="font-medium">{customer.billing_phone || "-"}</div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Billing Address</div>
-                        <div className="font-medium">{mockCustomer.billingAddress}</div>
+                        <div className="font-medium">{customer.billing_address || "-"}</div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Tax Exempt</div>
-                        <div className="font-medium">{mockCustomer.taxExempt ? "Yes" : "No"}</div>
+                        <div className="font-medium">{customer.tax_exempt ? "Yes" : "No"}</div>
                       </div>
                     </div>
                   </div>
@@ -338,7 +374,7 @@ export default function CustomerDetails() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Notes</h3>
                     <div className="p-4 bg-muted rounded-lg">
-                      <p className="text-sm">{mockCustomer.notes || "No notes available"}</p>
+                      <p className="text-sm">{customer.notes || "No notes available"}</p>
                     </div>
                   </div>
                 </div>
@@ -494,7 +530,7 @@ export default function CustomerDetails() {
       <CustomerDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        customer={mockCustomer}
+        customer={customer}
       />
 
       <ContactDialog
