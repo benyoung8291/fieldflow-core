@@ -24,7 +24,7 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks" as any)
-        .select("*, assigned:assigned_to(first_name, last_name)")
+        .select("*, assigned:profiles!tasks_assigned_to_fkey(first_name, last_name)")
         .eq("linked_module", linkedModule)
         .eq("linked_record_id", linkedRecordId)
         .order("due_date", { ascending: true });
