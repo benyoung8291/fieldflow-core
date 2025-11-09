@@ -312,12 +312,18 @@ export default function ServiceOrderDialog({
 
   const updateLineItem = (index: number, field: keyof LineItem, value: any) => {
     const updated = [...lineItems];
-    updated[index] = { ...updated[index], [field]: value };
+    
+    // Convert numeric fields to numbers
+    if (field === "quantity" || field === "unit_price" || field === "estimated_hours") {
+      updated[index] = { ...updated[index], [field]: parseFloat(value) || 0 };
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
     
     // Recalculate line total
     if (field === "quantity" || field === "unit_price") {
-      const qty = field === "quantity" ? parseFloat(value) || 0 : updated[index].quantity;
-      const price = field === "unit_price" ? parseFloat(value) || 0 : updated[index].unit_price;
+      const qty = updated[index].quantity;
+      const price = updated[index].unit_price;
       updated[index].line_total = qty * price;
     }
     
@@ -467,7 +473,7 @@ export default function ServiceOrderDialog({
     const subtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
     const taxAmount = (subtotal * taxRate) / 100;
     const total = subtotal + taxAmount;
-    const totalHours = lineItems.reduce((sum, item) => sum + (item.estimated_hours || 0), 0);
+    const totalHours = lineItems.reduce((sum, item) => sum + (Number(item.estimated_hours) || 0), 0);
     return { subtotal, taxAmount, total, totalHours };
   };
 
