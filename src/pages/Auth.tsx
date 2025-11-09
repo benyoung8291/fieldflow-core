@@ -6,6 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const signUpSchema = z.object({
+  email: z.string().email('Invalid email address').max(255, 'Email must be less than 255 characters'),
+  password: z.string()
+    .min(12, 'Password must be at least 12 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+  firstName: z.string().trim().min(1, 'First name is required').max(100, 'First name must be less than 100 characters'),
+  lastName: z.string().trim().min(1, 'Last name is required').max(100, 'Last name must be less than 100 characters')
+});
+
+const signInSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+});
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -22,34 +40,74 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        // Validate sign-up inputs
+        const validationResult = signUpSchema.safeParse({
           email,
           password,
+          firstName,
+          lastName
+        });
+
+        if (!validationResult.success) {
+          const firstError = validationResult.error.errors[0];
+          toast.error(firstError.message);
+          setIsLoading(false);
+          return;
+        }
+
+        const { error } = await supabase.auth.signUp({
+          email: validationResult.data.email,
+          password: validationResult.data.password,
           options: {
             data: {
-              first_name: firstName,
-              last_name: lastName,
+              first_name: validationResult.data.firstName,
+              last_name: validationResult.data.lastName,
             },
             emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          // Use generic error message to prevent user enumeration
+          toast.error("Unable to create account. Please try again or contact support.");
+          console.error("Sign up error:", error);
+          return;
+        }
 
         toast.success("Account created! Please check your email to verify your account.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        // Validate sign-in inputs
+        const validationResult = signInSchema.safeParse({
           email,
-          password,
+          password
         });
 
-        if (error) throw error;
+        if (!validationResult.success) {
+          const firstError = validationResult.error.errors[0];
+          toast.error(firstError.message);
+          setIsLoading(false);
+          return;
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({
+          email: validationResult.data.email,
+          password: validationResult.data.password,
+        });
+
+        if (error) {
+          // Use generic error message to prevent user enumeration
+          toast.error("Invalid email or password.");
+          console.error("Sign in error:", error);
+          return;
+        }
 
         toast.success("Welcome back!");
         navigate("/dashboard");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      // Generic error message for unexpected errors
+      toast.error("An unexpected error occurred. Please try again.");
+      console.error("Auth error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -108,14 +166,16 @@ export default function Auth() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">
+                Password
+                {isSignUp && <span className="text-xs text-muted-foreground ml-2">(min 12 chars, uppercase, lowercase, number, special char)</span>}
+              </Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>

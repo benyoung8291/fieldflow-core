@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { sanitizeError, sanitizeAuthError, sanitizeDatabaseError } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,11 +29,21 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('No authorization header');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: sanitizeAuthError(new Error('No auth header'), 'send-quote-email') }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) throw new Error('Unauthorized');
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: sanitizeAuthError(authError, 'send-quote-email') }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { quote_id, to, subject, message, pdf_html }: EmailData = await req.json();
 
@@ -43,7 +54,12 @@ serve(async (req) => {
       .eq('id', quote_id)
       .single();
 
-    if (quoteError) throw quoteError;
+    if (quoteError) {
+      return new Response(
+        JSON.stringify({ error: sanitizeDatabaseError(quoteError, 'send-quote-email') }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get user's tenant
     const { data: profile } = await supabase
@@ -53,7 +69,10 @@ serve(async (req) => {
       .single();
 
     if (!profile || profile.tenant_id !== quote.tenant_id) {
-      throw new Error('Unauthorized access to quote');
+      return new Response(
+        JSON.stringify({ error: sanitizeAuthError(new Error('Unauthorized access'), 'send-quote-email') }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const emailHTML = `
@@ -81,7 +100,12 @@ serve(async (req) => {
       html: emailHTML,
     });
 
-    if (emailError || !emailResult) throw emailError || new Error('Failed to send email');
+    if (emailError || !emailResult) {
+      return new Response(
+        JSON.stringify({ error: sanitizeError(emailError, 'send-quote-email') }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Track email in database
     await supabase.from('quote_emails').insert({
@@ -103,9 +127,8 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error sending email:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: sanitizeError(error, 'send-quote-email') }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

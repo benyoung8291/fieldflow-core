@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sanitizeError, sanitizeDatabaseError } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +17,10 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: sanitizeError(new Error('Configuration error'), 'suggest-workers') }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -36,11 +40,17 @@ serve(async (req) => {
 
     if (serviceOrderError) {
       console.error("Error fetching service order:", serviceOrderError);
-      throw new Error(`Failed to fetch service order: ${serviceOrderError.message}`);
+      return new Response(
+        JSON.stringify({ error: sanitizeDatabaseError(serviceOrderError, 'suggest-workers') }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (!serviceOrder) {
-      throw new Error("Service order not found");
+      return new Response(
+        JSON.stringify({ error: sanitizeDatabaseError(new Error('Not found'), 'suggest-workers') }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Try to fetch required skills if the table exists
@@ -289,14 +299,20 @@ Analyze and rank workers by suitability. CRITICAL: Workers must work on ${dayOfW
       }
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
-      throw new Error("AI Gateway request failed");
+      return new Response(
+        JSON.stringify({ error: sanitizeError(new Error('AI processing failed'), 'suggest-workers') }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiResponse = await response.json();
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
     
     if (!toolCall) {
-      throw new Error("No suggestions generated");
+      return new Response(
+        JSON.stringify({ error: sanitizeError(new Error('No suggestions'), 'suggest-workers') }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const suggestions = JSON.parse(toolCall.function.arguments);
@@ -309,11 +325,8 @@ Analyze and rank workers by suitability. CRITICAL: Workers must work on ${dayOfW
     );
 
   } catch (error) {
-    console.error("Error in suggest-workers:", error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
-      }),
+      JSON.stringify({ error: sanitizeError(error, 'suggest-workers') }),
       { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 

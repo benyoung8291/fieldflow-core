@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sanitizeError, sanitizeAuthError, sanitizeDatabaseError } from '../_shared/errorHandler.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -19,7 +20,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: sanitizeAuthError(userError, 'list-tenant-users') }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (!profile?.tenant_id) {
-      return new Response(JSON.stringify({ error: 'No tenant found' }), {
+      return new Response(JSON.stringify({ error: sanitizeAuthError(new Error('No tenant'), 'list-tenant-users') }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     const isAdmin = roles?.some(r => r.role === 'tenant_admin')
 
     if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
+      return new Response(JSON.stringify({ error: sanitizeAuthError(new Error('Insufficient permissions'), 'list-tenant-users') }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -61,7 +62,12 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('tenant_id', profile.tenant_id)
 
-    if (profilesError) throw profilesError
+    if (profilesError) {
+      return new Response(JSON.stringify({ error: sanitizeDatabaseError(profilesError, 'list-tenant-users') }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // Get user roles
     const { data: userRoles } = await supabaseAdmin
@@ -85,8 +91,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: sanitizeError(error, 'list-tenant-users') }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
