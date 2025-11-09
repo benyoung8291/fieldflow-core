@@ -14,7 +14,8 @@ export default function ServiceOrdersSidebar() {
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name),
-          appointments(id, start_time, end_time, status)
+          appointments(id, start_time, end_time, status),
+          service_order_line_items(description, quantity)
         `)
         .in("status", ["draft", "scheduled", "in_progress"])
         .order("created_at", { ascending: false });
@@ -24,7 +25,7 @@ export default function ServiceOrdersSidebar() {
         throw ordersError;
       }
 
-      // Calculate remaining hours for each service order
+      // Calculate remaining hours and generate summary for each service order
       return orders.map(order => {
         const estimatedHours = order.estimated_hours || 0;
         
@@ -41,10 +42,20 @@ export default function ServiceOrdersSidebar() {
 
         const remainingHours = Math.max(0, estimatedHours - scheduledHours);
 
+        // Generate line items summary
+        const lineItems = order.service_order_line_items || [];
+        const lineItemsSummary = lineItems.length > 0
+          ? lineItems
+              .slice(0, 3)
+              .map((item: any) => `${item.quantity}x ${item.description}`)
+              .join(", ") + (lineItems.length > 3 ? "..." : "")
+          : "";
+
         return {
           ...order,
           scheduledHours,
           remainingHours,
+          lineItemsSummary,
         };
       });
     },
@@ -78,6 +89,7 @@ export default function ServiceOrdersSidebar() {
                   key={order.id}
                   serviceOrder={order}
                   remainingHours={order.remainingHours}
+                  lineItemsSummary={order.lineItemsSummary}
                 />
               ))
             )}

@@ -1,15 +1,17 @@
 import { useDraggable } from "@dnd-kit/core";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin } from "lucide-react";
+import { Clock, MapPin, Calendar, CalendarRange, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface DraggableServiceOrderProps {
   serviceOrder: any;
   remainingHours: number;
+  lineItemsSummary?: string;
 }
 
-export default function DraggableServiceOrder({ serviceOrder, remainingHours }: DraggableServiceOrderProps) {
+export default function DraggableServiceOrder({ serviceOrder, remainingHours, lineItemsSummary }: DraggableServiceOrderProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `service-order-${serviceOrder.id}`,
     data: {
@@ -45,7 +47,7 @@ export default function DraggableServiceOrder({ serviceOrder, remainingHours }: 
         
         <div className="space-y-1 text-xs text-muted-foreground">
           {serviceOrder.customers && (
-            <div className="truncate">
+            <div className="truncate font-medium text-foreground">
               {serviceOrder.customers.name}
             </div>
           )}
@@ -53,7 +55,30 @@ export default function DraggableServiceOrder({ serviceOrder, remainingHours }: 
           {serviceOrder.estimated_hours && (
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              <span>Need {remainingHours.toFixed(1)}h more</span>
+              <span>Est: {serviceOrder.estimated_hours}h | Need {remainingHours.toFixed(1)}h more</span>
+            </div>
+          )}
+
+          {serviceOrder.preferred_date && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              <span>{format(new Date(serviceOrder.preferred_date), "MMM d, yyyy")}</span>
+            </div>
+          )}
+
+          {serviceOrder.preferred_date_start && serviceOrder.preferred_date_end && (
+            <div className="flex items-center gap-1">
+              <CalendarRange className="h-3 w-3" />
+              <span>
+                {format(new Date(serviceOrder.preferred_date_start), "MMM d")} - {format(new Date(serviceOrder.preferred_date_end), "MMM d")}
+              </span>
+            </div>
+          )}
+
+          {lineItemsSummary && (
+            <div className="flex items-start gap-1 pt-1">
+              <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
+              <span className="line-clamp-2 text-xs italic">{lineItemsSummary}</span>
             </div>
           )}
         </div>

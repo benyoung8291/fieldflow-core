@@ -62,6 +62,21 @@ export default function Scheduler() {
     },
   });
 
+  // Fetch all active workers/profiles
+  const { data: workers = [] } = useQuery({
+    queryKey: ["workers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .eq("is_active", true)
+        .order("first_name", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const todayAppointments = appointments.filter(apt => 
     isSameDay(new Date(apt.start_time), new Date())
   );
@@ -244,9 +259,11 @@ export default function Scheduler() {
     // Calculate start and end times
     const startTime = hour !== undefined 
       ? setMinutes(setHours(date, hour), 0)
-      : setHours(date, 9); // Default to 9 AM if no hour specified
+      : setHours(date, 18); // Default to 6 PM if no hour specified
 
-    const endTime = addHours(startTime, 2); // Default 2 hour appointment
+    // For service orders, use 4 hour default, otherwise 2 hours
+    const defaultDuration = draggedItem?.type === "service-order" ? 4 : 2;
+    const endTime = addHours(startTime, defaultDuration);
 
     // Handle dropping a service order
     if (draggedItem?.type === "service-order") {
@@ -456,6 +473,7 @@ export default function Scheduler() {
                   <SchedulerWeekView 
                     currentDate={currentDate}
                     appointments={appointments}
+                    workers={workers}
                     onAppointmentClick={(id) => setSelectedAppointment(id)}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);

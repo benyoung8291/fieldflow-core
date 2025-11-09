@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 interface SchedulerWeekViewProps {
   currentDate: Date;
   appointments: any[];
+  workers: any[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment: (id: string) => void;
 }
@@ -36,6 +37,7 @@ const statusColors = {
 export default function SchedulerWeekView({ 
   currentDate,
   appointments,
+  workers: passedWorkers,
   onAppointmentClick,
   onEditAppointment
 }: SchedulerWeekViewProps) {
@@ -50,25 +52,16 @@ export default function SchedulerWeekView({
   const weekEnd = endOfWeek(currentDate);
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Get unique technicians from appointments
-  const technicians = Array.from(
-    new Map(
-      appointments
-        .filter(apt => apt.assigned_to && apt.profiles)
-        .map(apt => [
-          apt.assigned_to, 
-          {
-            id: apt.assigned_to,
-            name: `${apt.profiles.first_name} ${apt.profiles.last_name}`
-          }
-        ])
-    ).values()
-  );
+  // Format workers from passed list
+  const formattedWorkers = passedWorkers.map(worker => ({
+    id: worker.id,
+    name: `${worker.first_name} ${worker.last_name}`
+  }));
 
   // Add unassigned row
   const workers = [
     { id: null, name: "Unassigned" },
-    ...technicians
+    ...formattedWorkers
   ];
 
   const handleGPSCheckIn = (appointment: any) => {
