@@ -14,6 +14,8 @@ import ServiceOrders from "./pages/ServiceOrders";
 import Scheduler from "./pages/Scheduler";
 import Customers from "./pages/Customers";
 import CustomerDetails from "./pages/CustomerDetails";
+import Leads from "./pages/Leads";
+import LeadDetails from "./pages/LeadDetails";
 import Workers from "./pages/Workers";
 import WorkerDetails from "./pages/WorkerDetails";
 import Settings from "./pages/Settings";
@@ -39,6 +41,8 @@ const App = () => (
           <Route path="/scheduler" element={<Scheduler />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:id" element={<CustomerDetails />} />
+          <Route path="/leads" element={<Leads />} />
+          <Route path="/leads/:id" element={<LeadDetails />} />
           <Route path="/workers" element={<Workers />} />
           <Route path="/workers/:id" element={<WorkerDetails />} />
           <Route path="/settings" element={<Settings />} />

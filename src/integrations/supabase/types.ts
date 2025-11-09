@@ -459,6 +459,184 @@ export type Database = {
           },
         ]
       }
+      lead_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          lead_id: string
+          subject: string
+          tenant_id: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_type: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          lead_id: string
+          subject: string
+          tenant_id: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          lead_id?: string
+          subject?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_contacts: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_primary: boolean | null
+          last_name: string
+          lead_id: string
+          mobile: string | null
+          notes: string | null
+          phone: string | null
+          position: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_primary?: boolean | null
+          last_name: string
+          lead_id: string
+          mobile?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_primary?: boolean | null
+          last_name?: string
+          lead_id?: string
+          mobile?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          city: string | null
+          company_name: string | null
+          converted_at: string | null
+          converted_by: string | null
+          converted_to_customer_id: string | null
+          created_at: string | null
+          created_by: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          mobile: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          postcode: string | null
+          rating: string | null
+          source: string | null
+          state: string | null
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          city?: string | null
+          company_name?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_to_customer_id?: string | null
+          created_at?: string | null
+          created_by: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          mobile?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          postcode?: string | null
+          rating?: string | null
+          source?: string | null
+          state?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          city?: string | null
+          company_name?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_to_customer_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          mobile?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          postcode?: string | null
+          rating?: string | null
+          source?: string | null
+          state?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       pay_rate_categories: {
         Row: {
           created_at: string | null
@@ -1074,6 +1252,8 @@ export type Database = {
           id: string
           internal_notes: string | null
           is_archived: boolean | null
+          is_for_lead: boolean | null
+          lead_id: string | null
           notes: string | null
           quote_number: string
           quote_type: string | null
@@ -1106,6 +1286,8 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           is_archived?: boolean | null
+          is_for_lead?: boolean | null
+          lead_id?: string | null
           notes?: string | null
           quote_number: string
           quote_type?: string | null
@@ -1138,6 +1320,8 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           is_archived?: boolean | null
+          is_for_lead?: boolean | null
+          lead_id?: string | null
           notes?: string | null
           quote_number?: string
           quote_type?: string | null
@@ -1160,6 +1344,13 @@ export type Database = {
             columns: ["duplicated_from_quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

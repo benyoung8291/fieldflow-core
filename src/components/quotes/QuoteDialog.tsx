@@ -15,7 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 
 const quoteSchema = z.object({
-  customer_id: z.string().min(1, "Customer is required"),
+  customer_id: z.string().optional(),
+  lead_id: z.string().optional(),
   title: z.string().trim().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
   description: z.string().max(1000, "Description must be less than 1000 characters").optional(),
   valid_until: z.string().optional(),
@@ -23,6 +24,9 @@ const quoteSchema = z.object({
   discount_amount: z.string().optional(),
   notes: z.string().max(2000, "Notes must be less than 2000 characters").optional(),
   terms_conditions: z.string().max(2000, "Terms must be less than 2000 characters").optional(),
+}).refine((data) => data.customer_id || data.lead_id, {
+  message: "Either customer or lead must be selected",
+  path: ["customer_id"],
 });
 
 interface QuoteDialogProps {
@@ -49,6 +53,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [isForLead, setIsForLead] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [priceBookOpen, setPriceBookOpen] = useState(false);
   const [selectedParentIndex, setSelectedParentIndex] = useState<number | null>(null);
@@ -56,6 +62,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
 
   const [formData, setFormData] = useState({
     customer_id: "",
+    lead_id: "",
     title: "",
     description: "",
     valid_until: "",
@@ -112,7 +119,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
 
   useEffect(() => {
     if (open) {
-      fetchCustomers();
+      fetchCustomersAndLeads();
       if (quoteId) {
         fetchQuote();
       } else {
@@ -121,17 +128,30 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     }
   }, [open, quoteId]);
 
-  const fetchCustomers = async () => {
-    const { data, error } = await supabase
+  const fetchCustomersAndLeads = async () => {
+    const { data: customersData, error: customersError } = await supabase
       .from("customers")
       .select("id, name")
       .eq("is_active", true)
       .order("name");
 
-    if (error) {
+    if (customersError) {
       toast({ title: "Error fetching customers", variant: "destructive" });
     } else {
-      setCustomers(data || []);
+      setCustomers(customersData || []);
+    }
+
+    const { data: leadsData, error: leadsError } = await supabase
+      .from("leads")
+      .select("id, name, company_name")
+      .eq("is_active", true)
+      .is("converted_to_customer_id", null)
+      .order("name");
+
+    if (leadsError) {
+      toast({ title: "Error fetching leads", variant: "destructive" });
+    } else {
+      setLeads(leadsData || []);
     }
   };
 
@@ -161,8 +181,10 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
 
     if (quoteData) {
       setIsComplexQuote(quoteData.quote_type === 'complex');
+      setIsForLead(quoteData.is_for_lead || false);
       setFormData({
         customer_id: quoteData.customer_id || "",
+        lead_id: quoteData.lead_id || "",
         title: quoteData.title || "",
         description: quoteData.description || "",
         valid_until: quoteData.valid_until || "",
@@ -223,6 +245,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   const resetForm = () => {
     setFormData({
       customer_id: "",
+      lead_id: "",
       title: "",
       description: "",
       valid_until: "",
@@ -245,6 +268,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     }]);
     setErrors({});
     setIsComplexQuote(false);
+    setIsForLead(false);
     setAttachments([]);
   };
 
@@ -552,7 +576,9 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       const { subtotal, taxAmount, total } = calculateTotals();
 
       const quoteData: any = {
-        customer_id: formData.customer_id,
+        customer_id: isForLead ? null : formData.customer_id || null,
+        lead_id: isForLead ? formData.lead_id || null : null,
+        is_for_lead: isForLead,
         title: formData.title,
         description: formData.description || null,
         valid_until: formData.valid_until || null,
@@ -680,18 +706,53 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="customer_id">Customer *</Label>
+                <Label>Quote For</Label>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="for-customer"
+                      checked={!isForLead}
+                      onChange={() => {
+                        setIsForLead(false);
+                        setFormData({ ...formData, lead_id: "", customer_id: "" });
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="for-customer" className="font-normal cursor-pointer">Customer</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="for-lead"
+                      checked={isForLead}
+                      onChange={() => {
+                        setIsForLead(true);
+                        setFormData({ ...formData, customer_id: "", lead_id: "" });
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="for-lead" className="font-normal cursor-pointer">Lead</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
                 <Select
-                  value={formData.customer_id}
-                  onValueChange={(value) => setFormData({ ...formData, customer_id: value })}
+                  value={isForLead ? formData.lead_id : formData.customer_id}
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    [isForLead ? "lead_id" : "customer_id"]: value 
+                  })}
                 >
                   <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select customer" />
+                    <SelectValue placeholder={`Select ${isForLead ? "lead" : "customer"}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
+                    {(isForLead ? leads : customers).map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name} {item.company_name && `(${item.company_name})`}
                       </SelectItem>
                     ))}
                   </SelectContent>

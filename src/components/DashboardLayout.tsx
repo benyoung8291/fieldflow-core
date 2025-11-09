@@ -9,7 +9,8 @@ import {
   FileText,
   Settings,
   LogOut,
-  Menu
+  Menu,
+  UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Projects", href: "/projects", icon: FileText },
   { name: "Service Orders", href: "/service-orders", icon: ClipboardList },
   { name: "Customers", href: "/customers", icon: Users },
+  { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Scheduler", href: "/scheduler", icon: Calendar },
   { name: "Workers", href: "/workers", icon: Users },
   { name: "Warehouse", href: "/warehouse", icon: Warehouse },
