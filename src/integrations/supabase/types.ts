@@ -1989,23 +1989,68 @@ export type Database = {
       }
       tenant_settings: {
         Row: {
+          abn: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          city: string | null
+          company_email: string | null
+          company_legal_name: string | null
+          company_name: string | null
+          company_phone: string | null
+          company_website: string | null
+          country: string | null
           created_at: string | null
           id: string
+          logo_url: string | null
+          postcode: string | null
+          primary_color: string | null
           renewal_notification_email: string | null
+          secondary_color: string | null
+          state: string | null
           tenant_id: string
           updated_at: string | null
         }
         Insert: {
+          abn?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
+          company_email?: string | null
+          company_legal_name?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_website?: string | null
+          country?: string | null
           created_at?: string | null
           id?: string
+          logo_url?: string | null
+          postcode?: string | null
+          primary_color?: string | null
           renewal_notification_email?: string | null
+          secondary_color?: string | null
+          state?: string | null
           tenant_id: string
           updated_at?: string | null
         }
         Update: {
+          abn?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
+          company_email?: string | null
+          company_legal_name?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_website?: string | null
+          country?: string | null
           created_at?: string | null
           id?: string
+          logo_url?: string | null
+          postcode?: string | null
+          primary_color?: string | null
           renewal_notification_email?: string | null
+          secondary_color?: string | null
+          state?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
