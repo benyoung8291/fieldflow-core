@@ -91,15 +91,24 @@ serve(async (req) => {
           .lte("start_time", new Date(new Date(dateRangeEnd).setDate(new Date(dateRangeEnd).getDate() + 1)).toISOString())
           .order("start_time");
 
-        const { data: availability } = await supabase
-          .from("worker_availability")
+        const { data: schedule } = await supabase
+          .from("worker_schedule")
           .select("*")
-          .eq("worker_id", worker.id);
+          .eq("worker_id", worker.id)
+          .eq("is_active", true);
+
+        const { data: unavailability } = await supabase
+          .from("worker_unavailability")
+          .select("*")
+          .eq("worker_id", worker.id)
+          .gte("end_date", preferredDate)
+          .lte("start_date", dateRangeEnd);
 
         return {
           ...worker,
           appointments: appointments || [],
-          availability: availability || []
+          schedule: schedule || [],
+          unavailability: unavailability || []
         };
       })
     );
@@ -115,12 +124,13 @@ CRITICAL SCORING CRITERIA (in order of importance):
 1. SKILLS MATCH (50% of score): Worker MUST have all required skills at or above required level
    - Missing any required skill: maximum 40% score
    - Lower skill level than required: deduct 10% per skill
-2. AVAILABILITY (30% of score): Worker should be available during preferred date range
-   - Fully booked on preferred date: deduct 20%
-   - No availability pattern set: deduct 10%
-3. SCHEDULE OPTIMIZATION (20% of score): Minimize travel time and conflicts
+2. REGULAR SCHEDULE MATCH (25% of score): Worker should have regular working days/hours that cover the preferred date
+   - No schedule set for the day of week: deduct 20%
+   - Working hours don't cover the service time: deduct 15%
+3. AVAILABILITY (15% of score): Worker should NOT have unavailability periods during preferred date
+   - Has unavailability during preferred date: deduct 15%
+4. SCHEDULE OPTIMIZATION (10% of score): Minimize conflicts with existing appointments
    - Back-to-back appointments: deduct 5%
-   - Matches preferred days/hours: add 5%
 
 Provide 3-5 worker suggestions ranked by overall suitability score (0-100).`;
 
@@ -128,6 +138,8 @@ Provide 3-5 worker suggestions ranked by overall suitability score (0-100).`;
       `- ${req.skills?.name} (${req.skills?.category}) - Level Required: ${req.required_level}`
     ).join('\n') || "No specific skills required";
 
+    const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    
     const workersAnalysis = workersWithAppointments.map(worker => {
       const workerSkillsText = worker.worker_skills?.map((skill: any) =>
         `  - ${skill.skills?.name} (${skill.skills?.category}) - Level: ${skill.skill_level}`
@@ -137,22 +149,24 @@ Provide 3-5 worker suggestions ranked by overall suitability score (0-100).`;
         `  - ${new Date(apt.start_time).toLocaleString()} to ${new Date(apt.end_time).toLocaleString()}`
       ).join('\n') || "  No appointments";
 
-      const availabilityText = worker.availability.map((avail: any) =>
-        `  - ${avail.day_of_week}: ${avail.start_time} to ${avail.end_time} (${avail.is_available ? 'Available' : 'Unavailable'})`
-      ).join('\n') || "  No availability pattern set";
+      const scheduleText = worker.schedule.map((sched: any) =>
+        `  - ${DAYS[sched.day_of_week]}: ${sched.start_time} to ${sched.end_time}`
+      ).join('\n') || "  No regular schedule set";
+
+      const unavailabilityText = worker.unavailability.map((unavail: any) =>
+        `  - ${unavail.start_date} to ${unavail.end_date}${unavail.start_time ? ` (${unavail.start_time}-${unavail.end_time})` : ' (All day)'}: ${unavail.reason || 'No reason'}`
+      ).join('\n') || "  No unavailable periods";
 
       return `
 Worker: ${worker.first_name} ${worker.last_name} (ID: ${worker.id})
 Skills:
 ${workerSkillsText}
+Regular Weekly Schedule:
+${scheduleText}
 Appointments (${preferredDate} to ${dateRangeEnd}):
 ${appointmentsText}
-Availability Pattern:
-${availabilityText}
-Preferences:
-  - Start: ${worker.preferred_start_time || "Not set"}
-  - End: ${worker.preferred_end_time || "Not set"}
-  - Days: ${worker.preferred_days?.join(', ') || "Not set"}
+Unavailable Periods:
+${unavailabilityText}
 `;
     }).join('\n---\n');
 

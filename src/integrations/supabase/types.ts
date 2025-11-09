@@ -2742,67 +2742,6 @@ export type Database = {
           },
         ]
       }
-      worker_availability: {
-        Row: {
-          created_at: string | null
-          date: string
-          end_time: string
-          id: string
-          is_available: boolean | null
-          notes: string | null
-          start_time: string
-          tenant_id: string
-          updated_at: string | null
-          worker_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          date: string
-          end_time: string
-          id?: string
-          is_available?: boolean | null
-          notes?: string | null
-          start_time: string
-          tenant_id: string
-          updated_at?: string | null
-          worker_id: string
-        }
-        Update: {
-          created_at?: string | null
-          date?: string
-          end_time?: string
-          id?: string
-          is_available?: boolean | null
-          notes?: string | null
-          start_time?: string
-          tenant_id?: string
-          updated_at?: string | null
-          worker_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "worker_availability_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "worker_availability_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "worker_availability_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       worker_certificates: {
         Row: {
           certificate_name: string
@@ -2893,6 +2832,42 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_schedule: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          start_time: string
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          start_time: string
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          start_time?: string
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_skills: {
         Row: {
           created_at: string | null
@@ -2969,6 +2944,48 @@ export type Database = {
           tenant_id?: string
           training_name?: string
           training_provider?: string | null
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      worker_unavailability: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          reason: string | null
+          start_date: string
+          start_time: string | null
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          start_date: string
+          start_time?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          start_date?: string
+          start_time?: string | null
+          tenant_id?: string
           updated_at?: string | null
           worker_id?: string
         }

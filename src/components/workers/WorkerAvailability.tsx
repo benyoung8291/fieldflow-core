@@ -4,192 +4,322 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock } from "lucide-react";
+import { Plus, Clock, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 interface WorkerAvailabilityProps {
   workerId: string;
 }
 
+const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isUnavailableDialogOpen, setIsUnavailableDialogOpen] = useState(false);
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number>(1);
+  const [scheduleFormData, setScheduleFormData] = useState({
     start_time: "09:00",
     end_time: "17:00",
-    is_available: true,
+  });
+  const [unavailableFormData, setUnavailableFormData] = useState({
+    start_date: new Date(),
+    end_date: new Date(),
+    start_time: "",
+    end_time: "",
+    reason: "",
     notes: "",
   });
   const queryClient = useQueryClient();
 
-  const { data: availability = [] } = useQuery({
-    queryKey: ["worker-availability", workerId],
+  // Fetch worker's regular schedule
+  const { data: schedule = [] } = useQuery({
+    queryKey: ["worker-schedule", workerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("worker_availability")
+        .from("worker_schedule")
         .select("*")
         .eq("worker_id", workerId)
-        .order("date", { ascending: true });
+        .eq("is_active", true)
+        .order("day_of_week");
 
       if (error) throw error;
       return data;
     },
   });
 
-  const createAvailability = useMutation({
-    mutationFn: async () => {
-      if (!selectedDate) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", workerId)
-        .single();
-
-      const { error } = await supabase.from("worker_availability").insert({
-        tenant_id: profile?.tenant_id,
-        worker_id: workerId,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        is_available: formData.is_available,
-        notes: formData.notes,
-      });
+  // Fetch worker's unavailable periods
+  const { data: unavailability = [] } = useQuery({
+    queryKey: ["worker-unavailability", workerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("worker_unavailability")
+        .select("*")
+        .eq("worker_id", workerId)
+        .gte("end_date", format(new Date(), "yyyy-MM-dd"))
+        .order("start_date");
 
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-availability", workerId] });
-      toast.success("Availability added successfully");
-      setIsDialogOpen(false);
-      setFormData({
-        start_time: "09:00",
-        end_time: "17:00",
-        is_available: true,
-        notes: "",
-      });
-    },
-    onError: () => {
-      toast.error("Failed to add availability");
+      return data;
     },
   });
 
-  const deleteAvailability = useMutation({
+  const getTenantId = async () => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", workerId)
+      .single();
+    return profile?.tenant_id;
+  };
+
+  const createOrUpdateSchedule = useMutation({
+    mutationFn: async () => {
+      const tenant_id = await getTenantId();
+      
+      const existingDay = schedule.find(s => s.day_of_week === selectedDayOfWeek);
+      
+      if (existingDay) {
+        const { error } = await supabase
+          .from("worker_schedule")
+          .update({
+            start_time: scheduleFormData.start_time,
+            end_time: scheduleFormData.end_time,
+          })
+          .eq("id", existingDay.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("worker_schedule")
+          .insert({
+            tenant_id,
+            worker_id: workerId,
+            day_of_week: selectedDayOfWeek,
+            start_time: scheduleFormData.start_time,
+            end_time: scheduleFormData.end_time,
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worker-schedule", workerId] });
+      toast.success("Schedule updated successfully");
+      setIsScheduleDialogOpen(false);
+    },
+    onError: () => {
+      toast.error("Failed to update schedule");
+    },
+  });
+
+  const deleteScheduleDay = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("worker_availability")
+        .from("worker_schedule")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-availability", workerId] });
-      toast.success("Availability deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["worker-schedule", workerId] });
+      toast.success("Schedule day removed");
     },
     onError: () => {
-      toast.error("Failed to delete availability");
+      toast.error("Failed to remove schedule day");
     },
   });
 
-  const availabilityByDate = availability.reduce((acc, item) => {
-    acc[item.date] = item;
-    return acc;
-  }, {} as Record<string, any>);
+  const createUnavailability = useMutation({
+    mutationFn: async () => {
+      const tenant_id = await getTenantId();
 
-  const selectedDateAvailability = selectedDate
-    ? availabilityByDate[format(selectedDate, "yyyy-MM-dd")]
-    : null;
+      const { error } = await supabase
+        .from("worker_unavailability")
+        .insert({
+          tenant_id,
+          worker_id: workerId,
+          start_date: format(unavailableFormData.start_date, "yyyy-MM-dd"),
+          end_date: format(unavailableFormData.end_date, "yyyy-MM-dd"),
+          start_time: unavailableFormData.start_time || null,
+          end_time: unavailableFormData.end_time || null,
+          reason: unavailableFormData.reason,
+          notes: unavailableFormData.notes,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worker-unavailability", workerId] });
+      toast.success("Unavailability added successfully");
+      setIsUnavailableDialogOpen(false);
+      setUnavailableFormData({
+        start_date: new Date(),
+        end_date: new Date(),
+        start_time: "",
+        end_time: "",
+        reason: "",
+        notes: "",
+      });
+    },
+    onError: () => {
+      toast.error("Failed to add unavailability");
+    },
+  });
+
+  const deleteUnavailability = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("worker_unavailability")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worker-unavailability", workerId] });
+      toast.success("Unavailability deleted");
+    },
+    onError: () => {
+      toast.error("Failed to delete unavailability");
+    },
+  });
+
+  const scheduleByDay = schedule.reduce((acc, item) => {
+    acc[item.day_of_week] = item;
+    return acc;
+  }, {} as Record<number, any>);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Calendar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            modifiers={{
-              available: availability
-                .filter((a) => a.is_available)
-                .map((a) => new Date(a.date)),
-              unavailable: availability
-                .filter((a) => !a.is_available)
-                .map((a) => new Date(a.date)),
-            }}
-            modifiersClassNames={{
-              available: "bg-success/20 text-success",
-              unavailable: "bg-destructive/20 text-destructive",
-            }}
-            className="rounded-md border"
-          />
-        </CardContent>
-      </Card>
-
+    <div className="grid gap-4">
+      {/* Regular Weekly Schedule */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>
-              {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Select a date"}
-            </CardTitle>
-            <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+            <CardTitle>Regular Weekly Schedule</CardTitle>
+            <Button size="sm" onClick={() => setIsScheduleDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Add
+              Add Day
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {selectedDateAvailability ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Badge variant={selectedDateAvailability.is_available ? "default" : "destructive"}>
-                  {selectedDateAvailability.is_available ? "Available" : "Unavailable"}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteAvailability.mutate(selectedDateAvailability.id)}
-                >
-                  Remove
-                </Button>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {selectedDateAvailability.start_time} - {selectedDateAvailability.end_time}
-                </span>
-              </div>
-              {selectedDateAvailability.notes && (
-                <div className="text-sm">
-                  <div className="font-medium mb-1">Notes:</div>
-                  <div className="text-muted-foreground">{selectedDateAvailability.notes}</div>
+          <div className="space-y-2">
+            {DAYS_OF_WEEK.map((day, index) => {
+              const daySchedule = scheduleByDay[index];
+              return (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="font-medium w-24">{day}</div>
+                    {daySchedule ? (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>{daySchedule.start_time} - {daySchedule.end_time}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Not working</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDayOfWeek(index);
+                        if (daySchedule) {
+                          setScheduleFormData({
+                            start_time: daySchedule.start_time,
+                            end_time: daySchedule.end_time,
+                          });
+                        } else {
+                          setScheduleFormData({
+                            start_time: "09:00",
+                            end_time: "17:00",
+                          });
+                        }
+                        setIsScheduleDialogOpen(true);
+                      }}
+                    >
+                      {daySchedule ? "Edit" : "Add"}
+                    </Button>
+                    {daySchedule && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteScheduleDay.mutate(daySchedule.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Unavailable Periods */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Unavailable Periods</CardTitle>
+            <Button size="sm" onClick={() => setIsUnavailableDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Period
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {unavailability.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No unavailable periods set</p>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              No availability set for this date. Click "Add" to create one.
-            </p>
+            <div className="space-y-2">
+              {unavailability.map((item) => (
+                <div key={item.id} className="flex items-start justify-between p-3 border rounded-lg">
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      {format(new Date(item.start_date), "MMM d, yyyy")} -{" "}
+                      {format(new Date(item.end_date), "MMM d, yyyy")}
+                    </div>
+                    {item.start_time && item.end_time && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{item.start_time} - {item.end_time}</span>
+                      </div>
+                    )}
+                    {item.reason && (
+                      <Badge variant="secondary" className="mt-1">{item.reason}</Badge>
+                    )}
+                    {item.notes && (
+                      <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteUnavailability.mutate(item.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Schedule Dialog */}
+      <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Add Availability for {selectedDate && format(selectedDate, "MMMM d, yyyy")}
-            </DialogTitle>
+            <DialogTitle>Set Schedule for {DAYS_OF_WEEK[selectedDayOfWeek]}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -198,9 +328,9 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                 <Input
                   id="start_time"
                   type="time"
-                  value={formData.start_time}
+                  value={scheduleFormData.start_time}
                   onChange={(e) =>
-                    setFormData({ ...formData, start_time: e.target.value })
+                    setScheduleFormData({ ...scheduleFormData, start_time: e.target.value })
                   }
                 />
               </div>
@@ -209,22 +339,90 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                 <Input
                   id="end_time"
                   type="time"
-                  value={formData.end_time}
+                  value={scheduleFormData.end_time}
                   onChange={(e) =>
-                    setFormData({ ...formData, end_time: e.target.value })
+                    setScheduleFormData({ ...scheduleFormData, end_time: e.target.value })
                   }
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="is_available">Available</Label>
-              <Switch
-                id="is_available"
-                checked={formData.is_available}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_available: checked })
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => createOrUpdateSchedule.mutate()}>Save</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unavailability Dialog */}
+      <Dialog open={isUnavailableDialogOpen} onOpenChange={setIsUnavailableDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Unavailable Period</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Calendar
+                  mode="single"
+                  selected={unavailableFormData.start_date}
+                  onSelect={(date) =>
+                    setUnavailableFormData({ ...unavailableFormData, start_date: date || new Date() })
+                  }
+                  className="rounded-md border"
+                />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Calendar
+                  mode="single"
+                  selected={unavailableFormData.end_date}
+                  onSelect={(date) =>
+                    setUnavailableFormData({ ...unavailableFormData, end_date: date || new Date() })
+                  }
+                  className="rounded-md border"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="unavail_start_time">Start Time (Optional)</Label>
+                <Input
+                  id="unavail_start_time"
+                  type="time"
+                  value={unavailableFormData.start_time}
+                  onChange={(e) =>
+                    setUnavailableFormData({ ...unavailableFormData, start_time: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="unavail_end_time">End Time (Optional)</Label>
+                <Input
+                  id="unavail_end_time"
+                  type="time"
+                  value={unavailableFormData.end_time}
+                  onChange={(e) =>
+                    setUnavailableFormData({ ...unavailableFormData, end_time: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="reason">Reason</Label>
+              <Input
+                id="reason"
+                value={unavailableFormData.reason}
+                onChange={(e) =>
+                  setUnavailableFormData({ ...unavailableFormData, reason: e.target.value })
                 }
+                placeholder="e.g., Vacation, Training, etc."
               />
             </div>
 
@@ -232,19 +430,19 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
-                value={formData.notes}
+                value={unavailableFormData.notes}
                 onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
+                  setUnavailableFormData({ ...unavailableFormData, notes: e.target.value })
                 }
-                placeholder="Add any notes about this availability..."
+                placeholder="Additional details..."
               />
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsUnavailableDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => createAvailability.mutate()}>Save</Button>
+              <Button onClick={() => createUnavailability.mutate()}>Save</Button>
             </div>
           </div>
         </DialogContent>
