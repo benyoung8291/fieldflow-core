@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         sidebarCollapsed ? "lg:w-20" : "lg:w-64"
       )}>
         <div className="flex flex-col h-full">
-          <div className="flex-1 flex flex-col gap-y-5 px-6 py-8">
+          <div className="flex-shrink-0 px-6 py-8">
             <div className={cn(
               "flex items-center",
               sidebarCollapsed ? "justify-center" : "justify-between"
@@ -171,11 +171,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
               )}
             </div>
-            <nav className="flex flex-1 flex-col gap-2 overflow-y-auto">
-              {renderMenuContent()}
-            </nav>
           </div>
-          <div className="border-t border-sidebar-border px-6 py-4">
+          
+          <nav className="flex-1 flex flex-col gap-2 px-6 overflow-y-auto">
+            {renderMenuContent()}
+          </nav>
+          
+          <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4">
             <Button
               variant="ghost"
               size="sm"
