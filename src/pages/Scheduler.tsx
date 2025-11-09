@@ -190,7 +190,7 @@ export default function Scheduler() {
         .eq("id", (await supabase.auth.getUser()).data.user?.id)
         .single();
 
-      const { error } = await supabase.from("appointments").insert({
+      const { data: newAppointment, error } = await supabase.from("appointments").insert({
         tenant_id: profile?.tenant_id,
         service_order_id: serviceOrderId,
         title: serviceOrder?.title || "New Appointment",
@@ -201,16 +201,50 @@ export default function Scheduler() {
         location_address: customer?.address,
         status: "published",
         created_by: (await supabase.auth.getUser()).data.user?.id,
-      });
+      }).select(`
+        *,
+        service_orders(order_number, title),
+        profiles!appointments_assigned_to_fkey(first_name, last_name)
+      `).single();
 
       if (error) throw error;
+      return newAppointment;
+    },
+    onMutate: async ({ serviceOrderId, startTime, endTime, workerId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+
+      // Snapshot previous value
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+
+      // Optimistically update with placeholder
+      queryClient.setQueryData(["appointments"], (old: any) => {
+        const optimisticAppointment = {
+          id: `temp-${Date.now()}`,
+          service_order_id: serviceOrderId,
+          title: "Creating appointment...",
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          assigned_to: workerId,
+          status: "published",
+          service_orders: null,
+          profiles: null,
+        };
+        return [...(old || []), optimisticAppointment];
+      });
+
+      return { previousAppointments };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["service-orders-with-appointments"] });
       toast.success("Appointment created successfully");
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(["appointments"], context.previousAppointments);
+      }
       toast.error(error.message || "Failed to create appointment");
     },
   });
