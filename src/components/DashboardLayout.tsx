@@ -179,11 +179,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           
           <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className={cn(
-                "w-full",
+                "w-full hover:bg-sidebar-accent",
                 sidebarCollapsed ? "px-2" : ""
               )}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
