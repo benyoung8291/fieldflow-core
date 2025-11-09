@@ -288,24 +288,56 @@ export default function QuoteDetails() {
               )}
 
               <div>
-                <Label className="text-sm font-medium mb-3 block">Line Items</Label>
+                <Label className="text-sm font-medium mb-3 block">Line Items & Takeoffs</Label>
                 <div className="space-y-2">
-                  {lineItems?.map((item: any) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium">{item.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.quantity} × ${item.unit_price}
-                        </p>
+                  {lineItems?.filter((item: any) => !item.parent_line_item_id).map((item: any) => {
+                    const subItems = lineItems?.filter((sub: any) => sub.parent_line_item_id === item.id) || [];
+                    const hasSubItems = subItems.length > 0;
+                    
+                    return (
+                      <div key={item.id} className="border rounded-lg overflow-hidden">
+                        <div className="flex items-start justify-between p-3 bg-muted/20">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.description}</p>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              Qty: {item.quantity}
+                              {!hasSubItems && (
+                                <>
+                                  {" • "}Cost: ${item.cost_price?.toFixed(2) || "0.00"}
+                                  {" • "}Margin: {item.margin_percentage?.toFixed(2) || "0"}%
+                                  {" • "}Sell: ${item.sell_price?.toFixed(2) || "0.00"}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right font-medium">
+                            ${item.line_total.toFixed(2)}
+                          </div>
+                        </div>
+                        
+                        {hasSubItems && (
+                          <div className="border-t">
+                            {subItems.map((subItem: any) => (
+                              <div key={subItem.id} className="flex items-start justify-between p-3 pl-8 border-b last:border-b-0 bg-background/50">
+                                <div className="flex-1">
+                                  <p className="text-sm">{subItem.description}</p>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Qty: {subItem.quantity}
+                                    {" • "}Cost: ${subItem.cost_price?.toFixed(2) || "0.00"}
+                                    {" • "}Margin: {subItem.margin_percentage?.toFixed(2) || "0"}%
+                                    {" • "}Sell: ${subItem.sell_price?.toFixed(2) || "0.00"}
+                                  </div>
+                                </div>
+                                <div className="text-right text-sm font-medium">
+                                  ${subItem.line_total.toFixed(2)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right font-medium">
-                        ${item.line_total.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

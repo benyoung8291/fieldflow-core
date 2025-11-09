@@ -467,6 +467,54 @@ export type Database = {
           },
         ]
       }
+      price_book_items: {
+        Row: {
+          category: string | null
+          code: string
+          cost_price: number
+          created_at: string | null
+          description: string
+          id: string
+          is_active: boolean | null
+          margin_percentage: number
+          notes: string | null
+          sell_price: number
+          tenant_id: string
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          cost_price?: number
+          created_at?: string | null
+          description: string
+          id?: string
+          is_active?: boolean | null
+          margin_percentage?: number
+          notes?: string | null
+          sell_price?: number
+          tenant_id: string
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          cost_price?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          margin_percentage?: number
+          notes?: string | null
+          sell_price?: number
+          tenant_id?: string
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           abn: string | null
@@ -604,45 +652,71 @@ export type Database = {
       }
       quote_line_items: {
         Row: {
+          cost_price: number | null
           created_at: string | null
           description: string
           id: string
+          is_from_price_book: boolean | null
           item_order: number
           line_total: number
+          margin_percentage: number | null
           notes: string | null
+          parent_line_item_id: string | null
+          price_book_item_id: string | null
           quantity: number
           quote_id: string
+          sell_price: number | null
           tenant_id: string
           unit_price: number
           updated_at: string | null
         }
         Insert: {
+          cost_price?: number | null
           created_at?: string | null
           description: string
           id?: string
+          is_from_price_book?: boolean | null
           item_order?: number
           line_total?: number
+          margin_percentage?: number | null
           notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
           quantity?: number
           quote_id: string
+          sell_price?: number | null
           tenant_id: string
           unit_price?: number
           updated_at?: string | null
         }
         Update: {
+          cost_price?: number | null
           created_at?: string | null
           description?: string
           id?: string
+          is_from_price_book?: boolean | null
           item_order?: number
           line_total?: number
+          margin_percentage?: number | null
           notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
           quantity?: number
           quote_id?: string
+          sell_price?: number | null
           tenant_id?: string
           unit_price?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_parent_line_item_id_fkey"
+            columns: ["parent_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_line_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotes: {
         Row: {
