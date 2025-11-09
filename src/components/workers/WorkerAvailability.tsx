@@ -88,7 +88,9 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
       
       if (currentSchedule) {
         // If exists, toggle between all-day and delete
-        const isCurrentlyAllDay = currentSchedule.start_time === "00:00" && currentSchedule.end_time === "23:59";
+        const isCurrentlyAllDay = 
+          (currentSchedule.start_time === "00:00" || currentSchedule.start_time === "00:00:00") && 
+          (currentSchedule.end_time === "23:59" || currentSchedule.end_time === "23:59:00");
         console.log("Is currently all day:", isCurrentlyAllDay);
         
         if (isCurrentlyAllDay) {
@@ -289,7 +291,8 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                     {daySchedule ? (
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        {daySchedule.start_time === "00:00" && daySchedule.end_time === "23:59" ? (
+                        {((daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
+                          (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00")) ? (
                           <span>Anytime</span>
                         ) : (
                           <span>{daySchedule.start_time} - {daySchedule.end_time}</span>
@@ -306,7 +309,11 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                       </Label>
                       <Switch
                         id={`anytime-${index}`}
-                        checked={daySchedule?.start_time === "00:00" && daySchedule?.end_time === "23:59"}
+                        checked={
+                          daySchedule && 
+                          (daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
+                          (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00")
+                        }
                         onCheckedChange={() => toggleAllDay.mutate({ dayOfWeek: index, currentSchedule: daySchedule })}
                       />
                     </div>
@@ -316,10 +323,12 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                       onClick={() => {
                         setSelectedDayOfWeek(index);
                         if (daySchedule) {
-                          const isAllDay = daySchedule.start_time === "00:00" && daySchedule.end_time === "23:59";
+                          const isAllDay = 
+                            (daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
+                            (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00");
                           setScheduleFormData({
-                            start_time: isAllDay ? "09:00" : daySchedule.start_time,
-                            end_time: isAllDay ? "17:00" : daySchedule.end_time,
+                            start_time: isAllDay ? "09:00" : daySchedule.start_time.substring(0, 5),
+                            end_time: isAllDay ? "17:00" : daySchedule.end_time.substring(0, 5),
                             is_all_day: isAllDay,
                           });
                         } else {
