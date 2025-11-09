@@ -171,8 +171,12 @@ export default function MenuCustomizationTab() {
 
   const initializeDefaultMenu = useMutation({
     mutationFn: async () => {
+      if (!profile?.tenant_id) {
+        throw new Error("Tenant ID not found. Please refresh the page.");
+      }
+
       const itemsToInsert = defaultMenuItems.map((item, index) => ({
-        tenant_id: profile?.tenant_id!,
+        tenant_id: profile.tenant_id,
         label: item.label,
         icon: item.icon,
         path: item.path,
@@ -203,9 +207,13 @@ export default function MenuCustomizationTab() {
           .eq("id", editingItem.id);
         if (error) throw error;
       } else {
+        if (!profile?.tenant_id) {
+          throw new Error("Tenant ID not found. Please refresh the page.");
+        }
+        
         const { error } = await supabase.from("menu_items").insert({
           ...data,
-          tenant_id: profile?.tenant_id!,
+          tenant_id: profile.tenant_id,
         } as any);
         if (error) throw error;
       }
@@ -314,9 +322,15 @@ export default function MenuCustomizationTab() {
           {menuItems.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No menu items configured</p>
-              <Button onClick={() => initializeDefaultMenu.mutate()}>
-                Initialize Default Menu
+              <Button 
+                onClick={() => initializeDefaultMenu.mutate()}
+                disabled={!profile?.tenant_id || initializeDefaultMenu.isPending}
+              >
+                {initializeDefaultMenu.isPending ? "Initializing..." : "Initialize Default Menu"}
               </Button>
+              {!profile?.tenant_id && (
+                <p className="text-sm text-muted-foreground mt-2">Loading profile...</p>
+              )}
             </div>
           ) : (
             <>
