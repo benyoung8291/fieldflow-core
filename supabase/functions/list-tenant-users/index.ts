@@ -69,20 +69,13 @@ Deno.serve(async (req) => {
       .select('user_id, role')
       .eq('tenant_id', profile.tenant_id)
 
-    // Get all auth users for this tenant
-    const { data: { users: authUsers }, error: authError } = await supabaseAdmin.auth.admin.listUsers()
-    
-    if (authError) throw authError
-
-    // Combine the data
+    // Combine the data (email now comes from profiles)
     const combinedData = profiles?.map((profile) => {
-      const authUser = authUsers.find((u) => u.id === profile.id)
       const roles = userRoles?.filter((role) => role.user_id === profile.id) || []
       const hasWorkerRole = roles.some(r => r.role === 'worker')
       
       return {
         ...profile,
-        email: authUser?.email || null,
         user_roles: roles,
         has_worker_role: hasWorkerRole,
       }

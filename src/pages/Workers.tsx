@@ -42,7 +42,7 @@ export default function Workers() {
   const { data: workers = [], isLoading } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
-      // First get all user_roles with worker role
+      // Get all user_roles with worker role
       const { data: workerRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -54,13 +54,14 @@ export default function Workers() {
       
       if (workerUserIds.length === 0) return [];
 
-      // Then fetch profiles for those users
+      // Fetch profiles for those users (now includes email)
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select(`
           id,
           first_name,
           last_name,
+          email,
           phone,
           is_active,
           pay_rate_category:pay_rate_categories(name, hourly_rate)
@@ -69,13 +70,7 @@ export default function Workers() {
         .order("first_name");
 
       if (error) throw error;
-
-      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
-      
-      return ((profiles || []) as any[]).map((profile: any) => ({
-        ...profile,
-        email: authUsers?.find((u: any) => u.id === profile.id)?.email
-      })) as Worker[];
+      return (profiles || []) as Worker[];
     },
   });
 

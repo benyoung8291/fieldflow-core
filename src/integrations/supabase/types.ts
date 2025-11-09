@@ -960,6 +960,7 @@ export type Database = {
           abn: string | null
           avatar_url: string | null
           created_at: string | null
+          email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           first_name: string | null
@@ -981,6 +982,7 @@ export type Database = {
           abn?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string | null
@@ -1002,6 +1004,7 @@ export type Database = {
           abn?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string | null

@@ -41,7 +41,7 @@ export default function WorkerDetails() {
   const { data: worker, isLoading } = useQuery({
     queryKey: ["worker", id],
     queryFn: async () => {
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select(`
           *,
@@ -50,14 +50,8 @@ export default function WorkerDetails() {
         .eq("id", id)
         .single();
 
-      if (profileError) throw profileError;
-
-      const { data: { user } } = await supabase.auth.admin.getUserById(id!);
-
-      return {
-        ...profile,
-        email: user?.email,
-      };
+      if (error) throw error;
+      return profile;
     },
     enabled: !!id,
   });
@@ -101,6 +95,7 @@ export default function WorkerDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["worker", id] });
+      queryClient.invalidateQueries({ queryKey: ["workers"] });
       toast.success("Worker updated successfully");
       setIsEditing(false);
     },
