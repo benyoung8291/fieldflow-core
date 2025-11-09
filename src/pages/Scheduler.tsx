@@ -500,20 +500,51 @@ export default function Scheduler() {
       : (event.activatorEvent as MouseEvent)?.ctrlKey || (event.activatorEvent as MouseEvent)?.metaKey;
 
     // Calculate start and end times
-    const startTime = hour !== undefined 
+    let startTime = hour !== undefined 
       ? setMinutes(setHours(date, hour), 0)
       : setHours(date, 18); // Default to 6 PM if no hour specified
 
     // For service orders, use 4 hour default, otherwise 2 hours
     const defaultDuration = draggedItem?.type === "service-order" ? 4 : 2;
-    const endTime = addHours(startTime, defaultDuration);
+    let endTime = addHours(startTime, defaultDuration);
 
     // Handle dropping a service order
     if (draggedItem?.type === "service-order") {
       const serviceOrder = draggedItem.serviceOrder;
 
-      // Check conflicts and availability
+      // Check for existing appointments and find next available slot
       if (workerId) {
+        // Find all appointments for this worker on this date
+        const workerAppointmentsOnDate = appointments.filter(apt => 
+          apt.assigned_to === workerId &&
+          new Date(apt.start_time).toDateString() === date.toDateString()
+        ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+        // Check if proposed time conflicts with existing appointments
+        let hasConflict = true;
+        let attemptCount = 0;
+        const maxAttempts = 20; // Prevent infinite loops
+
+        while (hasConflict && attemptCount < maxAttempts) {
+          hasConflict = false;
+          
+          for (const apt of workerAppointmentsOnDate) {
+            const aptStart = new Date(apt.start_time);
+            const aptEnd = new Date(apt.end_time);
+            
+            // Check if times overlap
+            if (startTime < aptEnd && endTime > aptStart) {
+              hasConflict = true;
+              // Move to immediately after this appointment
+              startTime = new Date(aptEnd);
+              endTime = addHours(startTime, defaultDuration);
+              break;
+            }
+          }
+          attemptCount++;
+        }
+
+        // Final conflict check with availability
         const conflict = checkConflict(workerId, startTime, endTime);
         if (conflict.hasConflict) {
           toast.error(conflict.reason);
@@ -542,10 +573,42 @@ export default function Scheduler() {
       const originalStart = new Date(appointment.start_time);
       const originalEnd = new Date(appointment.end_time);
       const durationMs = originalEnd.getTime() - originalStart.getTime();
-      const newEndTime = new Date(startTime.getTime() + durationMs);
+      let newEndTime = new Date(startTime.getTime() + durationMs);
 
-      // Check conflicts and availability
+      // Check for existing appointments and find next available slot
       if (workerId) {
+        // Find all appointments for this worker on this date (excluding current one)
+        const workerAppointmentsOnDate = appointments.filter(apt => 
+          apt.id !== appointment.id &&
+          apt.assigned_to === workerId &&
+          new Date(apt.start_time).toDateString() === date.toDateString()
+        ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+        // Check if proposed time conflicts with existing appointments
+        let hasConflict = true;
+        let attemptCount = 0;
+        const maxAttempts = 20;
+
+        while (hasConflict && attemptCount < maxAttempts) {
+          hasConflict = false;
+          
+          for (const apt of workerAppointmentsOnDate) {
+            const aptStart = new Date(apt.start_time);
+            const aptEnd = new Date(apt.end_time);
+            
+            // Check if times overlap
+            if (startTime < aptEnd && newEndTime > aptStart) {
+              hasConflict = true;
+              // Move to immediately after this appointment
+              startTime = new Date(aptEnd);
+              newEndTime = new Date(startTime.getTime() + durationMs);
+              break;
+            }
+          }
+          attemptCount++;
+        }
+
+        // Final conflict check
         const conflict = checkConflict(workerId, startTime, newEndTime, appointment.id);
         if (conflict.hasConflict) {
           toast.error(conflict.reason);
