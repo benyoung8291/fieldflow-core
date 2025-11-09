@@ -12,7 +12,8 @@ import {
   Menu,
   UserPlus,
   BarChart3,
-  Kanban
+  Kanban,
+  FileCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const navigation = [
   { name: "Quotes", href: "/quotes", icon: FileText },
   { name: "Projects", href: "/projects", icon: FileText },
   { name: "Service Orders", href: "/service-orders", icon: ClipboardList },
+  { name: "Service Contracts", href: "/service-contracts", icon: FileCheck },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Scheduler", href: "/scheduler", icon: Calendar },

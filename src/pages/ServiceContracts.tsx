@@ -1,0 +1,356 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Calendar, DollarSign, FileText, TrendingUp } from "lucide-react";
+import { format, addMonths, startOfMonth, endOfMonth, parseISO, addDays, addWeeks, isWithinInterval } from "date-fns";
+
+export default function ServiceContracts() {
+  const { data: contracts, isLoading } = useQuery({
+    queryKey: ["service-contracts-dashboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_contracts" as any)
+        .select(`
+          *,
+          customers (name),
+          service_contract_line_items (*)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Calculate upcoming generations for next 12 months
+  const calculateUpcomingGenerations = () => {
+    if (!contracts) return [];
+    
+    const generations: any[] = [];
+    const now = new Date();
+    const endDate = addMonths(now, 12);
+
+    contracts.forEach((contract: any) => {
+      if (contract.status !== "active" || !contract.auto_generate) return;
+
+      contract.service_contract_line_items?.forEach((item: any) => {
+        if (!item.is_active || !item.next_generation_date) return;
+
+        let currentDate = parseISO(item.next_generation_date);
+        
+        while (currentDate <= endDate) {
+          if (currentDate >= now) {
+            generations.push({
+              date: currentDate,
+              contractId: contract.id,
+              contractNumber: contract.contract_number,
+              customerName: contract.customers?.name,
+              itemDescription: item.description,
+              amount: item.line_total,
+              frequency: item.recurrence_frequency,
+            });
+          }
+
+          // Calculate next date based on frequency
+          switch (item.recurrence_frequency) {
+            case "weekly":
+              currentDate = addWeeks(currentDate, 1);
+              break;
+            case "fortnightly":
+              currentDate = addWeeks(currentDate, 2);
+              break;
+            case "monthly":
+              currentDate = addMonths(currentDate, 1);
+              break;
+            case "quarterly":
+              currentDate = addMonths(currentDate, 3);
+              break;
+            case "yearly":
+              currentDate = addMonths(currentDate, 12);
+              break;
+            default:
+              currentDate = addMonths(currentDate, 100); // Stop loop for one_time
+          }
+
+          // Check if contract has ended
+          if (contract.end_date && currentDate > parseISO(contract.end_date)) {
+            break;
+          }
+        }
+      });
+    });
+
+    return generations.sort((a, b) => a.date.getTime() - b.date.getTime());
+  };
+
+  // Calculate revenue by month
+  const calculateMonthlyRevenue = () => {
+    const generations = calculateUpcomingGenerations();
+    const monthlyRevenue: { [key: string]: number } = {};
+
+    generations.forEach((gen) => {
+      const monthKey = format(gen.date, "yyyy-MM");
+      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + parseFloat(gen.amount);
+    });
+
+    return Object.entries(monthlyRevenue)
+      .map(([month, revenue]) => ({ month, revenue }))
+      .slice(0, 12);
+  };
+
+  const activeContracts = contracts?.filter((c: any) => c.status === "active") || [];
+  const upcomingGenerations = calculateUpcomingGenerations().slice(0, 20);
+  const monthlyRevenue = calculateMonthlyRevenue();
+  const totalContractValue = activeContracts.reduce((sum: number, c: any) => sum + parseFloat(c.total_contract_value || 0), 0);
+
+  const upcomingRenewals = contracts?.filter((c: any) => {
+    if (!c.end_date || c.status !== "active") return false;
+    const endDate = parseISO(c.end_date);
+    const threeMonthsFromNow = addMonths(new Date(), 3);
+    return endDate <= threeMonthsFromNow && endDate >= new Date();
+  }) || [];
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="space-y-4">
+          <div className="h-8 w-64 bg-muted animate-pulse rounded" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Service Contracts</h1>
+        <p className="text-muted-foreground">Manage active contracts and forecast revenue</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeContracts.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Contract Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totalContractValue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Ex-GST</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Upcoming Generations</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{upcomingGenerations.length}</div>
+            <p className="text-xs text-muted-foreground">Next 12 months</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Renewal Alerts</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{upcomingRenewals.length}</div>
+            <p className="text-xs text-muted-foreground">Within 3 months</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="contracts" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="contracts">Active Contracts</TabsTrigger>
+          <TabsTrigger value="generations">Upcoming Generations</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue Forecast</TabsTrigger>
+          <TabsTrigger value="renewals">Renewal Alerts</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="contracts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Contracts</CardTitle>
+              <CardDescription>All currently active service contracts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contract Number</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Value</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeContracts.map((contract: any) => (
+                    <TableRow key={contract.id}>
+                      <TableCell className="font-medium">{contract.contract_number}</TableCell>
+                      <TableCell>{contract.customers?.name}</TableCell>
+                      <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
+                      <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
+                      <TableCell>${parseFloat(contract.total_contract_value).toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge variant="default">{contract.status}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="generations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upcoming Service Order Generations</CardTitle>
+              <CardDescription>Scheduled service orders for the next 12 months</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Generation Date</TableHead>
+                    <TableHead>Contract</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Frequency</TableHead>
+                    <TableHead>Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {upcomingGenerations.map((gen: any, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{format(gen.date, "PP")}</TableCell>
+                      <TableCell>{gen.contractNumber}</TableCell>
+                      <TableCell>{gen.customerName}</TableCell>
+                      <TableCell>{gen.itemDescription}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{gen.frequency}</Badge>
+                      </TableCell>
+                      <TableCell>${parseFloat(gen.amount).toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="revenue" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Revenue Forecast (Ex-GST)</CardTitle>
+              <CardDescription>Expected revenue from service order generations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Projected Revenue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monthlyRevenue.map((item) => (
+                    <TableRow key={item.month}>
+                      <TableCell className="font-medium">
+                        {format(parseISO(item.month + "-01"), "MMMM yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right text-lg font-semibold">
+                        ${item.revenue.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell className="font-bold">Total (12 Months)</TableCell>
+                    <TableCell className="text-right text-lg font-bold">
+                      ${monthlyRevenue.reduce((sum, item) => sum + item.revenue, 0).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="renewals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Renewal Alerts</CardTitle>
+              <CardDescription>Contracts ending within the next 3 months</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {upcomingRenewals.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No upcoming renewals</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contract Number</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Value</TableHead>
+                      <TableHead>Days Until Renewal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {upcomingRenewals.map((contract: any) => {
+                      const endDate = parseISO(contract.end_date);
+                      const daysUntil = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                      return (
+                        <TableRow key={contract.id}>
+                          <TableCell className="font-medium">{contract.contract_number}</TableCell>
+                          <TableCell>{contract.customers?.name}</TableCell>
+                          <TableCell>{format(endDate, "PP")}</TableCell>
+                          <TableCell>${parseFloat(contract.total_contract_value).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge variant={daysUntil <= 30 ? "destructive" : "secondary"}>
+                              {daysUntil} days
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
