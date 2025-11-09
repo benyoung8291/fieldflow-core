@@ -19,6 +19,8 @@ import LeadDetails from "./pages/LeadDetails";
 import Workers from "./pages/Workers";
 import WorkerDetails from "./pages/WorkerDetails";
 import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
+import QuotePipeline from "./pages/QuotePipeline";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,8 @@ const App = () => (
           <Route path="/leads/:id" element={<LeadDetails />} />
           <Route path="/workers" element={<Workers />} />
           <Route path="/workers/:id" element={<WorkerDetails />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/pipeline" element={<QuotePipeline />} />
           <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

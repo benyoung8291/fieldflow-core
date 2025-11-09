@@ -17,6 +17,7 @@ import { Plus, DollarSign, Trash2 } from "lucide-react";
 import QuoteTemplatesTab from "@/components/settings/QuoteTemplatesTab";
 import MessageTemplatesTab from "@/components/settings/MessageTemplatesTab";
 import TermsTemplatesTab from "@/components/settings/TermsTemplatesTab";
+import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 
 interface PayRateCategory {
   id: string;
@@ -164,6 +165,7 @@ export default function Settings() {
         <Tabs defaultValue="pay-rates" className="space-y-6">
           <TabsList>
             <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
+            <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
             <TabsTrigger value="quote-templates">Quote Templates</TabsTrigger>
             <TabsTrigger value="message-templates">Messages</TabsTrigger>
             <TabsTrigger value="terms-templates">Terms & Conditions</TabsTrigger>
@@ -239,6 +241,14 @@ export default function Settings() {
                 </TableBody>
               </Table>
             )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="crm-statuses">
+            <Card>
+              <CardContent className="pt-6">
+                <CRMStatusesTab />
               </CardContent>
             </Card>
           </TabsContent>

@@ -10,7 +10,9 @@ import {
   Settings,
   LogOut,
   Menu,
-  UserPlus
+  UserPlus,
+  BarChart3,
+  Kanban
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,8 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Pipeline", href: "/pipeline", icon: Kanban },
   { name: "Quotes", href: "/quotes", icon: FileText },
   { name: "Projects", href: "/projects", icon: FileText },
   { name: "Service Orders", href: "/service-orders", icon: ClipboardList },
