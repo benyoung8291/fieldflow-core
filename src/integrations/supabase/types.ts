@@ -1811,6 +1811,65 @@ export type Database = {
           },
         ]
       }
+      service_order_line_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          is_from_price_book: boolean | null
+          item_order: number
+          line_total: number
+          notes: string | null
+          parent_line_item_id: string | null
+          price_book_item_id: string | null
+          quantity: number
+          service_order_id: string
+          tenant_id: string
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          quantity?: number
+          service_order_id: string
+          tenant_id: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          quantity?: number
+          service_order_id?: string
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_line_items_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_order_templates: {
         Row: {
           billing_type: string | null
@@ -1900,95 +1959,136 @@ export type Database = {
       }
       service_orders: {
         Row: {
-          assigned_to: string | null
           billing_type: string | null
           completed_date: string | null
           created_at: string | null
           created_by: string
+          customer_contact_id: string | null
           customer_id: string
+          customer_location_id: string | null
           description: string | null
           estimated_hours: number | null
           fixed_amount: number | null
-          hourly_rate: number | null
           id: string
           is_recurring: boolean | null
           location_id: string | null
           order_number: string
           parent_service_order_id: string | null
+          preferred_date: string | null
+          preferred_date_end: string | null
+          preferred_date_start: string | null
           priority: string | null
           project_id: string | null
+          purchase_order_number: string | null
           recurrence_days_of_week: string[] | null
           recurrence_end_date: string | null
           recurrence_frequency: number | null
           recurrence_pattern: string | null
-          scheduled_date: string | null
+          skill_required: string | null
           status: Database["public"]["Enums"]["service_order_status"] | null
+          subtotal: number | null
+          tax_amount: number | null
+          tax_rate: number | null
           tenant_id: string
           title: string
+          total_amount: number | null
           updated_at: string | null
+          work_order_number: string | null
         }
         Insert: {
-          assigned_to?: string | null
           billing_type?: string | null
           completed_date?: string | null
           created_at?: string | null
           created_by: string
+          customer_contact_id?: string | null
           customer_id: string
+          customer_location_id?: string | null
           description?: string | null
           estimated_hours?: number | null
           fixed_amount?: number | null
-          hourly_rate?: number | null
           id?: string
           is_recurring?: boolean | null
           location_id?: string | null
           order_number: string
           parent_service_order_id?: string | null
+          preferred_date?: string | null
+          preferred_date_end?: string | null
+          preferred_date_start?: string | null
           priority?: string | null
           project_id?: string | null
+          purchase_order_number?: string | null
           recurrence_days_of_week?: string[] | null
           recurrence_end_date?: string | null
           recurrence_frequency?: number | null
           recurrence_pattern?: string | null
-          scheduled_date?: string | null
+          skill_required?: string | null
           status?: Database["public"]["Enums"]["service_order_status"] | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
           tenant_id: string
           title: string
+          total_amount?: number | null
           updated_at?: string | null
+          work_order_number?: string | null
         }
         Update: {
-          assigned_to?: string | null
           billing_type?: string | null
           completed_date?: string | null
           created_at?: string | null
           created_by?: string
+          customer_contact_id?: string | null
           customer_id?: string
+          customer_location_id?: string | null
           description?: string | null
           estimated_hours?: number | null
           fixed_amount?: number | null
-          hourly_rate?: number | null
           id?: string
           is_recurring?: boolean | null
           location_id?: string | null
           order_number?: string
           parent_service_order_id?: string | null
+          preferred_date?: string | null
+          preferred_date_end?: string | null
+          preferred_date_start?: string | null
           priority?: string | null
           project_id?: string | null
+          purchase_order_number?: string | null
           recurrence_days_of_week?: string[] | null
           recurrence_end_date?: string | null
           recurrence_frequency?: number | null
           recurrence_pattern?: string | null
-          scheduled_date?: string | null
+          skill_required?: string | null
           status?: Database["public"]["Enums"]["service_order_status"] | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
           tenant_id?: string
           title?: string
+          total_amount?: number | null
           updated_at?: string | null
+          work_order_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "service_orders_customer_contact_id_fkey"
+            columns: ["customer_contact_id"]
+            isOneToOne: false
+            referencedRelation: "customer_contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_customer_location_id_fkey"
+            columns: ["customer_location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
             referencedColumns: ["id"]
           },
           {

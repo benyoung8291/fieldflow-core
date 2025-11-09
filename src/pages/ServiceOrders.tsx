@@ -60,7 +60,6 @@ export default function ServiceOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
 
   const { data: orders = [], isLoading } = useQuery({
@@ -71,8 +70,9 @@ export default function ServiceOrders() {
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name),
-          profiles!service_orders_assigned_to_fkey(first_name, last_name),
-          project:customers!service_orders_project_id_fkey(name)
+          customer_locations(name, address),
+          customer_contacts(first_name, last_name, email),
+          projects(name)
         `)
         .order("created_at", { ascending: false });
 
@@ -94,30 +94,19 @@ export default function ServiceOrders() {
     },
   });
 
-  const { data: technicians = [] } = useQuery({
-    queryKey: ["technicians_filter"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const filteredOrders = orders.filter((order: any) => {
     const matchesSearch = 
       searchTerm === "" ||
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customers?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      order.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.work_order_number?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
-    const matchesAssigned = assignedFilter === "all" || order.assigned_to === assignedFilter;
     const matchesCustomer = customerFilter === "all" || order.customer_id === customerFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesAssigned && matchesCustomer;
+    return matchesSearch && matchesStatus && matchesPriority && matchesCustomer;
   });
 
   const handleDelete = async () => {
@@ -273,7 +262,7 @@ export default function ServiceOrders() {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
@@ -319,22 +308,6 @@ export default function ServiceOrders() {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <Select value={assignedFilter} onValueChange={setAssignedFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Technicians" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Technicians</SelectItem>
-                    {technicians.map((tech: any) => (
-                      <SelectItem key={tech.id} value={tech.id}>
-                        {tech.first_name} {tech.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -366,7 +339,7 @@ export default function ServiceOrders() {
                         Title
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                        Project
+                        Location
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
                         Status
@@ -375,10 +348,7 @@ export default function ServiceOrders() {
                         Priority
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                        Assigned
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                        Scheduled
+                        Total
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
                         Actions
@@ -389,14 +359,24 @@ export default function ServiceOrders() {
                     {filteredOrders.map((order: any) => (
                       <tr key={order.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                         <td className="py-4 px-4">
-                          <span className="font-medium">{order.order_number}</span>
+                          <div>
+                            <span className="font-medium">{order.order_number}</span>
+                            {order.work_order_number && (
+                              <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-4">{order.customers?.name || "-"}</td>
-                        <td className="py-4 px-4">{order.title}</td>
                         <td className="py-4 px-4">
-                          {order.project?.name ? (
-                            <Badge variant="outline">{order.project.name}</Badge>
-                          ) : "-"}
+                          <div>
+                            {order.title}
+                            {order.skill_required && (
+                              <div className="text-xs text-muted-foreground">Skill: {order.skill_required}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {order.customer_locations?.name || "-"}
                         </td>
                         <td className="py-4 px-4">
                           <Badge className={statusColors[order.status as keyof typeof statusColors]}>
@@ -409,13 +389,7 @@ export default function ServiceOrders() {
                           </Badge>
                         </td>
                         <td className="py-4 px-4">
-                          {order.profiles ? 
-                            `${order.profiles.first_name} ${order.profiles.last_name}` : 
-                            "-"
-                          }
-                        </td>
-                        <td className="py-4 px-4">
-                          {order.scheduled_date || "-"}
+                          ${order.total_amount?.toFixed(2) || "0.00"}
                         </td>
                         <td className="py-4 px-4">
                           <DropdownMenu>
