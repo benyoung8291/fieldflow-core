@@ -61,7 +61,7 @@ export default function Scheduler() {
         .select(`
           *,
           service_orders(order_number, title),
-          profiles!appointments_assigned_to_fkey(first_name, last_name),
+          profiles:assigned_to(first_name, last_name),
           appointment_workers(worker_id, profiles(first_name, last_name))
         `)
         .order("start_time", { ascending: true });
@@ -209,7 +209,7 @@ export default function Scheduler() {
       }).select(`
         *,
         service_orders(order_number, title),
-        profiles!appointments_assigned_to_fkey(first_name, last_name),
+        profiles:assigned_to(first_name, last_name),
         appointment_workers(worker_id, profiles(first_name, last_name))
       `).single();
 
