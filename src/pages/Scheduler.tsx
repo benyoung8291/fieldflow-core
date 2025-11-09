@@ -3,13 +3,15 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText } from "lucide-react";
-import { format, addDays, setHours, setMinutes, addHours, isSameDay } from "date-fns";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List } from "lucide-react";
+import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
+import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
+import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
-import FullCalendarScheduler from "@/components/scheduler/FullCalendarScheduler";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
@@ -28,7 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export default function Scheduler() {
-  const [viewType, setViewType] = useState<"calendar" | "kanban" | "service-orders">("calendar");
+  const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban">("week");
   const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -96,20 +98,22 @@ export default function Scheduler() {
   const activeWorkers = uniqueTechnicians.size;
 
   const handlePrevious = () => {
-    const calendarApi = document.querySelector('.fullcalendar-scheduler')?.querySelector('.fc')as any;
-    if (calendarApi?.__fullCalendar) {
-      calendarApi.__fullCalendar.prev();
+    if (viewType === "day") {
+      setCurrentDate(addDays(currentDate, -1));
+    } else if (viewType === "week") {
+      setCurrentDate(subWeeks(currentDate, 1));
     } else {
-      setCurrentDate(addDays(currentDate, -7));
+      setCurrentDate(subMonths(currentDate, 1));
     }
   };
 
   const handleNext = () => {
-    const calendarApi = document.querySelector('.fullcalendar-scheduler')?.querySelector('.fc') as any;
-    if (calendarApi?.__fullCalendar) {
-      calendarApi.__fullCalendar.next();
+    if (viewType === "day") {
+      setCurrentDate(addDays(currentDate, 1));
+    } else if (viewType === "week") {
+      setCurrentDate(addWeeks(currentDate, 1));
     } else {
-      setCurrentDate(addDays(currentDate, 7));
+      setCurrentDate(addMonths(currentDate, 1));
     }
   };
 
@@ -118,7 +122,15 @@ export default function Scheduler() {
   };
 
   const getDateRangeLabel = () => {
-    return format(currentDate, "MMMM yyyy");
+    if (viewType === "day") {
+      return format(currentDate, "EEEE, MMMM d, yyyy");
+    } else if (viewType === "week") {
+      const start = startOfWeek(currentDate);
+      const end = endOfWeek(currentDate);
+      return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+    } else {
+      return format(currentDate, "MMMM yyyy");
+    }
   };
 
   const handleCreateAppointment = () => {
@@ -666,11 +678,23 @@ export default function Scheduler() {
                   <FileText className="h-4 w-4 mr-2" />
                   Publish Draft Appointments
                 </Button>
-                <Tabs value={viewType} onValueChange={(v) => setViewType(v as "calendar" | "kanban" | "service-orders")}>
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="service-order-view" 
+                    checked={showServiceOrderView}
+                    onCheckedChange={setShowServiceOrderView}
+                  />
+                  <Label htmlFor="service-order-view" className="text-sm cursor-pointer">
+                    <List className="h-4 w-4 inline mr-1" />
+                    Service Order View
+                  </Label>
+                </div>
+                <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
                   <TabsList>
-                    <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                    <TabsTrigger value="day">Day</TabsTrigger>
+                    <TabsTrigger value="week">Week</TabsTrigger>
+                    <TabsTrigger value="month">Month</TabsTrigger>
                     <TabsTrigger value="kanban">Kanban</TabsTrigger>
-                    <TabsTrigger value="service-orders">Service Orders</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -679,41 +703,106 @@ export default function Scheduler() {
           <CardContent>
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
-            ) : viewType === "service-orders" ? (
+            ) : showServiceOrderView ? (
               <ServiceOrdersCalendarView 
                 currentDate={currentDate}
                 appointments={appointments}
-                viewType="calendar"
+                viewType={viewType}
                 onAppointmentClick={(id) => setSelectedAppointment(id)}
               />
-            ) : viewType === "calendar" ? (
-              <FullCalendarScheduler
-                currentDate={currentDate}
-                appointments={appointments}
-                workers={workers}
-                onAppointmentClick={(id) => {
-                  const apt = appointments.find(a => a.id === id);
-                  setDetailsAppointment(apt);
-                }}
-                onAppointmentUpdate={async (id, data) => {
-                  await updateAppointmentMutation.mutateAsync({
-                    appointmentId: id,
-                    startTime: new Date(data.start_time),
-                    endTime: new Date(data.end_time),
-                    workerId: data.assigned_to,
-                  });
-                }}
-                onDateChange={setCurrentDate}
-              />
-            ) : viewType === "kanban" ? (
-              <KanbanBoardView
-                appointments={appointments}
-                onAppointmentClick={(id) => {
-                  const apt = appointments.find(a => a.id === id);
-                  setDetailsAppointment(apt);
-                }}
-              />
-            ) : null}
+            ) : (
+              <>
+                {viewType === "day" && (
+                  <SchedulerDayView 
+                    currentDate={currentDate} 
+                    appointments={appointments}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
+                  />
+                )}
+                {viewType === "week" && (
+                  <SchedulerWeekView 
+                    currentDate={currentDate}
+                    appointments={appointments}
+                    workers={workers}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
+                  />
+                )}
+                {viewType === "month" && (
+                  <SchedulerMonthView 
+                    currentDate={currentDate}
+                    appointments={appointments}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
+                  />
+                )}
+                {viewType === "kanban" && (
+                  <KanbanBoardView
+                    appointments={appointments}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Legend */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-sm">Status Legend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-muted"></div>
+                <span className="text-sm">Draft</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-info"></div>
+                <span className="text-sm">Scheduled</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-warning"></div>
+                <span className="text-sm">Checked In</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-success"></div>
+                <span className="text-sm">Completed</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-destructive"></div>
+                <span className="text-sm">Cancelled</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
           </div>
