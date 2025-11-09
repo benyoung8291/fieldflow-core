@@ -17,9 +17,10 @@ interface PriceBookDialogProps {
   onOpenChange: (open: boolean) => void;
   onSelectItem?: (item: any) => void;
   onSelectAssembly?: (assembly: any) => void;
+  allowAssemblies?: boolean;
 }
 
-export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSelectAssembly }: PriceBookDialogProps) {
+export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSelectAssembly, allowAssemblies = true }: PriceBookDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -262,10 +263,17 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSe
 
         {!showForm ? (
           <Tabs defaultValue="items" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="items">Items</TabsTrigger>
-              <TabsTrigger value="assemblies">Assemblies</TabsTrigger>
-            </TabsList>
+            {allowAssemblies && (
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="items">Items</TabsTrigger>
+                <TabsTrigger value="assemblies">Assemblies</TabsTrigger>
+              </TabsList>
+            )}
+            {!allowAssemblies && (
+              <TabsList className="grid w-full grid-cols-1">
+                <TabsTrigger value="items">Items</TabsTrigger>
+              </TabsList>
+            )}
 
             <TabsContent value="items" className="space-y-4">
               <div className="flex gap-2">
@@ -346,7 +354,8 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSe
               </div>
             </TabsContent>
 
-            <TabsContent value="assemblies" className="space-y-4">
+            {allowAssemblies && (
+              <TabsContent value="assemblies" className="space-y-4">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -426,6 +435,7 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSe
                 </Table>
               </div>
             </TabsContent>
+            )}
           </Tabs>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

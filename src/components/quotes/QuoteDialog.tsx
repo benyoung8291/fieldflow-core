@@ -1312,6 +1312,36 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         open={priceBookOpen} 
         onOpenChange={setPriceBookOpen}
         onSelectItem={handlePriceBookSelect}
+        allowAssemblies={isComplexQuote}
+      />
+
+      <AILineItemMatcher
+        open={aiMatcherOpen}
+        onOpenChange={setAiMatcherOpen}
+        onItemsMatched={(items) => {
+          const newItems = items.map(item => ({
+            description: item.description,
+            quantity: item.quantity.toString(),
+            cost_price: item.cost_price.toString(),
+            margin_percentage: item.margin_percentage.toString(),
+            sell_price: item.sell_price.toString(),
+            line_total: item.quantity * item.sell_price,
+            subItems: [],
+            expanded: false,
+          }));
+          setLineItems([...lineItems, ...newItems]);
+        }}
+        tenantId={tenantId}
+      />
+
+      <CreateLeadDialog
+        open={createLeadOpen}
+        onOpenChange={setCreateLeadOpen}
+        onLeadCreated={(leadId, leadName) => {
+          setFormData({ ...formData, lead_id: leadId });
+          fetchCustomersAndLeads();
+          toast({ title: `Lead "${leadName}" created and selected` });
+        }}
       />
     </>
   );
