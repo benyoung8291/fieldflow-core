@@ -517,7 +517,7 @@ export default function ServiceOrderDialog({
         tax_rate: taxRate,
         tax_amount: totals.taxAmount,
         total_amount: totals.total,
-        total_estimated_hours: totals.totalHours,
+        estimated_hours: totals.totalHours,
       };
 
       if (!orderId) {
