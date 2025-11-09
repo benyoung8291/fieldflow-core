@@ -3,9 +3,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Building2, Users, FileText } from "lucide-react";
+import { Plus, Search, Building2, Users, FileText, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import CustomerDialog from "@/components/customers/CustomerDialog";
+import CustomerImportDialog from "@/components/customers/CustomerImportDialog";
 import { useNavigate } from "react-router-dom";
 import { usePresence } from "@/hooks/usePresence";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
@@ -18,6 +19,7 @@ export default function Customers() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   
   const { onlineUsers, updateCursorPosition } = usePresence({
@@ -25,7 +27,7 @@ export default function Customers() {
   });
 
   // Fetch customers from database
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading, refetch } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -130,10 +132,16 @@ export default function Customers() {
             </div>
             <PresenceIndicator users={onlineUsers} />
           </div>
-          <Button onClick={handleAddNew} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Customer
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" className="gap-2">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Button>
+            <Button onClick={handleAddNew} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Customer
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -303,6 +311,12 @@ export default function Customers() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         customer={selectedCustomer}
+      />
+
+      <CustomerImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => refetch()}
       />
     </DashboardLayout>
   );
