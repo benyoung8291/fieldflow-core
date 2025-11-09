@@ -1,8 +1,5 @@
 project_id = "puffpjmmuoaecxygrkcm"
 
-[functions.generate-quote-pdf]
-verify_jwt = false
-
 [functions.match-quote-items]
 verify_jwt = false
 
