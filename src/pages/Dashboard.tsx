@@ -1,11 +1,67 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardList, Users, Calendar, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClipboardList, Users, Calendar, TrendingUp, Plus, FileText, Briefcase, DollarSign, CheckSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, startOfMonth } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
+  const quickActions = [
+    {
+      name: "New Order",
+      description: "Create service order",
+      icon: ClipboardList,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      onClick: () => navigate("/service-orders"),
+    },
+    {
+      name: "New Appointment",
+      description: "Schedule appointment",
+      icon: Calendar,
+      color: "text-warning",
+      bgColor: "bg-warning/10",
+      onClick: () => navigate("/scheduler"),
+    },
+    {
+      name: "New Quote",
+      description: "Create quote",
+      icon: FileText,
+      color: "text-info",
+      bgColor: "bg-info/10",
+      onClick: () => navigate("/quotes"),
+    },
+    {
+      name: "New Project",
+      description: "Start project",
+      icon: Briefcase,
+      color: "text-success",
+      bgColor: "bg-success/10",
+      onClick: () => navigate("/projects"),
+    },
+    {
+      name: "New Invoice",
+      description: "Create invoice",
+      icon: DollarSign,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+      onClick: () => toast.info("Invoice module coming soon"),
+    },
+    {
+      name: "New Task",
+      description: "Add to-do",
+      icon: CheckSquare,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100",
+      onClick: () => toast.info("Task management coming soon"),
+    },
+  ];
+
   // Fetch dashboard statistics
   const { data: stats = [], isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -122,6 +178,39 @@ export default function Dashboard() {
             Welcome back! Here's an overview of your operations.
           </p>
         </div>
+
+        {/* Quick Actions */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Button
+                    key={action.name}
+                    variant="outline"
+                    className="h-auto flex flex-col items-center gap-2 p-4 hover:shadow-md transition-all"
+                    onClick={action.onClick}
+                  >
+                    <div className={`p-3 rounded-lg ${action.bgColor}`}>
+                      <Icon className={`h-6 w-6 ${action.color}`} />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-medium text-sm">{action.name}</p>
+                      <p className="text-xs text-muted-foreground">{action.description}</p>
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
