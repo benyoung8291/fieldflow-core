@@ -52,13 +52,13 @@ export default function QuotePipeline() {
     queryKey: ['crm-statuses'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('crm_status_settings')
+        .from('crm_status_settings' as any)
         .select('*')
         .eq('is_active', true)
         .order('display_order');
       
       if (error) throw error;
-      return data;
+      return data as unknown as CRMStatus[];
     },
   });
 
@@ -78,7 +78,7 @@ export default function QuotePipeline() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as unknown as Quote[];
     },
   });
 
@@ -87,7 +87,7 @@ export default function QuotePipeline() {
     mutationFn: async ({ quoteId, newStatus }: { quoteId: string; newStatus: string }) => {
       const { error } = await supabase
         .from('quotes')
-        .update({ crm_status: newStatus })
+        .update({ crm_status: newStatus } as any)
         .eq('id', quoteId);
       
       if (error) throw error;

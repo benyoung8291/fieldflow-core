@@ -25,7 +25,7 @@ export default function Analytics() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
@@ -34,13 +34,13 @@ export default function Analytics() {
     queryKey: ['crm-statuses'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('crm_status_settings')
+        .from('crm_status_settings' as any)
         .select('*')
         .eq('is_active', true)
         .order('display_order');
       
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 

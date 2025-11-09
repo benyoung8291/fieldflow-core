@@ -53,12 +53,12 @@ export default function CRMStatusesTab() {
     queryKey: ['crm-statuses-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('crm_status_settings')
+        .from('crm_status_settings' as any)
         .select('*')
         .order('display_order');
       
       if (error) throw error;
-      return data as CRMStatus[];
+      return data as unknown as CRMStatus[];
     },
   });
 
@@ -76,7 +76,7 @@ export default function CRMStatusesTab() {
 
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
-      const { error } = await supabase.from('crm_status_settings').insert({
+      const { error } = await supabase.from('crm_status_settings' as any).insert({
         tenant_id: profile.tenant_id,
         ...data,
       });
@@ -102,7 +102,7 @@ export default function CRMStatusesTab() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const { error } = await supabase
-        .from('crm_status_settings')
+        .from('crm_status_settings' as any)
         .update(data)
         .eq('id', id);
       
@@ -127,7 +127,7 @@ export default function CRMStatusesTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('crm_status_settings')
+        .from('crm_status_settings' as any)
         .delete()
         .eq('id', id);
       
