@@ -774,37 +774,6 @@ export default function Scheduler() {
             )}
           </CardContent>
         </Card>
-
-        {/* Legend */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-sm">Status Legend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-muted"></div>
-                <span className="text-sm">Draft</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-info"></div>
-                <span className="text-sm">Scheduled</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-warning"></div>
-                <span className="text-sm">Checked In</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-success"></div>
-                <span className="text-sm">Completed</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-destructive"></div>
-                <span className="text-sm">Cancelled</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
           </div>
 
           {/* Draggable Service Orders Sidebar */}
