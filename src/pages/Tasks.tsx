@@ -439,6 +439,7 @@ export default function Tasks() {
         } : undefined}
         linkedModule={selectedTask?.linked_module}
         linkedRecordId={selectedTask?.linked_record_id}
+        linkedRecordName={selectedTask?.linked_record_name}
         workers={workers}
       />
     </DashboardLayout>

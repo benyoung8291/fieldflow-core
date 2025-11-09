@@ -20,6 +20,7 @@ interface TaskDialogProps {
   defaultValues?: Partial<TaskFormData>;
   linkedModule?: string;
   linkedRecordId?: string;
+  linkedRecordName?: string;
   workers?: Array<{ id: string; first_name: string; last_name: string }>;
   taskId?: string;
 }
@@ -40,6 +41,7 @@ export default function TaskDialog({
   defaultValues,
   linkedModule,
   linkedRecordId,
+  linkedRecordName,
   workers = [],
   taskId,
 }: TaskDialogProps) {
@@ -198,6 +200,7 @@ export default function TaskDialog({
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">
                       Linked to: <span className="font-medium capitalize">{linkedModule.replace('_', ' ')}</span>
+                      {linkedRecordName && <span className="font-medium"> - {linkedRecordName}</span>}
                     </p>
                   </div>
                 )}
@@ -330,6 +333,7 @@ export default function TaskDialog({
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   Linked to: <span className="font-medium capitalize">{linkedModule.replace('_', ' ')}</span>
+                  {linkedRecordName && <span className="font-medium"> - {linkedRecordName}</span>}
                 </p>
               </div>
             )}

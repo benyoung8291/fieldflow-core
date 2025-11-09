@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckSquare } from "lucide-react";
 import TaskDialog, { TaskFormData } from "./TaskDialog";
@@ -20,7 +20,38 @@ export default function CreateTaskButton({
   size = "default",
 }: CreateTaskButtonProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [linkedRecordName, setLinkedRecordName] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Fetch linked record name
+  const { data: linkedRecord } = useQuery({
+    queryKey: ["linked-record", linkedModule, linkedRecordId],
+    queryFn: async () => {
+      if (!linkedModule || !linkedRecordId) return null;
+      
+      const tableName = linkedModule === 'customer' ? 'customers' : 
+                       linkedModule === 'lead' ? 'leads' :
+                       linkedModule === 'project' ? 'projects' :
+                       linkedModule === 'quote' ? 'quotes' : 
+                       linkedModule;
+      
+      const { data, error } = await supabase
+        .from(tableName as any)
+        .select('name, title')
+        .eq('id', linkedRecordId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!linkedModule && !!linkedRecordId,
+  });
+
+  useEffect(() => {
+    if (linkedRecord) {
+      setLinkedRecordName((linkedRecord as any)?.name || (linkedRecord as any)?.title || null);
+    }
+  }, [linkedRecord]);
 
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
@@ -90,6 +121,7 @@ export default function CreateTaskButton({
         onSubmit={(data) => createTaskMutation.mutate(data)}
         linkedModule={linkedModule}
         linkedRecordId={linkedRecordId}
+        linkedRecordName={linkedRecordName || undefined}
         workers={workers}
       />
     </>

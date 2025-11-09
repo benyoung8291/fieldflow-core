@@ -266,6 +266,7 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
           }}
           linkedModule={linkedModule}
           linkedRecordId={linkedRecordId}
+          linkedRecordName={selectedTask.linked_record_name}
           workers={workers}
           onSubmit={async (data: TaskFormData) => {
             const { error } = await supabase
