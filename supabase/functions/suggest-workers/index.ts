@@ -118,15 +118,26 @@ serve(async (req) => {
     console.log("Required Skills:", JSON.stringify(requiredSkills, null, 2));
 
     // Prepare context for AI
+    const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const preferredDateObj = new Date(preferredDate);
+    const dayOfWeek = DAYS[preferredDateObj.getDay()];
+    
     const systemPrompt = `You are a worker recommendation assistant. Analyze workers' skills, availability, and schedules to suggest the best workers for a service order.
+
+UNDERSTANDING THE DATA:
+- Regular Weekly Schedule: Shows which days each worker normally works and their hours (e.g., "Monday: 09:00:00 to 17:00:00" means they work 9am-5pm on Mondays)
+- Times with "00:00:00 to 23:59:00" mean the worker is available ANYTIME that day
+- If a day is missing from the schedule, the worker does NOT work that day
+- Unavailable Periods: Specific dates when worker is NOT available (vacation, training, etc.)
+- Appointments: Already scheduled work for the worker
 
 CRITICAL SCORING CRITERIA (in order of importance):
 1. SKILLS MATCH (50% of score): Worker MUST have all required skills at or above required level
    - Missing any required skill: maximum 40% score
    - Lower skill level than required: deduct 10% per skill
-2. REGULAR SCHEDULE MATCH (25% of score): Worker should have regular working days/hours that cover the preferred date
-   - No schedule set for the day of week: deduct 20%
-   - Working hours don't cover the service time: deduct 15%
+2. REGULAR SCHEDULE MATCH (25% of score): Check if worker's regular schedule includes the service order day
+   - Worker doesn't work on that day of week: deduct 25% (major issue!)
+   - Working hours don't cover the service time: deduct 10%
 3. AVAILABILITY (15% of score): Worker should NOT have unavailability periods during preferred date
    - Has unavailability during preferred date: deduct 15%
 4. SCHEDULE OPTIMIZATION (10% of score): Minimize conflicts with existing appointments
@@ -137,8 +148,6 @@ Provide 3-5 worker suggestions ranked by overall suitability score (0-100).`;
     const requiredSkillsText = requiredSkills?.map((req: any) => 
       `- ${req.skills?.name} (${req.skills?.category}) - Level Required: ${req.required_level}`
     ).join('\n') || "No specific skills required";
-
-    const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
     const workersAnalysis = workersWithAppointments.map(worker => {
       const workerSkillsText = worker.worker_skills?.map((skill: any) =>
@@ -149,13 +158,19 @@ Provide 3-5 worker suggestions ranked by overall suitability score (0-100).`;
         `  - ${new Date(apt.start_time).toLocaleString()} to ${new Date(apt.end_time).toLocaleString()}`
       ).join('\n') || "  No appointments";
 
-      const scheduleText = worker.schedule.map((sched: any) =>
-        `  - ${DAYS[sched.day_of_week]}: ${sched.start_time} to ${sched.end_time}`
-      ).join('\n') || "  No regular schedule set";
+      const scheduleText = worker.schedule.length > 0 
+        ? worker.schedule.map((sched: any) => {
+            const isAnytime = (sched.start_time === "00:00:00" || sched.start_time === "00:00") && 
+                             (sched.end_time === "23:59:00" || sched.end_time === "23:59");
+            return `  - ${DAYS[sched.day_of_week]}: ${isAnytime ? 'Anytime (Available all day)' : `${sched.start_time} to ${sched.end_time}`}`;
+          }).join('\n')
+        : "  ⚠️ NO REGULAR SCHEDULE SET - Worker has not specified working days/hours";
 
-      const unavailabilityText = worker.unavailability.map((unavail: any) =>
-        `  - ${unavail.start_date} to ${unavail.end_date}${unavail.start_time ? ` (${unavail.start_time}-${unavail.end_time})` : ' (All day)'}: ${unavail.reason || 'No reason'}`
-      ).join('\n') || "  No unavailable periods";
+      const unavailabilityText = worker.unavailability.length > 0
+        ? worker.unavailability.map((unavail: any) =>
+            `  - ${unavail.start_date} to ${unavail.end_date}${unavail.start_time ? ` (${unavail.start_time}-${unavail.end_time})` : ' (All day)'}: ${unavail.reason || 'No reason'}`
+          ).join('\n')
+        : "  No unavailable periods";
 
       return `
 Worker: ${worker.first_name} ${worker.last_name} (ID: ${worker.id})
@@ -174,8 +189,10 @@ ${unavailabilityText}
 Order Number: ${serviceOrder.order_number}
 Location: ${serviceOrder.customer_locations?.[0]?.address || serviceOrder.customers?.address || "Unknown"}
 Estimated Duration: ${serviceOrder.estimated_hours || 2} hours
-Preferred Date: ${preferredDate}
+Preferred Date: ${preferredDate} (${dayOfWeek})
 Date Range: ${preferredDate} to ${dateRangeEnd}
+
+IMPORTANT: The service needs to be performed on ${dayOfWeek}. Only recommend workers who have ${dayOfWeek} in their regular schedule!
 
 REQUIRED SKILLS:
 ${requiredSkillsText}
@@ -183,7 +200,7 @@ ${requiredSkillsText}
 AVAILABLE WORKERS:
 ${workersAnalysis}
 
-Analyze and rank workers by suitability. Heavily penalize workers missing required skills.`;
+Analyze and rank workers by suitability. CRITICAL: Workers must work on ${dayOfWeek} to be suitable!`;
 
     console.log("User prompt being sent to AI:", userPrompt);
 
