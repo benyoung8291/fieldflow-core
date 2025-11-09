@@ -33,6 +33,7 @@ export default function AddressAutocomplete({
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [justSelected, setJustSelected] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -47,8 +48,15 @@ export default function AddressAutocomplete({
   }, []);
 
   useEffect(() => {
+    // Don't fetch predictions if we just selected an address
+    if (justSelected) {
+      setJustSelected(false);
+      return;
+    }
+
     if (value.length < 3) {
       setPredictions([]);
+      setShowDropdown(false);
       return;
     }
 
@@ -75,11 +83,13 @@ export default function AddressAutocomplete({
         setIsLoading(false);
       }
     }, 300);
-  }, [value]);
+  }, [value, justSelected]);
 
   const handleSelect = async (placeId: string, description: string) => {
     setIsLoading(true);
     setShowDropdown(false);
+    setPredictions([]);
+    setJustSelected(true);
     onChange(description);
 
     try {
@@ -150,13 +160,13 @@ export default function AddressAutocomplete({
       </div>
       
       {showDropdown && predictions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto">
           {predictions.map((prediction) => (
             <button
               key={prediction.place_id}
               type="button"
               onClick={() => handleSelect(prediction.place_id, prediction.description)}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="w-full px-3 py-2.5 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b border-border last:border-b-0"
             >
               {prediction.description}
             </button>
