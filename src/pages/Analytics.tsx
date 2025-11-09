@@ -45,9 +45,10 @@ export default function Analytics() {
   });
 
   // Fetch service orders for analytics
-  const { data: serviceOrders = [] } = useQuery({
+  const { data: serviceOrders = [], error: soError, isLoading: soLoading } = useQuery({
     queryKey: ['service-orders-analytics'],
     queryFn: async () => {
+      console.log('Fetching service orders for analytics...');
       const { data, error } = await supabase
         .from('service_orders')
         .select(`
@@ -57,15 +58,25 @@ export default function Analytics() {
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Service orders fetch error:', error);
+        throw error;
+      }
+      console.log('Service orders fetched:', data?.length, data);
       return data as any[];
     },
   });
 
+  // Log service orders errors
+  if (soError) {
+    console.error('Service orders query error:', soError);
+  }
+
   // Fetch service contracts for analytics
-  const { data: serviceContracts = [] } = useQuery({
+  const { data: serviceContracts = [], error: scError, isLoading: scLoading } = useQuery({
     queryKey: ['service-contracts-analytics'],
     queryFn: async () => {
+      console.log('Fetching service contracts for analytics...');
       const { data, error } = await supabase
         .from('service_contracts')
         .select(`
@@ -76,10 +87,19 @@ export default function Analytics() {
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Service contracts fetch error:', error);
+        throw error;
+      }
+      console.log('Service contracts fetched:', data?.length, data);
       return data as any[];
     },
   });
+
+  // Log service contracts errors
+  if (scError) {
+    console.error('Service contracts query error:', scError);
+  }
 
   // Calculate key metrics
   const totalQuotes = quotes.length;
