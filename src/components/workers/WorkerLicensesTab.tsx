@@ -62,7 +62,10 @@ export default function WorkerLicensesTab({ workerId }: WorkerLicensesTabProps) 
         .select("*")
         .eq("worker_id", workerId)
         .order("expiry_date", { ascending: true });
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching worker licenses:", error);
+        throw error;
+      }
       return data || [];
     },
   });

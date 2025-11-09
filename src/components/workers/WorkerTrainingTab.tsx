@@ -62,7 +62,10 @@ export default function WorkerTrainingTab({ workerId }: WorkerTrainingTabProps) 
         .select("*")
         .eq("worker_id", workerId)
         .order("completion_date", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching worker training:", error);
+        throw error;
+      }
       return data || [];
     },
   });

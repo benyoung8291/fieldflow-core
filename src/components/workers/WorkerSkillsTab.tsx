@@ -58,10 +58,14 @@ export default function WorkerSkillsTab({ workerId }: WorkerSkillsTabProps) {
         .from("worker_skills")
         .select(`
           *,
-          skill:skills(id, name, category)
+          skill:skills!inner(id, name, category)
         `)
-        .eq("worker_id", workerId);
-      if (error) throw error;
+        .eq("worker_id", workerId)
+        .order("created_at", { ascending: false });
+      if (error) {
+        console.error("Error fetching worker skills:", error);
+        throw error;
+      }
       return data || [];
     },
   });
