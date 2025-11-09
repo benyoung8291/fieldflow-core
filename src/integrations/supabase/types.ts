@@ -101,6 +101,65 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          field_name: string | null
+          id: string
+          ip_address: string | null
+          new_value: string | null
+          note: string | null
+          old_value: string | null
+          record_id: string
+          table_name: string
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          field_name?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: string | null
+          note?: string | null
+          old_value?: string | null
+          record_id: string
+          table_name: string
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          field_name?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: string | null
+          note?: string | null
+          old_value?: string | null
+          record_id?: string
+          table_name?: string
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_contacts: {
         Row: {
           created_at: string | null

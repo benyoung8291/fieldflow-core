@@ -1,9 +1,11 @@
+import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import AuditDrawer from "@/components/audit/AuditDrawer";
 
 const mockOrders = [
   {
@@ -57,8 +59,18 @@ const priorityColors = {
 };
 
 export default function ServiceOrders() {
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
+
   return (
     <DashboardLayout>
+      {selectedOrder && (
+        <AuditDrawer 
+          tableName="service_orders" 
+          recordId={selectedOrder}
+          recordTitle={`Service Order ${mockOrders.find(o => o.id === selectedOrder)?.orderNumber}`}
+        />
+      )}
+      
       <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -156,7 +168,11 @@ export default function ServiceOrders() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedOrder(order.id)}
+                        >
                           View
                         </Button>
                       </td>

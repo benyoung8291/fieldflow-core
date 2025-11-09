@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Building2, FileText } from "lucide-react";
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
+import AuditDrawer from "@/components/audit/AuditDrawer";
 
 const mockCustomer = {
   id: "1",
@@ -124,6 +125,12 @@ export default function CustomerDetails() {
 
   return (
     <DashboardLayout>
+      <AuditDrawer 
+        tableName="customers" 
+        recordId={id!} 
+        recordTitle={mockCustomer.name}
+      />
+      
       <div className="space-y-6">
         {/* Header */}
         <div>
