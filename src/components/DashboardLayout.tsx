@@ -120,12 +120,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const renderMenuContent = (isMobile = false) => {
-    const topLevelItems = menuItems.filter(item => !item.parent_id && item.is_visible);
-    const getChildren = (parentId: string) => menuItems.filter(item => item.parent_id === parentId && item.is_visible);
-
     const renderMenuItem = (item: any) => {
       const isActive = item.path && location.pathname === item.path;
-      const children = item.is_folder ? getChildren(item.id) : [];
+      const children = item.children || [];
       const isExpanded = expandedFolders.has(item.id);
       const Icon = item.iconComponent;
 
@@ -198,9 +195,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     return (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={topLevelItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={menuItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1">
-            {topLevelItems.map((item) => renderMenuItem(item))}
+            {menuItems.map((item) => renderMenuItem(item))}
           </div>
         </SortableContext>
       </DndContext>
