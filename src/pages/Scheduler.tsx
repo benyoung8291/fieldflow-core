@@ -12,7 +12,7 @@ import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
-import BryntumSchedulerView from "@/components/scheduler/BryntumSchedulerView";
+import BryntumSchedulerPlaceholder from "@/components/scheduler/BryntumSchedulerPlaceholder";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
@@ -773,23 +773,7 @@ export default function Scheduler() {
                   />
                 )}
                 {viewType === "bryntum" && (
-                  <BryntumSchedulerView
-                    currentDate={currentDate}
-                    appointments={appointments}
-                    workers={workers}
-                    onAppointmentClick={(id) => {
-                      const apt = appointments.find(a => a.id === id);
-                      setDetailsAppointment(apt);
-                    }}
-                    onAppointmentUpdate={async (id, data) => {
-                      await updateAppointmentMutation.mutateAsync({
-                        appointmentId: id,
-                        startTime: new Date(data.start_time),
-                        endTime: new Date(data.end_time),
-                        workerId: data.assigned_to,
-                      });
-                    }}
-                  />
+                  <BryntumSchedulerPlaceholder />
                 )}
               </>
             )}
