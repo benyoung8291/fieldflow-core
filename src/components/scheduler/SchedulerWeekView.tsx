@@ -27,6 +27,7 @@ interface SchedulerWeekViewProps {
   onEditAppointment: (id: string) => void;
   onRemoveWorker: (appointmentId: string, workerId: string) => void;
   onGPSCheckIn: (appointment: any) => void;
+  checkAvailability?: (workerId: string, startTime: Date, endTime: Date) => { isAvailable: boolean; reason?: string };
 }
 
 const statusColors = {
@@ -44,7 +45,8 @@ export default function SchedulerWeekView({
   onAppointmentClick,
   onEditAppointment,
   onRemoveWorker,
-  onGPSCheckIn
+  onGPSCheckIn,
+  checkAvailability
 }: SchedulerWeekViewProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -181,12 +183,23 @@ export default function SchedulerWeekView({
                   return matchesWorker && isSameDay(new Date(apt.start_time), day);
                 });
 
+                // Check if worker is available for this day (using 9am-5pm as default check)
+                const dayStart = new Date(day);
+                dayStart.setHours(9, 0, 0, 0);
+                const dayEnd = new Date(day);
+                dayEnd.setHours(17, 0, 0, 0);
+                
+                const isAvailable = !worker.id || !checkAvailability 
+                  ? true 
+                  : checkAvailability(worker.id, dayStart, dayEnd).isAvailable;
+
                 return (
                   <DroppableTimeSlot
                     key={day.toISOString()}
                     id={`slot-${worker.id || 'unassigned'}-${day.toISOString()}`}
                     date={day}
                     workerId={worker.id}
+                    isAvailable={isAvailable}
                     className={cn(
                       "min-h-[100px] p-2 border-2 border-dashed rounded-lg space-y-1",
                       isSameDay(day, new Date()) 

@@ -9,6 +9,7 @@ interface DroppableTimeSlotProps {
   hour?: number;
   children: ReactNode;
   className?: string;
+  isAvailable?: boolean;
 }
 
 export default function DroppableTimeSlot({ 
@@ -17,7 +18,8 @@ export default function DroppableTimeSlot({
   workerId, 
   hour,
   children, 
-  className 
+  className,
+  isAvailable = true 
 }: DroppableTimeSlotProps) {
   const { setNodeRef, isOver, active } = useDroppable({
     id,
@@ -26,7 +28,9 @@ export default function DroppableTimeSlot({
       date,
       workerId,
       hour,
+      isAvailable,
     },
+    disabled: !isAvailable,
   });
 
   const isDraggingServiceOrder = active?.data?.current?.type === "service-order";
@@ -37,8 +41,9 @@ export default function DroppableTimeSlot({
       ref={setNodeRef}
       className={cn(
         className,
-        isOver && isDraggingServiceOrder && "ring-2 ring-primary ring-offset-2",
-        isOver && isDraggingAppointment && "ring-2 ring-warning ring-offset-2"
+        !isAvailable && "opacity-30 cursor-not-allowed bg-muted/50",
+        isOver && isAvailable && isDraggingServiceOrder && "ring-2 ring-primary ring-offset-2",
+        isOver && isAvailable && isDraggingAppointment && "ring-2 ring-warning ring-offset-2"
       )}
     >
       {children}

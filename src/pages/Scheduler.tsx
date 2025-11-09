@@ -906,6 +906,7 @@ export default function Scheduler() {
                     currentDate={currentDate}
                     appointments={appointments}
                     workers={workers}
+                    checkAvailability={checkAvailability}
                     onAppointmentClick={(id) => {
                       const apt = appointments.find(a => a.id === id);
                       setDetailsAppointment(apt);
