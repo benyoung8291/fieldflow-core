@@ -70,13 +70,16 @@ export default function ServiceOrders() {
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name),
-          customer_locations(name, address),
+          customer_locations!service_orders_customer_location_id_fkey(name, address),
           customer_contacts(first_name, last_name, email),
           projects(name)
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching service orders:", error);
+        throw error;
+      }
       return data;
     },
   });
@@ -326,76 +329,72 @@ export default function ServiceOrders() {
               <div className="text-center py-8 text-muted-foreground">No orders found</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b border-border">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-border bg-muted/50">
                     <tr>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
                         Order #
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
                         Customer
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
                         Title
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
                         Location
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
                         Status
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
                         Priority
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground text-xs">
                         Total
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground text-xs w-20">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border">
                     {filteredOrders.map((order: any) => (
-                      <tr key={order.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                        <td className="py-4 px-4">
-                          <div>
-                            <span className="font-medium">{order.order_number}</span>
-                            {order.work_order_number && (
-                              <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
-                            )}
-                          </div>
+                      <tr key={order.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="py-2 px-3">
+                          <div className="font-medium text-xs">{order.order_number}</div>
+                          {order.work_order_number && (
+                            <div className="text-[10px] text-muted-foreground">WO: {order.work_order_number}</div>
+                          )}
                         </td>
-                        <td className="py-4 px-4">{order.customers?.name || "-"}</td>
-                        <td className="py-4 px-4">
-                          <div>
-                            {order.title}
-                            {order.skill_required && (
-                              <div className="text-xs text-muted-foreground">Skill: {order.skill_required}</div>
-                            )}
-                          </div>
+                        <td className="py-2 px-3 text-xs">{order.customers?.name || "-"}</td>
+                        <td className="py-2 px-3">
+                          <div className="text-xs">{order.title}</div>
+                          {order.skill_required && (
+                            <div className="text-[10px] text-muted-foreground">Skill: {order.skill_required}</div>
+                          )}
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2 px-3 text-xs">
                           {order.customer_locations?.name || "-"}
                         </td>
-                        <td className="py-4 px-4">
-                          <Badge className={statusColors[order.status as keyof typeof statusColors]}>
+                        <td className="py-2 px-3">
+                          <Badge variant="outline" className={`text-[10px] py-0 px-1.5 ${statusColors[order.status as keyof typeof statusColors]}`}>
                             {order.status.replace('_', ' ')}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4">
-                          <Badge className={priorityColors[order.priority as keyof typeof priorityColors]}>
+                        <td className="py-2 px-3">
+                          <Badge variant="outline" className={`text-[10px] py-0 px-1.5 ${priorityColors[order.priority as keyof typeof priorityColors]}`}>
                             {order.priority}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2 px-3 text-right text-xs font-medium">
                           ${order.total_amount?.toFixed(2) || "0.00"}
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2 px-3 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                <MoreVertical className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
