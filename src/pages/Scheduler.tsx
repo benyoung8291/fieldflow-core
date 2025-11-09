@@ -204,7 +204,7 @@ export default function Scheduler() {
         end_time: endTime.toISOString(),
         assigned_to: workerId,
         location_address: customer?.address,
-        status: "published",
+        status: "draft",
         created_by: (await supabase.auth.getUser()).data.user?.id,
       }).select(`
         *,
@@ -242,7 +242,7 @@ export default function Scheduler() {
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           assigned_to: workerId,
-          status: "published",
+          status: "draft",
           service_orders: null,
           profiles: null,
         };
@@ -419,6 +419,24 @@ export default function Scheduler() {
     },
   });
 
+  const publishAppointmentsMutation = useMutation({
+    mutationFn: async (appointmentIds: string[]) => {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "published" })
+        .in("id", appointmentIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointments published successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to publish appointments");
+    },
+  });
+
   const handleRemoveWorker = (appointmentId: string, workerId: string) => {
     removeWorkerFromAppointmentMutation.mutate({ appointmentId, workerId });
   };
@@ -426,6 +444,17 @@ export default function Scheduler() {
   const handleDeleteAppointment = (appointmentId: string) => {
     if (confirm("Are you sure you want to delete this appointment?")) {
       deleteAppointmentMutation.mutate(appointmentId);
+    }
+  };
+
+  const handlePublishAllDraft = () => {
+    const draftAppointments = appointments.filter(apt => apt.status === "draft");
+    if (draftAppointments.length === 0) {
+      toast.info("No draft appointments to publish");
+      return;
+    }
+    if (confirm(`Publish ${draftAppointments.length} draft appointment(s)?`)) {
+      publishAppointmentsMutation.mutate(draftAppointments.map(apt => apt.id));
     }
   };
 
@@ -640,6 +669,15 @@ export default function Scheduler() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handlePublishAllDraft}
+                  disabled={!appointments.some(apt => apt.status === "draft")}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Publish Draft Appointments
+                </Button>
                 <div className="flex items-center gap-2">
                   <Switch 
                     id="service-order-view" 

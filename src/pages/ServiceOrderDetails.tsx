@@ -22,6 +22,13 @@ const statusColors = {
   completed: "bg-success/10 text-success",
 };
 
+const statusLabels: Record<string, string> = {
+  draft: "Waiting",
+  scheduled: "Scheduled",
+  in_progress: "In Progress",
+  completed: "Completed",
+};
+
 const priorityColors = {
   low: "bg-muted text-muted-foreground",
   normal: "bg-info/10 text-info",
@@ -117,7 +124,7 @@ export default function ServiceOrderDetails() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={statusColors[order.status as keyof typeof statusColors]}>
-              {order.status.replace('_', ' ')}
+              {statusLabels[order.status as keyof typeof statusLabels] || order.status.replace('_', ' ')}
             </Badge>
             <Badge variant="outline" className={priorityColors[order.priority as keyof typeof priorityColors]}>
               {order.priority}

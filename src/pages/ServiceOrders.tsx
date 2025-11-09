@@ -39,6 +39,13 @@ const statusColors = {
   completed: "bg-success/10 text-success",
 };
 
+const statusLabels: Record<string, string> = {
+  draft: "Waiting",
+  scheduled: "Scheduled",
+  in_progress: "In Progress",
+  completed: "Completed",
+};
+
 const priorityColors = {
   low: "bg-muted text-muted-foreground",
   normal: "bg-info/10 text-info",
@@ -222,7 +229,7 @@ export default function ServiceOrders() {
           <Card className="shadow-sm">
             <CardContent className="pt-3 pb-2 px-3">
               <div className="text-xl font-bold text-muted-foreground">{stats.draft}</div>
-              <p className="text-[10px] text-muted-foreground">Draft</p>
+              <p className="text-[10px] text-muted-foreground">Waiting</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
@@ -265,7 +272,7 @@ export default function ServiceOrders() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="draft">Waiting</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -370,7 +377,7 @@ export default function ServiceOrders() {
                         </td>
                         <td className="py-1 px-2">
                           <Badge variant="outline" className={`text-[9px] py-0 px-1 ${statusColors[order.status as keyof typeof statusColors]}`}>
-                            {order.status.replace('_', ' ')}
+                            {statusLabels[order.status as keyof typeof statusLabels] || order.status.replace('_', ' ')}
                           </Badge>
                         </td>
                         <td className="py-1 px-2">

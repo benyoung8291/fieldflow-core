@@ -2118,6 +2118,7 @@ export type Database = {
       }
       service_orders: {
         Row: {
+          allow_bidding: boolean | null
           billing_type: string | null
           completed_date: string | null
           created_at: string | null
@@ -2155,6 +2156,7 @@ export type Database = {
           work_order_number: string | null
         }
         Insert: {
+          allow_bidding?: boolean | null
           billing_type?: string | null
           completed_date?: string | null
           created_at?: string | null
@@ -2192,6 +2194,7 @@ export type Database = {
           work_order_number?: string | null
         }
         Update: {
+          allow_bidding?: boolean | null
           billing_type?: string | null
           completed_date?: string | null
           created_at?: string | null

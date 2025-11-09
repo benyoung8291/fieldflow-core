@@ -118,6 +118,14 @@ export default function CustomerLocationDetails() {
     cancelled: "bg-destructive/10 text-destructive",
   };
 
+  const statusLabels: Record<string, string> = {
+    draft: "Waiting",
+    scheduled: "Scheduled",
+    in_progress: "In Progress",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+
   const upcomingAppointments: any[] = appointments?.filter((apt: any) => 
     isFuture(parseISO(apt.start_time))
   ) || [];

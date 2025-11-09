@@ -453,7 +453,7 @@ export default function ConvertQuoteDialog({
 
               <div className="rounded-lg bg-muted p-4">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> A new service order will be created with status "Draft". 
+                  <strong>Note:</strong> A new service order will be created with status "Waiting". 
                   You can assign workers and update details after creation.
                 </p>
               </div>

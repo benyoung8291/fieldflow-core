@@ -23,6 +23,14 @@ const statusColors = {
   cancelled: "bg-destructive/10 text-destructive",
 };
 
+const statusLabels: Record<string, string> = {
+  draft: "Waiting",
+  scheduled: "Scheduled",
+  in_progress: "In Progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
 export default function CustomerDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -441,7 +449,7 @@ export default function CustomerDetails() {
                             <td className="py-3 px-4">{order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</td>
                             <td className="py-3 px-4">
                               <Badge className={statusColors[order.status as keyof typeof statusColors] || statusColors.draft}>
-                                {order.status?.replace('_', ' ') || "Draft"}
+                                {statusLabels[order.status as keyof typeof statusLabels] || order.status?.replace('_', ' ') || "Waiting"}
                               </Badge>
                             </td>
                           </tr>

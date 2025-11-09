@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -124,6 +125,7 @@ export default function ServiceOrderDialog({
     preferred_date: "",
     preferred_date_start: "",
     preferred_date_end: "",
+    allow_bidding: false,
   });
 
   useEffect(() => {
@@ -250,6 +252,7 @@ export default function ServiceOrderDialog({
           preferred_date: orderData.preferred_date || "",
           preferred_date_start: orderData.preferred_date_start || "",
           preferred_date_end: orderData.preferred_date_end || "",
+          allow_bidding: orderData.allow_bidding || false,
         });
 
         if (lineItemsData) {
@@ -299,6 +302,7 @@ export default function ServiceOrderDialog({
       preferred_date: "",
       preferred_date_start: "",
       preferred_date_end: "",
+      allow_bidding: false,
     });
     setLineItems([]);
     setAttachments([]);
@@ -532,6 +536,7 @@ export default function ServiceOrderDialog({
         tax_amount: totals.taxAmount,
         total_amount: totals.total,
         estimated_hours: totals.totalHours,
+        allow_bidding: formData.allow_bidding,
       };
 
       if (!orderId) {
@@ -918,7 +923,7 @@ export default function ServiceOrderDialog({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="draft">Waiting</SelectItem>
                           <SelectItem value="scheduled">Scheduled</SelectItem>
                           <SelectItem value="in_progress">In Progress</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
@@ -1015,6 +1020,23 @@ export default function ServiceOrderDialog({
                     </div>
                   </FieldPresenceWrapper>
                 </div>
+
+                <FieldPresenceWrapper fieldName="allow_bidding" onlineUsers={onlineUsers}>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="allow_bidding"
+                      checked={formData.allow_bidding}
+                      onCheckedChange={(checked) => {
+                        setFormData({ ...formData, allow_bidding: checked });
+                        setCurrentField("allow_bidding");
+                        updateField("allow_bidding");
+                      }}
+                    />
+                    <Label htmlFor="allow_bidding">
+                      Allow workers to bid on this service order
+                    </Label>
+                  </div>
+                </FieldPresenceWrapper>
               </TabsContent>
 
               <TabsContent value="line-items" className="space-y-4 mt-4">
