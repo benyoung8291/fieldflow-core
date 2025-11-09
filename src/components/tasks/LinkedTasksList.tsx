@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Clock, AlertCircle } from "lucide-react";
+import { CheckSquare, Clock, AlertCircle, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import TaskDialog, { TaskFormData } from "./TaskDialog";
 
 interface LinkedTasksListProps {
@@ -16,8 +17,20 @@ interface LinkedTasksListProps {
 
 export default function LinkedTasksList({ linkedModule, linkedRecordId }: LinkedTasksListProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const getModuleRoute = (module: string, id: string) => {
+    const routes: Record<string, string> = {
+      customer: `/customers/${id}`,
+      lead: `/leads/${id}`,
+      project: `/projects/${id}`,
+      quote: `/quotes/${id}`,
+      service_order: `/service-orders/${id}`,
+    };
+    return routes[module] || '#';
+  };
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["tasks", linkedModule, linkedRecordId],
@@ -30,7 +43,34 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
         .order("due_date", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      // Fetch linked record names
+      const tasksWithLinks = await Promise.all((data || []).map(async (task: any) => {
+        if (!task.linked_module || !task.linked_record_id) return task;
+        
+        let linkedRecordName = null;
+        try {
+          const { data: linkedData } = await supabase
+            .from(task.linked_module === 'customer' ? 'customers' : 
+                  task.linked_module === 'lead' ? 'leads' :
+                  task.linked_module === 'project' ? 'projects' :
+                  task.linked_module === 'quote' ? 'quotes' : 
+                  task.linked_module)
+            .select('name, title')
+            .eq('id', task.linked_record_id)
+            .maybeSingle();
+          
+          if (linkedData) {
+            linkedRecordName = (linkedData as any)?.name || (linkedData as any)?.title || null;
+          }
+        } catch (e) {
+          console.error('Error fetching linked record:', e);
+        }
+        
+        return { ...task, linked_record_name: linkedRecordName };
+      }));
+      
+      return tasksWithLinks;
     },
   });
 
@@ -163,7 +203,7 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
                   <p className="text-sm text-muted-foreground">{task.description}</p>
                 )}
                 
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                   {task.assigned && (
                     <div className="flex items-center gap-1">
                       <CheckSquare className="h-3 w-3" />
@@ -177,6 +217,18 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
                       {new Date(task.due_date) < new Date() && task.status !== "completed" && (
                         <AlertCircle className="h-3 w-3 text-red-500 ml-1" />
                       )}
+                    </div>
+                  )}
+                  {task.linked_module && task.linked_record_id && task.linked_record_name && (
+                    <div 
+                      className="flex items-center gap-1 text-primary hover:underline cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(getModuleRoute(task.linked_module, task.linked_record_id));
+                      }}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Linked to: {task.linked_module.charAt(0).toUpperCase() + task.linked_module.slice(1).replace('_', ' ')} - {task.linked_record_name}
                     </div>
                   )}
                 </div>

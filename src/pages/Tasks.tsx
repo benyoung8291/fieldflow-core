@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Filter, Calendar, User, Link as LinkIcon } from "lucide-react";
+import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 export default function Tasks() {
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -21,6 +23,17 @@ export default function Tasks() {
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
   const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
+
+  const getModuleRoute = (module: string, id: string) => {
+    const routes: Record<string, string> = {
+      customer: `/customers/${id}`,
+      lead: `/leads/${id}`,
+      project: `/projects/${id}`,
+      quote: `/quotes/${id}`,
+      service_order: `/service-orders/${id}`,
+    };
+    return routes[module] || '#';
+  };
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -76,7 +89,34 @@ export default function Tasks() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Fetch linked record names
+      const tasksWithLinks = await Promise.all((data || []).map(async (task: any) => {
+        if (!task.linked_module || !task.linked_record_id) return task;
+        
+        let linkedRecordName = null;
+        try {
+          const { data: linkedData } = await supabase
+            .from(task.linked_module === 'customer' ? 'customers' : 
+                  task.linked_module === 'lead' ? 'leads' :
+                  task.linked_module === 'project' ? 'projects' :
+                  task.linked_module === 'quote' ? 'quotes' : 
+                  task.linked_module)
+            .select('name, title')
+            .eq('id', task.linked_record_id)
+            .maybeSingle();
+          
+          if (linkedData) {
+            linkedRecordName = (linkedData as any)?.name || (linkedData as any)?.title || null;
+          }
+        } catch (e) {
+          console.error('Error fetching linked record:', e);
+        }
+        
+        return { ...task, linked_record_name: linkedRecordName };
+      }));
+      
+      return tasksWithLinks;
     },
   });
 
@@ -340,7 +380,7 @@ export default function Tasks() {
                       {task.description && (
                         <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{task.description}</p>
                       )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                         {task.due_date && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -353,10 +393,16 @@ export default function Tasks() {
                             {task.assigned_user.first_name} {task.assigned_user.last_name}
                           </div>
                         )}
-                        {task.linked_module && (
-                          <div className="flex items-center gap-1">
-                            <LinkIcon className="h-3 w-3" />
-                            <span className="capitalize">{task.linked_module.replace("_", " ")}</span>
+                        {task.linked_module && task.linked_record_name && (
+                          <div 
+                            className="flex items-center gap-1 text-primary hover:underline cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(getModuleRoute(task.linked_module, task.linked_record_id));
+                            }}
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            {task.linked_module.charAt(0).toUpperCase() + task.linked_module.slice(1).replace('_', ' ')} - {task.linked_record_name}
                           </div>
                         )}
                       </div>
