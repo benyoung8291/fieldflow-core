@@ -548,6 +548,60 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          actual_cost: number | null
+          budget: number | null
+          created_at: string | null
+          created_by: string
+          customer_id: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          progress: number | null
+          start_date: string | null
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_cost?: number | null
+          budget?: number | null
+          created_at?: string | null
+          created_by: string
+          customer_id: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          progress?: number | null
+          start_date?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_cost?: number | null
+          budget?: number | null
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          progress?: number | null
+          start_date?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       service_order_templates: {
         Row: {
           billing_type: string | null

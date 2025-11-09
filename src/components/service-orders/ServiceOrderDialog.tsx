@@ -110,9 +110,9 @@ export default function ServiceOrderDialog({
 
   const fetchProjects = async (customerId: string) => {
     const { data, error } = await supabase
-      .from("customers")
+      .from("projects")
       .select("id, name")
-      .eq("parent_customer_id", customerId)
+      .eq("customer_id", customerId)
       .order("name");
     
     if (error) {
