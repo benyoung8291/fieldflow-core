@@ -95,10 +95,10 @@ serve(async (req) => {
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
-    // Check if business entity exists - match any businessEntity tag with version number
-    const businessEntityTag = xmlText.match(/<businessEntity[^>]*>([\s\S]+)<\/businessEntity[^>]*>/i);
+    // Check if business entity exists - the tag is businessEntity202001
+    const businessEntityTag = xmlText.match(/<businessEntity202001[^>]*>([\s\S]+)<\/businessEntity202001>/i);
     if (!businessEntityTag) {
-      console.error('No businessEntity tag found in response');
+      console.error('No businessEntity202001 tag found in response');
       throw new Error('No business entity found for this ABN');
     }
     
