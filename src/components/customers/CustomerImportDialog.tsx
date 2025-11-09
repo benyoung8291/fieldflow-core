@@ -32,6 +32,13 @@ interface CustomerImportDialogProps {
 
 type ImportStep = "upload" | "mapping" | "preview" | "importing";
 
+interface ValidationError {
+  row: number;
+  field: string;
+  value: string;
+  message: string;
+}
+
 const CUSTOMER_FIELDS = [
   { value: "name", label: "Name *", required: true },
   { value: "email", label: "Email" },
@@ -62,6 +69,7 @@ export default function CustomerImportDialog({
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -122,6 +130,33 @@ export default function CustomerImportDialog({
     });
   };
 
+  const validateABN = (abn: string): boolean => {
+    if (!abn) return true; // ABN is optional
+    
+    // Remove spaces and check if it's 11 digits
+    const cleanABN = abn.replace(/\s/g, '');
+    if (!/^\d{11}$/.test(cleanABN)) return false;
+    
+    // Validate ABN checksum
+    const weights = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+    let sum = 0;
+    
+    for (let i = 0; i < 11; i++) {
+      const digit = parseInt(cleanABN[i], 10);
+      const weight = weights[i];
+      sum += (i === 0 ? digit - 1 : digit) * weight;
+    }
+    
+    return sum % 89 === 0;
+  };
+
+  const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Email is optional
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleColumnMappingChange = (csvColumn: string, dbField: string) => {
     setColumnMapping((prev) => ({
       ...prev,
@@ -172,12 +207,94 @@ export default function CustomerImportDialog({
     return true;
   };
 
+  const validateRowData = (): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    const mappedData = getMappedData();
+
+    mappedData.forEach((row, index) => {
+      // Validate required name field
+      if (!row.name || row.name.trim() === "") {
+        errors.push({
+          row: index + 1,
+          field: "name",
+          value: row.name || "",
+          message: "Name is required",
+        });
+      }
+
+      // Validate ABN format
+      if (row.abn && !validateABN(row.abn)) {
+        errors.push({
+          row: index + 1,
+          field: "abn",
+          value: row.abn,
+          message: "Invalid ABN format (must be 11 digits with valid checksum)",
+        });
+      }
+
+      // Validate email format
+      if (row.email && !validateEmail(row.email)) {
+        errors.push({
+          row: index + 1,
+          field: "email",
+          value: row.email,
+          message: "Invalid email format",
+        });
+      }
+
+      // Validate billing_email format
+      if (row.billing_email && !validateEmail(row.billing_email)) {
+        errors.push({
+          row: index + 1,
+          field: "billing_email",
+          value: row.billing_email,
+          message: "Invalid billing email format",
+        });
+      }
+
+      // Validate payment_terms is a number
+      if (row.payment_terms && (isNaN(row.payment_terms) || row.payment_terms < 0)) {
+        errors.push({
+          row: index + 1,
+          field: "payment_terms",
+          value: String(row.payment_terms),
+          message: "Payment terms must be a positive number",
+        });
+      }
+    });
+
+    return errors;
+  };
+
   const handlePreview = () => {
     if (!validateMappedData()) return;
+    
+    // Validate all row data
+    const errors = validateRowData();
+    setValidationErrors(errors);
+    
+    if (errors.length > 0) {
+      toast({
+        title: "Validation errors found",
+        description: `Found ${errors.length} validation error(s). Please review before importing.`,
+        variant: "destructive",
+      });
+    }
+    
     setStep("preview");
   };
 
   const handleImport = async () => {
+    // Don't allow import if there are validation errors
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Cannot import",
+        description: "Please fix all validation errors before importing",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
     setStep("importing");
 
@@ -215,6 +332,7 @@ export default function CustomerImportDialog({
       onImportComplete();
       handleClose();
     } catch (error: any) {
+      console.error("Import error:", error);
       toast({
         title: "Import failed",
         description: error.message,
@@ -231,6 +349,7 @@ export default function CustomerImportDialog({
     setCsvData([]);
     setCsvHeaders([]);
     setColumnMapping({});
+    setValidationErrors([]);
     onOpenChange(false);
   };
 
@@ -328,6 +447,42 @@ export default function CustomerImportDialog({
           {step === "preview" && (
             <ScrollArea className="h-[400px] border rounded-lg p-4">
               <div className="space-y-4">
+                {/* Validation Errors */}
+                {validationErrors.length > 0 && (
+                  <div className="bg-destructive/10 border border-destructive rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="destructive">{validationErrors.length}</Badge>
+                      <span className="font-medium text-destructive">Validation Errors</span>
+                    </div>
+                    <ScrollArea className="h-[150px]">
+                      <div className="space-y-2">
+                        {validationErrors.map((error, idx) => (
+                          <div key={idx} className="text-sm border-l-2 border-destructive pl-3">
+                            <div className="font-medium">Row {error.row}</div>
+                            <div className="text-muted-foreground">
+                              {error.field}: {error.message}
+                            </div>
+                            {error.value && (
+                              <div className="text-xs text-muted-foreground">
+                                Value: "{error.value}"
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+
+                {/* Success indicator */}
+                {validationErrors.length === 0 && (
+                  <div className="bg-success/10 border border-success rounded-lg p-3 mb-4">
+                    <span className="text-success font-medium">
+                      ✓ All validation checks passed
+                    </span>
+                  </div>
+                )}
+
                 <div className="text-sm text-muted-foreground mb-4">
                   Showing first 5 rows (importing {csvData.length} total)
                 </div>
@@ -380,7 +535,10 @@ export default function CustomerImportDialog({
               <Button variant="outline" onClick={() => setStep("mapping")}>
                 Back
               </Button>
-              <Button onClick={handleImport} disabled={importing}>
+              <Button 
+                onClick={handleImport} 
+                disabled={importing || validationErrors.length > 0}
+              >
                 Import {csvData.length} Customers
               </Button>
             </>
