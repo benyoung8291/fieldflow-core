@@ -13,7 +13,7 @@ export default function ServiceOrdersSidebar() {
         .from("service_orders")
         .select(`
           *,
-          customers(name),
+          customers!service_orders_customer_id_fkey(name),
           appointments(id, start_time, end_time, status)
         `)
         .in("status", ["draft", "scheduled", "in_progress"])
