@@ -81,19 +81,18 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
   };
 
   const toggleAllDay = useMutation({
-    mutationFn: async (dayOfWeek: number) => {
+    mutationFn: async ({ dayOfWeek, currentSchedule }: { dayOfWeek: number; currentSchedule: any }) => {
       const tenant_id = await getTenantId();
-      const existingDay = scheduleByDay[dayOfWeek];
       
-      if (existingDay) {
+      if (currentSchedule) {
         // If exists, toggle between all-day and delete
-        const isCurrentlyAllDay = existingDay.start_time === "00:00" && existingDay.end_time === "23:59";
+        const isCurrentlyAllDay = currentSchedule.start_time === "00:00" && currentSchedule.end_time === "23:59";
         if (isCurrentlyAllDay) {
           // Delete the schedule
           const { error } = await supabase
             .from("worker_schedule")
             .delete()
-            .eq("id", existingDay.id);
+            .eq("id", currentSchedule.id);
           if (error) throw error;
         } else {
           // Set to all-day
@@ -103,7 +102,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
               start_time: "00:00",
               end_time: "23:59",
             })
-            .eq("id", existingDay.id);
+            .eq("id", currentSchedule.id);
           if (error) throw error;
         }
       } else {
@@ -124,7 +123,8 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
       queryClient.invalidateQueries({ queryKey: ["worker-schedule", workerId] });
       toast.success("Schedule updated");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Toggle error:", error);
       toast.error("Failed to update schedule");
     },
   });
@@ -290,7 +290,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                       <Switch
                         id={`anytime-${index}`}
                         checked={daySchedule?.start_time === "00:00" && daySchedule?.end_time === "23:59"}
-                        onCheckedChange={() => toggleAllDay.mutate(index)}
+                        onCheckedChange={() => toggleAllDay.mutate({ dayOfWeek: index, currentSchedule: daySchedule })}
                       />
                     </div>
                     <Button
