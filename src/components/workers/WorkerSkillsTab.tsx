@@ -104,6 +104,23 @@ export default function WorkerSkillsTab({ workerId }: WorkerSkillsTabProps) {
           .eq("id", editingSkill.id);
         if (error) throw error;
       } else {
+        // Check if skill already exists for this worker
+        const { data: existing } = await supabase
+          .from("worker_skills")
+          .select("id")
+          .eq("worker_id", workerId)
+          .eq("skill_id", formData.skill_id)
+          .maybeSingle();
+
+        if (existing) {
+          toast({
+            title: "Skill already added",
+            description: "This worker already has this skill. Please edit the existing one instead.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from("worker_skills")
           .insert([skillData]);
@@ -195,12 +212,16 @@ export default function WorkerSkillsTab({ workerId }: WorkerSkillsTabProps) {
                   <SelectValue placeholder="Select skill" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSkills.map((skill: any) => (
-                    <SelectItem key={skill.id} value={skill.id}>
-                      {skill.name}
-                      {skill.category && ` (${skill.category})`}
-                    </SelectItem>
-                  ))}
+                  {availableSkills
+                    .filter((skill: any) => 
+                      editingSkill || !workerSkills.some((ws: any) => ws.skill_id === skill.id)
+                    )
+                    .map((skill: any) => (
+                      <SelectItem key={skill.id} value={skill.id}>
+                        {skill.name}
+                        {skill.category && ` (${skill.category})`}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

@@ -16,10 +16,14 @@ import WorkerTrainingTab from "@/components/workers/WorkerTrainingTab";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import LinkUserAccountDialog from "@/components/workers/LinkUserAccountDialog";
 
 export default function WorkerDetails() {
   const { id } = useParams<{ id: string }>();
   const { onlineUsers, updateCursorPosition } = usePresence({ page: `worker-${id}` });
+  const [linkAccountDialogOpen, setLinkAccountDialogOpen] = useState(false);
 
   const updateCursor = (e: React.MouseEvent) => {
     updateCursorPosition(e.clientX, e.clientY);
@@ -68,16 +72,33 @@ export default function WorkerDetails() {
   return (
     <DashboardLayout>
       <RemoteCursors users={onlineUsers} />
+      
+      <LinkUserAccountDialog
+        open={linkAccountDialogOpen}
+        onOpenChange={setLinkAccountDialogOpen}
+        workerId={id!}
+        workerName={`${worker.first_name} ${worker.last_name}`}
+      />
+
       <div className="space-y-6" onMouseMove={updateCursor}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
               {worker.first_name} {worker.last_name}
             </h1>
-            <p className="text-muted-foreground">{worker.email}</p>
+            <p className="text-muted-foreground">{worker.email || "No email set"}</p>
           </div>
           <div className="flex items-center gap-2">
             <PresenceIndicator users={onlineUsers} />
+            {!worker.email && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setLinkAccountDialogOpen(true)}
+              >
+                Create User Account
+              </Button>
+            )}
             <Badge variant={worker.is_active ? "default" : "secondary"}>
               {worker.is_active ? "Active" : "Inactive"}
             </Badge>
