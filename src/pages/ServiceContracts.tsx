@@ -6,14 +6,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw } from "lucide-react";
+import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw, Plus } from "lucide-react";
 import { format, addMonths, parseISO, addWeeks } from "date-fns";
 import { useState } from "react";
 import RenewContractDialog from "@/components/quotes/RenewContractDialog";
+import ServiceContractDialog from "@/components/contracts/ServiceContractDialog";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function ServiceContracts() {
   const navigate = useNavigate();
   const [renewingContract, setRenewingContract] = useState<any>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
@@ -143,11 +146,18 @@ export default function ServiceContracts() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Service Contracts</h1>
-        <p className="text-muted-foreground">Manage active contracts and forecast revenue</p>
-      </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Service Contracts</h1>
+            <p className="text-muted-foreground">Manage active contracts and forecast revenue</p>
+          </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Contract
+          </Button>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -377,13 +387,19 @@ export default function ServiceContracts() {
         </TabsContent>
       </Tabs>
 
-      {renewingContract && (
-        <RenewContractDialog
-          open={!!renewingContract}
-          onOpenChange={(open) => !open && setRenewingContract(null)}
-          contract={renewingContract}
+        {renewingContract && (
+          <RenewContractDialog
+            open={!!renewingContract}
+            onOpenChange={(open) => !open && setRenewingContract(null)}
+            contract={renewingContract}
+          />
+        )}
+
+        <ServiceContractDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
         />
-      )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

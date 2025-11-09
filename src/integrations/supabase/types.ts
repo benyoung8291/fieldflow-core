@@ -336,6 +336,63 @@ export type Database = {
           },
         ]
       }
+      customer_locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_active: boolean | null
+          is_primary: boolean | null
+          location_notes: string | null
+          name: string
+          postcode: string | null
+          state: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          location_notes?: string | null
+          name: string
+          postcode?: string | null
+          state?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          location_notes?: string | null
+          name?: string
+          postcode?: string | null
+          state?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customer_message_templates: {
         Row: {
           content: string
@@ -1454,6 +1511,53 @@ export type Database = {
           },
         ]
       }
+      service_contract_attachments: {
+        Row: {
+          contract_id: string
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          is_internal: boolean | null
+          tenant_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          is_internal?: boolean | null
+          tenant_id: string
+          uploaded_by: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          is_internal?: boolean | null
+          tenant_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contract_attachments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_contract_line_items: {
         Row: {
           contract_id: string
@@ -1467,6 +1571,7 @@ export type Database = {
           item_order: number
           last_generated_date: string | null
           line_total: number
+          location_id: string | null
           next_generation_date: string | null
           notes: string | null
           quantity: number
@@ -1485,6 +1590,7 @@ export type Database = {
           item_order?: number
           last_generated_date?: string | null
           line_total?: number
+          location_id?: string | null
           next_generation_date?: string | null
           notes?: string | null
           quantity?: number
@@ -1503,6 +1609,7 @@ export type Database = {
           item_order?: number
           last_generated_date?: string | null
           line_total?: number
+          location_id?: string | null
           next_generation_date?: string | null
           notes?: string | null
           quantity?: number
@@ -1515,6 +1622,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_line_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -1681,6 +1795,7 @@ export type Database = {
           hourly_rate: number | null
           id: string
           is_recurring: boolean | null
+          location_id: string | null
           order_number: string
           parent_service_order_id: string | null
           priority: string | null
@@ -1708,6 +1823,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_recurring?: boolean | null
+          location_id?: string | null
           order_number: string
           parent_service_order_id?: string | null
           priority?: string | null
@@ -1735,6 +1851,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_recurring?: boolean | null
+          location_id?: string | null
           order_number?: string
           parent_service_order_id?: string | null
           priority?: string | null
@@ -1755,6 +1872,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
             referencedColumns: ["id"]
           },
           {

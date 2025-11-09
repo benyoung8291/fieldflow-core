@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Building2, FileText } from "lucide-react";
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
+import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 
 const mockCustomer = {
@@ -113,6 +116,27 @@ export default function CustomerDetails() {
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
 
+  const { data: session } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    },
+  });
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", session?.user?.id)
+        .single();
+      return data;
+    },
+    enabled: !!session?.user?.id,
+  });
+
   const handleEditContact = (contact: any) => {
     setSelectedContact(contact);
     setIsContactDialogOpen(true);
@@ -214,6 +238,7 @@ export default function CustomerDetails() {
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="contacts">Contacts</TabsTrigger>
+                <TabsTrigger value="locations">Locations</TabsTrigger>
                 <TabsTrigger value="service-history">Service History</TabsTrigger>
                 <TabsTrigger value="sub-accounts">Sub-Accounts</TabsTrigger>
               </TabsList>
@@ -358,6 +383,12 @@ export default function CustomerDetails() {
                     </Card>
                   ))}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="locations" className="space-y-4 mt-0">
+                {profile?.tenant_id && (
+                  <CustomerLocationsTab customerId={id!} tenantId={profile.tenant_id} />
+                )}
               </TabsContent>
 
               <TabsContent value="service-history" className="space-y-4 mt-0">

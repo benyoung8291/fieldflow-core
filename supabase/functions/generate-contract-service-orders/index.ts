@@ -61,6 +61,14 @@ serve(async (req) => {
           status,
           auto_generate,
           customers (name)
+        ),
+        customer_locations (
+          id,
+          name,
+          address,
+          city,
+          state,
+          postcode
         )
       `)
       .eq("is_active", true)
@@ -138,6 +146,9 @@ serve(async (req) => {
           `${item.description} (Qty: ${item.quantity})`
         ).join("\n");
 
+        // Get location from first line item (all items in group should have same location)
+        const locationId = items[0].location_id || null;
+        
         // Create the service order
         const { data: newOrder, error: orderError } = await supabase
           .from("service_orders")
@@ -153,6 +164,7 @@ serve(async (req) => {
             fixed_amount: fixedAmount,
             estimated_hours: estimatedHours,
             priority: "normal",
+            location_id: locationId,
             notes: `Auto-generated from contract ${contract.contract_number}`,
           })
           .select()
