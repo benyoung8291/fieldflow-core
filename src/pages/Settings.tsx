@@ -20,6 +20,7 @@ import TermsTemplatesTab from "@/components/settings/TermsTemplatesTab";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
 import MenuCustomizationTab from "@/components/settings/MenuCustomizationTab";
+import TaskTemplatesTab from "@/components/settings/TaskTemplatesTab";
 import { RolePermissionsTab } from "@/components/settings/RolePermissionsTab";
 
 interface PayRateCategory {
@@ -171,6 +172,7 @@ export default function Settings() {
             <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
+            <TabsTrigger value="task-templates">Task Templates</TabsTrigger>
             <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
             <TabsTrigger value="quote-templates">Quote Templates</TabsTrigger>
             <TabsTrigger value="message-templates">Messages</TabsTrigger>
@@ -267,6 +269,14 @@ export default function Settings() {
                 </TableBody>
               </Table>
             )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="task-templates">
+            <Card>
+              <CardContent className="pt-6">
+                <TaskTemplatesTab />
               </CardContent>
             </Card>
           </TabsContent>

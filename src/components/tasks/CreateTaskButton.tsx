@@ -79,7 +79,7 @@ export default function CreateTaskButton({
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      const { error } = await supabase.from("tasks" as any).insert({
+      const { data: newTask, error } = await supabase.from("tasks" as any).insert({
         tenant_id: profile.tenant_id,
         title: taskData.title,
         description: taskData.description,
@@ -90,9 +90,29 @@ export default function CreateTaskButton({
         created_by: user.id,
         linked_module: linkedModule || null,
         linked_record_id: linkedRecordId || null,
-      });
+      }).select().single();
 
       if (error) throw error;
+      
+      // Apply template checklist if template was selected
+      const templateId = (taskData as any)._templateId;
+      if (templateId && newTask) {
+        const { data: templateItems } = await supabase
+          .from("task_template_checklist_items" as any)
+          .select("*")
+          .eq("template_id", templateId)
+          .order("item_order");
+        
+        if (templateItems && templateItems.length > 0) {
+          const checklistData = templateItems.map((item: any) => ({
+            task_id: (newTask as any).id,
+            title: item.title,
+            item_order: item.item_order,
+          }));
+          
+          await supabase.from("task_checklist_items" as any).insert(checklistData);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });

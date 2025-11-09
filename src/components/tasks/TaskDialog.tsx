@@ -11,7 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import TaskComments from "./TaskComments";
+import TaskChecklist from "./TaskChecklist";
 
 interface TaskDialogProps {
   open: boolean;
@@ -45,6 +48,7 @@ export default function TaskDialog({
   workers = [],
   taskId,
 }: TaskDialogProps) {
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [formData, setFormData] = useState<TaskFormData>({
     title: defaultValues?.title || "",
     description: defaultValues?.description || "",
@@ -52,6 +56,22 @@ export default function TaskDialog({
     priority: defaultValues?.priority || "medium",
     assigned_to: defaultValues?.assigned_to || undefined,
     due_date: defaultValues?.due_date,
+  });
+
+  // Fetch active task templates
+  const { data: templates = [] } = useQuery({
+    queryKey: ["task-templates-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("task_templates" as any)
+        .select("*, checklist:task_template_checklist_items(id, title, item_order)")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !taskId, // Only fetch when creating new task
   });
 
   // Reset form when defaultValues change (editing different task)
@@ -68,8 +88,32 @@ export default function TaskDialog({
     }
   }, [defaultValues, open]);
 
-  const handleSubmit = () => {
-    onSubmit(formData);
+  // Apply template when selected
+  const handleTemplateSelect = async (templateId: string) => {
+    setSelectedTemplate(templateId);
+    const template: any = templates.find((t: any) => t.id === templateId);
+    if (template) {
+      setFormData(prev => ({
+        ...prev,
+        priority: template.default_priority,
+        status: template.default_status,
+        description: template.description || prev.description,
+      }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    await onSubmit(formData);
+    
+    // If creating a new task with a template, apply checklist items
+    if (selectedTemplate && !taskId) {
+      const template: any = templates.find((t: any) => t.id === selectedTemplate);
+      if (template?.checklist && template.checklist.length > 0) {
+        // Store the selected template ID to apply checklist after task is created
+        (formData as any)._templateId = selectedTemplate;
+      }
+    }
+    
     onOpenChange(false);
   };
 
@@ -82,8 +126,9 @@ export default function TaskDialog({
         
         {taskId ? (
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details">Task Details</TabsTrigger>
+              <TabsTrigger value="checklist">Checklist</TabsTrigger>
               <TabsTrigger value="comments">Comments</TabsTrigger>
             </TabsList>
             
@@ -216,12 +261,38 @@ export default function TaskDialog({
               </div>
             </TabsContent>
             
+            <TabsContent value="checklist" className="mt-4">
+              <TaskChecklist taskId={taskId} />
+            </TabsContent>
+            
             <TabsContent value="comments" className="mt-4">
               <TaskComments taskId={taskId} />
             </TabsContent>
           </Tabs>
         ) : (
           <div className="space-y-4">
+            {templates.length > 0 && !defaultValues && (
+              <div>
+                <Label htmlFor="template">Use Template (Optional)</Label>
+                <Select
+                  value={selectedTemplate}
+                  onValueChange={handleTemplateSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template: any) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            
             <div>
               <Label htmlFor="title">Task Title *</Label>
               <Input
