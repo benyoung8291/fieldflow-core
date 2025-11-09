@@ -120,25 +120,87 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const renderMenuContent = (isMobile = false) => {
-    const topLevelItems = menuItems.filter(item => !item.parent_id);
+    const topLevelItems = menuItems.filter(item => !item.parent_id && item.is_visible);
+    const getChildren = (parentId: string) => menuItems.filter(item => item.parent_id === parentId && item.is_visible);
+
+    const renderMenuItem = (item: any) => {
+      const isActive = item.path && location.pathname === item.path;
+      const children = item.is_folder ? getChildren(item.id) : [];
+      const isExpanded = expandedFolders.has(item.id);
+      const Icon = item.iconComponent;
+
+      return (
+        <div key={item.id}>
+          <div className="flex items-center gap-2">
+            {isEditMode && (
+              <div className="cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            <button
+              onClick={() => {
+                if (!isEditMode) {
+                  if (item.is_folder) {
+                    toggleFolder(item.id);
+                  } else if (item.path) {
+                    handleNavigate(item.path, isMobile);
+                  }
+                }
+              }}
+              disabled={isEditMode && !item.is_folder}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
+                isEditMode ? "cursor-default" : "",
+                isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
+              {item.is_folder && (
+                <div className="mr-1">
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </div>
+              )}
+              <Icon className="h-5 w-5" />
+              {item.label}
+            </button>
+          </div>
+          
+          {/* Render children when folder is expanded */}
+          {item.is_folder && isExpanded && children.length > 0 && (
+            <div className="ml-6 mt-1 space-y-1 border-l-2 border-sidebar-border pl-2">
+              {children.map((child) => {
+                const childIsActive = child.path && location.pathname === child.path;
+                const ChildIcon = child.iconComponent;
+                return (
+                  <button
+                    key={child.id}
+                    onClick={() => !isEditMode && child.path && handleNavigate(child.path, isMobile)}
+                    disabled={isEditMode}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full",
+                      isEditMode ? "cursor-default" : "",
+                      childIsActive
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <ChildIcon className="h-4 w-4" />
+                    {child.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    };
 
     return (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={topLevelItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1">
-            {topLevelItems.map((item) => {
-              const isActive = item.path && location.pathname === item.path;
-              return (
-                <SortableMenuItem
-                  key={item.id}
-                  item={item}
-                  isActive={isActive}
-                  isEditMode={isEditMode}
-                  isMobile={isMobile}
-                  onNavigate={(path) => handleNavigate(path, isMobile)}
-                />
-              );
-            })}
+            {topLevelItems.map((item) => renderMenuItem(item))}
           </div>
         </SortableContext>
       </DndContext>
