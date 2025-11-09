@@ -710,6 +710,7 @@ export type Database = {
       }
       menu_items: {
         Row: {
+          color: string | null
           created_at: string | null
           icon: string
           id: string
@@ -724,6 +725,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          color?: string | null
           created_at?: string | null
           icon: string
           id?: string
@@ -738,6 +740,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          color?: string | null
           created_at?: string | null
           icon?: string
           id?: string

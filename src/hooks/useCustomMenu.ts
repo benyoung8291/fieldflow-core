@@ -12,6 +12,7 @@ interface MenuItem {
   is_folder: boolean;
   is_visible: boolean;
   is_system: boolean;
+  color: string | null;
 }
 
 export interface MenuItemWithIcon extends MenuItem {
@@ -20,18 +21,18 @@ export interface MenuItemWithIcon extends MenuItem {
 }
 
 const defaultNavigation = [
-  { name: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
-  { name: "Quotes", href: "/quotes", icon: "FileText" },
-  { name: "Pipeline", href: "/pipeline", icon: "GitBranch" },
-  { name: "Projects", href: "/projects", icon: "FolderKanban" },
-  { name: "Service Orders", href: "/service-orders", icon: "Wrench" },
-  { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature" },
-  { name: "Scheduler", href: "/scheduler", icon: "Calendar" },
-  { name: "Customers", href: "/customers", icon: "Users" },
-  { name: "Leads", href: "/leads", icon: "Target" },
-  { name: "Workers", href: "/workers", icon: "HardHat" },
-  { name: "Analytics", href: "/analytics", icon: "BarChart3" },
-  { name: "Settings", href: "/settings", icon: "Settings" },
+  { name: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", color: "#3b82f6" },
+  { name: "Quotes", href: "/quotes", icon: "FileText", color: "#3b82f6" },
+  { name: "Pipeline", href: "/pipeline", icon: "GitBranch", color: "#3b82f6" },
+  { name: "Projects", href: "/projects", icon: "FolderKanban", color: "#3b82f6" },
+  { name: "Service Orders", href: "/service-orders", icon: "Wrench", color: "#f59e0b" },
+  { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature", color: "#f59e0b" },
+  { name: "Scheduler", href: "/scheduler", icon: "Calendar", color: "#f59e0b" },
+  { name: "Customers", href: "/customers", icon: "Users", color: "#10b981" },
+  { name: "Leads", href: "/leads", icon: "Target", color: "#10b981" },
+  { name: "Workers", href: "/workers", icon: "HardHat", color: "#f59e0b" },
+  { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899" },
+  { name: "Settings", href: "/settings", icon: "Settings", color: "#6366f1" },
 ];
 
 export function useCustomMenu() {
@@ -63,6 +64,7 @@ export function useCustomMenu() {
         is_folder: false,
         is_visible: true,
         is_system: true,
+        color: item.color,
         iconComponent: (LucideIcons as any)[item.icon] || LucideIcons.Circle,
       }));
     }

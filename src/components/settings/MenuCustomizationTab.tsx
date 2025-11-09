@@ -40,6 +40,7 @@ interface MenuItem {
   is_folder: boolean;
   is_visible: boolean;
   is_system: boolean;
+  color: string | null;
 }
 
 interface SortableItemProps {
@@ -126,6 +127,7 @@ export default function MenuCustomizationTab() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [selectedColor, setSelectedColor] = useState("#3b82f6");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -278,6 +280,7 @@ export default function MenuCustomizationTab() {
 
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
+    setSelectedColor(item.color || "#3b82f6");
     setIsDialogOpen(true);
   };
 
@@ -299,6 +302,7 @@ export default function MenuCustomizationTab() {
       parent_id: parentId === "none" ? null : parentId || null,
       is_folder: isCreatingFolder,
       is_visible: formData.get("is_visible") === "on",
+      color: formData.get("color") as string || null,
       item_order: editingItem?.item_order || menuItems.length,
     });
   };
@@ -347,6 +351,7 @@ export default function MenuCustomizationTab() {
                   onClick={() => {
                     setEditingItem(null);
                     setIsCreatingFolder(false);
+                    setSelectedColor("#3b82f6");
                     setIsDialogOpen(true);
                   }}
                   variant="outline"
@@ -358,6 +363,7 @@ export default function MenuCustomizationTab() {
                   onClick={() => {
                     setEditingItem(null);
                     setIsCreatingFolder(true);
+                    setSelectedColor("#3b82f6");
                     setIsDialogOpen(true);
                   }}
                   variant="outline"
@@ -466,6 +472,27 @@ export default function MenuCustomizationTab() {
                     ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="color">Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="color"
+                  name="color"
+                  type="color"
+                  value={selectedColor}
+                  onChange={(e) => setSelectedColor(e.target.value)}
+                  className="w-20 h-10"
+                />
+                <Input
+                  type="text"
+                  value={selectedColor}
+                  onChange={(e) => setSelectedColor(e.target.value)}
+                  className="flex-1"
+                  placeholder="#3b82f6"
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
