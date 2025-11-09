@@ -23,24 +23,34 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch service order with required skills and dates
-    const { data: serviceOrder } = await supabase
+    // Fetch service order details
+    const { data: serviceOrder, error: serviceOrderError } = await supabase
       .from("service_orders")
       .select(`
         *,
         customers!service_orders_customer_id_fkey(address, city, state),
-        customer_locations(address, latitude, longitude),
-        service_order_required_skills(
-          required_level,
-          skills(id, name, category)
-        )
+        customer_locations(address, latitude, longitude)
       `)
       .eq("id", serviceOrderId)
-      .single();
+      .maybeSingle();
+
+    if (serviceOrderError) {
+      console.error("Error fetching service order:", serviceOrderError);
+      throw new Error(`Failed to fetch service order: ${serviceOrderError.message}`);
+    }
 
     if (!serviceOrder) {
       throw new Error("Service order not found");
     }
+
+    // Try to fetch required skills if the table exists
+    const { data: requiredSkills } = await supabase
+      .from("service_order_required_skills")
+      .select(`
+        required_level,
+        skills(id, name, category)
+      `)
+      .eq("service_order_id", serviceOrderId);
 
     const preferredDate = serviceOrder.preferred_date || new Date().toISOString().split('T')[0];
     const dateRangeEnd = serviceOrder.date_range_end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -110,7 +120,7 @@ CRITICAL SCORING CRITERIA (in order of importance):
 
 Provide 3-5 worker suggestions ranked by overall suitability score (0-100).`;
 
-    const requiredSkillsText = serviceOrder.service_order_required_skills?.map((req: any) => 
+    const requiredSkillsText = requiredSkills?.map((req: any) => 
       `- ${req.skills?.name} (${req.skills?.category}) - Level Required: ${req.required_level}`
     ).join('\n') || "No specific skills required";
 
