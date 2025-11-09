@@ -58,8 +58,10 @@ serve(async (req) => {
 
     console.log('Validating ABN:', cleanABN);
 
-    // Call ABR API
-    const abrUrl = `https://abr.business.gov.au/abrxmlsearch/AbrXmlSearch.asmx/ABRSearchByABN?searchString=${cleanABN}&includeHistoricalDetails=N&authenticationGuid=${guid}`;
+    // Call ABR API with includeHistoricalDetails=Y to get full details
+    const abrUrl = `https://abr.business.gov.au/abrxmlsearch/AbrXmlSearch.asmx/ABRSearchByABN?searchString=${cleanABN}&includeHistoricalDetails=Y&authenticationGuid=${guid}`;
+    
+    console.log('Calling ABR API...');
     
     const response = await fetch(abrUrl, {
       method: 'GET',
@@ -74,28 +76,37 @@ serve(async (req) => {
     }
 
     const xmlText = await response.text();
-    console.log('ABR API Response received');
+    console.log('ABR API Response received, length:', xmlText.length);
+    console.log('Response preview:', xmlText.substring(0, 500));
 
     // Check for errors using regex
     if (hasXMLTag(xmlText, 'exception')) {
       const exceptionDescription = extractXMLValue(xmlText, 'exceptionDescription');
+      console.error('ABR API exception:', exceptionDescription);
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
     // Check if business entity exists
     if (!hasXMLTag(xmlText, 'businessEntity')) {
+      console.error('No businessEntity tag found in response');
       throw new Error('No business entity found for this ABN');
     }
 
-    // Extract ABN status from the ABN tag attribute
-    const abnStatusMatch = xmlText.match(/<ABN[^>]*status="([^"]*)"[^>]*>/i);
-    const abn_status = abnStatusMatch ? abnStatusMatch[1] : null;
+    // Extract ABN status - it's an attribute on the ABN tag, not identifierStatus
+    const abnTagMatch = xmlText.match(/<ABN[^>]*>/i);
+    console.log('ABN tag:', abnTagMatch ? abnTagMatch[0] : 'not found');
+    
+    // The status is typically in identifierStatus within the ABN tag
+    const identifierStatusMatch = xmlText.match(/<identifierStatus>([^<]*)<\/identifierStatus>/i);
+    const abn_status = identifierStatusMatch ? identifierStatusMatch[1].trim() : null;
+    
+    console.log('ABN status:', abn_status);
     
     if (abn_status !== 'Active') {
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          error: 'This ABN is not currently active',
+          error: `This ABN status is: ${abn_status || 'Unknown'}`,
           status: abn_status 
         }),
         {
@@ -104,29 +115,43 @@ serve(async (req) => {
       );
     }
 
-    // Extract legal name (Main Name)
-    const mainName = extractXMLValue(xmlText, 'organisationName');
-    
-    // Extract all trading names (Business Names)
-    // First, extract the businessName section
-    const businessNameSectionMatch = xmlText.match(/<businessName[^>]*>[\s\S]*?<\/businessName>/gi);
-    const businessNames: string[] = [];
-    
-    if (businessNameSectionMatch) {
-      businessNameSectionMatch.forEach((section) => {
-        const orgName = extractXMLValue(section, 'organisationName');
-        if (orgName && !businessNames.includes(orgName)) {
-          businessNames.push(orgName);
-        }
-      });
+    // Extract legal name from mainName section
+    const mainNameMatch = xmlText.match(/<mainName[^>]*>([\s\S]*?)<\/mainName>/i);
+    let mainName = '';
+    if (mainNameMatch) {
+      const mainNameSection = mainNameMatch[1];
+      mainName = extractXMLValue(mainNameSection, 'organisationName') || '';
     }
+    console.log('Legal name (mainName):', mainName);
+    
+    // Extract all business names (trading names)
+    const businessNames: string[] = [];
+    const businessNameMatches = xmlText.matchAll(/<businessName[^>]*>([\s\S]*?)<\/businessName>/gi);
+    
+    for (const match of businessNameMatches) {
+      const businessNameSection = match[1];
+      const orgName = extractXMLValue(businessNameSection, 'organisationName');
+      if (orgName && !businessNames.includes(orgName)) {
+        businessNames.push(orgName);
+      }
+    }
+    console.log('Business names (trading names):', businessNames);
 
     // Extract entity type
-    const entityType = extractXMLValue(xmlText, 'entityDescription');
+    const entityTypeMatch = xmlText.match(/<entityType[^>]*>([\s\S]*?)<\/entityType>/i);
+    let entityType = '';
+    if (entityTypeMatch) {
+      const entityTypeSection = entityTypeMatch[1];
+      entityType = extractXMLValue(entityTypeSection, 'entityDescription') || '';
+    }
+    console.log('Entity type:', entityType);
 
     // Extract GST registration
-    const gstValue = extractXMLValue(xmlText, 'goodsAndServicesTax');
-    const gstRegistered = gstValue === 'true';
+    const gstValue = extractXMLValue(xmlText, 'effectiveTo');
+    // If GST effectiveTo is empty/null, it means GST is currently active
+    const gstFromDate = extractXMLValue(xmlText, 'effectiveFrom');
+    const gstRegistered = gstFromDate !== null && gstValue === null;
+    console.log('GST registered:', gstRegistered, 'effectiveFrom:', gstFromDate, 'effectiveTo:', gstValue);
 
     // Extract last updated date
     const recordLastUpdatedDate = extractXMLValue(xmlText, 'recordLastUpdatedDate');
@@ -142,7 +167,7 @@ serve(async (req) => {
       lastUpdated: recordLastUpdatedDate,
     };
 
-    console.log('ABN validation result:', result);
+    console.log('ABN validation result:', JSON.stringify(result, null, 2));
 
     return new Response(
       JSON.stringify(result),
