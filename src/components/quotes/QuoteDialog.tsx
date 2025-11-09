@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen } from "lucide-react";
+import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen, Upload, X, FileText } from "lucide-react";
 import { z } from "zod";
 import PriceBookDialog from "./PriceBookDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -63,7 +63,11 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     discount_amount: "0",
     notes: "",
     terms_conditions: "",
+    internal_notes: "",
   });
+
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { 
@@ -138,7 +142,19 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         discount_amount: quoteData.discount_amount?.toString() || "0",
         notes: quoteData.notes || "",
         terms_conditions: quoteData.terms_conditions || "",
+        internal_notes: quoteData.internal_notes || "",
       });
+
+      // Fetch attachments
+      const { data: attachmentsData } = await supabase
+        .from("quote_attachments")
+        .select("*")
+        .eq("quote_id", quoteId)
+        .order("created_at", { ascending: false });
+      
+      if (attachmentsData) {
+        setAttachments(attachmentsData);
+      }
 
       if (itemsData && itemsData.length > 0) {
         // Build hierarchical structure
@@ -185,6 +201,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       discount_amount: "0",
       notes: "",
       terms_conditions: "",
+      internal_notes: "",
     });
     setLineItems([{ 
       description: "", 
@@ -198,6 +215,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     }]);
     setErrors({});
     setIsComplexQuote(false);
+    setAttachments([]);
   };
 
   const calculatePricing = (cost: string, margin: string, sell: string, changedField: string) => {
@@ -367,6 +385,97 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     setSelectedParentIndex(null);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !quoteId) return;
+
+    setUploadingFiles(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${profile.tenant_id}/${quoteId}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('quote-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('quote-attachments')
+          .getPublicUrl(fileName);
+
+        const { data: attachment, error: attachmentError } = await supabase
+          .from('quote_attachments')
+          .insert({
+            quote_id: quoteId,
+            tenant_id: profile.tenant_id,
+            file_name: file.name,
+            file_url: fileName,
+            file_type: file.type,
+            file_size: file.size,
+            uploaded_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (attachmentError) throw attachmentError;
+
+        setAttachments(prev => [attachment, ...prev]);
+      }
+
+      toast({ title: "Files uploaded successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error uploading files",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFiles(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string, fileUrl: string) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('quote-attachments')
+        .remove([fileUrl]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('quote_attachments')
+        .delete()
+        .eq('id', attachmentId);
+
+      if (dbError) throw dbError;
+
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      toast({ title: "Attachment deleted" });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting attachment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const calculateTotals = () => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
     const taxRate = parseFloat(formData.tax_rate) || 0;
@@ -425,6 +534,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         total_amount: total,
         notes: formData.notes || null,
         terms_conditions: formData.terms_conditions || null,
+        internal_notes: formData.internal_notes || null,
       };
 
       let savedQuoteId = quoteId;
@@ -912,6 +1022,90 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                 onChange={(e) => setFormData({ ...formData, terms_conditions: e.target.value })}
                 rows={3}
               />
+            </div>
+
+            <div className="border-t pt-6 space-y-4">
+              <div>
+                <Label className="text-base font-semibold">Internal Only</Label>
+                <p className="text-sm text-muted-foreground">These fields are not visible to customers</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="internal_notes">Internal Notes</Label>
+                <Textarea
+                  id="internal_notes"
+                  value={formData.internal_notes}
+                  onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
+                  rows={3}
+                  placeholder="Add internal notes, comments, or reminders..."
+                />
+              </div>
+
+              {quoteId && (
+                <div className="space-y-2">
+                  <Label>Internal Attachments</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="file-upload"
+                        multiple
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        disabled={uploadingFiles}
+                      >
+                        {uploadingFiles ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="mr-2 h-4 w-4" />
+                        )}
+                        Upload Files
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Upload documents, images, or other files
+                      </p>
+                    </div>
+
+                    {attachments.length > 0 && (
+                      <div className="border rounded-lg divide-y">
+                        {attachments.map((attachment) => (
+                          <div key={attachment.id} className="flex items-center justify-between p-3">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteAttachment(attachment.id, attachment.file_url)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {!quoteId && (
+                <p className="text-sm text-muted-foreground italic">
+                  Save the quote first to upload attachments
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 justify-end">

@@ -14,6 +14,8 @@ import {
   XCircle,
   FileText,
   Calendar,
+  Download,
+  Lock,
 } from "lucide-react";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import { format } from "date-fns";
@@ -78,6 +80,45 @@ export default function QuoteDetails() {
       return data;
     },
   });
+
+  const { data: attachments } = useQuery({
+    queryKey: ["quote-attachments", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quote_attachments")
+        .select("*")
+        .eq("quote_id", id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleDownloadAttachment = async (fileUrl: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('quote-attachments')
+        .download(fileUrl);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Error downloading file",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const updateStatus = async (newStatus: string) => {
     try {
@@ -383,6 +424,60 @@ export default function QuoteDetails() {
           </Card>
 
           <div className="space-y-6">
+            {(quote.internal_notes || (attachments && attachments.length > 0)) && (
+              <Card className="border-orange-200 dark:border-orange-900/50">
+                <CardHeader className="bg-orange-50 dark:bg-orange-950/20">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Internal Only
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {quote.internal_notes && (
+                    <div>
+                      <Label className="text-sm font-medium">Internal Notes</Label>
+                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                        {quote.internal_notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {attachments && attachments.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">Attachments</Label>
+                      <div className="space-y-2">
+                        {attachments.map((attachment: any) => (
+                          <div
+                            key={attachment.id}
+                            className="flex items-center justify-between p-2 border rounded hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDownloadAttachment(attachment.file_url, attachment.file_name)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            </div>
+            
+            <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Customer</CardTitle>
