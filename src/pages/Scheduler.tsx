@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Sparkles } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
 import GPSCheckInDialog from "@/components/scheduler/GPSCheckInDialog";
+import SmartSchedulingDialog from "@/components/scheduler/SmartSchedulingDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
@@ -40,6 +41,7 @@ export default function Scheduler() {
   const [detailsAppointment, setDetailsAppointment] = useState<any | null>(null);
   const [gpsCheckInAppointment, setGpsCheckInAppointment] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showSmartScheduling, setShowSmartScheduling] = useState(false);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
@@ -95,6 +97,21 @@ export default function Scheduler() {
         .select("id, first_name, last_name")
         .eq("is_active", true)
         .order("first_name", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch service orders for smart scheduling
+  const { data: serviceOrders = [] } = useQuery({
+    queryKey: ["service-orders-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("id, order_number, title, estimated_hours")
+        .in("status", ["draft", "scheduled", "in_progress"])
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -483,6 +500,25 @@ export default function Scheduler() {
     }
   };
 
+  const handleSmartSchedule = async (
+    workerId: string,
+    serviceOrderId: string,
+    startTime: Date,
+    endTime: Date
+  ) => {
+    try {
+      await createAppointmentMutation.mutateAsync({
+        serviceOrderId,
+        startTime,
+        endTime,
+        workerId,
+      });
+      setShowSmartScheduling(false);
+    } catch (error) {
+      console.error("Failed to create appointment:", error);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -665,6 +701,14 @@ export default function Scheduler() {
         onUseServiceOrderTemplate={handleUseServiceOrderTemplate}
       />
 
+      <SmartSchedulingDialog
+        open={showSmartScheduling}
+        onOpenChange={setShowSmartScheduling}
+        serviceOrders={serviceOrders}
+        workers={workers}
+        onSchedule={handleSmartSchedule}
+      />
+
       <AppointmentDetailsDialog
         appointment={detailsAppointment}
         open={!!detailsAppointment}
@@ -758,6 +802,15 @@ export default function Scheduler() {
                 <h3 className="text-sm font-semibold ml-2">{getDateRangeLabel()}</h3>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setShowSmartScheduling(true)}
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                  Smart Schedule
+                </Button>
                 <Button
                   variant="default"
                   size="sm"
