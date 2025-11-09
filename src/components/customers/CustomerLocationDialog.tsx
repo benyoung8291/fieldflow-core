@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader } from "@googlemaps/js-api-loader";
+import AddressAutocomplete from "./AddressAutocomplete";
 
 interface CustomerLocationDialogProps {
   open: boolean;
@@ -44,8 +44,6 @@ export default function CustomerLocationDialog({
 }: CustomerLocationDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
-  const addressInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   
   const { register, handleSubmit, watch, setValue } = useForm<LocationFormData>({
     defaultValues: location || {
@@ -67,85 +65,7 @@ export default function CustomerLocationDialog({
 
   const isPrimary = watch("is_primary");
   const isActive = watch("is_active");
-
-  useEffect(() => {
-    if (!open || !addressInputRef.current) return;
-
-    const initAutocomplete = async () => {
-      const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-      
-      if (!apiKey) {
-        console.warn("Google Places API key not found. Address autocomplete disabled.");
-        return;
-      }
-
-      try {
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-          libraries: ["places"],
-        });
-
-        // @ts-ignore - Loader types may be incomplete
-        await loader.load();
-
-        autocompleteRef.current = new window.google.maps.places.Autocomplete(
-          addressInputRef.current!,
-          {
-            componentRestrictions: { country: "au" },
-            fields: ["address_components", "formatted_address", "geometry"],
-          }
-        );
-
-        autocompleteRef.current.addListener("place_changed", () => {
-          const place = autocompleteRef.current?.getPlace();
-          if (!place || !place.geometry) return;
-
-          const addressComponents = place.address_components || [];
-          let street = "";
-          let city = "";
-          let state = "";
-          let postcode = "";
-
-          addressComponents.forEach((component) => {
-            const types = component.types;
-            if (types.includes("street_number")) {
-              street = component.long_name + " " + street;
-            }
-            if (types.includes("route")) {
-              street += component.long_name;
-            }
-            if (types.includes("locality")) {
-              city = component.long_name;
-            }
-            if (types.includes("administrative_area_level_1")) {
-              state = component.short_name;
-            }
-            if (types.includes("postal_code")) {
-              postcode = component.long_name;
-            }
-          });
-
-          setValue("address", street || place.formatted_address || "");
-          setValue("city", city);
-          setValue("state", state);
-          setValue("postcode", postcode);
-          setValue("latitude", place.geometry.location?.lat() || null);
-          setValue("longitude", place.geometry.location?.lng() || null);
-        });
-      } catch (error) {
-        console.error("Error loading Google Maps:", error);
-      }
-    };
-
-    initAutocomplete();
-
-    return () => {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      }
-    };
-  }, [open, setValue]);
+  const address = watch("address");
 
   const onSubmit = async (data: LocationFormData) => {
     setIsSubmitting(true);
@@ -196,14 +116,17 @@ export default function CustomerLocationDialog({
 
             <div className="col-span-2">
               <Label htmlFor="address">Address</Label>
-              <Input 
-                id="address" 
-                {...register("address")}
-                ref={(e) => {
-                  register("address").ref(e);
-                  addressInputRef.current = e;
+              <AddressAutocomplete
+                value={address}
+                onChange={(value) => setValue("address", value)}
+                onPlaceSelect={(place) => {
+                  setValue("address", place.address);
+                  setValue("city", place.city);
+                  setValue("state", place.state);
+                  setValue("postcode", place.postcode);
+                  setValue("latitude", place.latitude);
+                  setValue("longitude", place.longitude);
                 }}
-                placeholder="Start typing to search address..."
               />
             </div>
 
