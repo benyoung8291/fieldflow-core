@@ -1623,6 +1623,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sequential_number_settings: {
+        Row: {
+          created_at: string | null
+          entity_type: string
+          id: string
+          next_number: number
+          number_length: number
+          prefix: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_type: string
+          id?: string
+          next_number?: number
+          number_length?: number
+          prefix?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_type?: string
+          id?: string
+          next_number?: number
+          number_length?: number
+          prefix?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       service_contract_attachments: {
         Row: {
           contract_id: string
@@ -2850,6 +2883,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_next_sequential_number: {
+        Args: { p_entity_type: string; p_tenant_id: string }
+        Returns: string
+      }
       get_user_tenant_id: { Args: never; Returns: string }
       has_permission: {
         Args: {

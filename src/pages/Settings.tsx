@@ -22,6 +22,7 @@ import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { ChangeLogTab } from "@/components/settings/ChangeLogTab";
 import { TemplatesTab } from "@/components/settings/TemplatesTab";
 import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
+import NumberingTab from "@/components/settings/NumberingTab";
 
 interface PayRateCategory {
   id: string;
@@ -169,6 +170,7 @@ export default function Settings() {
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="numbering">Numbering</TabsTrigger>
             <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
@@ -183,6 +185,14 @@ export default function Settings() {
             <Card>
               <CardContent className="pt-6">
                 <GeneralSettingsTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="numbering">
+            <Card>
+              <CardContent className="pt-6">
+                <NumberingTab />
               </CardContent>
             </Card>
           </TabsContent>

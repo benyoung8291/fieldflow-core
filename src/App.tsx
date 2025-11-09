@@ -14,6 +14,7 @@ import QuoteDetails from "./pages/QuoteDetails";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
 import ServiceOrders from "./pages/ServiceOrders";
+import ServiceOrderDetails from "./pages/ServiceOrderDetails";
 import ServiceContracts from "./pages/ServiceContracts";
 import ServiceContractDetails from "./pages/ServiceContractDetails";
 import Scheduler from "./pages/Scheduler";
@@ -72,6 +73,7 @@ const App = () => (
           <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
           <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetails /></ProtectedRoute>} />
           <Route path="/service-orders" element={<ProtectedRoute><ServiceOrders /></ProtectedRoute>} />
+          <Route path="/service-orders/:id" element={<ProtectedRoute><ServiceOrderDetails /></ProtectedRoute>} />
           <Route path="/service-contracts" element={<ProtectedRoute><ServiceContracts /></ProtectedRoute>} />
           <Route path="/service-contracts/:id" element={<ProtectedRoute><ServiceContractDetails /></ProtectedRoute>} />
           <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />

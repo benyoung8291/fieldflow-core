@@ -347,7 +347,11 @@ export default function ServiceOrders() {
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {filteredOrders.map((order: any) => (
-                      <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                      <tr 
+                        key={order.id} 
+                        className="hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => window.location.href = `/service-orders/${order.id}`}
+                      >
                         <td className="py-1 px-2">
                           <div className="font-medium text-[11px]">{order.order_number}</div>
                           {order.work_order_number && (
@@ -377,7 +381,7 @@ export default function ServiceOrders() {
                         <td className="py-1 px-2 text-right text-[11px] font-medium">
                           ${order.total_amount?.toFixed(2) || "0.00"}
                         </td>
-                        <td className="py-1 px-2 text-right">
+                        <td className="py-1 px-2 text-right" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
