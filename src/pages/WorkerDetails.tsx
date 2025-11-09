@@ -9,6 +9,10 @@ import { Calendar, Clock, DollarSign, Mail, Phone, User, Shield } from "lucide-r
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import WorkerAvailability from "@/components/workers/WorkerAvailability";
+import WorkerSkillsTab from "@/components/workers/WorkerSkillsTab";
+import WorkerCertificatesTab from "@/components/workers/WorkerCertificatesTab";
+import WorkerLicensesTab from "@/components/workers/WorkerLicensesTab";
+import WorkerTrainingTab from "@/components/workers/WorkerTrainingTab";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
@@ -89,6 +93,10 @@ export default function WorkerDetails() {
         <Tabs defaultValue="details" className="w-full">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+            <TabsTrigger value="certificates">Certificates</TabsTrigger>
+            <TabsTrigger value="licenses">Licenses</TabsTrigger>
+            <TabsTrigger value="training">Training</TabsTrigger>
             <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="history">Activity History</TabsTrigger>
           </TabsList>
@@ -230,6 +238,22 @@ export default function WorkerDetails() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <WorkerSkillsTab workerId={id!} />
+          </TabsContent>
+
+          <TabsContent value="certificates">
+            <WorkerCertificatesTab workerId={id!} />
+          </TabsContent>
+
+          <TabsContent value="licenses">
+            <WorkerLicensesTab workerId={id!} />
+          </TabsContent>
+
+          <TabsContent value="training">
+            <WorkerTrainingTab workerId={id!} />
           </TabsContent>
 
           <TabsContent value="availability">
