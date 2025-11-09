@@ -96,22 +96,26 @@ serve(async (req) => {
     }
 
     // Check if business entity exists
-    if (!hasXMLTag(xmlText, 'businessEntity')) {
+    const businessEntityTag = xmlText.match(/<businessEntity\d*[^>]*>([\s\S]*?)<\/businessEntity\d*>/i);
+    if (!businessEntityTag) {
       console.error('No businessEntity tag found in response');
       throw new Error('No business entity found for this ABN');
     }
+    
+    const businessEntitySection = businessEntityTag[1];
+    console.log('BusinessEntity section extracted, length:', businessEntitySection.length);
 
-    // Extract ABN status from entityStatusCode
-    const entityStatusMatch = xmlText.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
+    // Extract ABN status from entityStatusCode - search within businessEntity section
+    const entityStatusMatch = businessEntitySection.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
     let abn_status = null;
     if (entityStatusMatch) {
-      console.log('EntityStatus section found:', entityStatusMatch[0]);
+      console.log('EntityStatus section found');
       const entityStatusSection = entityStatusMatch[1];
       const statusCodeMatch = entityStatusSection.match(/<entityStatusCode>([^<]*)<\/entityStatusCode>/i);
       abn_status = statusCodeMatch ? statusCodeMatch[1].trim() : null;
       console.log('Status code extracted:', abn_status);
     } else {
-      console.log('No entityStatus tag found in XML');
+      console.log('No entityStatus tag found in businessEntity');
     }
     
     console.log('Final ABN status:', abn_status);
@@ -129,8 +133,8 @@ serve(async (req) => {
       );
     }
 
-    // Extract legal name from mainName section
-    const mainNameMatch = xmlText.match(/<mainName[^>]*>([\s\S]*?)<\/mainName>/i);
+    // Extract legal name from mainName section within businessEntity
+    const mainNameMatch = businessEntitySection.match(/<mainName[^>]*>([\s\S]*?)<\/mainName>/i);
     let mainName = '';
     if (mainNameMatch) {
       const mainNameSection = mainNameMatch[1];
@@ -138,21 +142,27 @@ serve(async (req) => {
     }
     console.log('Legal name (mainName):', mainName);
     
-    // Extract all business names (trading names)
+    // Extract all business names (trading names) from businessEntity section
     const businessNames: string[] = [];
-    const businessNameMatches = xmlText.matchAll(/<businessName[^>]*>([\s\S]*?)<\/businessName>/gi);
+    const businessNameMatches = businessEntitySection.matchAll(/<businessName[^>]*>([\s\S]*?)<\/businessName>/gi);
     
+    console.log('Searching for businessName tags in businessEntity section...');
+    let matchCount = 0;
     for (const match of businessNameMatches) {
+      matchCount++;
       const businessNameSection = match[1];
+      console.log(`BusinessName match ${matchCount}:`, businessNameSection.substring(0, 200));
       const orgName = extractXMLValue(businessNameSection, 'organisationName');
+      console.log(`Extracted org name ${matchCount}:`, orgName);
       if (orgName && !businessNames.includes(orgName)) {
         businessNames.push(orgName);
       }
     }
+    console.log('Total businessName tags found:', matchCount);
     console.log('Business names (trading names):', businessNames);
 
-    // Extract entity type
-    const entityTypeMatch = xmlText.match(/<entityType[^>]*>([\s\S]*?)<\/entityType>/i);
+    // Extract entity type from businessEntity section
+    const entityTypeMatch = businessEntitySection.match(/<entityType[^>]*>([\s\S]*?)<\/entityType>/i);
     let entityType = '';
     if (entityTypeMatch) {
       const entityTypeSection = entityTypeMatch[1];
@@ -160,8 +170,8 @@ serve(async (req) => {
     }
     console.log('Entity type:', entityType);
 
-    // Extract GST registration - look for goodsAndServicesTax section
-    const gstMatch = xmlText.match(/<goodsAndServicesTax[^>]*>([\s\S]*?)<\/goodsAndServicesTax>/i);
+    // Extract GST registration from businessEntity section
+    const gstMatch = businessEntitySection.match(/<goodsAndServicesTax[^>]*>([\s\S]*?)<\/goodsAndServicesTax>/i);
     let gstRegistered = false;
     if (gstMatch) {
       const gstSection = gstMatch[1];
@@ -172,8 +182,8 @@ serve(async (req) => {
       console.log('GST registered:', gstRegistered, 'effectiveFrom:', gstFromDate, 'effectiveTo:', gstToDate);
     }
 
-    // Extract last updated date
-    const recordLastUpdatedDate = extractXMLValue(xmlText, 'recordLastUpdatedDate');
+    // Extract last updated date from businessEntity section
+    const recordLastUpdatedDate = extractXMLValue(businessEntitySection, 'recordLastUpdatedDate');
 
     const result = {
       valid: true,
