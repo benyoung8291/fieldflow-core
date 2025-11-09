@@ -116,6 +116,52 @@ export type Database = {
           },
         ]
       }
+      appointment_workers: {
+        Row: {
+          appointment_id: string
+          created_at: string | null
+          id: string
+          tenant_id: string
+          worker_id: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string | null
+          id?: string
+          tenant_id: string
+          worker_id: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string | null
+          id?: string
+          tenant_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_workers_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_workers_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_workers_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           assigned_to: string | null

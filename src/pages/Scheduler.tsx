@@ -57,7 +57,8 @@ export default function Scheduler() {
         .select(`
           *,
           service_orders(order_number, title),
-          profiles!appointments_assigned_to_fkey(first_name, last_name)
+          profiles!appointments_assigned_to_fkey(first_name, last_name),
+          appointment_workers(worker_id, profiles(first_name, last_name))
         `)
         .order("start_time", { ascending: true });
 
@@ -204,10 +205,21 @@ export default function Scheduler() {
       }).select(`
         *,
         service_orders(order_number, title),
-        profiles!appointments_assigned_to_fkey(first_name, last_name)
+        profiles!appointments_assigned_to_fkey(first_name, last_name),
+        appointment_workers(worker_id, profiles(first_name, last_name))
       `).single();
 
       if (error) throw error;
+
+      // Add to appointment_workers junction table
+      if (workerId && newAppointment) {
+        await supabase.from("appointment_workers").insert({
+          tenant_id: profile?.tenant_id,
+          appointment_id: newAppointment.id,
+          worker_id: workerId,
+        });
+      }
+
       return newAppointment;
     },
     onMutate: async ({ serviceOrderId, startTime, endTime, workerId }) => {
@@ -261,7 +273,8 @@ export default function Scheduler() {
       endTime: Date; 
       workerId: string | null;
     }) => {
-      const { error } = await supabase
+      // Update appointment times and primary worker
+      const { error: updateError } = await supabase
         .from("appointments")
         .update({
           start_time: startTime.toISOString(),
@@ -270,14 +283,77 @@ export default function Scheduler() {
         })
         .eq("id", appointmentId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      if (workerId) {
+        // Get tenant_id
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", (await supabase.auth.getUser()).data.user?.id)
+          .single();
+
+        // Clear existing workers and add new one
+        await supabase
+          .from("appointment_workers")
+          .delete()
+          .eq("appointment_id", appointmentId);
+
+        const { error: workerError } = await supabase
+          .from("appointment_workers")
+          .insert({
+            tenant_id: profile?.tenant_id,
+            appointment_id: appointmentId,
+            worker_id: workerId,
+          });
+
+        if (workerError) throw workerError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success("Appointment updated successfully");
+      toast.success("Appointment reassigned successfully");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update appointment");
+    },
+  });
+
+  const addWorkerToAppointmentMutation = useMutation({
+    mutationFn: async ({ 
+      appointmentId, 
+      workerId 
+    }: { 
+      appointmentId: string; 
+      workerId: string;
+    }) => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from("appointment_workers")
+        .insert({
+          tenant_id: profile?.tenant_id,
+          appointment_id: appointmentId,
+          worker_id: workerId,
+        });
+
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          throw new Error("Worker already assigned to this appointment");
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Worker added to appointment");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to add worker");
     },
   });
 
@@ -293,6 +369,9 @@ export default function Scheduler() {
     if (dropTarget?.type !== "time-slot") return;
 
     const { date, workerId, hour } = dropTarget;
+    const isMultiAssign = event.activatorEvent instanceof KeyboardEvent 
+      ? event.activatorEvent.ctrlKey || event.activatorEvent.metaKey
+      : (event.activatorEvent as MouseEvent)?.ctrlKey || (event.activatorEvent as MouseEvent)?.metaKey;
 
     // Calculate start and end times
     const startTime = hour !== undefined 
@@ -353,12 +432,21 @@ export default function Scheduler() {
         }
       }
 
-      updateAppointmentMutation.mutate({
-        appointmentId: appointment.id,
-        startTime,
-        endTime: newEndTime,
-        workerId,
-      });
+      if (isMultiAssign && workerId) {
+        // Add worker to appointment (multi-assign)
+        addWorkerToAppointmentMutation.mutate({
+          appointmentId: appointment.id,
+          workerId,
+        });
+      } else {
+        // Move appointment (reassign)
+        updateAppointmentMutation.mutate({
+          appointmentId: appointment.id,
+          startTime,
+          endTime: newEndTime,
+          workerId,
+        });
+      }
     }
   };
 

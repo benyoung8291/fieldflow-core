@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
-import { Clock, MapPin, MoreVertical, Repeat } from "lucide-react";
+import { Clock, MapPin, MoreVertical, Repeat, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,6 +77,16 @@ export default function DraggableAppointment({
                 {format(new Date(appointment.end_time), "HH:mm")}
               </span>
             </div>
+            {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
+              <div className="flex items-center gap-1 text-[10px]">
+                <Users className="h-3 w-3" />
+                <span className="truncate">
+                  {appointment.appointment_workers.map((aw: any) => 
+                    `${aw.profiles?.first_name || ''} ${aw.profiles?.last_name || ''}`
+                  ).join(', ')}
+                </span>
+              </div>
+            )}
             {appointment.location_address && (
               <div className="flex items-center gap-1 text-[10px]">
                 <MapPin className="h-3 w-3" />
@@ -101,6 +111,12 @@ export default function DraggableAppointment({
               <Clock className="h-3 w-3" />
               <span>{format(new Date(appointment.start_time), "HH:mm")}</span>
             </div>
+            {appointment.appointment_workers && appointment.appointment_workers.length > 1 && (
+              <div className="flex items-center gap-1 mt-1 text-[10px]">
+                <Users className="h-3 w-3" />
+                <span>{appointment.appointment_workers.length} workers</span>
+              </div>
+            )}
             {appointment.location_address && (
               <div className="flex items-center gap-1 mt-1 text-[10px]">
                 <MapPin className="h-3 w-3" />
