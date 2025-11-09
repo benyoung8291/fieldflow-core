@@ -78,13 +78,8 @@ serve(async (req) => {
     const xmlText = await response.text();
     console.log('ABR API Response received, length:', xmlText.length);
     
-    // Log the opening businessEntity tag to see what we're dealing with
-    const businessEntityOpenMatch = xmlText.match(/<businessEntity[^>]*>/i);
-    console.log('BusinessEntity opening tag:', businessEntityOpenMatch ? businessEntityOpenMatch[0] : 'not found');
-    
-    // Also log the closing tag
-    const businessEntityCloseMatch = xmlText.match(/<\/businessEntity[^>]*>/i);
-    console.log('BusinessEntity closing tag:', businessEntityCloseMatch ? businessEntityCloseMatch[0] : 'not found');
+    // Log the full response to see the structure
+    console.log('Full XML response:', xmlText);
 
     // Check for errors using regex
     if (hasXMLTag(xmlText, 'exception')) {
