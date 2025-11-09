@@ -6,7 +6,7 @@ import DraggableServiceOrder from "./DraggableServiceOrder";
 import { differenceInHours } from "date-fns";
 
 export default function ServiceOrdersSidebar() {
-  const { data: serviceOrdersWithAppointments = [] } = useQuery({
+  const { data: serviceOrdersWithAppointments = [], error } = useQuery({
     queryKey: ["service-orders-with-appointments"],
     queryFn: async () => {
       const { data: orders, error: ordersError } = await supabase
@@ -17,9 +17,12 @@ export default function ServiceOrdersSidebar() {
           appointments(id, start_time, end_time, status)
         `)
         .in("status", ["draft", "scheduled", "in_progress"])
-        .order("priority", { ascending: false });
+        .order("created_at", { ascending: false });
 
-      if (ordersError) throw ordersError;
+      if (ordersError) {
+        console.error("Error fetching service orders:", ordersError);
+        throw ordersError;
+      }
 
       // Calculate remaining hours for each service order
       return orders.map(order => {
