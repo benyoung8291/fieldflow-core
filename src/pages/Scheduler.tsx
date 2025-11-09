@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
+import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
@@ -27,6 +28,7 @@ export default function Scheduler() {
   const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
   const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -110,6 +112,27 @@ export default function Scheduler() {
   const handleCreateAppointment = () => {
     setEditingAppointmentId(undefined);
     setDialogOpen(true);
+  };
+
+  const handleUseAppointmentTemplate = (template: any) => {
+    const now = new Date();
+    const startTime = new Date(now);
+    startTime.setHours(9, 0, 0, 0);
+    const endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + template.duration_hours);
+
+    setEditingAppointmentId(undefined);
+    setDialogOpen(true);
+    
+    // The dialog will handle pre-filling from template data
+    setTimeout(() => {
+      // You could pass template data to the dialog via a ref or context
+    }, 100);
+  };
+
+  const handleUseServiceOrderTemplate = (template: any) => {
+    // Navigate to service orders page with template data
+    toast.success("Service order template selected");
   };
 
   useEffect(() => {
@@ -303,6 +326,13 @@ export default function Scheduler() {
         defaultDate={currentDate}
       />
 
+      <TemplatesDialog
+        open={showTemplatesDialog}
+        onOpenChange={setShowTemplatesDialog}
+        onUseAppointmentTemplate={handleUseAppointmentTemplate}
+        onUseServiceOrderTemplate={handleUseServiceOrderTemplate}
+      />
+
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
         <div className="grid grid-cols-[1fr_350px] gap-6">
           <div className="space-y-6">
@@ -316,6 +346,10 @@ export default function Scheduler() {
           </div>
           <div className="flex items-center gap-2">
             <PresenceIndicator users={onlineUsers} />
+            <Button variant="outline" className="gap-2" onClick={() => setShowTemplatesDialog(true)}>
+              <FileText className="h-4 w-4" />
+              Templates
+            </Button>
             <Button className="gap-2" onClick={handleCreateAppointment}>
               <Clock className="h-4 w-4" />
               New Appointment

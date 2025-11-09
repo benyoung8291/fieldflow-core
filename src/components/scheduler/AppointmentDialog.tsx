@@ -15,6 +15,7 @@ import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import RecurrenceDialog from "./RecurrenceDialog";
 import RecurringEditDialog from "./RecurringEditDialog";
+import SaveTemplateDialog from "./SaveTemplateDialog";
 import { generateRecurringInstances, checkRecurringConflicts } from "@/hooks/useRecurringAppointments";
 import { Badge } from "@/components/ui/badge";
 
@@ -72,6 +73,7 @@ export default function AppointmentDialog({
   const [recurrenceConfig, setRecurrenceConfig] = useState<any>(null);
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false);
+  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
   const [parentAppointmentId, setParentAppointmentId] = useState<string | null>(null);
 
@@ -652,9 +654,12 @@ export default function AppointmentDialog({
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex items-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setShowSaveTemplateDialog(true)}>
+              Save as Template
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -676,6 +681,13 @@ export default function AppointmentDialog({
         onOpenChange={setShowRecurringEditDialog}
         onConfirm={saveAppointment}
         action="edit"
+      />
+
+      <SaveTemplateDialog
+        open={showSaveTemplateDialog}
+        onOpenChange={setShowSaveTemplateDialog}
+        appointmentData={formData}
+        type="appointment"
       />
     </Dialog>
   );

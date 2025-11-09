@@ -14,6 +14,94 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          default_assigned_to: string | null
+          default_status: string | null
+          description: string | null
+          duration_hours: number
+          gps_check_in_radius: number | null
+          id: string
+          is_recurring: boolean | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          name: string
+          notes: string | null
+          recurrence_days_of_week: string[] | null
+          recurrence_frequency: number | null
+          recurrence_pattern: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          default_assigned_to?: string | null
+          default_status?: string | null
+          description?: string | null
+          duration_hours?: number
+          gps_check_in_radius?: number | null
+          id?: string
+          is_recurring?: boolean | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name: string
+          notes?: string | null
+          recurrence_days_of_week?: string[] | null
+          recurrence_frequency?: number | null
+          recurrence_pattern?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          default_assigned_to?: string | null
+          default_status?: string | null
+          description?: string | null
+          duration_hours?: number
+          gps_check_in_radius?: number | null
+          id?: string
+          is_recurring?: boolean | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name?: string
+          notes?: string | null
+          recurrence_days_of_week?: string[] | null
+          recurrence_frequency?: number | null
+          recurrence_pattern?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_templates_default_assigned_to_fkey"
+            columns: ["default_assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           assigned_to: string | null
@@ -453,6 +541,79 @@ export type Database = {
           },
           {
             foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_order_templates: {
+        Row: {
+          billing_type: string | null
+          created_at: string | null
+          created_by: string
+          default_assigned_to: string | null
+          description: string | null
+          estimated_hours: number | null
+          fixed_amount: number | null
+          hourly_rate: number | null
+          id: string
+          name: string
+          priority: string | null
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          billing_type?: string | null
+          created_at?: string | null
+          created_by: string
+          default_assigned_to?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          fixed_amount?: number | null
+          hourly_rate?: number | null
+          id?: string
+          name: string
+          priority?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          billing_type?: string | null
+          created_at?: string | null
+          created_by?: string
+          default_assigned_to?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          fixed_amount?: number | null
+          hourly_rate?: number | null
+          id?: string
+          name?: string
+          priority?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_templates_default_assigned_to_fkey"
+            columns: ["default_assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
