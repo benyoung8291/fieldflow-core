@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Calendar, DollarSign, FileText, TrendingUp } from "lucide-react";
 import { format, addMonths, startOfMonth, endOfMonth, parseISO, addDays, addWeeks, isWithinInterval } from "date-fns";
 
 export default function ServiceContracts() {
+  const navigate = useNavigate();
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
     queryFn: async () => {
@@ -215,7 +217,11 @@ export default function ServiceContracts() {
                 </TableHeader>
                 <TableBody>
                   {activeContracts.map((contract: any) => (
-                    <TableRow key={contract.id}>
+                    <TableRow 
+                      key={contract.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/service-contracts/${contract.id}`)}
+                    >
                       <TableCell className="font-medium">{contract.contract_number}</TableCell>
                       <TableCell>{contract.customers?.name}</TableCell>
                       <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
