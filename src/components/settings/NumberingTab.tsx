@@ -17,6 +17,7 @@ interface SequentialSetting {
 
 export default function NumberingTab() {
   const queryClient = useQueryClient();
+  const [overheadPercentage, setOverheadPercentage] = useState<string>("20");
   const [settings, setSettings] = useState<Record<string, { prefix: string; next_number: number; number_length: number }>>({
     service_order: { prefix: "SO-", next_number: 1, number_length: 6 },
     quote: { prefix: "Q-", next_number: 1, number_length: 6 },
@@ -48,6 +49,22 @@ export default function NumberingTab() {
       });
       
       setSettings(settingsMap);
+      return data;
+    },
+  });
+
+  // Fetch overhead percentage
+  const { data: generalSettings } = useQuery({
+    queryKey: ["general-settings-overhead"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings" as any)
+        .select("overhead_percentage")
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data && (data as any).overhead_percentage) {
+        setOverheadPercentage((data as any).overhead_percentage.toString());
+      }
       return data;
     },
   });
@@ -106,15 +123,80 @@ export default function NumberingTab() {
     return <div className="text-sm text-muted-foreground">Loading settings...</div>;
   }
 
+  const saveOverheadMutation = useMutation({
+    mutationFn: async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
+      const { error } = await supabase
+        .from("general_settings" as any)
+        .upsert({
+          tenant_id: profile.tenant_id,
+          overhead_percentage: parseFloat(overheadPercentage),
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["general-settings-overhead"] });
+      toast.success("Overhead percentage saved successfully");
+    },
+    onError: () => {
+      toast.error("Failed to save overhead percentage");
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium mb-1">Sequential Numbering</h3>
+        <h3 className="text-lg font-medium mb-1">Sequential Numbering & Costing</h3>
         <p className="text-sm text-muted-foreground">
           Configure automatic sequential numbering for service orders, quotes, and invoices. 
-          This allows you to align numbering with other systems when migrating.
+          Set overhead percentage for time log cost calculations.
         </p>
       </div>
+
+      {/* Overhead Percentage */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Labor Overhead Percentage</CardTitle>
+          <CardDescription>
+            Overhead percentage applied to worker hourly rates when calculating time log costs
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="overhead">Overhead Percentage (%)</Label>
+              <Input
+                id="overhead"
+                type="number"
+                min="0"
+                max="200"
+                step="0.1"
+                value={overheadPercentage}
+                onChange={(e) => setOverheadPercentage(e.target.value)}
+                placeholder="20"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Example: 20% overhead on $50/hr = $60/hr total cost
+              </p>
+            </div>
+          </div>
+          <Button 
+            size="sm" 
+            onClick={() => saveOverheadMutation.mutate()}
+            disabled={saveOverheadMutation.isPending}
+          >
+            Save Overhead Setting
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
         {Object.entries(settings).map(([entityType, setting]) => (

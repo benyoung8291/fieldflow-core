@@ -2599,6 +2599,65 @@ export type Database = {
         }
         Relationships: []
       }
+      time_logs: {
+        Row: {
+          appointment_id: string
+          clock_in: string
+          clock_out: string | null
+          created_at: string | null
+          hourly_rate: number
+          id: string
+          notes: string | null
+          overhead_percentage: number
+          status: string
+          tenant_id: string
+          total_cost: number | null
+          total_hours: number | null
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          appointment_id: string
+          clock_in: string
+          clock_out?: string | null
+          created_at?: string | null
+          hourly_rate?: number
+          id?: string
+          notes?: string | null
+          overhead_percentage?: number
+          status?: string
+          tenant_id: string
+          total_cost?: number | null
+          total_hours?: number | null
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          appointment_id?: string
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string | null
+          hourly_rate?: number
+          id?: string
+          notes?: string | null
+          overhead_percentage?: number
+          status?: string
+          tenant_id?: string
+          total_cost?: number | null
+          total_hours?: number | null
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_logs_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

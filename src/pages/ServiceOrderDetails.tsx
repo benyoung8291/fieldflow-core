@@ -6,12 +6,13 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAttachments";
 import AuditTimeline from "@/components/audit/AuditTimeline";
+import AppointmentsTab from "@/components/service-orders/AppointmentsTab";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const statusColors = {
@@ -140,7 +141,16 @@ export default function ServiceOrderDetails() {
             <CardContent>
               <div className="text-sm font-medium">{order.customers?.name}</div>
               {order.customers?.email && (
-                <div className="text-xs text-muted-foreground">{order.customers.email}</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <Mail className="h-3 w-3" />
+                  {order.customers.email}
+                </div>
+              )}
+              {order.customers?.phone && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <Phone className="h-3 w-3" />
+                  {order.customers.phone}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -155,8 +165,11 @@ export default function ServiceOrderDetails() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm font-medium">{order.customer_locations.name}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {order.customer_locations.address}
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  {order.customer_locations.city}, {order.customer_locations.state}
+                  {order.customer_locations.city}, {order.customer_locations.state} {order.customer_locations.postcode}
                 </div>
               </CardContent>
             </Card>
@@ -170,6 +183,10 @@ export default function ServiceOrderDetails() {
               <CardContent>
                 <div className="text-sm font-medium">
                   {(order as any).assigned_profile.first_name} {(order as any).assigned_profile.last_name}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <Mail className="h-3 w-3" />
+                  {(order as any).assigned_profile.email}
                 </div>
               </CardContent>
             </Card>
@@ -194,6 +211,7 @@ export default function ServiceOrderDetails() {
         <Tabs defaultValue="details" className="space-y-4">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="appointments">Appointments & Time</TabsTrigger>
             <TabsTrigger value="items">Line Items ({lineItems.length})</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
@@ -244,13 +262,13 @@ export default function ServiceOrderDetails() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Location Details</CardTitle>
+                  <CardTitle className="text-base">Contact Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {order.customer_locations && (
                     <>
                       <div>
-                        <div className="text-xs text-muted-foreground mb-1">Full Address</div>
+                        <div className="text-xs text-muted-foreground mb-1">Site Address</div>
                         <div className="text-sm">
                           {order.customer_locations.address}
                           {order.customer_locations.city && <>, {order.customer_locations.city}</>}
@@ -262,18 +280,38 @@ export default function ServiceOrderDetails() {
                   )}
                   {order.customer_contacts && (
                     <div>
-                      <div className="text-xs text-muted-foreground mb-1">Contact</div>
-                      <div className="text-sm">
+                      <div className="text-xs text-muted-foreground mb-1">Site Contact</div>
+                      <div className="text-sm font-medium">
                         {order.customer_contacts.first_name} {order.customer_contacts.last_name}
                       </div>
                       {order.customer_contacts.email && (
-                        <div className="text-xs text-muted-foreground">{order.customer_contacts.email}</div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Mail className="h-3 w-3" />
+                          {order.customer_contacts.email}
+                        </div>
+                      )}
+                      {order.customer_contacts.phone && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Phone className="h-3 w-3" />
+                          {order.customer_contacts.phone}
+                        </div>
                       )}
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="appointments">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Appointments & Time Logs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AppointmentsTab serviceOrderId={id!} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="items">
