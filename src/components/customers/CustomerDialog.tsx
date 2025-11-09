@@ -53,6 +53,7 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
   }, [open, updateCursorPosition]);
 
   const [formData, setFormData] = useState({
+    customerType: "company" as "individual" | "company",
     name: "",
     tradingName: "",
     legalName: "",
@@ -141,6 +142,7 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
   useEffect(() => {
     if (customer) {
       setFormData({
+        customerType: customer.customer_type || "company",
         name: customer.name || "",
         tradingName: customer.trading_name || "",
         legalName: customer.legal_company_name || "",
@@ -164,6 +166,7 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
     } else {
       // Reset form for new customer
       setFormData({
+        customerType: "company",
         name: "",
         tradingName: "",
         legalName: "",
@@ -206,10 +209,11 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
 
       // Map form data to database columns (snake_case)
       const customerData = {
-        name: formData.name,
-        trading_name: formData.tradingName || null,
-        legal_company_name: formData.legalName || null,
-        abn: formData.abn || null,
+        customer_type: formData.customerType,
+        name: formData.customerType === "company" ? formData.tradingName : formData.name,
+        trading_name: formData.customerType === "company" ? formData.tradingName : null,
+        legal_company_name: formData.customerType === "company" ? formData.legalName : null,
+        abn: formData.customerType === "company" ? formData.abn : null,
         email: formData.email || null,
         phone: formData.phone || null,
         address: formData.address || null,
@@ -294,10 +298,40 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
             </TabsList>
 
             <TabsContent value="general" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Customer Type Toggle */}
+              <div className="space-y-2">
+                <Label>Customer Type</Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="customerType"
+                      value="company"
+                      checked={formData.customerType === "company"}
+                      onChange={(e) => setFormData({ ...formData, customerType: e.target.value as "company" })}
+                      className="w-4 h-4"
+                    />
+                    <span>Company</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="customerType"
+                      value="individual"
+                      checked={formData.customerType === "individual"}
+                      onChange={(e) => setFormData({ ...formData, customerType: e.target.value as "individual" })}
+                      className="w-4 h-4"
+                    />
+                    <span>Individual</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Individual Name - Only show for individuals */}
+              {formData.customerType === "individual" && (
                 <FieldPresenceWrapper fieldName="name" onlineUsers={onlineUsers}>
                   <div className="space-y-2">
-                    <Label htmlFor="name">Customer Name *</Label>
+                    <Label htmlFor="name">Full Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -314,105 +348,111 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
                     />
                   </div>
                 </FieldPresenceWrapper>
-                <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
-                  <div className="space-y-2">
-                    <Label htmlFor="tradingName">Trading Name</Label>
-                    <Input
-                      id="tradingName"
-                      value={formData.tradingName}
-                      onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
-                      onFocus={() => {
-                        setCurrentField("tradingName");
-                        updateField("tradingName");
-                      }}
-                      onBlur={() => {
-                        setCurrentField("");
-                        updateField("");
-                      }}
-                    />
-                  </div>
-                </FieldPresenceWrapper>
-              </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <FieldPresenceWrapper fieldName="legalName" onlineUsers={onlineUsers}>
-                  <div className="space-y-2">
-                    <Label htmlFor="legalName">Legal Company Name</Label>
-                    <Input
-                      id="legalName"
-                      value={formData.legalName}
-                      onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
-                      onFocus={() => {
-                        setCurrentField("legalName");
-                        updateField("legalName");
-                      }}
-                      onBlur={() => {
-                        setCurrentField("");
-                        updateField("");
-                      }}
-                      disabled={abnValidated}
-                    />
+              {/* Company Fields - Only show for companies */}
+              {formData.customerType === "company" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FieldPresenceWrapper fieldName="legalName" onlineUsers={onlineUsers}>
+                      <div className="space-y-2">
+                        <Label htmlFor="legalName">Legal Company Name *</Label>
+                        <Input
+                          id="legalName"
+                          value={formData.legalName}
+                          onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
+                          onFocus={() => {
+                            setCurrentField("legalName");
+                            updateField("legalName");
+                          }}
+                          onBlur={() => {
+                            setCurrentField("");
+                            updateField("");
+                          }}
+                          disabled
+                          className="bg-muted"
+                          required
+                        />
+                      </div>
+                    </FieldPresenceWrapper>
+                    <FieldPresenceWrapper fieldName="abn" onlineUsers={onlineUsers}>
+                      <div className="space-y-2">
+                        <Label htmlFor="abn">ABN *</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="abn"
+                            placeholder="12 345 678 901"
+                            value={formData.abn}
+                            onChange={(e) => handleABNChange(e.target.value)}
+                            onFocus={() => {
+                              setCurrentField("abn");
+                              updateField("abn");
+                            }}
+                            onBlur={() => {
+                              setCurrentField("");
+                              updateField("");
+                            }}
+                            className="flex-1"
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant={abnValidated ? "default" : "outline"}
+                            size="sm"
+                            onClick={handleValidateABN}
+                            disabled={validatingABN || !formData.abn}
+                          >
+                            {validatingABN ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : abnValidated ? (
+                              <CheckCircle2 className="h-4 w-4" />
+                            ) : (
+                              "Check"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </FieldPresenceWrapper>
                   </div>
-                </FieldPresenceWrapper>
-                <FieldPresenceWrapper fieldName="abn" onlineUsers={onlineUsers}>
-                  <div className="space-y-2">
-                    <Label htmlFor="abn">ABN</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="abn"
-                        placeholder="12 345 678 901"
-                        value={formData.abn}
-                        onChange={(e) => handleABNChange(e.target.value)}
-                        onFocus={() => {
-                          setCurrentField("abn");
-                          updateField("abn");
-                        }}
-                        onBlur={() => {
-                          setCurrentField("");
-                          updateField("");
-                        }}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant={abnValidated ? "default" : "outline"}
-                        size="sm"
-                        onClick={handleValidateABN}
-                        disabled={validatingABN || !formData.abn}
+
+                  {/* Trading Name Selection - Show if ABN validated and trading names available */}
+                  {abnValidated && availableTradingNames.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="tradingNameSelect">Select Trading Name *</Label>
+                      <Select
+                        value={formData.tradingName}
+                        onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
+                        required
                       >
-                        {validatingABN ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : abnValidated ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : (
-                          "Check"
-                        )}
-                      </Button>
+                        <SelectTrigger id="tradingNameSelect">
+                          <SelectValue placeholder="Select a trading name" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTradingNames.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                </FieldPresenceWrapper>
-              </div>
+                  )}
 
-              {/* Trading Name Selection - Show if ABN validated and trading names available */}
-              {abnValidated && availableTradingNames.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="tradingNameSelect">Select Trading Name</Label>
-                  <Select
-                    value={formData.tradingName}
-                    onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
-                  >
-                    <SelectTrigger id="tradingNameSelect">
-                      <SelectValue placeholder="Select a trading name" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTradingNames.map((name) => (
-                        <SelectItem key={name} value={name}>
-                          {name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  {/* Show trading name as locked field if already set but not from validation */}
+                  {!abnValidated && formData.tradingName && (
+                    <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
+                      <div className="space-y-2">
+                        <Label htmlFor="tradingName">Trading Name</Label>
+                        <Input
+                          id="tradingName"
+                          value={formData.tradingName}
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
+                    </FieldPresenceWrapper>
+                  )}
+                </>
               )}
 
               <div className="grid grid-cols-2 gap-4">

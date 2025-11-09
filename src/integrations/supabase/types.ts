@@ -449,6 +449,7 @@ export type Database = {
           billing_phone: string | null
           city: string | null
           created_at: string | null
+          customer_type: string
           email: string | null
           id: string
           is_active: boolean | null
@@ -473,6 +474,7 @@ export type Database = {
           billing_phone?: string | null
           city?: string | null
           created_at?: string | null
+          customer_type?: string
           email?: string | null
           id?: string
           is_active?: boolean | null
@@ -497,6 +499,7 @@ export type Database = {
           billing_phone?: string | null
           city?: string | null
           created_at?: string | null
+          customer_type?: string
           email?: string | null
           id?: string
           is_active?: boolean | null
