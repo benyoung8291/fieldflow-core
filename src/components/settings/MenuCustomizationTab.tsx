@@ -307,8 +307,15 @@ export default function MenuCustomizationTab() {
   const getChildren = (parentId: string) => menuItems.filter((item) => item.parent_id === parentId);
 
   const iconOptions = Object.keys(LucideIcons).filter((key) => 
-    key !== "createLucideIcon" && key !== "default" && typeof (LucideIcons as any)[key] === "function"
-  ).slice(0, 100);
+    key !== "createLucideIcon" && 
+    key !== "default" && 
+    key !== "icons" && 
+    key !== "dynamicIconImports" &&
+    typeof (LucideIcons as any)[key] !== "string" &&
+    // Check if it's a valid React component (has $$typeof or is an object with render function)
+    (LucideIcons as any)[key] && 
+    typeof (LucideIcons as any)[key] === "object"
+  ).sort().slice(0, 150); // Increased to 150 for more icon choices
 
   return (
     <div className="space-y-6">
