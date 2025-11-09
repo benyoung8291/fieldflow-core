@@ -130,45 +130,79 @@ export default function FullCalendarScheduler({
           --fc-border-color: hsl(var(--border));
           --fc-button-bg-color: hsl(var(--primary));
           --fc-button-border-color: hsl(var(--primary));
-          --fc-button-hover-bg-color: hsl(var(--primary-hover));
-          --fc-button-hover-border-color: hsl(var(--primary-hover));
+          --fc-button-hover-bg-color: hsl(var(--primary) / 0.9);
+          --fc-button-hover-border-color: hsl(var(--primary) / 0.9);
           --fc-button-active-bg-color: hsl(var(--primary));
           --fc-button-active-border-color: hsl(var(--primary));
-          --fc-today-bg-color: hsl(var(--accent));
+          --fc-today-bg-color: hsl(var(--accent) / 0.3);
         }
         
         .fc {
           font-family: inherit;
+          background: hsl(var(--background));
         }
         
         .fc .fc-button {
           text-transform: capitalize;
           font-weight: 500;
-          border-radius: 0.375rem;
+          border-radius: 0.5rem;
           padding: 0.5rem 1rem;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px 0 hsl(var(--primary) / 0.05);
+        }
+        
+        .fc .fc-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.15);
         }
         
         .fc .fc-button:focus {
-          box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+          box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+          outline: none;
+        }
+        
+        .fc .fc-button-active {
+          box-shadow: inset 0 2px 4px 0 hsl(var(--primary) / 0.2);
         }
         
         .fc-event {
-          border-radius: 0.25rem;
-          padding: 2px 4px;
-          cursor: pointer;
-          transition: opacity 0.2s;
+          border-radius: 0.375rem;
+          padding: 4px 6px;
+          cursor: move;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+          border-width: 1px;
+          border-style: solid;
         }
         
         .fc-event:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          z-index: 10;
+        }
+        
+        .fc-event-dragging {
+          opacity: 0.7;
+          transform: scale(1.02);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fc-event-resizing {
           opacity: 0.8;
         }
         
         .fc-resource-timeline-divider {
           width: 2px;
+          background: hsl(var(--border));
         }
         
         .fc-timeline-slot {
-          border-right: 1px solid hsl(var(--border));
+          border-right: 1px solid hsl(var(--border) / 0.5);
+          transition: background-color 0.2s ease;
+        }
+        
+        .fc-timeline-slot:hover {
+          background-color: hsl(var(--accent) / 0.1);
         }
         
         .fc-timeline-slot-minor {
@@ -176,12 +210,40 @@ export default function FullCalendarScheduler({
         }
         
         .fc-col-header-cell {
-          background: hsl(var(--muted));
+          background: hsl(var(--muted) / 0.7);
           font-weight: 600;
+          border-bottom: 2px solid hsl(var(--border));
+          padding: 8px;
         }
         
-        .fc-resource-timeline-divider {
-          background: hsl(var(--border));
+        .fc-datagrid-cell {
+          padding: 8px;
+        }
+        
+        .fc-datagrid-cell-frame {
+          background: hsl(var(--muted) / 0.3);
+          transition: background-color 0.2s ease;
+        }
+        
+        .fc-datagrid-cell-frame:hover {
+          background: hsl(var(--muted) / 0.5);
+        }
+        
+        .fc-timeline-now-indicator-line {
+          border-color: hsl(var(--destructive));
+          border-width: 2px;
+        }
+        
+        .fc-timeline-now-indicator-arrow {
+          border-top-color: hsl(var(--destructive));
+        }
+        
+        .fc-scrollgrid {
+          border-color: hsl(var(--border));
+        }
+        
+        .fc-highlight {
+          background: hsl(var(--primary) / 0.1);
         }
       `}</style>
       
@@ -234,14 +296,14 @@ export default function FullCalendarScheduler({
         resourceAreaHeaderContent="Workers"
         nowIndicator={true}
         eventContent={(arg) => (
-          <div className="flex flex-col overflow-hidden px-1">
-            <div className="font-medium text-xs truncate">{arg.event.title}</div>
+          <div className="flex flex-col overflow-hidden px-1.5 py-0.5 h-full justify-center">
+            <div className="font-semibold text-xs truncate leading-tight">{arg.event.title}</div>
             {arg.event.extendedProps.serviceOrder && (
-              <div className="text-[10px] opacity-75 truncate">
-                #{arg.event.extendedProps.serviceOrder}
+              <div className="text-[10px] opacity-80 truncate font-medium">
+                SO #{arg.event.extendedProps.serviceOrder}
               </div>
             )}
-            <div className="text-[10px] opacity-75">
+            <div className="text-[10px] opacity-70 font-medium">
               {format(arg.event.start!, "h:mm a")} - {format(arg.event.end!, "h:mm a")}
             </div>
           </div>
