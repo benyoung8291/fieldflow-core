@@ -415,43 +415,63 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
                     </FieldPresenceWrapper>
                   </div>
 
-                  {/* Trading Name Selection - Show if ABN validated and trading names available */}
-                  {abnValidated && availableTradingNames.length > 0 && (
+                  {/* Trading Name - Always show for companies */}
+                  <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
                     <div className="space-y-2">
-                      <Label htmlFor="tradingNameSelect">Select Trading Name *</Label>
-                      <Select
-                        value={formData.tradingName}
-                        onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
-                        required
-                      >
-                        <SelectTrigger id="tradingNameSelect">
-                          <SelectValue placeholder="Select a trading name" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableTradingNames.map((name) => (
-                            <SelectItem key={name} value={name}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Show trading name as locked field if already set but not from validation */}
-                  {!abnValidated && formData.tradingName && (
-                    <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
-                      <div className="space-y-2">
-                        <Label htmlFor="tradingName">Trading Name</Label>
+                      <Label htmlFor="tradingName">Trading Name *</Label>
+                      {availableTradingNames.length > 0 ? (
+                        <Select
+                          value={formData.tradingName}
+                          onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
+                          required
+                        >
+                          <SelectTrigger 
+                            id="tradingName"
+                            className="bg-background z-50"
+                            onFocus={() => {
+                              setCurrentField("tradingName");
+                              updateField("tradingName");
+                            }}
+                            onBlur={() => {
+                              setCurrentField("");
+                              updateField("");
+                            }}
+                          >
+                            <SelectValue placeholder="Select a trading name" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background border border-border shadow-lg z-[100]">
+                            {availableTradingNames.map((name) => (
+                              <SelectItem 
+                                key={name} 
+                                value={name}
+                                className="cursor-pointer hover:bg-accent"
+                              >
+                                {name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
                         <Input
                           id="tradingName"
                           value={formData.tradingName}
-                          disabled
-                          className="bg-muted"
+                          onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
+                          onFocus={() => {
+                            setCurrentField("tradingName");
+                            updateField("tradingName");
+                          }}
+                          onBlur={() => {
+                            setCurrentField("");
+                            updateField("");
+                          }}
+                          placeholder={abnValidated ? "No trading names found" : "Enter trading name or validate ABN"}
+                          disabled={abnValidated && availableTradingNames.length === 0}
+                          className={abnValidated && availableTradingNames.length === 0 ? "bg-muted" : ""}
+                          required
                         />
-                      </div>
-                    </FieldPresenceWrapper>
-                  )}
+                      )}
+                    </div>
+                  </FieldPresenceWrapper>
                 </>
               )}
 
