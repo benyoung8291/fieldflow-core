@@ -1,12 +1,22 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import DroppableTimeSlot from "./DroppableTimeSlot";
+import DraggableAppointment from "./DraggableAppointment";
+import AppointmentContextMenu from "./AppointmentContextMenu";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import RecurringEditDialog from "./RecurringEditDialog";
 
 interface SchedulerMonthViewProps {
   currentDate: Date;
   appointments: any[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment: (id: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onGPSCheckIn: (appointment: any) => void;
 }
 
 const statusColors = {
@@ -21,8 +31,15 @@ export default function SchedulerMonthView({
   currentDate,
   appointments,
   onAppointmentClick,
-  onEditAppointment
+  onEditAppointment,
+  onRemoveWorker,
+  onGPSCheckIn
 }: SchedulerMonthViewProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [showRecurringDeleteDialog, setShowRecurringDeleteDialog] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null);
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart);
@@ -30,6 +47,49 @@ export default function SchedulerMonthView({
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const handleDeleteClick = (appointment: any) => {
+    if (appointment.is_recurring || appointment.parent_appointment_id) {
+      setAppointmentToDelete(appointment);
+      setShowRecurringDeleteDialog(true);
+    } else {
+      handleDelete(appointment.id, "single");
+    }
+  };
+
+  const handleDelete = async (appointmentId: string, deleteType: "single" | "series") => {
+    try {
+      const appointment = appointments.find(a => a.id === appointmentId);
+      
+      if (deleteType === "series" && (appointment?.is_recurring || appointment?.parent_appointment_id)) {
+        const targetId = appointment.parent_appointment_id || appointmentId;
+        const { error } = await supabase
+          .from("appointments")
+          .delete()
+          .or(`id.eq.${targetId},parent_appointment_id.eq.${targetId}`)
+          .gte("start_time", appointment.start_time);
+
+        if (error) throw error;
+        toast({ title: "Recurring series deleted successfully" });
+      } else {
+        const { error } = await supabase
+          .from("appointments")
+          .delete()
+          .eq("id", appointmentId);
+
+        if (error) throw error;
+        toast({ title: "Appointment deleted successfully" });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting appointment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -53,8 +113,11 @@ export default function SchedulerMonthView({
           const isToday = isSameDay(day, new Date());
 
           return (
-            <div
+            <DroppableTimeSlot
               key={day.toISOString()}
+              id={`month-slot-${day.toISOString()}`}
+              date={day}
+              workerId={null}
               className={cn(
                 "min-h-[120px] p-2 border-2 rounded-lg",
                 isCurrentMonth ? "border-border bg-background" : "border-border/50 bg-muted/30",
@@ -73,29 +136,37 @@ export default function SchedulerMonthView({
               {/* Appointments */}
               <div className="space-y-1">
                 {dayAppointments.slice(0, 3).map(apt => (
-                  <div
+                  <AppointmentContextMenu
                     key={apt.id}
-                    className={cn(
-                      "px-2 py-1 rounded text-[10px] cursor-pointer hover:shadow-sm transition-shadow truncate",
-                      apt.status === "draft" && "bg-muted text-muted-foreground",
-                      apt.status === "published" && "bg-info/10 text-info",
-                      apt.status === "checked_in" && "bg-warning/10 text-warning",
-                      apt.status === "completed" && "bg-success/10 text-success",
-                      apt.status === "cancelled" && "bg-destructive/10 text-destructive"
-                    )}
-                    onClick={() => onAppointmentClick(apt.id)}
-                    title={apt.title}
+                    appointment={apt}
+                    onEdit={() => onEditAppointment(apt.id)}
+                    onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
+                    onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                    onGPSCheckIn={() => onGPSCheckIn(apt)}
+                    onViewDetails={() => onAppointmentClick(apt.id)}
                   >
-                    <div className="flex items-center gap-1">
-                      <div 
-                        className={cn(
-                          "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                          statusColors[apt.status as keyof typeof statusColors]
-                        )}
-                      />
-                      <span className="truncate">{apt.title}</span>
+                    <div
+                      className={cn(
+                        "px-2 py-1 rounded text-[10px] cursor-pointer hover:shadow-sm transition-shadow truncate",
+                        apt.status === "draft" && "bg-muted text-muted-foreground",
+                        apt.status === "published" && "bg-info/10 text-info",
+                        apt.status === "checked_in" && "bg-warning/10 text-warning",
+                        apt.status === "completed" && "bg-success/10 text-success",
+                        apt.status === "cancelled" && "bg-destructive/10 text-destructive"
+                      )}
+                      title={apt.title}
+                    >
+                      <div className="flex items-center gap-1">
+                        <div 
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                            statusColors[apt.status as keyof typeof statusColors]
+                          )}
+                        />
+                        <span className="truncate">{apt.title}</span>
+                      </div>
                     </div>
-                  </div>
+                  </AppointmentContextMenu>
                 ))}
                 {dayAppointments.length > 3 && (
                   <div className="text-[10px] text-muted-foreground text-center pt-1">
@@ -103,7 +174,7 @@ export default function SchedulerMonthView({
                   </div>
                 )}
               </div>
-            </div>
+            </DroppableTimeSlot>
           );
         })}
       </div>
@@ -131,6 +202,19 @@ export default function SchedulerMonthView({
           <span className="text-xs">Cancelled</span>
         </div>
       </div>
+
+      {showRecurringDeleteDialog && appointmentToDelete && (
+        <RecurringEditDialog
+          open={showRecurringDeleteDialog}
+          onOpenChange={setShowRecurringDeleteDialog}
+          action="delete"
+          onConfirm={(type) => {
+            handleDelete(appointmentToDelete.id, type);
+            setShowRecurringDeleteDialog(false);
+            setAppointmentToDelete(null);
+          }}
+        />
+      )}
     </div>
   );
 }

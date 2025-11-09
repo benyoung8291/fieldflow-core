@@ -14,6 +14,8 @@ import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
+import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
+import GPSCheckInDialog from "@/components/scheduler/GPSCheckInDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
@@ -35,6 +37,8 @@ export default function Scheduler() {
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
   const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
+  const [detailsAppointment, setDetailsAppointment] = useState<any | null>(null);
+  const [gpsCheckInAppointment, setGpsCheckInAppointment] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
@@ -357,6 +361,74 @@ export default function Scheduler() {
     },
   });
 
+  const removeWorkerFromAppointmentMutation = useMutation({
+    mutationFn: async ({ 
+      appointmentId, 
+      workerId 
+    }: { 
+      appointmentId: string; 
+      workerId: string;
+    }) => {
+      const { error } = await supabase
+        .from("appointment_workers")
+        .delete()
+        .eq("appointment_id", appointmentId)
+        .eq("worker_id", workerId);
+
+      if (error) throw error;
+
+      // Check if there are any workers left
+      const { data: remainingWorkers } = await supabase
+        .from("appointment_workers")
+        .select("id")
+        .eq("appointment_id", appointmentId);
+
+      // If no workers left, set assigned_to to null
+      if (!remainingWorkers || remainingWorkers.length === 0) {
+        await supabase
+          .from("appointments")
+          .update({ assigned_to: null })
+          .eq("id", appointmentId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Worker removed from appointment");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove worker");
+    },
+  });
+
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const { error } = await supabase
+        .from("appointments")
+        .delete()
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointment deleted");
+      setDetailsAppointment(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete appointment");
+    },
+  });
+
+  const handleRemoveWorker = (appointmentId: string, workerId: string) => {
+    removeWorkerFromAppointmentMutation.mutate({ appointmentId, workerId });
+  };
+
+  const handleDeleteAppointment = (appointmentId: string) => {
+    if (confirm("Are you sure you want to delete this appointment?")) {
+      deleteAppointmentMutation.mutate(appointmentId);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -476,6 +548,26 @@ export default function Scheduler() {
         onUseServiceOrderTemplate={handleUseServiceOrderTemplate}
       />
 
+      <AppointmentDetailsDialog
+        appointment={detailsAppointment}
+        open={!!detailsAppointment}
+        onOpenChange={(open) => !open && setDetailsAppointment(null)}
+        onEdit={() => {
+          setEditingAppointmentId(detailsAppointment?.id);
+          setDialogOpen(true);
+          setDetailsAppointment(null);
+        }}
+        onDelete={detailsAppointment && !detailsAppointment.assigned_to ? () => handleDeleteAppointment(detailsAppointment.id) : undefined}
+      />
+
+      {gpsCheckInAppointment && (
+        <GPSCheckInDialog
+          appointment={gpsCheckInAppointment}
+          open={!!gpsCheckInAppointment}
+          onOpenChange={(open) => !open && setGpsCheckInAppointment(null)}
+        />
+      )}
+
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
         <div className="grid grid-cols-[1fr_350px] gap-6">
           <div className="space-y-4">
@@ -586,11 +678,16 @@ export default function Scheduler() {
                   <SchedulerDayView 
                     currentDate={currentDate} 
                     appointments={appointments}
-                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
                     }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
                   />
                 )}
                 {viewType === "week" && (
@@ -598,28 +695,41 @@ export default function Scheduler() {
                     currentDate={currentDate}
                     appointments={appointments}
                     workers={workers}
-                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
                     }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
                   />
                 )}
                 {viewType === "month" && (
                   <SchedulerMonthView 
                     currentDate={currentDate}
                     appointments={appointments}
-                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
                     }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
                   />
                 )}
                 {viewType === "kanban" && (
                   <KanbanBoardView
                     appointments={appointments}
-                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
                   />
                 )}
               </>

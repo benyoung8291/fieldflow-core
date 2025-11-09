@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Clock, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import DroppableTimeSlot from "./DroppableTimeSlot";
+import { cn } from "@/lib/utils";
 
 interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
@@ -99,49 +101,67 @@ export default function ServiceOrdersCalendarView({
                 const dayAppointments = getAppointmentsForDay(order.id, day);
                 
                 return (
-                  <div key={day.toISOString()} className="min-h-[80px]">
+                  <DroppableTimeSlot
+                    key={day.toISOString()}
+                    id={`so-slot-${order.id}-${day.toISOString()}`}
+                    date={day}
+                    workerId={null}
+                    className="min-h-[80px]"
+                  >
                     {dayAppointments.length > 0 ? (
                       <div className="space-y-1">
-                        {dayAppointments.map(apt => (
-                          <Card
-                            key={apt.id}
-                            className="p-2 cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => onAppointmentClick(apt.id)}
-                          >
-                            <div className="space-y-1">
-                              {apt.profiles && (
-                                <div className="flex items-center gap-1 text-xs">
-                                  <User className="h-3 w-3" />
-                                  <span className="truncate">
-                                    {apt.profiles.first_name} {apt.profiles.last_name}
+                        {dayAppointments.map(apt => {
+                          const workers = apt.appointment_workers || [];
+                          return (
+                            <Card
+                              key={apt.id}
+                              className="p-2 cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => onAppointmentClick(apt.id)}
+                            >
+                              <div className="space-y-1">
+                                {workers.length > 0 ? (
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <User className="h-3 w-3" />
+                                    <span className="truncate">
+                                      {workers.map((w: any) => 
+                                        `${w.profiles?.first_name || ''} ${w.profiles?.last_name || ''}`
+                                      ).join(', ')}
+                                    </span>
+                                  </div>
+                                ) : apt.profiles && (
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <User className="h-3 w-3" />
+                                    <span className="truncate">
+                                      {apt.profiles.first_name} {apt.profiles.last_name}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    {format(new Date(apt.start_time), "HH:mm")} - {format(new Date(apt.end_time), "HH:mm")}
                                   </span>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                <span>
-                                  {format(new Date(apt.start_time), "HH:mm")} - {format(new Date(apt.end_time), "HH:mm")}
-                                </span>
+                                <div className="text-xs font-semibold">
+                                  {calculateTotalHours(apt.start_time, apt.end_time)}h
+                                </div>
+                                <Badge 
+                                  variant={apt.status === "completed" ? "default" : "secondary"}
+                                  className="text-xs w-fit"
+                                >
+                                  {apt.status}
+                                </Badge>
                               </div>
-                              <div className="text-xs font-semibold">
-                                {calculateTotalHours(apt.start_time, apt.end_time)}h
-                              </div>
-                              <Badge 
-                                variant={apt.status === "completed" ? "default" : "secondary"}
-                                className="text-xs w-fit"
-                              >
-                                {apt.status}
-                              </Badge>
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                         -
                       </div>
                     )}
-                  </div>
+                  </DroppableTimeSlot>
                 );
               })}
             </div>

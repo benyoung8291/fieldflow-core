@@ -23,6 +23,8 @@ interface SchedulerDayViewProps {
   appointments: any[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment: (id: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onGPSCheckIn: (appointment: any) => void;
 }
 
 const statusColors = {
@@ -39,7 +41,9 @@ export default function SchedulerDayView({
   currentDate,
   appointments,
   onAppointmentClick,
-  onEditAppointment
+  onEditAppointment,
+  onRemoveWorker,
+  onGPSCheckIn
 }: SchedulerDayViewProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();

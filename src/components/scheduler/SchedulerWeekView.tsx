@@ -15,6 +15,7 @@ import RecurringEditDialog from "./RecurringEditDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DraggableAppointment from "./DraggableAppointment";
+import AppointmentContextMenu from "./AppointmentContextMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +25,8 @@ interface SchedulerWeekViewProps {
   workers: any[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment: (id: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onGPSCheckIn: (appointment: any) => void;
 }
 
 const statusColors = {
@@ -39,7 +42,9 @@ export default function SchedulerWeekView({
   appointments,
   workers: passedWorkers,
   onAppointmentClick,
-  onEditAppointment
+  onEditAppointment,
+  onRemoveWorker,
+  onGPSCheckIn
 }: SchedulerWeekViewProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -170,10 +175,11 @@ export default function SchedulerWeekView({
 
               {/* Day cells */}
               {weekDays.map(day => {
-                const dayAppointments = appointments.filter(
-                  apt => apt.assigned_to === worker.id && 
-                         isSameDay(new Date(apt.start_time), day)
-                );
+                const dayAppointments = appointments.filter(apt => {
+                  const isUnassigned = !apt.assigned_to && (!apt.appointment_workers || apt.appointment_workers.length === 0);
+                  const matchesWorker = worker.id === null ? isUnassigned : apt.assigned_to === worker.id;
+                  return matchesWorker && isSameDay(new Date(apt.start_time), day);
+                });
 
                 return (
                   <DroppableTimeSlot
@@ -189,15 +195,24 @@ export default function SchedulerWeekView({
                     )}
                   >
                     {dayAppointments.map(apt => (
-                      <DraggableAppointment
+                      <AppointmentContextMenu
                         key={apt.id}
                         appointment={apt}
-                        statusColor={statusColors[apt.status as keyof typeof statusColors]}
                         onEdit={() => onEditAppointment(apt.id)}
-                        onGPSCheckIn={() => handleGPSCheckIn(apt)}
-                        onViewHistory={() => onAppointmentClick(apt.id)}
-                        onDelete={() => handleDeleteClick(apt)}
-                      />
+                        onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
+                        onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                        onGPSCheckIn={() => onGPSCheckIn(apt)}
+                        onViewDetails={() => onAppointmentClick(apt.id)}
+                      >
+                        <DraggableAppointment
+                          appointment={apt}
+                          statusColor={statusColors[apt.status as keyof typeof statusColors]}
+                          onEdit={() => onEditAppointment(apt.id)}
+                          onGPSCheckIn={() => onGPSCheckIn(apt)}
+                          onViewHistory={() => onAppointmentClick(apt.id)}
+                          onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                        />
+                      </AppointmentContextMenu>
                     ))}
                     {dayAppointments.length === 0 && (
                       <div className="text-xs text-muted-foreground text-center py-4">
