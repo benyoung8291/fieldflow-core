@@ -23,6 +23,8 @@ export const UserManagementTab = () => {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [isWorkerSetupDialogOpen, setIsWorkerSetupDialogOpen] = useState(false);
+  const [selectedWorkerUserId, setSelectedWorkerUserId] = useState<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -178,6 +180,74 @@ export const UserManagementTab = () => {
     resetPasswordMutation.mutate({ userId: resetPasswordUserId, password: newPassword });
   };
 
+  const setupAsWorkerMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      if (!profile?.tenant_id) throw new Error("No tenant ID");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Check if user already has worker role
+      const existingRole = users?.find(u => u.id === userId)?.user_roles?.find((r: any) => r.role === 'worker');
+      
+      if (existingRole) {
+        throw new Error("User already has worker role");
+      }
+
+      // Assign worker role
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: userId,
+          role: 'worker' as any,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+        } as any);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("Worker profile linked successfully");
+      setIsWorkerSetupDialogOpen(false);
+      setSelectedWorkerUserId(null);
+      // Navigate to worker details to set up profile
+      navigate(`/workers/${userId}`);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to set up worker profile");
+    },
+  });
+
+  const unlinkWorkerMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", 'worker' as any);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("Worker profile unlinked successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to unlink worker profile");
+    },
+  });
+
+  const handleSetupAsWorker = (userId: string) => {
+    setSelectedWorkerUserId(userId);
+    setIsWorkerSetupDialogOpen(true);
+  };
+
+  const confirmSetupAsWorker = () => {
+    if (!selectedWorkerUserId) return;
+    setupAsWorkerMutation.mutate(selectedWorkerUserId);
+  };
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "tenant_admin":
@@ -309,16 +379,35 @@ export const UserManagementTab = () => {
                 </TableCell>
                 <TableCell>
                   {user.has_worker_role ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/workers/${user.id}`)}
-                    >
-                      View Profile
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/workers/${user.id}`)}
+                      >
+                        View Profile
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Remove worker profile link?")) {
+                            unlinkWorkerMutation.mutate(user.id);
+                          }
+                        }}
+                      >
+                        Unlink
+                      </Button>
+                    </div>
                   ) : (
-                    <span className="text-muted-foreground text-sm">-</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSetupAsWorker(user.id)}
+                    >
+                      Link as Worker
+                    </Button>
                   )}
                 </TableCell>
                 <TableCell>
@@ -376,6 +465,44 @@ export const UserManagementTab = () => {
               </Button>
               <Button onClick={handleResetPassword}>
                 Reset Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isWorkerSetupDialogOpen} onOpenChange={setIsWorkerSetupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link User as Worker</DialogTitle>
+            <DialogDescription>
+              This will assign the worker role to this user and allow you to set up their worker profile details (pay rate, availability, etc.).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md bg-muted p-4">
+              <p className="text-sm text-muted-foreground">
+                After linking, you'll be redirected to the worker profile page where you can:
+              </p>
+              <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside space-y-1">
+                <li>Set pay rate category</li>
+                <li>Configure work availability</li>
+                <li>Add emergency contact details</li>
+                <li>Set tax and superannuation information</li>
+              </ul>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsWorkerSetupDialogOpen(false);
+                  setSelectedWorkerUserId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmSetupAsWorker}>
+                Continue to Setup
               </Button>
             </div>
           </div>
