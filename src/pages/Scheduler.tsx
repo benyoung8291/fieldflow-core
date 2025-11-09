@@ -768,6 +768,13 @@ export default function Scheduler() {
                       const apt = appointments.find(a => a.id === id);
                       setDetailsAppointment(apt);
                     }}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
+                    onDeleteAppointment={handleDeleteAppointment}
                   />
                 )}
               </>

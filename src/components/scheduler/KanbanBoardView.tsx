@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Clock, MapPin, User, Calendar } from "lucide-react";
 import DroppableStatusColumn from "./DroppableStatusColumn";
+import AppointmentContextMenu from "./AppointmentContextMenu";
 
 const STATUSES = [
   { id: "draft", label: "Draft", color: "bg-muted" },
@@ -20,9 +21,20 @@ const STATUSES = [
 interface KanbanBoardViewProps {
   appointments: any[];
   onAppointmentClick: (id: string) => void;
+  onEditAppointment?: (id: string) => void;
+  onRemoveWorker?: (appointmentId: string, workerId: string) => void;
+  onGPSCheckIn?: (appointment: any) => void;
+  onDeleteAppointment?: (id: string) => void;
 }
 
-export default function KanbanBoardView({ appointments, onAppointmentClick }: KanbanBoardViewProps) {
+export default function KanbanBoardView({ 
+  appointments, 
+  onAppointmentClick,
+  onEditAppointment,
+  onRemoveWorker,
+  onGPSCheckIn,
+  onDeleteAppointment
+}: KanbanBoardViewProps) {
   const queryClient = useQueryClient();
   const [activeAppointment, setActiveAppointment] = useState<any>(null);
 
@@ -97,6 +109,10 @@ export default function KanbanBoardView({ appointments, onAppointmentClick }: Ka
                   key={appointment.id}
                   appointment={appointment}
                   onClick={() => onAppointmentClick(appointment.id)}
+                  onEdit={() => onEditAppointment?.(appointment.id)}
+                  onRemoveWorker={(workerId) => onRemoveWorker?.(appointment.id, workerId)}
+                  onGPSCheckIn={() => onGPSCheckIn?.(appointment)}
+                  onDelete={appointment.status === "draft" ? () => onDeleteAppointment?.(appointment.id) : undefined}
                 />
               ))}
               {appointmentsByStatus[status.id]?.length === 0 && (
@@ -120,54 +136,84 @@ export default function KanbanBoardView({ appointments, onAppointmentClick }: Ka
   );
 }
 
-function AppointmentCard({ appointment, onClick }: { appointment: any; onClick?: () => void }) {
-  return (
-    <Card 
-      className={cn(
-        "cursor-pointer hover:shadow-md transition-shadow",
-        onClick && "active:scale-95"
-      )}
-      onClick={onClick}
-    >
-      <CardHeader className="p-3 pb-2">
-        <CardTitle className="text-sm font-medium truncate">{appointment.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 pt-0 space-y-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
-        </div>
-        
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span>
-            {format(new Date(appointment.start_time), "HH:mm")} - 
-            {format(new Date(appointment.end_time), "HH:mm")}
-          </span>
-        </div>
+interface AppointmentCardProps {
+  appointment: any;
+  onClick?: () => void;
+  onEdit?: () => void;
+  onRemoveWorker?: (workerId: string) => void;
+  onGPSCheckIn?: () => void;
+  onDelete?: () => void;
+}
 
-        {appointment.profiles && (
-          <div className="flex items-center gap-2 text-xs">
-            <User className="h-3 w-3" />
-            <span className="truncate">
-              {appointment.profiles.first_name} {appointment.profiles.last_name}
+function AppointmentCard({ 
+  appointment, 
+  onClick, 
+  onEdit,
+  onRemoveWorker,
+  onGPSCheckIn,
+  onDelete
+}: AppointmentCardProps) {
+  return (
+    <AppointmentContextMenu
+      appointment={appointment}
+      onEdit={onEdit || (() => {})}
+      onRemoveWorker={onRemoveWorker || (() => {})}
+      onGPSCheckIn={onGPSCheckIn || (() => {})}
+      onViewDetails={onClick || (() => {})}
+      onDelete={onDelete}
+    >
+      <Card 
+        className={cn(
+          "cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200",
+          "border-l-4",
+          appointment.status === "draft" && "border-l-muted",
+          appointment.status === "published" && "border-l-info",
+          appointment.status === "checked_in" && "border-l-warning",
+          appointment.status === "completed" && "border-l-success",
+          appointment.status === "cancelled" && "border-l-destructive"
+        )}
+        onClick={onClick}
+      >
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm font-medium truncate">{appointment.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-0 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>
+              {format(new Date(appointment.start_time), "HH:mm")} - 
+              {format(new Date(appointment.end_time), "HH:mm")}
             </span>
           </div>
-        )}
 
-        {appointment.location_address && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            <span className="truncate">{appointment.location_address.split(',')[0]}</span>
-          </div>
-        )}
+          {appointment.profiles && (
+            <div className="flex items-center gap-2 text-xs">
+              <User className="h-3 w-3" />
+              <span className="truncate">
+                {appointment.profiles.first_name} {appointment.profiles.last_name}
+              </span>
+            </div>
+          )}
 
-        {appointment.service_orders && (
-          <Badge variant="outline" className="text-xs">
-            {appointment.service_orders.order_number}
-          </Badge>
-        )}
-      </CardContent>
-    </Card>
+          {appointment.location_address && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              <span className="truncate">{appointment.location_address.split(',')[0]}</span>
+            </div>
+          )}
+
+          {appointment.service_orders && (
+            <Badge variant="outline" className="text-xs">
+              {appointment.service_orders.order_number}
+            </Badge>
+          )}
+        </CardContent>
+      </Card>
+    </AppointmentContextMenu>
   );
 }
