@@ -14,6 +14,10 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { usePresence } from "@/hooks/usePresence";
+import PresenceIndicator from "@/components/presence/PresenceIndicator";
+import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
+import RemoteCursors from "@/components/presence/RemoteCursors";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -22,6 +26,24 @@ interface CustomerDialogProps {
 }
 
 export default function CustomerDialog({ open, onOpenChange, customer }: CustomerDialogProps) {
+  const [currentField, setCurrentField] = useState<string>("");
+  const { onlineUsers, updateField, updateCursorPosition } = usePresence({
+    page: "customer-dialog",
+    field: currentField,
+  });
+
+  // Track mouse movement for cursor sharing
+  useEffect(() => {
+    if (!open) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      updateCursorPosition(e.clientX, e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [open, updateCursorPosition]);
+
   const [formData, setFormData] = useState({
     name: "",
     tradingName: "",
@@ -111,13 +133,20 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {customer ? "Edit Customer" : "New Customer"}
-          </DialogTitle>
-          <DialogDescription>
-            {customer ? "Update customer information and billing details" : "Add a new customer to your system"}
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>
+                {customer ? "Edit Customer" : "New Customer"}
+              </DialogTitle>
+              <DialogDescription>
+                {customer ? "Update customer information and billing details" : "Add a new customer to your system"}
+              </DialogDescription>
+            </div>
+            <PresenceIndicator users={onlineUsers} />
+          </div>
         </DialogHeader>
+
+        <RemoteCursors users={onlineUsers} />
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="general" className="w-full">
@@ -129,43 +158,83 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
 
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Customer Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tradingName">Trading Name</Label>
-                  <Input
-                    id="tradingName"
-                    value={formData.tradingName}
-                    onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
-                  />
-                </div>
+                <FieldPresenceWrapper fieldName="name" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Customer Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("name");
+                        updateField("name");
+                      }}
+                      onBlur={() => {
+                        setCurrentField("");
+                        updateField("");
+                      }}
+                      required
+                    />
+                  </div>
+                </FieldPresenceWrapper>
+                <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="tradingName">Trading Name</Label>
+                    <Input
+                      id="tradingName"
+                      value={formData.tradingName}
+                      onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("tradingName");
+                        updateField("tradingName");
+                      }}
+                      onBlur={() => {
+                        setCurrentField("");
+                        updateField("");
+                      }}
+                    />
+                  </div>
+                </FieldPresenceWrapper>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="legalName">Legal Company Name</Label>
-                  <Input
-                    id="legalName"
-                    value={formData.legalName}
-                    onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="abn">ABN</Label>
-                  <Input
-                    id="abn"
-                    placeholder="12 345 678 901"
-                    value={formData.abn}
-                    onChange={(e) => setFormData({ ...formData, abn: e.target.value })}
-                  />
-                </div>
+                <FieldPresenceWrapper fieldName="legalName" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="legalName">Legal Company Name</Label>
+                    <Input
+                      id="legalName"
+                      value={formData.legalName}
+                      onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("legalName");
+                        updateField("legalName");
+                      }}
+                      onBlur={() => {
+                        setCurrentField("");
+                        updateField("");
+                      }}
+                    />
+                  </div>
+                </FieldPresenceWrapper>
+                <FieldPresenceWrapper fieldName="abn" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="abn">ABN</Label>
+                    <Input
+                      id="abn"
+                      placeholder="12 345 678 901"
+                      value={formData.abn}
+                      onChange={(e) => setFormData({ ...formData, abn: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("abn");
+                        updateField("abn");
+                      }}
+                      onBlur={() => {
+                        setCurrentField("");
+                        updateField("");
+                      }}
+                    />
+                  </div>
+                </FieldPresenceWrapper>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Plus, Search, Building2, Users, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import { useNavigate } from "react-router-dom";
+import { usePresence } from "@/hooks/usePresence";
+import PresenceIndicator from "@/components/presence/PresenceIndicator";
+import RemoteCursors from "@/components/presence/RemoteCursors";
 
 const mockCustomers = [
   {
@@ -58,6 +61,20 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  
+  const { onlineUsers, updateCursorPosition } = usePresence({
+    page: "customers-list",
+  });
+
+  // Track mouse movement
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      updateCursorPosition(e.clientX, e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [updateCursorPosition]);
 
   const handleEdit = (customer: any) => {
     setSelectedCustomer(customer);
@@ -75,14 +92,18 @@ export default function Customers() {
 
   return (
     <DashboardLayout>
+      <RemoteCursors users={onlineUsers} />
       <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Customers</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage customer accounts, contacts, and billing information
-            </p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Customers</h1>
+              <p className="text-muted-foreground mt-2">
+                Manage customer accounts, contacts, and billing information
+              </p>
+            </div>
+            <PresenceIndicator users={onlineUsers} />
           </div>
           <Button onClick={handleAddNew} className="gap-2">
             <Plus className="h-4 w-4" />
