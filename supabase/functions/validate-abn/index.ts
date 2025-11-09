@@ -95,8 +95,8 @@ serve(async (req) => {
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
-    // Check if business entity exists
-    const businessEntityTag = xmlText.match(/<businessEntity\d*[^>]*>([\s\S]*?)<\/businessEntity\d*>/i);
+    // Check if business entity exists - match any businessEntity tag with version number
+    const businessEntityTag = xmlText.match(/<businessEntity[^>]*>([\s\S]+)<\/businessEntity[^>]*>/i);
     if (!businessEntityTag) {
       console.error('No businessEntity tag found in response');
       throw new Error('No business entity found for this ABN');
@@ -104,7 +104,10 @@ serve(async (req) => {
     
     const businessEntitySection = businessEntityTag[1];
     console.log('BusinessEntity section extracted, length:', businessEntitySection.length);
-    console.log('Full BusinessEntity section:', businessEntitySection);
+    
+    // Check if businessName tags exist
+    const businessNameCount = (businessEntitySection.match(/<businessName>/g) || []).length;
+    console.log('Number of <businessName> tags found:', businessNameCount);
 
     // Extract ABN status from entityStatusCode - search within businessEntity section
     const entityStatusMatch = businessEntitySection.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
