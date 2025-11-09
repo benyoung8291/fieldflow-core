@@ -216,7 +216,7 @@ export default function Tasks() {
                 <SelectContent>
                   <SelectItem value="my-tasks">My Tasks</SelectItem>
                   <SelectItem value="all">All Tasks</SelectItem>
-                  {workers.map((worker) => (
+                  {workers.filter(w => w.id && w.id.trim()).map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
                     </SelectItem>

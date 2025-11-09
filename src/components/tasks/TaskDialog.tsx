@@ -158,7 +158,7 @@ export default function TaskDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {workers.map((worker) => (
+                  {workers.filter(w => w.id && w.id.trim()).map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
                     </SelectItem>
@@ -290,7 +290,7 @@ export default function TaskDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {workers.map((worker) => (
+                    {workers.filter(w => w.id && w.id.trim()).map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.first_name} {worker.last_name}
                       </SelectItem>
