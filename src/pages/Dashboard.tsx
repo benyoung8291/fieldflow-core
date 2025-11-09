@@ -58,7 +58,7 @@ export default function Dashboard() {
       icon: CheckSquare,
       color: "text-orange-600",
       bgColor: "bg-orange-100",
-      onClick: () => toast.info("Task management coming soon"),
+      onClick: () => navigate("/tasks"),
     },
   ];
 
