@@ -731,6 +731,7 @@ export type Database = {
           id: string
           notes: string | null
           quote_number: string
+          quote_type: string | null
           rejected_at: string | null
           sent_at: string | null
           status: string
@@ -756,6 +757,7 @@ export type Database = {
           id?: string
           notes?: string | null
           quote_number: string
+          quote_type?: string | null
           rejected_at?: string | null
           sent_at?: string | null
           status?: string
@@ -781,6 +783,7 @@ export type Database = {
           id?: string
           notes?: string | null
           quote_number?: string
+          quote_type?: string | null
           rejected_at?: string | null
           sent_at?: string | null
           status?: string

@@ -11,6 +11,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen } from "lucide-react";
 import { z } from "zod";
 import PriceBookDialog from "./PriceBookDialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 const quoteSchema = z.object({
   customer_id: z.string().min(1, "Customer is required"),
@@ -50,6 +52,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [priceBookOpen, setPriceBookOpen] = useState(false);
   const [selectedParentIndex, setSelectedParentIndex] = useState<number | null>(null);
+  const [isComplexQuote, setIsComplexQuote] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -125,6 +128,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     }
 
     if (quoteData) {
+      setIsComplexQuote(quoteData.quote_type === 'complex');
       setFormData({
         customer_id: quoteData.customer_id || "",
         title: quoteData.title || "",
@@ -193,6 +197,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       expanded: false
     }]);
     setErrors({});
+    setIsComplexQuote(false);
   };
 
   const calculatePricing = (cost: string, margin: string, sell: string, changedField: string) => {
@@ -412,6 +417,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         title: formData.title,
         description: formData.description || null,
         valid_until: formData.valid_until || null,
+        quote_type: isComplexQuote ? 'complex' : 'simple',
         subtotal,
         tax_rate: parseFloat(formData.tax_rate) || 0,
         tax_amount: taxAmount,
@@ -525,13 +531,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{quoteId ? "Edit" : "Create"} Quote</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="customer_id">Customer *</Label>
                 <Select
@@ -561,6 +567,20 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                   onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="quote_type" className="flex items-center gap-2">
+                  Quote Type
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-sm text-muted-foreground">Simple</span>
+                    <Switch
+                      checked={isComplexQuote}
+                      onCheckedChange={setIsComplexQuote}
+                    />
+                    <span className="text-sm text-muted-foreground">Complex</span>
+                  </div>
+                </Label>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -588,20 +608,22 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label>Line Items & Takeoffs</Label>
+                <Label>Line Items {isComplexQuote && "& Takeoffs"}</Label>
                 <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      setSelectedParentIndex(null);
-                      setPriceBookOpen(true);
-                    }}
-                  >
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Price Book
-                  </Button>
+                  {isComplexQuote && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedParentIndex(null);
+                        setPriceBookOpen(true);
+                      }}
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Price Book
+                    </Button>
+                  )}
                   <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Item
@@ -609,182 +631,225 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                 </div>
               </div>
 
-              {lineItems.map((item, index) => (
-                <div key={index} className="border rounded-lg">
-                  <div className="grid grid-cols-12 gap-3 items-start p-4 bg-muted/20">
-                    <div className="col-span-1 flex items-center gap-1">
-                      {hasSubItems(item) && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => toggleExpanded(index)}
-                        >
-                          {item.expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </Button>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      {isComplexQuote && <TableHead className="w-[40px]"></TableHead>}
+                      <TableHead className="min-w-[300px]">Description</TableHead>
+                      <TableHead className="w-[100px] text-right">Quantity</TableHead>
+                      {isComplexQuote && (
+                        <>
+                          <TableHead className="w-[120px] text-right">Cost</TableHead>
+                          <TableHead className="w-[100px] text-right">Margin %</TableHead>
+                          <TableHead className="w-[120px] text-right">Sell</TableHead>
+                        </>
                       )}
-                    </div>
-                    <div className="col-span-3 space-y-2">
-                      <Label className="text-xs">Description</Label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                        placeholder="Item description"
-                      />
-                    </div>
-                    <div className="col-span-1 space-y-2">
-                      <Label className="text-xs">Qty</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.quantity}
-                        onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-2 space-y-2">
-                      <Label className="text-xs">Cost</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.cost_price}
-                        onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
-                        disabled={hasSubItems(item)}
-                        className={hasSubItems(item) ? "bg-muted" : ""}
-                      />
-                    </div>
-                    <div className="col-span-1 space-y-2">
-                      <Label className="text-xs">Margin%</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.margin_percentage}
-                        onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
-                        disabled={hasSubItems(item)}
-                        className={hasSubItems(item) ? "bg-muted" : ""}
-                      />
-                    </div>
-                    <div className="col-span-2 space-y-2">
-                      <Label className="text-xs">Sell</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.sell_price}
-                        onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
-                        disabled={hasSubItems(item)}
-                        className={hasSubItems(item) ? "bg-muted" : ""}
-                      />
-                    </div>
-                    <div className="col-span-1 space-y-2">
-                      <Label className="text-xs">Total</Label>
-                      <Input value={`$${item.line_total.toFixed(2)}`} disabled className="bg-muted font-medium" />
-                    </div>
-                    <div className="col-span-1 flex items-end gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedParentIndex(index);
-                          setPriceBookOpen(true);
-                        }}
-                        title="Add sub-item from price book"
-                      >
-                        <BookOpen className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => addSubItem(index)}
-                        title="Add sub-item"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeLineItem(index)}
-                        disabled={lineItems.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                      {!isComplexQuote && (
+                        <TableHead className="w-[120px] text-right">Unit Price</TableHead>
+                      )}
+                      <TableHead className="w-[120px] text-right">Total</TableHead>
+                      <TableHead className="w-[120px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lineItems.map((item, index) => (
+                      <>
+                        <TableRow key={index} className="border-b">
+                          {isComplexQuote && (
+                            <TableCell>
+                              {hasSubItems(item) && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => toggleExpanded(index)}
+                                >
+                                  {item.expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                </Button>
+                              )}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <Input
+                              value={item.description}
+                              onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                              placeholder="Item description"
+                              className="border-0 focus-visible:ring-0 bg-transparent"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.quantity}
+                              onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                              className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                            />
+                          </TableCell>
+                          {isComplexQuote && (
+                            <>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.cost_price}
+                                  onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
+                                  disabled={hasSubItems(item)}
+                                  className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.margin_percentage}
+                                  onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
+                                  disabled={hasSubItems(item)}
+                                  className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.sell_price}
+                                  onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                                  disabled={hasSubItems(item)}
+                                  className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
+                                />
+                              </TableCell>
+                            </>
+                          )}
+                          {!isComplexQuote && (
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.sell_price}
+                                onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                                className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="text-right font-medium">
+                            ${item.line_total.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-1 justify-end">
+                              {isComplexQuote && (
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => {
+                                      setSelectedParentIndex(index);
+                                      setPriceBookOpen(true);
+                                    }}
+                                    title="Add from price book"
+                                  >
+                                    <BookOpen className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => addSubItem(index)}
+                                    title="Add sub-item"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => removeLineItem(index)}
+                                disabled={lineItems.length === 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
 
-                  {/* Sub-items */}
-                  {item.expanded && item.subItems && item.subItems.length > 0 && (
-                    <div className="border-t bg-background/50">
-                      {item.subItems.map((subItem, subIndex) => (
-                        <div key={subIndex} className="grid grid-cols-12 gap-3 items-start p-3 pl-12 border-b last:border-b-0">
-                          <div className="col-span-3 space-y-2">
-                            <Input
-                              value={subItem.description}
-                              onChange={(e) => updateSubItem(index, subIndex, "description", e.target.value)}
-                              placeholder="Sub-item description"
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="col-span-1 space-y-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={subItem.quantity}
-                              onChange={(e) => updateSubItem(index, subIndex, "quantity", e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="col-span-2 space-y-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={subItem.cost_price}
-                              onChange={(e) => updateSubItem(index, subIndex, "cost_price", e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="col-span-1 space-y-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={subItem.margin_percentage}
-                              onChange={(e) => updateSubItem(index, subIndex, "margin_percentage", e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="col-span-2 space-y-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={subItem.sell_price}
-                              onChange={(e) => updateSubItem(index, subIndex, "sell_price", e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="col-span-2 space-y-2">
-                            <Input 
-                              value={`$${subItem.line_total.toFixed(2)}`} 
-                              disabled 
-                              className="bg-muted text-sm"
-                            />
-                          </div>
-                          <div className="col-span-1 flex items-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeSubItem(index, subIndex)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        {/* Sub-items */}
+                        {isComplexQuote && item.expanded && item.subItems && item.subItems.length > 0 && (
+                          item.subItems.map((subItem, subIndex) => (
+                            <TableRow key={`${index}-${subIndex}`} className="bg-muted/30">
+                              <TableCell></TableCell>
+                              <TableCell className="pl-12">
+                                <Input
+                                  value={subItem.description}
+                                  onChange={(e) => updateSubItem(index, subIndex, "description", e.target.value)}
+                                  placeholder="Sub-item description"
+                                  className="border-0 focus-visible:ring-0 text-sm bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={subItem.quantity}
+                                  onChange={(e) => updateSubItem(index, subIndex, "quantity", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={subItem.cost_price}
+                                  onChange={(e) => updateSubItem(index, subIndex, "cost_price", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={subItem.margin_percentage}
+                                  onChange={(e) => updateSubItem(index, subIndex, "margin_percentage", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={subItem.sell_price}
+                                  onChange={(e) => updateSubItem(index, subIndex, "sell_price", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                ${subItem.line_total.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => removeSubItem(index, subIndex)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
