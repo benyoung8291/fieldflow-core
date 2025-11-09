@@ -16,7 +16,8 @@ serve(async (req) => {
       workerId, 
       serviceOrderId, 
       preferredDate, 
-      estimatedDuration 
+      estimatedDuration,
+      dateRangeEnd 
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -29,13 +30,18 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Calculate date range for appointment search
+    const startDate = new Date(preferredDate);
+    const endDate = dateRangeEnd ? new Date(dateRangeEnd) : new Date(startDate);
+    endDate.setDate(endDate.getDate() + 7); // Extend by 7 days for flexibility
+
     // Fetch worker's existing appointments
     const { data: existingAppointments } = await supabase
       .from("appointments")
       .select("start_time, end_time, location_address, latitude, longitude")
       .eq("assigned_to", workerId)
-      .gte("start_time", new Date(preferredDate).toISOString())
-      .lte("start_time", new Date(new Date(preferredDate).setDate(new Date(preferredDate).getDate() + 7)).toISOString())
+      .gte("start_time", startDate.toISOString())
+      .lte("start_time", endDate.toISOString())
       .order("start_time");
 
     // Fetch worker availability
@@ -51,7 +57,16 @@ serve(async (req) => {
       .eq("id", workerId)
       .single();
 
-    // Fetch service order details
+    // Fetch worker skills
+    const { data: workerSkills } = await supabase
+      .from("worker_skills")
+      .select(`
+        skill_level,
+        skills(name, category)
+      `)
+      .eq("worker_id", workerId);
+
+    // Fetch service order details and required skills
     const { data: serviceOrder } = await supabase
       .from("service_orders")
       .select(`
@@ -65,13 +80,17 @@ serve(async (req) => {
           address,
           latitude,
           longitude
+        ),
+        service_order_required_skills(
+          required_level,
+          skills(name, category)
         )
       `)
       .eq("id", serviceOrderId)
       .single();
 
     // Prepare context for AI
-    const systemPrompt = `You are a scheduling optimization assistant. Analyze the worker's schedule, availability, and travel logistics to suggest optimal time slots.
+    const systemPrompt = `You are a scheduling optimization assistant. Analyze the worker's schedule, availability, skills, and travel logistics to suggest optimal time slots.
 
 Consider:
 1. Worker's existing appointments and buffer time between jobs
@@ -80,13 +99,30 @@ Consider:
 4. Avoid back-to-back scheduling without travel buffer
 5. Prioritize slots that minimize total travel time
 6. Respect worker availability patterns
+7. CRITICAL: Match worker skills to service order requirements - penalize heavily if skills don't match
+8. Preferred date priority - slots on the preferred date score higher, but suggest alternatives if preferred date is suboptimal
+9. Consider date range flexibility - if preferred date is fully booked or has poor options, suggest better slots within the date range
 
-Provide 3-5 time slot suggestions ranked by optimality.`;
+Provide 3-5 time slot suggestions ranked by optimality (0-100 score).`;
 
     const userPrompt = `Service Order: ${serviceOrder?.title || "Untitled"}
 Location: ${serviceOrder?.customer_locations?.[0]?.address || serviceOrder?.customers?.address || "Unknown"}
 Estimated Duration: ${estimatedDuration || serviceOrder?.estimated_hours || 2} hours
 Preferred Date: ${new Date(preferredDate).toLocaleDateString()}
+${dateRangeEnd ? `Date Range: ${new Date(preferredDate).toLocaleDateString()} to ${new Date(dateRangeEnd).toLocaleDateString()}` : ""}
+
+SKILLS ANALYSIS (CRITICAL):
+Required Skills for Service Order:
+${serviceOrder?.service_order_required_skills?.map((req: any) => 
+  `- ${req.skills?.name} (${req.skills?.category}) - Level Required: ${req.required_level}`
+).join('\n') || "No specific skills required"}
+
+Worker's Skills:
+${workerSkills?.map((skill: any) => 
+  `- ${skill.skills?.name} (${skill.skills?.category}) - Level: ${skill.skill_level}`
+).join('\n') || "No skills recorded"}
+
+${serviceOrder?.service_order_required_skills?.length > 0 ? "⚠️ Significantly reduce score if worker lacks required skills or has insufficient skill levels!" : ""}
 
 Worker's Existing Appointments:
 ${existingAppointments?.map((apt: any) => 
@@ -103,7 +139,7 @@ Worker Preferences:
 - Preferred End: ${profile?.preferred_end_time || "Not set"}
 - Preferred Days: ${profile?.preferred_days?.join(', ') || "Not set"}
 
-Suggest optimal time slots.`;
+Suggest optimal time slots. Prioritize preferred date but suggest alternatives if better options exist in the date range.`;
 
     // Call Lovable AI with tool calling for structured output
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -146,7 +182,11 @@ Suggest optimal time slots.`;
                         },
                         reasoning: {
                           type: "string",
-                          description: "Brief explanation of why this slot is optimal"
+                          description: "Brief explanation of why this slot is optimal, including skills match assessment"
+                        },
+                        skills_match: {
+                          type: "boolean",
+                          description: "Whether worker skills adequately match service order requirements"
                         },
                         travel_time_before: {
                           type: "number",

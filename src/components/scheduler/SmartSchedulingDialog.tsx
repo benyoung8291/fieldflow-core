@@ -26,6 +26,7 @@ interface TimeSlotSuggestion {
   end_time: string;
   score: number;
   reasoning: string;
+  skills_match?: boolean;
   travel_time_before?: number;
   travel_time_after?: number;
 }
@@ -40,6 +41,7 @@ export default function SmartSchedulingDialog({
   const [selectedServiceOrder, setSelectedServiceOrder] = useState<string>("");
   const [selectedWorker, setSelectedWorker] = useState<string>("");
   const [preferredDate, setPreferredDate] = useState<Date>(new Date());
+  const [dateRangeEnd, setDateRangeEnd] = useState<Date | undefined>();
   const [suggestions, setSuggestions] = useState<TimeSlotSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,6 +62,7 @@ export default function SmartSchedulingDialog({
           workerId: selectedWorker,
           serviceOrderId: selectedServiceOrder,
           preferredDate: preferredDate.toISOString(),
+          dateRangeEnd: dateRangeEnd?.toISOString(),
           estimatedDuration: serviceOrder?.estimated_hours || 2,
         }
       });
@@ -152,30 +155,59 @@ export default function SmartSchedulingDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Preferred Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !preferredDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {preferredDate ? format(preferredDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={preferredDate}
-                  onSelect={(date) => date && setPreferredDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Preferred Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !preferredDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {preferredDate ? format(preferredDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={preferredDate}
+                    onSelect={(date) => date && setPreferredDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date Range End (Optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateRangeEnd && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRangeEnd ? format(dateRangeEnd, "PPP") : "Flexible dates"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dateRangeEnd}
+                    onSelect={setDateRangeEnd}
+                    disabled={(date) => date < preferredDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <Button 
@@ -203,8 +235,13 @@ export default function SmartSchedulingDialog({
                 <Card key={index} className="hover:shadow-md transition-shadow">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
                         Option {index + 1}
+                        {suggestion.skills_match === false && (
+                          <Badge variant="destructive" className="text-xs">
+                            Skills Mismatch
+                          </Badge>
+                        )}
                       </CardTitle>
                       <Badge className={cn("text-xs", getScoreColor(suggestion.score))}>
                         {suggestion.score}% optimal
