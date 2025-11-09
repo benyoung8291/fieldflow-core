@@ -362,6 +362,7 @@ export default function Tasks() {
             createTaskMutation.mutate(data);
           }
         }}
+        taskId={selectedTask?.id}
         defaultValues={selectedTask ? {
           title: selectedTask.title,
           description: selectedTask.description || "",

@@ -179,6 +179,7 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
         <TaskDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
+          taskId={selectedTask.id}
           defaultValues={{
             title: selectedTask.title,
             description: selectedTask.description || "",
