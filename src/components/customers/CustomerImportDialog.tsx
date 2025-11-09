@@ -30,13 +30,22 @@ interface CustomerImportDialogProps {
   onImportComplete: () => void;
 }
 
-type ImportStep = "upload" | "mapping" | "preview" | "importing";
+type ImportStep = "upload" | "mapping" | "preview" | "duplicates" | "importing";
 
 interface ValidationError {
   row: number;
   field: string;
   value: string;
   message: string;
+}
+
+interface DuplicateMatch {
+  rowIndex: number;
+  newData: any;
+  existingCustomer: any;
+  matchType: "abn" | "email" | "both";
+  selectedFields: string[];
+  action: "skip" | "update";
 }
 
 const CUSTOMER_FIELDS = [
@@ -70,6 +79,8 @@ export default function CustomerImportDialog({
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -266,7 +277,68 @@ export default function CustomerImportDialog({
     return errors;
   };
 
-  const handlePreview = () => {
+  const checkForDuplicates = async () => {
+    setCheckingDuplicates(true);
+    try {
+      const mappedData = getMappedData();
+      const duplicateMatches: DuplicateMatch[] = [];
+
+      // Get all existing customers
+      const { data: existingCustomers, error } = await supabase
+        .from("customers")
+        .select("*");
+
+      if (error) throw error;
+
+      // Check each row for duplicates
+      mappedData.forEach((row, index) => {
+        if (!row.abn && !row.email) return; // Skip if no identifying info
+
+        const match = existingCustomers?.find((existing) => {
+          if (row.abn && existing.abn === row.abn) return true;
+          if (row.email && existing.email === row.email) return true;
+          return false;
+        });
+
+        if (match) {
+          const matchType =
+            row.abn === match.abn && row.email === match.email
+              ? "both"
+              : row.abn === match.abn
+              ? "abn"
+              : "email";
+
+          // Get all fields that are different
+          const changedFields = Object.keys(row).filter(
+            (key) => row[key] !== match[key] && row[key] !== undefined && row[key] !== ""
+          );
+
+          duplicateMatches.push({
+            rowIndex: index + 1,
+            newData: row,
+            existingCustomer: match,
+            matchType,
+            selectedFields: [], // User will select which to update
+            action: "skip", // Default to skip
+          });
+        }
+      });
+
+      setDuplicates(duplicateMatches);
+      return duplicateMatches;
+    } catch (error: any) {
+      toast({
+        title: "Error checking duplicates",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setCheckingDuplicates(false);
+    }
+  };
+
+  const handlePreview = async () => {
     if (!validateMappedData()) return;
     
     // Validate all row data
@@ -282,6 +354,40 @@ export default function CustomerImportDialog({
     }
     
     setStep("preview");
+  };
+
+  const handleCheckDuplicates = async () => {
+    const foundDuplicates = await checkForDuplicates();
+    if (foundDuplicates.length > 0) {
+      setStep("duplicates");
+      toast({
+        title: "Duplicates found",
+        description: `Found ${foundDuplicates.length} potential duplicate(s)`,
+      });
+    } else {
+      toast({
+        title: "No duplicates",
+        description: "All customers are unique, ready to import",
+      });
+    }
+  };
+
+  const handleDuplicateAction = (index: number, action: "skip" | "update") => {
+    setDuplicates((prev) =>
+      prev.map((dup, i) => (i === index ? { ...dup, action } : dup))
+    );
+  };
+
+  const handleFieldSelection = (duplicateIndex: number, field: string, selected: boolean) => {
+    setDuplicates((prev) =>
+      prev.map((dup, i) => {
+        if (i !== duplicateIndex) return dup;
+        const selectedFields = selected
+          ? [...dup.selectedFields, field]
+          : dup.selectedFields.filter((f) => f !== field);
+        return { ...dup, selectedFields };
+      })
+    );
   };
 
   const handleImport = async () => {
@@ -312,21 +418,71 @@ export default function CustomerImportDialog({
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
       const mappedData = getMappedData();
-      const customersToInsert = mappedData.map((row) => ({
-        ...row,
-        tenant_id: profile.tenant_id,
-        is_active: true,
-      }));
+      
+      // Separate records into new inserts and updates
+      const duplicateIds = new Set(duplicates.map(d => d.rowIndex - 1));
+      const newCustomers: any[] = [];
+      const updates: { id: string; data: any }[] = [];
 
-      const { error } = await supabase
-        .from("customers")
-        .insert(customersToInsert);
+      mappedData.forEach((row, index) => {
+        const duplicate = duplicates.find(d => d.rowIndex - 1 === index);
+        
+        if (duplicate && duplicate.action === "update" && duplicate.selectedFields.length > 0) {
+          // Build update object with only selected fields
+          const updateData: any = {};
+          duplicate.selectedFields.forEach(field => {
+            if (row[field] !== undefined) {
+              updateData[field] = row[field];
+            }
+          });
+          
+          updates.push({
+            id: duplicate.existingCustomer.id,
+            data: updateData,
+          });
+        } else if (!duplicate || duplicate.action === "skip") {
+          // Only insert if not a duplicate or user chose to skip update
+          if (!duplicateIds.has(index) || duplicate?.action === "skip") {
+            newCustomers.push({
+              ...row,
+              tenant_id: profile.tenant_id,
+              is_active: true,
+            });
+          }
+        }
+      });
 
-      if (error) throw error;
+      let insertCount = 0;
+      let updateCount = 0;
+
+      // Perform inserts
+      if (newCustomers.length > 0) {
+        const { error: insertError } = await supabase
+          .from("customers")
+          .insert(newCustomers);
+
+        if (insertError) throw insertError;
+        insertCount = newCustomers.length;
+      }
+
+      // Perform updates one by one to ensure audit logging
+      for (const update of updates) {
+        const { error: updateError } = await supabase
+          .from("customers")
+          .update(update.data)
+          .eq("id", update.id);
+
+        if (updateError) throw updateError;
+        updateCount++;
+      }
+
+      const message = [];
+      if (insertCount > 0) message.push(`${insertCount} new customer(s)`);
+      if (updateCount > 0) message.push(`${updateCount} updated customer(s)`);
 
       toast({
         title: "Import successful",
-        description: `Successfully imported ${customersToInsert.length} customers`,
+        description: `Imported ${message.join(" and ")}`,
       });
 
       onImportComplete();
@@ -338,7 +494,7 @@ export default function CustomerImportDialog({
         description: error.message,
         variant: "destructive",
       });
-      setStep("preview");
+      setStep(duplicates.length > 0 ? "duplicates" : "preview");
     } finally {
       setImporting(false);
     }
@@ -350,6 +506,7 @@ export default function CustomerImportDialog({
     setCsvHeaders([]);
     setColumnMapping({});
     setValidationErrors([]);
+    setDuplicates([]);
     onOpenChange(false);
   };
 
@@ -364,6 +521,7 @@ export default function CustomerImportDialog({
             {step === "upload" && "Upload your CSV file to begin"}
             {step === "mapping" && "Map CSV columns to customer fields"}
             {step === "preview" && "Review your data before importing"}
+            {step === "duplicates" && "Resolve duplicate customers"}
             {step === "importing" && "Importing customers..."}
           </DialogDescription>
         </DialogHeader>
@@ -377,7 +535,9 @@ export default function CustomerImportDialog({
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
             <Badge variant={step === "preview" ? "default" : "secondary"}>3. Preview</Badge>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            <Badge variant={step === "importing" ? "default" : "secondary"}>4. Import</Badge>
+            <Badge variant={step === "duplicates" ? "default" : "secondary"}>4. Duplicates</Badge>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <Badge variant={step === "importing" ? "default" : "secondary"}>5. Import</Badge>
           </div>
 
           {/* Upload Step */}
@@ -504,6 +664,105 @@ export default function CustomerImportDialog({
             </ScrollArea>
           )}
 
+          {/* Duplicates Step */}
+          {step === "duplicates" && (
+            <ScrollArea className="h-[400px] border rounded-lg p-4">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="secondary">{duplicates.length}</Badge>
+                  <span className="font-medium">Duplicate customers found</span>
+                </div>
+
+                {duplicates.map((duplicate, index) => {
+                  const changedFields = Object.keys(duplicate.newData).filter(
+                    (key) =>
+                      duplicate.newData[key] !== duplicate.existingCustomer[key] &&
+                      duplicate.newData[key] !== undefined &&
+                      duplicate.newData[key] !== ""
+                  );
+
+                  return (
+                    <div key={index} className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium">
+                            Row {duplicate.rowIndex}: {duplicate.newData.name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Matches existing customer by{" "}
+                            <Badge variant="outline" className="ml-1">
+                              {duplicate.matchType === "both"
+                                ? "ABN & Email"
+                                : duplicate.matchType.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={duplicate.action === "skip" ? "default" : "outline"}
+                            onClick={() => handleDuplicateAction(index, "skip")}
+                          >
+                            Skip
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={duplicate.action === "update" ? "default" : "outline"}
+                            onClick={() => handleDuplicateAction(index, "update")}
+                          >
+                            Update
+                          </Button>
+                        </div>
+                      </div>
+
+                      {duplicate.action === "update" && (
+                        <div className="space-y-2 border-t pt-4">
+                          <div className="text-sm font-medium mb-2">
+                            Select fields to update:
+                          </div>
+                          {changedFields.map((field) => (
+                            <label
+                              key={field}
+                              className="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={duplicate.selectedFields.includes(field)}
+                                onChange={(e) =>
+                                  handleFieldSelection(index, field, e.target.checked)
+                                }
+                                className="mt-1"
+                              />
+                              <div className="flex-1 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                  <div className="font-medium capitalize">
+                                    {field.replace(/_/g, " ")}
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    Current: {String(duplicate.existingCustomer[field] || "-")}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-success font-medium">New Value</div>
+                                  <div>{String(duplicate.newData[field])}</div>
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                          {changedFields.length === 0 && (
+                            <div className="text-sm text-muted-foreground">
+                              No field differences detected
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+
           {/* Importing Step */}
           {step === "importing" && (
             <div className="flex flex-col items-center justify-center py-12">
@@ -536,10 +795,28 @@ export default function CustomerImportDialog({
                 Back
               </Button>
               <Button 
-                onClick={handleImport} 
-                disabled={importing || validationErrors.length > 0}
+                onClick={handleCheckDuplicates} 
+                disabled={checkingDuplicates || validationErrors.length > 0}
               >
-                Import {csvData.length} Customers
+                {checkingDuplicates ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Checking...
+                  </>
+                ) : (
+                  "Next: Check Duplicates"
+                )}
+              </Button>
+            </>
+          )}
+          {step === "duplicates" && (
+            <>
+              <Button variant="outline" onClick={() => setStep("preview")}>
+                Back
+              </Button>
+              <Button onClick={handleImport} disabled={importing}>
+                Import ({duplicates.filter(d => d.action === "update").length} updates,{" "}
+                {csvData.length - duplicates.filter(d => d.action !== "skip").length} new)
               </Button>
             </>
           )}
