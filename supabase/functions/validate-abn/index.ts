@@ -78,6 +78,15 @@ serve(async (req) => {
     const xmlText = await response.text();
     console.log('ABR API Response received, length:', xmlText.length);
     console.log('Response preview:', xmlText.substring(0, 500));
+    
+    // Also log the businessEntity section if it exists
+    const businessEntityMatch = xmlText.match(/<businessEntity202001[^>]*>([\s\S]*?)<\/businessEntity202001>/i);
+    if (businessEntityMatch) {
+      console.log('BusinessEntity section found, length:', businessEntityMatch[1].length);
+      console.log('First 500 chars of businessEntity:', businessEntityMatch[1].substring(0, 500));
+    } else {
+      console.log('No businessEntity202001 tag found');
+    }
 
     // Check for errors using regex
     if (hasXMLTag(xmlText, 'exception')) {
@@ -96,12 +105,16 @@ serve(async (req) => {
     const entityStatusMatch = xmlText.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
     let abn_status = null;
     if (entityStatusMatch) {
+      console.log('EntityStatus section found:', entityStatusMatch[0]);
       const entityStatusSection = entityStatusMatch[1];
       const statusCodeMatch = entityStatusSection.match(/<entityStatusCode>([^<]*)<\/entityStatusCode>/i);
       abn_status = statusCodeMatch ? statusCodeMatch[1].trim() : null;
+      console.log('Status code extracted:', abn_status);
+    } else {
+      console.log('No entityStatus tag found in XML');
     }
     
-    console.log('ABN status:', abn_status);
+    console.log('Final ABN status:', abn_status);
     
     if (abn_status !== 'Active') {
       return new Response(
