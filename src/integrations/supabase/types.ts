@@ -336,6 +336,39 @@ export type Database = {
           },
         ]
       }
+      customer_message_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string
+          id: string
+          is_default: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           abn: string | null
@@ -790,6 +823,53 @@ export type Database = {
           },
         ]
       }
+      quote_emails: {
+        Row: {
+          clicked_at: string | null
+          id: string
+          message: string | null
+          opened_at: string | null
+          quote_id: string
+          sent_at: string | null
+          sent_by: string
+          sent_to: string
+          subject: string | null
+          tenant_id: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          id?: string
+          message?: string | null
+          opened_at?: string | null
+          quote_id: string
+          sent_at?: string | null
+          sent_by: string
+          sent_to: string
+          subject?: string | null
+          tenant_id: string
+        }
+        Update: {
+          clicked_at?: string | null
+          id?: string
+          message?: string | null
+          opened_at?: string | null
+          quote_id?: string
+          sent_at?: string | null
+          sent_by?: string
+          sent_to?: string
+          subject?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_emails_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_line_items: {
         Row: {
           cost_price: number | null
@@ -857,6 +937,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quote_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          footer_text: string | null
+          header_logo_url: string | null
+          header_text: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          show_cost_analysis: boolean | null
+          show_margins: boolean | null
+          show_sub_items: boolean | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          footer_text?: string | null
+          header_logo_url?: string | null
+          header_text?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          show_cost_analysis?: boolean | null
+          show_margins?: boolean | null
+          show_sub_items?: boolean | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          footer_text?: string | null
+          header_logo_url?: string | null
+          header_text?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          show_cost_analysis?: boolean | null
+          show_margins?: boolean | null
+          show_sub_items?: boolean | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       quote_versions: {
         Row: {
@@ -939,6 +1067,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           customer_id: string
+          customer_message: string | null
           description: string | null
           discount_amount: number | null
           duplicated_from_quote_id: string | null
@@ -970,6 +1099,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           customer_id: string
+          customer_message?: string | null
           description?: string | null
           discount_amount?: number | null
           duplicated_from_quote_id?: string | null
@@ -1001,6 +1131,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           customer_id?: string
+          customer_message?: string | null
           description?: string | null
           discount_amount?: number | null
           duplicated_from_quote_id?: string | null
@@ -1254,6 +1385,39 @@ export type Database = {
           secondary_color?: string | null
           status?: Database["public"]["Enums"]["tenant_status"] | null
           subdomain?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      terms_conditions_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string
+          id: string
+          is_default: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          tenant_id?: string
           updated_at?: string | null
         }
         Relationships: []
