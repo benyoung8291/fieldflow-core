@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
 import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
+import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
@@ -23,9 +24,12 @@ import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
 import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function Scheduler() {
   const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban">("week");
+  const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -352,64 +356,42 @@ export default function Scheduler() {
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
         <div className="grid grid-cols-[1fr_350px] gap-6">
-          <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Scheduler</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage appointments with GPS check-in/out
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <PresenceIndicator users={onlineUsers} />
-            <Button variant="outline" className="gap-2" onClick={() => setShowTemplatesDialog(true)}>
-              <FileText className="h-4 w-4" />
-              Templates
-            </Button>
-            <Button className="gap-2" onClick={handleCreateAppointment}>
-              <Clock className="h-4 w-4" />
-              New Appointment
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
-              <Calendar className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{todayAppointments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {todayAppointments.filter(a => !a.assigned_to).length} pending assignments
-              </p>
+          <div className="space-y-4">
+        {/* Compact Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Card className="shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Today's Jobs</p>
+                </div>
+                <p className="text-lg font-bold">{todayAppointments.length}</p>
+              </div>
             </CardContent>
           </Card>
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Workers</CardTitle>
-              <Users className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeWorkers}</div>
-              <p className="text-xs text-muted-foreground">
-                {appointments.filter(a => a.status === "draft" || a.status === "published").length} scheduled
-              </p>
+          
+          <Card className="shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Active Workers</p>
+                </div>
+                <p className="text-lg font-bold">{activeWorkers}</p>
+              </div>
             </CardContent>
           </Card>
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Checked In</CardTitle>
-              <MapPin className="h-4 w-4 text-info" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{checkedInAppointments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {appointments.filter(a => a.status === "completed").length} completed today
-              </p>
+          
+          <Card className="shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Checked In</p>
+                </div>
+                <p className="text-lg font-bold">{checkedInAppointments.length}</p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -443,19 +425,39 @@ export default function Scheduler() {
                   <h3 className="text-lg font-semibold">{getDateRangeLabel()}</h3>
                 </div>
               </div>
-              <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
-                <TabsList>
-                  <TabsTrigger value="day">Day</TabsTrigger>
-                  <TabsTrigger value="week">Week</TabsTrigger>
-                  <TabsTrigger value="month">Month</TabsTrigger>
-                  <TabsTrigger value="kanban">Kanban</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="service-order-view" 
+                    checked={showServiceOrderView}
+                    onCheckedChange={setShowServiceOrderView}
+                  />
+                  <Label htmlFor="service-order-view" className="text-sm cursor-pointer">
+                    <List className="h-4 w-4 inline mr-1" />
+                    Service Order View
+                  </Label>
+                </div>
+                <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
+                  <TabsList>
+                    <TabsTrigger value="day">Day</TabsTrigger>
+                    <TabsTrigger value="week">Week</TabsTrigger>
+                    <TabsTrigger value="month">Month</TabsTrigger>
+                    <TabsTrigger value="kanban">Kanban</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
+            ) : showServiceOrderView ? (
+              <ServiceOrdersCalendarView 
+                currentDate={currentDate}
+                appointments={appointments}
+                viewType={viewType}
+                onAppointmentClick={(id) => setSelectedAppointment(id)}
+              />
             ) : (
               <>
                 {viewType === "day" && (

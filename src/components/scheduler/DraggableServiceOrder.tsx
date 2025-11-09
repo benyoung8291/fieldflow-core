@@ -27,7 +27,11 @@ export default function DraggableServiceOrder({ serviceOrder, remainingHours, li
       {...attributes}
       className={cn(
         "p-3 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow",
-        isDragging && "opacity-50"
+        isDragging && "opacity-50",
+        // Priority color indicators
+        serviceOrder.priority === "urgent" && "border-l-4 border-l-destructive",
+        serviceOrder.priority === "high" && "border-l-4 border-l-orange-500",
+        serviceOrder.priority === "normal" && "border-l-4 border-l-primary"
       )}
     >
       <div className="space-y-2">
