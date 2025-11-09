@@ -1,0 +1,387 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { UserPlus, Shield, KeyRound, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
+
+export const UserManagementTab = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { isAdmin } = usePermissions();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users-management", profile?.tenant_id],
+    queryFn: async () => {
+      if (!profile?.tenant_id) return [];
+
+      // Fetch profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id);
+
+      if (profilesError) throw profilesError;
+
+      // Fetch roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("tenant_id", profile.tenant_id);
+
+      if (rolesError) throw rolesError;
+
+      // Fetch user emails from auth.users via admin API
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+
+      if (authError) throw authError;
+      
+      const authUsers = authData.users || [];
+
+      // Combine data
+      const combinedData = profilesData?.map((profile) => {
+        const authUser = authUsers.find((u: any) => u.id === profile.id);
+        const userRoles = rolesData?.filter((role) => role.user_id === profile.id) || [];
+        const hasWorkerRole = userRoles.some(r => r.role === 'worker');
+        
+        return {
+          ...profile,
+          email: authUser?.email || null,
+          user_roles: userRoles,
+          has_worker_role: hasWorkerRole,
+        };
+      });
+
+      return combinedData || [];
+    },
+    enabled: !!profile?.tenant_id && isAdmin,
+  });
+
+  const assignRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      if (!profile?.tenant_id) throw new Error("No tenant ID");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: userId,
+          role: role as any,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+        } as any);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("Role assigned successfully");
+      setIsRoleDialogOpen(false);
+      setSelectedUserId(null);
+      setSelectedRole("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to assign role");
+    },
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", role as any);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("Role removed successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove role");
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        password: password,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Password reset successfully");
+      setIsResetPasswordDialogOpen(false);
+      setResetPasswordUserId(null);
+      setNewPassword("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to reset password");
+    },
+  });
+
+  const handleAssignRole = () => {
+    if (!selectedUserId || !selectedRole) {
+      toast.error("Please select a user and role");
+      return;
+    }
+
+    assignRoleMutation.mutate({ userId: selectedUserId, role: selectedRole });
+  };
+
+  const handleResetPassword = () => {
+    if (!resetPasswordUserId || !newPassword) {
+      toast.error("Please enter a new password");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    resetPasswordMutation.mutate({ userId: resetPasswordUserId, password: newPassword });
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "tenant_admin":
+        return "destructive";
+      case "supervisor":
+        return "default";
+      case "worker":
+        return "secondary";
+      default:
+        return "outline";
+    }
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        You don't have permission to manage users
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold">User Management</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage users, assign roles, and reset passwords
+          </p>
+        </div>
+        <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Assign Role
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Role to User</DialogTitle>
+              <DialogDescription>
+                Select a user and assign them a role
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>User</Label>
+                <Select value={selectedUserId || ""} onValueChange={setSelectedUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.first_name} {user.last_name} ({user.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                    <SelectItem value="supervisor">Supervisor</SelectItem>
+                    <SelectItem value="worker">Worker</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAssignRole} className="w-full">
+                Assign Role
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-8">Loading...</div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Roles</TableHead>
+              <TableHead>Worker Profile</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users?.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">
+                  {user.first_name} {user.last_name}
+                </TableCell>
+                <TableCell>{user.email || "-"}</TableCell>
+                <TableCell>{user.phone || "-"}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2 flex-wrap">
+                    {user.user_roles && user.user_roles.length > 0 ? (
+                      user.user_roles.map((ur: any, idx: number) => (
+                        <Badge
+                          key={idx}
+                          variant={getRoleBadgeVariant(ur.role)}
+                          className="cursor-pointer hover:opacity-80"
+                          onClick={() =>
+                            removeRoleMutation.mutate({
+                              userId: user.id,
+                              role: ur.role,
+                            })
+                          }
+                        >
+                          <Shield className="h-3 w-3 mr-1" />
+                          {ur.role}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-sm">No roles</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {user.has_worker_role ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/workers/${user.id}`)}
+                    >
+                      View Profile
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={user.is_active ? "default" : "secondary"}>
+                    {user.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setResetPasswordUserId(user.id);
+                      setIsResetPasswordDialogOpen(true);
+                    }}
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset User Password</DialogTitle>
+            <DialogDescription>
+              Enter a new password for the user (minimum 6 characters)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsResetPasswordDialogOpen(false);
+                  setResetPasswordUserId(null);
+                  setNewPassword("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleResetPassword}>
+                Reset Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};

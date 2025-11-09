@@ -22,6 +22,7 @@ import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
 import MenuCustomizationTab from "@/components/settings/MenuCustomizationTab";
 import TaskTemplatesTab from "@/components/settings/TaskTemplatesTab";
 import { RolePermissionsTab } from "@/components/settings/RolePermissionsTab";
+import { UserManagementTab } from "@/components/settings/UserManagementTab";
 
 interface PayRateCategory {
   id: string;
@@ -170,6 +171,7 @@ export default function Settings() {
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="menu">Menu</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
             <TabsTrigger value="task-templates">Task Templates</TabsTrigger>
@@ -191,6 +193,14 @@ export default function Settings() {
             <Card>
               <CardContent className="pt-6">
                 <MenuCustomizationTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card>
+              <CardContent className="pt-6">
+                <UserManagementTab />
               </CardContent>
             </Card>
           </TabsContent>
