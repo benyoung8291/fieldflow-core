@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Phone, Mail, Edit, Plus } from "lucide-react";
+import { MapPin, Phone, Mail, Edit, Plus, ExternalLink } from "lucide-react";
 import CustomerLocationDialog from "./CustomerLocationDialog";
 
 interface CustomerLocationsTabProps {
@@ -13,6 +14,7 @@ interface CustomerLocationsTabProps {
 }
 
 export default function CustomerLocationsTab({ customerId, tenantId }: CustomerLocationsTabProps) {
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
 
@@ -63,7 +65,20 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-semibold">{location.name}</h4>
+                      <h4 
+                        className="font-semibold hover:text-primary cursor-pointer"
+                        onClick={() => navigate(`/customer-locations/${location.id}`)}
+                      >
+                        {location.name}
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => navigate(`/customer-locations/${location.id}`)}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
                       {location.is_primary && (
                         <Badge variant="secondary">Primary</Badge>
                       )}

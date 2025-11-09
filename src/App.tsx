@@ -16,6 +16,7 @@ import ServiceContractDetails from "./pages/ServiceContractDetails";
 import Scheduler from "./pages/Scheduler";
 import Customers from "./pages/Customers";
 import CustomerDetails from "./pages/CustomerDetails";
+import CustomerLocationDetails from "./pages/CustomerLocationDetails";
 import Leads from "./pages/Leads";
 import LeadDetails from "./pages/LeadDetails";
 import Workers from "./pages/Workers";
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/scheduler" element={<Scheduler />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:id" element={<CustomerDetails />} />
+          <Route path="/customer-locations/:id" element={<CustomerLocationDetails />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<LeadDetails />} />
           <Route path="/workers" element={<Workers />} />
