@@ -1,9 +1,34 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Helper function to extract text between XML tags
+const extractXMLValue = (xml: string, tag: string): string | null => {
+  const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'i');
+  const match = xml.match(regex);
+  return match ? match[1].trim() : null;
+};
+
+// Helper function to extract all matching XML values
+const extractAllXMLValues = (xml: string, tag: string): string[] => {
+  const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'gi');
+  const matches = xml.matchAll(regex);
+  const values: string[] = [];
+  for (const match of matches) {
+    if (match[1].trim()) {
+      values.push(match[1].trim());
+    }
+  }
+  return values;
+};
+
+// Helper function to check if XML contains a tag
+const hasXMLTag = (xml: string, tag: string): boolean => {
+  const regex = new RegExp(`<${tag}[^>]*>`, 'i');
+  return regex.test(xml);
 };
 
 serve(async (req) => {
@@ -51,31 +76,20 @@ serve(async (req) => {
     const xmlText = await response.text();
     console.log('ABR API Response received');
 
-    // Parse XML response
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-
-    if (!xmlDoc) {
-      throw new Error('Failed to parse XML response');
-    }
-
-    // Check for errors
-    const exception = xmlDoc.querySelector('exception');
-    if (exception) {
-      const exceptionDescription = exception.querySelector('exceptionDescription')?.textContent;
+    // Check for errors using regex
+    if (hasXMLTag(xmlText, 'exception')) {
+      const exceptionDescription = extractXMLValue(xmlText, 'exceptionDescription');
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
-    // Extract business entity
-    const businessEntity = xmlDoc.querySelector('businessEntity');
-    if (!businessEntity) {
+    // Check if business entity exists
+    if (!hasXMLTag(xmlText, 'businessEntity')) {
       throw new Error('No business entity found for this ABN');
     }
 
-    // Check if ABN is current and active
-    const recordLastUpdatedDate = businessEntity.querySelector('recordLastUpdatedDate')?.textContent;
-    const abn_element = businessEntity.querySelector('ABN');
-    const abn_status = abn_element?.getAttribute('status');
+    // Extract ABN status from the ABN tag attribute
+    const abnStatusMatch = xmlText.match(/<ABN[^>]*status="([^"]*)"[^>]*>/i);
+    const abn_status = abnStatusMatch ? abnStatusMatch[1] : null;
     
     if (abn_status !== 'Active') {
       return new Response(
@@ -91,24 +105,31 @@ serve(async (req) => {
     }
 
     // Extract legal name (Main Name)
-    const mainName = businessEntity.querySelector('mainName organisationName')?.textContent;
+    const mainName = extractXMLValue(xmlText, 'organisationName');
     
-    // Extract trading names (Business Names)
+    // Extract all trading names (Business Names)
+    // First, extract the businessName section
+    const businessNameSectionMatch = xmlText.match(/<businessName[^>]*>[\s\S]*?<\/businessName>/gi);
     const businessNames: string[] = [];
-    const businessNameElements = businessEntity.querySelectorAll('businessName organisationName');
-    businessNameElements.forEach((element: any) => {
-      const name = element.textContent;
-      if (name && !businessNames.includes(name)) {
-        businessNames.push(name);
-      }
-    });
+    
+    if (businessNameSectionMatch) {
+      businessNameSectionMatch.forEach((section) => {
+        const orgName = extractXMLValue(section, 'organisationName');
+        if (orgName && !businessNames.includes(orgName)) {
+          businessNames.push(orgName);
+        }
+      });
+    }
 
     // Extract entity type
-    const entityType = businessEntity.querySelector('entityType entityDescription')?.textContent;
+    const entityType = extractXMLValue(xmlText, 'entityDescription');
 
     // Extract GST registration
-    const gstElement = businessEntity.querySelector('goodsAndServicesTax');
-    const gstRegistered = gstElement?.textContent === 'true';
+    const gstValue = extractXMLValue(xmlText, 'goodsAndServicesTax');
+    const gstRegistered = gstValue === 'true';
+
+    // Extract last updated date
+    const recordLastUpdatedDate = extractXMLValue(xmlText, 'recordLastUpdatedDate');
 
     const result = {
       valid: true,
