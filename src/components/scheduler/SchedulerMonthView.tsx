@@ -1,34 +1,13 @@
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface SchedulerMonthViewProps {
   currentDate: Date;
+  appointments: any[];
+  onAppointmentClick: (id: string) => void;
+  onEditAppointment: (id: string) => void;
 }
-
-const mockAppointments = [
-  {
-    id: "1",
-    title: "HVAC Installation",
-    date: new Date(),
-    count: 3,
-    status: "published",
-  },
-  {
-    id: "2",
-    title: "Plumbing Repair",
-    date: new Date(),
-    count: 2,
-    status: "checked_in",
-  },
-  {
-    id: "3",
-    title: "Electrical Check",
-    date: new Date(Date.now() + 86400000),
-    count: 4,
-    status: "published",
-  },
-];
 
 const statusColors = {
   draft: "bg-muted",
@@ -38,21 +17,26 @@ const statusColors = {
   cancelled: "bg-destructive",
 };
 
-export default function SchedulerMonthView({ currentDate }: SchedulerMonthViewProps) {
+export default function SchedulerMonthView({ 
+  currentDate,
+  appointments,
+  onAppointmentClick,
+  onEditAppointment
+}: SchedulerMonthViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
-  
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="space-y-2">
-      {/* Weekday headers */}
+    <div className="space-y-4">
+      {/* Day headers */}
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map(day => (
-          <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+          <div key={day} className="text-center text-sm font-medium text-muted-foreground">
             {day}
           </div>
         ))}
@@ -61,47 +45,91 @@ export default function SchedulerMonthView({ currentDate }: SchedulerMonthViewPr
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-2">
         {calendarDays.map(day => {
-          const dayAppointments = mockAppointments.filter(apt => 
-            isSameDay(apt.date, day)
+          const dayAppointments = appointments.filter(apt =>
+            isSameDay(new Date(apt.start_time), day)
           );
-          const totalAppointments = dayAppointments.reduce((sum, apt) => sum + apt.count, 0);
+          
+          const isCurrentMonth = isSameMonth(day, currentDate);
+          const isToday = isSameDay(day, new Date());
 
           return (
             <div
               key={day.toISOString()}
               className={cn(
-                "min-h-[120px] p-2 border rounded-lg",
-                !isSameMonth(day, currentDate) && "bg-muted/30 text-muted-foreground",
-                isSameMonth(day, currentDate) && "bg-background border-border",
-                isToday(day) && "border-2 border-primary bg-primary/5"
+                "min-h-[120px] p-2 border-2 rounded-lg",
+                isCurrentMonth ? "border-border bg-background" : "border-border/50 bg-muted/30",
+                isToday && "border-primary bg-primary/5"
               )}
             >
+              {/* Date number */}
               <div className={cn(
-                "text-sm font-medium mb-2",
-                isToday(day) && "text-primary font-bold"
+                "text-sm font-semibold mb-2",
+                isCurrentMonth ? "text-foreground" : "text-muted-foreground",
+                isToday && "text-primary"
               )}>
                 {format(day, "d")}
               </div>
 
+              {/* Appointments */}
               <div className="space-y-1">
                 {dayAppointments.slice(0, 3).map(apt => (
                   <div
                     key={apt.id}
                     className={cn(
-                      "h-1 rounded-full",
-                      statusColors[apt.status as keyof typeof statusColors]
+                      "px-2 py-1 rounded text-[10px] cursor-pointer hover:shadow-sm transition-shadow truncate",
+                      apt.status === "draft" && "bg-muted text-muted-foreground",
+                      apt.status === "published" && "bg-info/10 text-info",
+                      apt.status === "checked_in" && "bg-warning/10 text-warning",
+                      apt.status === "completed" && "bg-success/10 text-success",
+                      apt.status === "cancelled" && "bg-destructive/10 text-destructive"
                     )}
-                  />
+                    onClick={() => onAppointmentClick(apt.id)}
+                    title={apt.title}
+                  >
+                    <div className="flex items-center gap-1">
+                      <div 
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                          statusColors[apt.status as keyof typeof statusColors]
+                        )}
+                      />
+                      <span className="truncate">{apt.title}</span>
+                    </div>
+                  </div>
                 ))}
-                {totalAppointments > 0 && (
-                  <div className="text-xs text-muted-foreground pt-1">
-                    {totalAppointments} appointment{totalAppointments !== 1 ? "s" : ""}
+                {dayAppointments.length > 3 && (
+                  <div className="text-[10px] text-muted-foreground text-center pt-1">
+                    +{dayAppointments.length - 3} more
                   </div>
                 )}
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-muted"></div>
+          <span className="text-xs">Draft</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-info"></div>
+          <span className="text-xs">Scheduled</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-warning"></div>
+          <span className="text-xs">Checked In</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-success"></div>
+          <span className="text-xs">Completed</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-destructive"></div>
+          <span className="text-xs">Cancelled</span>
+        </div>
       </div>
     </div>
   );

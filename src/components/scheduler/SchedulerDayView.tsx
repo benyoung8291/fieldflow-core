@@ -1,175 +1,176 @@
-import { format } from "date-fns";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from "@dnd-kit/core";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { format, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Clock, MapPin, User } from "lucide-react";
+import { Clock, MapPin, User, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import GPSCheckInDialog from "./GPSCheckInDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SchedulerDayViewProps {
   currentDate: Date;
+  appointments: any[];
+  onAppointmentClick: (id: string) => void;
+  onEditAppointment: (id: string) => void;
 }
 
-const mockWorkers = [
-  { id: "1", name: "John Smith", role: "Technician" },
-  { id: "2", name: "Sarah Johnson", role: "Supervisor" },
-  { id: "3", name: "Mike Davis", role: "Technician" },
-  { id: "4", name: "Emily Brown", role: "Technician" },
-];
-
-const mockAppointments = [
-  {
-    id: "1",
-    title: "HVAC Installation",
-    customer: "Acme Corp",
-    workerId: "1",
-    startTime: "09:00",
-    endTime: "11:00",
-    status: "published",
-    location: "123 Main St",
-  },
-  {
-    id: "2",
-    title: "Plumbing Repair",
-    customer: "Tech Inc",
-    workerId: "1",
-    startTime: "14:00",
-    endTime: "16:00",
-    status: "checked_in",
-    location: "456 Oak Ave",
-  },
-  {
-    id: "3",
-    title: "Electrical Check",
-    customer: "Best Services",
-    workerId: "3",
-    startTime: "10:00",
-    endTime: "12:00",
-    status: "published",
-    location: "789 Pine Rd",
-  },
-];
-
-const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 8 PM
-
 const statusColors = {
-  draft: "bg-muted border-muted-foreground",
-  published: "bg-info/10 border-info",
-  checked_in: "bg-warning/10 border-warning",
-  completed: "bg-success/10 border-success",
-  cancelled: "bg-destructive/10 border-destructive",
+  draft: "bg-muted text-muted-foreground",
+  published: "bg-info/10 text-info",
+  checked_in: "bg-warning/10 text-warning",
+  completed: "bg-success/10 text-success",
+  cancelled: "bg-destructive/10 text-destructive",
 };
 
-export default function SchedulerDayView({ currentDate }: SchedulerDayViewProps) {
-  const [activeId, setActiveId] = useState<string | null>(null);
+const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+export default function SchedulerDayView({ 
+  currentDate,
+  appointments,
+  onAppointmentClick,
+  onEditAppointment
+}: SchedulerDayViewProps) {
+  const queryClient = useQueryClient();
+  const [gpsDialogOpen, setGpsDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+
+  const todayAppointments = appointments.filter(apt =>
+    isSameDay(new Date(apt.start_time), currentDate)
+  ).sort((a, b) => 
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  );
+
+  const handleGPSCheckIn = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setGpsDialogOpen(true);
   };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    if (over && active.id !== over.id) {
-      console.log(`Moving appointment ${active.id} to worker ${over.id}`);
-      // TODO: Update appointment assignment in database
-    }
-    
-    setActiveId(null);
-  };
-
-  const activeAppointment = mockAppointments.find(apt => apt.id === activeId);
 
   return (
-    <DndContext
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <>
+      {selectedAppointment && (
+        <GPSCheckInDialog
+          open={gpsDialogOpen}
+          onOpenChange={setGpsDialogOpen}
+          appointment={selectedAppointment}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["appointments"] });
+          }}
+        />
+      )}
+      
       <div className="space-y-4">
-        {/* Time grid */}
-        <div className="grid grid-cols-[100px_1fr] gap-4">
-          {/* Time labels */}
-          <div className="space-y-[60px] pt-12">
-            {hours.map(hour => (
-              <div key={hour} className="text-sm text-muted-foreground text-right pr-2">
-                {format(new Date().setHours(hour, 0), "h:mm a")}
-              </div>
-            ))}
-          </div>
+        {/* Timeline view */}
+        <div className="border border-border rounded-lg overflow-hidden">
+          {hours.map(hour => {
+            const hourAppointments = todayAppointments.filter(apt => {
+              const startHour = new Date(apt.start_time).getHours();
+              return startHour === hour;
+            });
 
-          {/* Workers columns */}
-          <div className="grid grid-cols-4 gap-4">
-            {mockWorkers.map(worker => (
-              <div key={worker.id} className="space-y-2">
-                {/* Worker header */}
-                <div className="sticky top-0 bg-background z-10 pb-2 border-b border-border">
-                  <div className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    {worker.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{worker.role}</div>
+            return (
+              <div 
+                key={hour} 
+                className="grid grid-cols-[80px_1fr] border-b border-border last:border-b-0"
+              >
+                {/* Time label */}
+                <div className="p-3 bg-muted/50 border-r border-border">
+                  <span className="text-sm font-medium">
+                    {format(new Date().setHours(hour, 0), "HH:mm")}
+                  </span>
                 </div>
 
-                {/* Time slots */}
-                <div className="relative h-[720px] bg-muted/20 rounded-lg border border-border">
-                  {/* Hourly grid lines */}
-                  {hours.map((hour, idx) => (
+                {/* Appointments in this hour */}
+                <div className="p-2 min-h-[60px] space-y-2">
+                  {hourAppointments.map(apt => (
                     <div
-                      key={hour}
-                      className="absolute w-full border-t border-border/50"
-                      style={{ top: `${idx * 60}px` }}
-                    />
-                  ))}
-
-                  {/* Appointments */}
-                  {mockAppointments
-                    .filter(apt => apt.workerId === worker.id)
-                    .map(apt => {
-                      const [startHour, startMin] = apt.startTime.split(":").map(Number);
-                      const [endHour, endMin] = apt.endTime.split(":").map(Number);
-                      const top = (startHour - 8) * 60 + startMin;
-                      const height = (endHour - startHour) * 60 + (endMin - startMin);
-
-                      return (
-                        <div
-                          key={apt.id}
-                          className={cn(
-                            "absolute left-1 right-1 p-2 rounded border-l-4 cursor-move hover:shadow-md transition-shadow",
-                            statusColors[apt.status as keyof typeof statusColors]
+                      key={apt.id}
+                      className={cn(
+                        "p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow group relative",
+                        statusColors[apt.status as keyof typeof statusColors]
+                      )}
+                      onClick={() => onAppointmentClick(apt.id)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm truncate">{apt.title}</h4>
+                          <div className="flex items-center gap-3 mt-2 text-xs">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {format(new Date(apt.start_time), "HH:mm")} - 
+                              {format(new Date(apt.end_time), "HH:mm")}
+                            </span>
+                            {apt.profiles && (
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {apt.profiles.first_name} {apt.profiles.last_name}
+                              </span>
+                            )}
+                            {apt.location_address && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {apt.location_address.split(',')[0]}
+                              </span>
+                            )}
+                          </div>
+                          {apt.service_orders && (
+                            <div className="mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {apt.service_orders.order_number}
+                              </Badge>
+                            </div>
                           )}
-                          style={{ top: `${top}px`, height: `${height}px` }}
-                        >
-                          <div className="text-xs font-medium truncate">{apt.title}</div>
-                          <div className="text-xs text-muted-foreground truncate">{apt.customer}</div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Clock className="h-3 w-3" />
-                            <span className="text-xs">{apt.startTime} - {apt.endTime}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            <span className="text-xs truncate">{apt.location}</span>
-                          </div>
                         </div>
-                      );
-                    })}
+
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                onEditAppointment(apt.id);
+                              }}>
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                handleGPSCheckIn(apt);
+                              }}>
+                                {apt.check_in_time ? "Check Out" : "GPS Check In"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                onAppointmentClick(apt.id);
+                              }}>
+                                View History
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </div>
 
-      <DragOverlay>
-        {activeAppointment && (
-          <div className={cn(
-            "p-3 rounded shadow-lg border-l-4 bg-card",
-            statusColors[activeAppointment.status as keyof typeof statusColors]
-          )}>
-            <div className="text-sm font-medium">{activeAppointment.title}</div>
-            <div className="text-xs text-muted-foreground">{activeAppointment.customer}</div>
+        {todayAppointments.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            No appointments scheduled for this day
           </div>
         )}
-      </DragOverlay>
-    </DndContext>
+      </div>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,59 @@ import { cn } from "@/lib/utils";
 import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
 import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
+import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
+import AuditDrawer from "@/components/audit/AuditDrawer";
+import PresenceIndicator from "@/components/presence/PresenceIndicator";
+import RemoteCursors from "@/components/presence/RemoteCursors";
+import { usePresence } from "@/hooks/usePresence";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function Scheduler() {
   const [viewType, setViewType] = useState<"day" | "week" | "month">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
+  const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  
+  const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      updateCursorPosition(e.clientX, e.clientY);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [updateCursorPosition]);
+
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ["appointments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          service_orders(order_number, title),
+          profiles!appointments_assigned_to_fkey(first_name, last_name)
+        `)
+        .order("start_time", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const todayAppointments = appointments.filter(apt => 
+    isSameDay(new Date(apt.start_time), new Date())
+  );
+  
+  const checkedInAppointments = appointments.filter(apt => 
+    apt.status === "checked_in"
+  );
+  
+  const uniqueTechnicians = new Set(appointments.map(apt => apt.assigned_to).filter(Boolean));
+  const activeWorkers = uniqueTechnicians.size;
 
   const handlePrevious = () => {
     if (viewType === "day") {
@@ -51,21 +100,52 @@ export default function Scheduler() {
     }
   };
 
+  const handleCreateAppointment = () => {
+    setEditingAppointmentId(undefined);
+    setDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (!dialogOpen) {
+      setEditingAppointmentId(undefined);
+    }
+  }, [dialogOpen]);
+
   return (
     <DashboardLayout>
+      <RemoteCursors users={onlineUsers} />
+      
+      {selectedAppointment && (
+        <AuditDrawer 
+          tableName="appointments" 
+          recordId={selectedAppointment}
+          recordTitle={`Appointment ${appointments.find((a: any) => a.id === selectedAppointment)?.title}`}
+        />
+      )}
+
+      <AppointmentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        appointmentId={editingAppointmentId}
+        defaultDate={currentDate}
+      />
+      
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Scheduler</h1>
             <p className="text-muted-foreground mt-2">
-              Drag and drop to assign appointments to workers
+              Manage appointments with GPS check-in/out
             </p>
           </div>
-          <Button className="gap-2">
-            <Clock className="h-4 w-4" />
-            New Appointment
-          </Button>
+          <div className="flex items-center gap-2">
+            <PresenceIndicator users={onlineUsers} />
+            <Button className="gap-2" onClick={handleCreateAppointment}>
+              <Clock className="h-4 w-4" />
+              New Appointment
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -76,8 +156,10 @@ export default function Scheduler() {
               <Calendar className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">4 pending assignments</p>
+              <div className="text-2xl font-bold">{todayAppointments.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {todayAppointments.filter(a => !a.assigned_to).length} pending assignments
+              </p>
             </CardContent>
           </Card>
           <Card className="shadow-md">
@@ -86,8 +168,10 @@ export default function Scheduler() {
               <Users className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">8</div>
-              <p className="text-xs text-muted-foreground">2 on break</p>
+              <div className="text-2xl font-bold">{activeWorkers}</div>
+              <p className="text-xs text-muted-foreground">
+                {appointments.filter(a => a.status === "draft" || a.status === "published").length} scheduled
+              </p>
             </CardContent>
           </Card>
           <Card className="shadow-md">
@@ -96,8 +180,10 @@ export default function Scheduler() {
               <MapPin className="h-4 w-4 text-info" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">5</div>
-              <p className="text-xs text-muted-foreground">3 in transit</p>
+              <div className="text-2xl font-bold">{checkedInAppointments.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {appointments.filter(a => a.status === "completed").length} completed today
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -141,9 +227,45 @@ export default function Scheduler() {
             </div>
           </CardHeader>
           <CardContent>
-            {viewType === "day" && <SchedulerDayView currentDate={currentDate} />}
-            {viewType === "week" && <SchedulerWeekView currentDate={currentDate} />}
-            {viewType === "month" && <SchedulerMonthView currentDate={currentDate} />}
+            {isLoading ? (
+              <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
+            ) : (
+              <>
+                {viewType === "day" && (
+                  <SchedulerDayView 
+                    currentDate={currentDate} 
+                    appointments={appointments}
+                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                  />
+                )}
+                {viewType === "week" && (
+                  <SchedulerWeekView 
+                    currentDate={currentDate}
+                    appointments={appointments}
+                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                  />
+                )}
+                {viewType === "month" && (
+                  <SchedulerMonthView 
+                    currentDate={currentDate}
+                    appointments={appointments}
+                    onAppointmentClick={(id) => setSelectedAppointment(id)}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                  />
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -160,7 +282,7 @@ export default function Scheduler() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-info"></div>
-                <span className="text-sm">Published</span>
+                <span className="text-sm">Scheduled</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-warning"></div>

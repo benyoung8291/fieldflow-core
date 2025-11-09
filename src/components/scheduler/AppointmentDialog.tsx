@@ -1,0 +1,516 @@
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, MapPin } from "lucide-react";
+import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
+import PresenceIndicator from "@/components/presence/PresenceIndicator";
+import RemoteCursors from "@/components/presence/RemoteCursors";
+import { usePresence } from "@/hooks/usePresence";
+
+interface AppointmentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  appointmentId?: string;
+  defaultDate?: Date;
+  defaultServiceOrderId?: string;
+}
+
+export default function AppointmentDialog({ 
+  open, 
+  onOpenChange, 
+  appointmentId,
+  defaultDate,
+  defaultServiceOrderId
+}: AppointmentDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
+  const [serviceOrders, setServiceOrders] = useState<any[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
+  const [currentField, setCurrentField] = useState<string>("");
+  
+  const { onlineUsers, updateField, updateCursorPosition } = usePresence({
+    page: "appointment-dialog",
+    field: currentField,
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      updateCursorPosition(e.clientX, e.clientY);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [open, updateCursorPosition]);
+  
+  const [formData, setFormData] = useState({
+    service_order_id: defaultServiceOrderId || "",
+    title: "",
+    description: "",
+    start_time: "",
+    end_time: "",
+    assigned_to: "",
+    status: "draft",
+    location_address: "",
+    location_lat: "",
+    location_lng: "",
+    gps_check_in_radius: "100",
+    notes: "",
+  });
+
+  useEffect(() => {
+    if (open) {
+      fetchServiceOrders();
+      fetchTechnicians();
+      if (appointmentId) {
+        fetchAppointment();
+      } else {
+        resetForm();
+        if (defaultDate) {
+          const dateStr = defaultDate.toISOString().slice(0, 16);
+          setFormData(prev => ({ ...prev, start_time: dateStr }));
+        }
+      }
+    }
+  }, [open, appointmentId, defaultDate]);
+
+  const fetchServiceOrders = async () => {
+    const { data, error } = await supabase
+      .from("service_orders")
+      .select("id, order_number, title")
+      .in("status", ["scheduled", "in_progress"])
+      .order("order_number");
+    
+    if (error) {
+      toast({ title: "Error fetching service orders", variant: "destructive" });
+    } else {
+      setServiceOrders(data || []);
+    }
+  };
+
+  const fetchTechnicians = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name");
+    
+    if (error) {
+      toast({ title: "Error fetching technicians", variant: "destructive" });
+    } else {
+      setTechnicians(data || []);
+    }
+  };
+
+  const fetchAppointment = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("id", appointmentId)
+      .single();
+    
+    if (error) {
+      toast({ title: "Error fetching appointment", variant: "destructive" });
+    } else if (data) {
+      setFormData({
+        service_order_id: data.service_order_id || "",
+        title: data.title || "",
+        description: data.description || "",
+        start_time: data.start_time?.slice(0, 16) || "",
+        end_time: data.end_time?.slice(0, 16) || "",
+        assigned_to: data.assigned_to || "",
+        status: data.status || "draft",
+        location_address: data.location_address || "",
+        location_lat: data.location_lat?.toString() || "",
+        location_lng: data.location_lng?.toString() || "",
+        gps_check_in_radius: data.gps_check_in_radius?.toString() || "100",
+        notes: data.notes || "",
+      });
+    }
+    setLoading(false);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      service_order_id: defaultServiceOrderId || "",
+      title: "",
+      description: "",
+      start_time: "",
+      end_time: "",
+      assigned_to: "",
+      status: "draft",
+      location_address: "",
+      location_lat: "",
+      location_lng: "",
+      gps_check_in_radius: "100",
+      notes: "",
+    });
+  };
+
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({
+            ...prev,
+            location_lat: position.coords.latitude.toString(),
+            location_lng: position.coords.longitude.toString(),
+          }));
+          toast({ title: "Location captured successfully" });
+        },
+        (error) => {
+          toast({ 
+            title: "Error getting location", 
+            description: error.message,
+            variant: "destructive" 
+          });
+        }
+      );
+    } else {
+      toast({ 
+        title: "Geolocation not supported", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Not authenticated", variant: "destructive" });
+        return;
+      }
+
+      const appointmentData: any = {
+        service_order_id: formData.service_order_id || null,
+        title: formData.title,
+        description: formData.description,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        assigned_to: formData.assigned_to || null,
+        status: formData.status,
+        location_address: formData.location_address,
+        location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
+        location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
+        gps_check_in_radius: parseInt(formData.gps_check_in_radius),
+        notes: formData.notes,
+      };
+
+      if (!appointmentId) {
+        appointmentData.created_by = user.id;
+      }
+
+      if (appointmentId) {
+        const { error } = await supabase
+          .from("appointments")
+          .update(appointmentData)
+          .eq("id", appointmentId);
+
+        if (error) throw error;
+        toast({ title: "Appointment updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from("appointments")
+          .insert([appointmentData]);
+
+        if (error) throw error;
+        toast({ title: "Appointment created successfully" });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({ 
+        title: "Error saving appointment", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <RemoteCursors users={onlineUsers} />
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <DialogTitle>{appointmentId ? "Edit" : "Create"} Appointment</DialogTitle>
+            <PresenceIndicator users={onlineUsers} />
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <FieldPresenceWrapper fieldName="service_order_id" onlineUsers={onlineUsers}>
+            <div className="space-y-2">
+              <Label htmlFor="service_order_id">Service Order (Optional)</Label>
+              <Select 
+                value={formData.service_order_id} 
+                onValueChange={(value) => {
+                  setFormData({ ...formData, service_order_id: value });
+                  setCurrentField("service_order_id");
+                  updateField("service_order_id");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Link to service order" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceOrders.map((order) => (
+                    <SelectItem key={order.id} value={order.id}>
+                      {order.order_number} - {order.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </FieldPresenceWrapper>
+
+          <FieldPresenceWrapper fieldName="title" onlineUsers={onlineUsers}>
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onFocus={() => {
+                  setCurrentField("title");
+                  updateField("title");
+                }}
+                required
+              />
+            </div>
+          </FieldPresenceWrapper>
+
+          <FieldPresenceWrapper fieldName="description" onlineUsers={onlineUsers}>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onFocus={() => {
+                  setCurrentField("description");
+                  updateField("description");
+                }}
+                rows={2}
+              />
+            </div>
+          </FieldPresenceWrapper>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FieldPresenceWrapper fieldName="start_time" onlineUsers={onlineUsers}>
+              <div className="space-y-2">
+                <Label htmlFor="start_time">Start Time *</Label>
+                <Input
+                  id="start_time"
+                  type="datetime-local"
+                  value={formData.start_time}
+                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  onFocus={() => {
+                    setCurrentField("start_time");
+                    updateField("start_time");
+                  }}
+                  required
+                />
+              </div>
+            </FieldPresenceWrapper>
+
+            <FieldPresenceWrapper fieldName="end_time" onlineUsers={onlineUsers}>
+              <div className="space-y-2">
+                <Label htmlFor="end_time">End Time *</Label>
+                <Input
+                  id="end_time"
+                  type="datetime-local"
+                  value={formData.end_time}
+                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  onFocus={() => {
+                    setCurrentField("end_time");
+                    updateField("end_time");
+                  }}
+                  required
+                />
+              </div>
+            </FieldPresenceWrapper>
+          </div>
+
+          <FieldPresenceWrapper fieldName="assigned_to" onlineUsers={onlineUsers}>
+            <div className="space-y-2">
+              <Label htmlFor="assigned_to">Assigned To</Label>
+              <Select 
+                value={formData.assigned_to} 
+                onValueChange={(value) => {
+                  setFormData({ ...formData, assigned_to: value });
+                  setCurrentField("assigned_to");
+                  updateField("assigned_to");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.first_name} {tech.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </FieldPresenceWrapper>
+
+          <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select 
+                value={formData.status} 
+                onValueChange={(value) => {
+                  setFormData({ ...formData, status: value });
+                  setCurrentField("status");
+                  updateField("status");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="checked_in">Checked In</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </FieldPresenceWrapper>
+
+          <div className="space-y-4 p-4 border border-border rounded-lg">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">GPS Location</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGetCurrentLocation}
+                className="gap-2"
+              >
+                <MapPin className="h-4 w-4" />
+                Get Current Location
+              </Button>
+            </div>
+
+            <FieldPresenceWrapper fieldName="location_address" onlineUsers={onlineUsers}>
+              <div className="space-y-2">
+                <Label htmlFor="location_address">Address</Label>
+                <Input
+                  id="location_address"
+                  value={formData.location_address}
+                  onChange={(e) => setFormData({ ...formData, location_address: e.target.value })}
+                  onFocus={() => {
+                    setCurrentField("location_address");
+                    updateField("location_address");
+                  }}
+                  placeholder="Job site address"
+                />
+              </div>
+            </FieldPresenceWrapper>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FieldPresenceWrapper fieldName="location_lat" onlineUsers={onlineUsers}>
+                <div className="space-y-2">
+                  <Label htmlFor="location_lat">Latitude</Label>
+                  <Input
+                    id="location_lat"
+                    type="number"
+                    step="0.000001"
+                    value={formData.location_lat}
+                    onChange={(e) => setFormData({ ...formData, location_lat: e.target.value })}
+                    onFocus={() => {
+                      setCurrentField("location_lat");
+                      updateField("location_lat");
+                    }}
+                    placeholder="-33.8688"
+                  />
+                </div>
+              </FieldPresenceWrapper>
+
+              <FieldPresenceWrapper fieldName="location_lng" onlineUsers={onlineUsers}>
+                <div className="space-y-2">
+                  <Label htmlFor="location_lng">Longitude</Label>
+                  <Input
+                    id="location_lng"
+                    type="number"
+                    step="0.000001"
+                    value={formData.location_lng}
+                    onChange={(e) => setFormData({ ...formData, location_lng: e.target.value })}
+                    onFocus={() => {
+                      setCurrentField("location_lng");
+                      updateField("location_lng");
+                    }}
+                    placeholder="151.2093"
+                  />
+                </div>
+              </FieldPresenceWrapper>
+            </div>
+
+            <FieldPresenceWrapper fieldName="gps_check_in_radius" onlineUsers={onlineUsers}>
+              <div className="space-y-2">
+                <Label htmlFor="gps_check_in_radius">Check-in Radius (meters)</Label>
+                <Input
+                  id="gps_check_in_radius"
+                  type="number"
+                  value={formData.gps_check_in_radius}
+                  onChange={(e) => setFormData({ ...formData, gps_check_in_radius: e.target.value })}
+                  onFocus={() => {
+                    setCurrentField("gps_check_in_radius");
+                    updateField("gps_check_in_radius");
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Technician must be within this radius to check in
+                </p>
+              </div>
+            </FieldPresenceWrapper>
+          </div>
+
+          <FieldPresenceWrapper fieldName="notes" onlineUsers={onlineUsers}>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                onFocus={() => {
+                  setCurrentField("notes");
+                  updateField("notes");
+                }}
+                rows={2}
+              />
+            </div>
+          </FieldPresenceWrapper>
+
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {appointmentId ? "Update" : "Create"} Appointment
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
