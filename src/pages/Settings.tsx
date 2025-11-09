@@ -14,16 +14,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, DollarSign, Trash2 } from "lucide-react";
-import QuoteTemplatesTab from "@/components/settings/QuoteTemplatesTab";
-import MessageTemplatesTab from "@/components/settings/MessageTemplatesTab";
-import TermsTemplatesTab from "@/components/settings/TermsTemplatesTab";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
 import MenuCustomizationTab from "@/components/settings/MenuCustomizationTab";
-import TaskTemplatesTab from "@/components/settings/TaskTemplatesTab";
 import { RolePermissionsTab } from "@/components/settings/RolePermissionsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { ChangeLogTab } from "@/components/settings/ChangeLogTab";
+import { TemplatesTab } from "@/components/settings/TemplatesTab";
+import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
 
 interface PayRateCategory {
   id: string;
@@ -175,11 +173,9 @@ export default function Settings() {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
-            <TabsTrigger value="task-templates">Task Templates</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
-            <TabsTrigger value="quote-templates">Quote Templates</TabsTrigger>
-            <TabsTrigger value="message-templates">Messages</TabsTrigger>
-            <TabsTrigger value="terms-templates">Terms & Conditions</TabsTrigger>
+            <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
             <TabsTrigger value="changelog">Change Log</TabsTrigger>
           </TabsList>
 
@@ -285,10 +281,10 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="task-templates">
+          <TabsContent value="templates">
             <Card>
               <CardContent className="pt-6">
-                <TaskTemplatesTab />
+                <TemplatesTab />
               </CardContent>
             </Card>
           </TabsContent>
@@ -301,26 +297,10 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="quote-templates">
+          <TabsContent value="activity-log">
             <Card>
               <CardContent className="pt-6">
-                <QuoteTemplatesTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="message-templates">
-            <Card>
-              <CardContent className="pt-6">
-                <MessageTemplatesTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="terms-templates">
-            <Card>
-              <CardContent className="pt-6">
-                <TermsTemplatesTab />
+                <ActivityLogTab />
               </CardContent>
             </Card>
           </TabsContent>
