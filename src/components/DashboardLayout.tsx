@@ -123,75 +123,79 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
         sidebarCollapsed ? "lg:w-20" : "lg:w-64"
       )}>
-        <div className="flex flex-1 flex-col gap-y-5 px-6 py-8">
-          <div className={cn(
-            "flex items-center",
-            sidebarCollapsed ? "justify-center" : "justify-between"
-          )}>
-            {!sidebarCollapsed && (
-              <div className="flex items-center gap-3">
+        <div className="flex flex-col h-full">
+          <div className="flex-1 flex flex-col gap-y-5 px-6 py-8">
+            <div className={cn(
+              "flex items-center",
+              sidebarCollapsed ? "justify-center" : "justify-between"
+            )}>
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-lg">FF</span>
+                  </div>
+                  <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
+                </div>
+              )}
+              {sidebarCollapsed && (
                 <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-lg">FF</span>
                 </div>
-                <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
-              </div>
-            )}
-            {sidebarCollapsed && (
-              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">FF</span>
-              </div>
-            )}
-            {!sidebarCollapsed && (
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <User className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate("/settings")}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        await supabase.auth.signOut();
-                        navigate("/auth");
-                        toast.success("Signed out successfully");
-                      }}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
+              )}
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <User className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => navigate("/settings")}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          await supabase.auth.signOut();
+                          navigate("/auth");
+                          toast.success("Signed out successfully");
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+            </div>
+            <nav className="flex flex-1 flex-col gap-2 overflow-y-auto">
+              {renderMenuContent()}
+            </nav>
           </div>
-          <nav className="flex flex-1 flex-col gap-2">
-            {renderMenuContent()}
-          </nav>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={cn(
-              "mt-auto",
-              sidebarCollapsed ? "px-2" : ""
-            )}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Collapse
-              </>
-            )}
-          </Button>
+          <div className="border-t border-sidebar-border px-6 py-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={cn(
+                "w-full",
+                sidebarCollapsed ? "px-2" : ""
+              )}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Collapse
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </aside>
 
