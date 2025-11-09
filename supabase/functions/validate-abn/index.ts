@@ -103,6 +103,7 @@ serve(async (req) => {
     
     const businessEntitySection = businessEntityTag[1];
     console.log('BusinessEntity section extracted, length:', businessEntitySection.length);
+    console.log('Last 800 chars of BusinessEntity section:', businessEntitySection.slice(-800));
     
     // Check if businessName tags exist
     const businessNameCount = (businessEntitySection.match(/<businessName>/g) || []).length;
