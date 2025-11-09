@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen, Upload, X, FileText } from "lucide-react";
 import { z } from "zod";
 import PriceBookDialog from "./PriceBookDialog";
@@ -64,10 +64,38 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     notes: "",
     terms_conditions: "",
     internal_notes: "",
+    customer_message: "",
   });
 
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  // Fetch templates
+  const { data: messageTemplates = [] } = useQuery({
+    queryKey: ["customer-message-templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customer_message_templates")
+        .select("*")
+        .order("is_default", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  const { data: termsTemplates = [] } = useQuery({
+    queryKey: ["terms-conditions-templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("terms_conditions_templates")
+        .select("*")
+        .order("is_default", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { 
@@ -143,6 +171,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         notes: quoteData.notes || "",
         terms_conditions: quoteData.terms_conditions || "",
         internal_notes: quoteData.internal_notes || "",
+        customer_message: quoteData.customer_message || "",
       });
 
       // Fetch attachments
@@ -202,6 +231,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       notes: "",
       terms_conditions: "",
       internal_notes: "",
+      customer_message: "",
     });
     setLineItems([{ 
       description: "", 
@@ -535,6 +565,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         notes: formData.notes || null,
         terms_conditions: formData.terms_conditions || null,
         internal_notes: formData.internal_notes || null,
+        customer_message: formData.customer_message || null,
       };
 
       let savedQuoteId = quoteId;
@@ -716,6 +747,54 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
               {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="customer_message">Customer Message</Label>
+                {messageTemplates.length > 0 && (
+                  <Select onValueChange={(value) => {
+                    const template = messageTemplates.find(t => t.id === value);
+                    if (template) {
+                      setFormData({ ...formData, customer_message: template.content });
+                    }
+                  }}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Load template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {messageTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <Textarea
+                id="customer_message"
+                value={formData.customer_message}
+                onChange={(e) => setFormData({ ...formData, customer_message: e.target.value })}
+                rows={8}
+                placeholder="Thank you for the opportunity to quote...
+
+SCOPE OF WORKS:
+- Item 1
+- Item 2
+
+INCLUSIONS:
+- Included item 1
+
+EXCLUSIONS:
+- Excluded item 1
+
+PRODUCTS:
+- Product 1"
+              />
+              <p className="text-xs text-muted-foreground">
+                This message will appear on the PDF above the line items
+              </p>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Line Items {isComplexQuote && "& Takeoffs"}</Label>
@@ -754,9 +833,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                           <TableHead className="w-[100px] text-right">Margin %</TableHead>
                           <TableHead className="w-[120px] text-right">Sell</TableHead>
                         </>
-                      )}
+                       )}
                       {!isComplexQuote && (
-                        <TableHead className="w-[120px] text-right">Unit Price</TableHead>
+                        <>
+                          <TableHead className="w-[120px] text-right">Cost</TableHead>
+                          <TableHead className="w-[100px] text-right">Margin %</TableHead>
+                          <TableHead className="w-[120px] text-right">Sell</TableHead>
+                        </>
                       )}
                       <TableHead className="w-[120px] text-right">Total</TableHead>
                       <TableHead className="w-[120px] text-right">Actions</TableHead>
@@ -833,15 +916,35 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                             </>
                           )}
                           {!isComplexQuote && (
-                            <TableCell>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={item.sell_price}
-                                onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
-                                className="border-0 focus-visible:ring-0 text-right bg-transparent"
-                              />
-                            </TableCell>
+                            <>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.cost_price}
+                                  onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.margin_percentage}
+                                  onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.sell_price}
+                                  onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                                  className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                                />
+                              </TableCell>
+                            </>
                           )}
                           <TableCell className="text-right font-medium">
                             ${item.line_total.toFixed(2)}
@@ -1015,7 +1118,28 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="terms_conditions">Terms & Conditions</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="terms_conditions">Terms & Conditions</Label>
+                {termsTemplates.length > 0 && (
+                  <Select onValueChange={(value) => {
+                    const template = termsTemplates.find(t => t.id === value);
+                    if (template) {
+                      setFormData({ ...formData, terms_conditions: template.content });
+                    }
+                  }}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Load template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {termsTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <Textarea
                 id="terms_conditions"
                 value={formData.terms_conditions}

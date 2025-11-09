@@ -16,8 +16,10 @@ import {
   Calendar,
   Download,
   Lock,
+  Mail,
 } from "lucide-react";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
+import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -37,6 +39,7 @@ export default function QuoteDetails() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [convertType, setConvertType] = useState<"service_order" | "project">("service_order");
 
@@ -308,6 +311,10 @@ export default function QuoteDetails() {
                 Convert to Order
               </Button>
             )}
+            <Button variant="outline" onClick={() => setPdfDialogOpen(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              PDF / Email
+            </Button>
             <Button onClick={() => setDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit
@@ -545,6 +552,13 @@ export default function QuoteDetails() {
       </div>
 
       <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quoteId={id} />
+
+      <QuotePDFDialog 
+        open={pdfDialogOpen} 
+        onOpenChange={setPdfDialogOpen} 
+        quoteId={id!}
+        customerEmail={quote.customer?.email}
+      />
 
       <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
         <AlertDialogContent>

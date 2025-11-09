@@ -12,7 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, DollarSign, Trash2 } from "lucide-react";
+import QuoteTemplatesTab from "@/components/settings/QuoteTemplatesTab";
+import MessageTemplatesTab from "@/components/settings/MessageTemplatesTab";
+import TermsTemplatesTab from "@/components/settings/TermsTemplatesTab";
 
 interface PayRateCategory {
   id: string;
@@ -157,17 +161,26 @@ export default function Settings() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Pay Rate Categories</CardTitle>
-              <Button onClick={() => setIsDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+        <Tabs defaultValue="pay-rates" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
+            <TabsTrigger value="quote-templates">Quote Templates</TabsTrigger>
+            <TabsTrigger value="message-templates">Messages</TabsTrigger>
+            <TabsTrigger value="terms-templates">Terms & Conditions</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pay-rates">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Pay Rate Categories</CardTitle>
+                  <Button onClick={() => setIsDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Category
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
             {isLoading ? (
               <div className="text-center py-8">Loading...</div>
             ) : (
@@ -226,8 +239,34 @@ export default function Settings() {
                 </TableBody>
               </Table>
             )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quote-templates">
+            <Card>
+              <CardContent className="pt-6">
+                <QuoteTemplatesTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="message-templates">
+            <Card>
+              <CardContent className="pt-6">
+                <MessageTemplatesTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="terms-templates">
+            <Card>
+              <CardContent className="pt-6">
+                <TermsTemplatesTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent>
