@@ -88,8 +88,18 @@ serve(async (req) => {
       throw new Error(exceptionDescription || 'ABR API returned an error');
     }
 
-    // Check if business entity exists - the XML uses <businessEntity> not <businessEntity202001>
-    let businessEntityTag = xmlText.match(/<businessEntity>([\s\S]+)<\/businessEntity>/i);
+    // Extract the entire response section after <response> tag
+    const responseMatch = xmlText.match(/<response>([\s\S]+)<\/response>/i);
+    if (!responseMatch) {
+      console.error('No response section found');
+      throw new Error('Invalid ABR API response format');
+    }
+    
+    const responseSection = responseMatch[1];
+    console.log('Response section extracted, length:', responseSection.length);
+    
+    // Now extract businessEntity from the response section
+    const businessEntityTag = responseSection.match(/<businessEntity[^>]*>([\s\S]+)<\/businessEntity[^>]*>/i);
     
     if (!businessEntityTag) {
       console.error('No businessEntity tag found in response');
@@ -98,7 +108,6 @@ serve(async (req) => {
     
     const businessEntitySection = businessEntityTag[1];
     console.log('BusinessEntity section extracted, length:', businessEntitySection.length);
-    console.log('Last 800 chars of BusinessEntity section:', businessEntitySection.slice(-800));
     
     // Check if businessName tags exist
     const businessNameCount = (businessEntitySection.match(/<businessName>/g) || []).length;
