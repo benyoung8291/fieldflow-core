@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen, Upload, X, FileText, Sparkles, UserPlus } from "lucide-react";
+import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, BookOpen, Upload, X, FileText, Sparkles, UserPlus, Save } from "lucide-react";
 import { z } from "zod";
 import PriceBookDialog from "./PriceBookDialog";
 import AILineItemMatcher from "./AILineItemMatcher";
 import CreateLeadDialog from "../leads/CreateLeadDialog";
+import QuoteItemTemplatesDialog from "./QuoteItemTemplatesDialog";
+import SaveAsTemplateDialog from "./SaveAsTemplateDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 
@@ -64,6 +66,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   const [aiMatcherOpen, setAiMatcherOpen] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [tenantId, setTenantId] = useState("");
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -894,6 +898,16 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                       Price Book
                     </Button>
                   )}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesDialogOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Load Template
+                  </Button>
+                  {lineItems.length > 0 && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setSaveTemplateOpen(true)}>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save as Template
+                    </Button>
+                  )}
                   <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Item
@@ -1342,6 +1356,67 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
           fetchCustomersAndLeads();
           toast({ title: `Lead "${leadName}" created and selected` });
         }}
+      />
+
+      <QuoteItemTemplatesDialog
+        open={templatesDialogOpen}
+        onOpenChange={setTemplatesDialogOpen}
+        onSelectTemplate={async (templateId) => {
+          try {
+            // Fetch template lines
+            const { data: templateLines, error } = await supabase
+              .from('quote_item_template_lines')
+              .select('*')
+              .eq('template_id', templateId)
+              .order('item_order');
+
+            if (error) throw error;
+
+            if (templateLines && templateLines.length > 0) {
+              // Build hierarchical structure
+              const parentLines = templateLines.filter(line => !line.parent_line_item_id);
+              const newItems = parentLines.map((parent: any) => {
+                const subItems = templateLines
+                  .filter((line: any) => line.parent_line_item_id === parent.id)
+                  .map((sub: any) => ({
+                    description: sub.description,
+                    quantity: sub.quantity.toString(),
+                    cost_price: sub.cost_price.toString(),
+                    margin_percentage: sub.margin_percentage.toString(),
+                    sell_price: sub.sell_price.toString(),
+                    line_total: sub.quantity * sub.sell_price,
+                  }));
+
+                return {
+                  description: parent.description,
+                  quantity: parent.quantity.toString(),
+                  cost_price: parent.cost_price.toString(),
+                  margin_percentage: parent.margin_percentage.toString(),
+                  sell_price: parent.sell_price.toString(),
+                  line_total: parent.quantity * parent.sell_price,
+                  subItems,
+                  expanded: subItems.length > 0,
+                };
+              });
+
+              setLineItems([...lineItems, ...newItems]);
+              toast({ title: 'Template loaded successfully' });
+            }
+          } catch (error: any) {
+            toast({
+              title: 'Error loading template',
+              description: error.message,
+              variant: 'destructive',
+            });
+          }
+        }}
+      />
+
+      <SaveAsTemplateDialog
+        open={saveTemplateOpen}
+        onOpenChange={setSaveTemplateOpen}
+        lineItems={lineItems}
+        quoteType={isComplexQuote ? 'complex' : 'simple'}
       />
     </>
   );

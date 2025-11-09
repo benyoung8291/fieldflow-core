@@ -1048,6 +1048,98 @@ export type Database = {
           },
         ]
       }
+      quote_item_template_lines: {
+        Row: {
+          cost_price: number | null
+          created_at: string | null
+          description: string
+          id: string
+          is_from_price_book: boolean | null
+          item_order: number
+          margin_percentage: number | null
+          notes: string | null
+          parent_line_item_id: string | null
+          price_book_item_id: string | null
+          quantity: number
+          sell_price: number
+          template_id: string
+        }
+        Insert: {
+          cost_price?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          margin_percentage?: number | null
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          quantity?: number
+          sell_price?: number
+          template_id: string
+        }
+        Update: {
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          margin_percentage?: number | null
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          quantity?: number
+          sell_price?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_item_template_lines_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "quote_item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_item_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          quote_type: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          quote_type?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          quote_type?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       quote_line_items: {
         Row: {
           cost_price: number | null
