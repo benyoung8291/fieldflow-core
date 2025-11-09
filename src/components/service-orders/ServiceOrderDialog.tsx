@@ -6,15 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Loader2, Plus, Trash2, Upload, FileText, Calendar, MapPin, User } from "lucide-react";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import ServiceOrderTemplatesDialog from "./ServiceOrderTemplatesDialog";
+import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
+import QuickContactDialog from "@/components/customers/QuickContactDialog";
+import PriceBookDialog from "@/components/quotes/PriceBookDialog";
+import { Badge } from "@/components/ui/badge";
 
 interface LineItem {
   id?: string;
@@ -22,8 +28,18 @@ interface LineItem {
   quantity: number;
   unit_price: number;
   line_total: number;
+  estimated_hours: number;
   item_order: number;
   notes?: string;
+  price_book_item_id?: string;
+}
+
+interface Attachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_size: number;
+  created_at: string;
 }
 
 interface ServiceOrderDialogProps {
@@ -40,17 +56,45 @@ export default function ServiceOrderDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [currentField, setCurrentField] = useState<string>("");
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+  const [priceBookDialogOpen, setPriceBookDialogOpen] = useState(false);
+  const [quickLocationOpen, setQuickLocationOpen] = useState(false);
+  const [quickContactOpen, setQuickContactOpen] = useState(false);
+  const [taxRate, setTaxRate] = useState<number>(10);
   
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
     page: "service-order-dialog",
     field: currentField,
   });
+
+  // Fetch tax rate from settings
+  const { data: settings } = useQuery({
+    queryKey: ["general-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings" as any)
+        .select("default_tax_rate")
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as unknown as { default_tax_rate: number } | null;
+    },
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (settings?.default_tax_rate) {
+      setTaxRate(settings.default_tax_rate);
+    }
+  }, [settings]);
 
   useEffect(() => {
     if (!open) return;
@@ -78,7 +122,6 @@ export default function ServiceOrderDialog({
     preferred_date: "",
     preferred_date_start: "",
     preferred_date_end: "",
-    tax_rate: "10",
   });
 
   useEffect(() => {
@@ -148,50 +191,84 @@ export default function ServiceOrderDialog({
 
   const fetchOrder = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("service_orders")
-      .select("*, service_order_line_items(*)")
-      .eq("id", orderId)
-      .single();
-    
-    if (error) {
-      toast({ title: "Error fetching order", variant: "destructive" });
-    } else if (data) {
-      setFormData({
-        customer_id: data.customer_id || "",
-        customer_location_id: data.customer_location_id || "",
-        customer_contact_id: data.customer_contact_id || "",
-        project_id: data.project_id || "",
-        title: data.title || "",
-        description: data.description || "",
-        work_order_number: data.work_order_number || "",
-        purchase_order_number: data.purchase_order_number || "",
-        status: data.status || "draft",
-        priority: data.priority || "normal",
-        skill_required: data.skill_required || "",
-        preferred_date: data.preferred_date || "",
-        preferred_date_start: data.preferred_date_start || "",
-        preferred_date_end: data.preferred_date_end || "",
-        tax_rate: data.tax_rate?.toString() || "10",
-      });
+    try {
+      // Fetch service order
+      const { data: orderData, error: orderError } = await supabase
+        .from("service_orders")
+        .select("*")
+        .eq("id", orderId)
+        .single();
+      
+      if (orderError) throw orderError;
 
-      if (data.service_order_line_items) {
-        setLineItems(
-          data.service_order_line_items
-            .sort((a: any, b: any) => a.item_order - b.item_order)
-            .map((item: any) => ({
+      // Fetch line items
+      const { data: lineItemsData } = await supabase
+        .from("service_order_line_items")
+        .select("*")
+        .eq("service_order_id", orderId)
+        .order("item_order");
+
+      // Fetch attachments
+      const { data: attachmentsData } = await supabase
+        .from("service_order_attachments" as any)
+        .select("*")
+        .eq("service_order_id", orderId)
+        .order("created_at", { ascending: false });
+
+      // Fetch appointments
+      const { data: appointmentsData } = await supabase
+        .from("appointments")
+        .select("id, title, start_time, status")
+        .eq("service_order_id", orderId)
+        .order("start_time");
+      
+      if (orderData) {
+        setFormData({
+          customer_id: orderData.customer_id || "",
+          customer_location_id: orderData.customer_location_id || "",
+          customer_contact_id: orderData.customer_contact_id || "",
+          project_id: orderData.project_id || "",
+          title: orderData.title || "",
+          description: orderData.description || "",
+          work_order_number: orderData.work_order_number || "",
+          purchase_order_number: orderData.purchase_order_number || "",
+          status: orderData.status || "draft",
+          priority: orderData.priority || "normal",
+          skill_required: orderData.skill_required || "",
+          preferred_date: orderData.preferred_date || "",
+          preferred_date_start: orderData.preferred_date_start || "",
+          preferred_date_end: orderData.preferred_date_end || "",
+        });
+
+        if (lineItemsData) {
+          setLineItems(
+            lineItemsData.map((item: any) => ({
               id: item.id,
               description: item.description,
               quantity: item.quantity,
               unit_price: item.unit_price,
               line_total: item.line_total,
+              estimated_hours: item.estimated_hours || 0,
               item_order: item.item_order,
               notes: item.notes,
+              price_book_item_id: item.price_book_item_id,
             }))
-        );
+          );
+        }
+
+        if (attachmentsData) {
+          setAttachments(attachmentsData as unknown as Attachment[]);
+        }
+
+        if (appointmentsData) {
+          setAppointments(appointmentsData);
+        }
       }
+    } catch (error: any) {
+      toast({ title: "Error fetching order", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const resetForm = () => {
@@ -210,9 +287,10 @@ export default function ServiceOrderDialog({
       preferred_date: "",
       preferred_date_start: "",
       preferred_date_end: "",
-      tax_rate: "10",
     });
     setLineItems([]);
+    setAttachments([]);
+    setAppointments([]);
     setProjects([]);
     setLocations([]);
     setContacts([]);
@@ -226,6 +304,7 @@ export default function ServiceOrderDialog({
         quantity: 1,
         unit_price: 0,
         line_total: 0,
+        estimated_hours: 0,
         item_order: lineItems.length,
       },
     ]);
@@ -249,12 +328,147 @@ export default function ServiceOrderDialog({
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
+  const handlePriceBookSelect = (item: any) => {
+    const newItem = {
+      description: item.description,
+      quantity: 1,
+      unit_price: item.sell_price,
+      line_total: item.sell_price,
+      estimated_hours: 0,
+      item_order: lineItems.length,
+      price_book_item_id: item.id,
+    };
+    setLineItems([...lineItems, newItem]);
+  };
+
+  const handleTemplateSelect = async (templateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("service_order_template_line_items" as any)
+        .select("*")
+        .eq("template_id", templateId)
+        .order("item_order");
+
+      if (error) throw error;
+
+      const { data: template } = await supabase
+        .from("service_order_templates" as any)
+        .select("name, description, skill_required")
+        .eq("id", templateId)
+        .single();
+
+      if (template) {
+        const t = template as unknown as { name: string; description: string; skill_required: string };
+        setFormData({
+          ...formData,
+          title: t.name,
+          description: t.description || "",
+          skill_required: t.skill_required || "",
+        });
+      }
+
+      if (data) {
+        const newItems = data.map((item: any, index: number) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          line_total: item.quantity * item.unit_price,
+          estimated_hours: item.estimated_hours || 0,
+          item_order: lineItems.length + index,
+          notes: item.notes,
+          price_book_item_id: item.price_book_item_id,
+        }));
+        setLineItems([...lineItems, ...newItems]);
+      }
+
+      toast({ title: "Template applied successfully" });
+    } catch (error: any) {
+      toast({ title: "Error applying template", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !orderId) return;
+
+    setUploading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${orderId}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('service-order-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('service-order-attachments')
+          .getPublicUrl(fileName);
+
+        const { error: dbError } = await supabase
+          .from("service_order_attachments" as any)
+          .insert({
+            service_order_id: orderId,
+            tenant_id: profile?.tenant_id,
+            file_name: file.name,
+            file_url: publicUrl,
+            file_type: file.type,
+            file_size: file.size,
+            uploaded_by: user.id,
+          });
+
+        if (dbError) throw dbError;
+      }
+
+      toast({ title: "Files uploaded successfully" });
+      fetchOrder();
+    } catch (error: any) {
+      toast({ title: "Error uploading files", description: error.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string, fileUrl: string) => {
+    try {
+      // Extract file path from URL
+      const urlParts = fileUrl.split('/');
+      const filePath = urlParts.slice(-2).join('/');
+
+      await supabase.storage
+        .from('service-order-attachments')
+        .remove([filePath]);
+
+      await supabase
+        .from("service_order_attachments" as any)
+        .delete()
+        .eq("id", attachmentId);
+
+      toast({ title: "Attachment deleted" });
+      fetchOrder();
+    } catch (error: any) {
+      toast({ title: "Error deleting attachment", description: error.message, variant: "destructive" });
+    }
+  };
+
   const calculateTotals = () => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
-    const taxRate = parseFloat(formData.tax_rate) || 0;
     const taxAmount = (subtotal * taxRate) / 100;
     const total = subtotal + taxAmount;
-    return { subtotal, taxAmount, total };
+    const totalHours = lineItems.reduce((sum, item) => sum + (item.estimated_hours || 0), 0);
+    return { subtotal, taxAmount, total, totalHours };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -294,9 +508,10 @@ export default function ServiceOrderDialog({
         billing_type: "fixed",
         fixed_amount: totals.total,
         subtotal: totals.subtotal,
-        tax_rate: parseFloat(formData.tax_rate),
+        tax_rate: taxRate,
         tax_amount: totals.taxAmount,
         total_amount: totals.total,
+        total_estimated_hours: totals.totalHours,
       };
 
       if (!orderId) {
@@ -339,8 +554,10 @@ export default function ServiceOrderDialog({
           quantity: item.quantity,
           unit_price: item.unit_price,
           line_total: item.line_total,
+          estimated_hours: item.estimated_hours || 0,
           item_order: index,
           notes: item.notes || null,
+          price_book_item_id: item.price_book_item_id || null,
         }));
 
         const { error: lineError } = await supabase
@@ -367,429 +584,626 @@ export default function ServiceOrderDialog({
   const totals = calculateTotals();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <RemoteCursors users={onlineUsers} />
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle>{orderId ? "Edit" : "Create"} Service Order</DialogTitle>
-            <PresenceIndicator users={onlineUsers} />
-          </div>
-        </DialogHeader>
+    <>
+      <ServiceOrderTemplatesDialog
+        open={templatesDialogOpen}
+        onOpenChange={setTemplatesDialogOpen}
+        onSelectTemplate={handleTemplateSelect}
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <FieldPresenceWrapper fieldName="customer_id" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="customer_id">Customer *</Label>
-                <Select 
-                  value={formData.customer_id} 
-                  onValueChange={(value) => {
-                    setFormData({ 
-                      ...formData, 
-                      customer_id: value, 
-                      customer_location_id: "",
-                      customer_contact_id: "",
-                      project_id: "" 
-                    });
-                    setCurrentField("customer_id");
-                    updateField("customer_id");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldPresenceWrapper>
+      <PriceBookDialog
+        open={priceBookDialogOpen}
+        onOpenChange={setPriceBookDialogOpen}
+        onSelectItem={handlePriceBookSelect}
+      />
 
-            <FieldPresenceWrapper fieldName="customer_location_id" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="customer_location_id">Location</Label>
-                <Select 
-                  value={formData.customer_location_id} 
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, customer_location_id: value });
-                    setCurrentField("customer_location_id");
-                    updateField("customer_location_id");
-                  }}
-                  disabled={!formData.customer_id || locations.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name} {location.address && `- ${location.address}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldPresenceWrapper>
-          </div>
+      {formData.customer_id && (
+        <>
+          <QuickLocationDialog
+            open={quickLocationOpen}
+            onOpenChange={setQuickLocationOpen}
+            customerId={formData.customer_id}
+            onLocationCreated={(locationId) => {
+              setFormData({ ...formData, customer_location_id: locationId });
+              fetchCustomerRelatedData(formData.customer_id);
+            }}
+          />
 
-          <div className="grid grid-cols-2 gap-4">
-            <FieldPresenceWrapper fieldName="customer_contact_id" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="customer_contact_id">Contact</Label>
-                <Select 
-                  value={formData.customer_contact_id} 
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, customer_contact_id: value });
-                    setCurrentField("customer_contact_id");
-                    updateField("customer_contact_id");
-                  }}
-                  disabled={!formData.customer_id || contacts.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select contact" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contacts.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.first_name} {contact.last_name}
-                        {contact.email && ` (${contact.email})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldPresenceWrapper>
+          <QuickContactDialog
+            open={quickContactOpen}
+            onOpenChange={setQuickContactOpen}
+            customerId={formData.customer_id}
+            onContactCreated={(contactId) => {
+              setFormData({ ...formData, customer_contact_id: contactId });
+              fetchCustomerRelatedData(formData.customer_id);
+            }}
+          />
+        </>
+      )}
 
-            <FieldPresenceWrapper fieldName="project_id" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="project_id">Project (Optional)</Label>
-                <Select 
-                  value={formData.project_id} 
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, project_id: value });
-                    setCurrentField("project_id");
-                    updateField("project_id");
-                  }}
-                  disabled={!formData.customer_id || projects.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldPresenceWrapper>
-          </div>
-
-          <FieldPresenceWrapper fieldName="title" onlineUsers={onlineUsers}>
-            <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                onFocus={() => {
-                  setCurrentField("title");
-                  updateField("title");
-                }}
-                required
-              />
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <RemoteCursors users={onlineUsers} />
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <DialogTitle>{orderId ? "Edit" : "Create"} Service Order</DialogTitle>
+              <PresenceIndicator users={onlineUsers} />
             </div>
-          </FieldPresenceWrapper>
+          </DialogHeader>
 
-          <FieldPresenceWrapper fieldName="description" onlineUsers={onlineUsers}>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                onFocus={() => {
-                  setCurrentField("description");
-                  updateField("description");
-                }}
-                rows={3}
-              />
-            </div>
-          </FieldPresenceWrapper>
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="line-items">Line Items</TabsTrigger>
+              {orderId && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
+              {orderId && <TabsTrigger value="appointments">Appointments</TabsTrigger>}
+            </TabsList>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FieldPresenceWrapper fieldName="work_order_number" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="work_order_number">Work Order Number</Label>
-                <Input
-                  id="work_order_number"
-                  value={formData.work_order_number}
-                  onChange={(e) => setFormData({ ...formData, work_order_number: e.target.value })}
-                  onFocus={() => {
-                    setCurrentField("work_order_number");
-                    updateField("work_order_number");
-                  }}
-                  placeholder="WO-12345"
-                />
-              </div>
-            </FieldPresenceWrapper>
+            <form onSubmit={handleSubmit}>
+              <TabsContent value="details" className="space-y-4 mt-4">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTemplatesDialogOpen(true)}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Use Template
+                  </Button>
+                </div>
 
-            <FieldPresenceWrapper fieldName="purchase_order_number" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="purchase_order_number">Purchase Order Number</Label>
-                <Input
-                  id="purchase_order_number"
-                  value={formData.purchase_order_number}
-                  onChange={(e) => setFormData({ ...formData, purchase_order_number: e.target.value })}
-                  onFocus={() => {
-                    setCurrentField("purchase_order_number");
-                    updateField("purchase_order_number");
-                  }}
-                  placeholder="PO-12345"
-                />
-              </div>
-            </FieldPresenceWrapper>
-          </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FieldPresenceWrapper fieldName="customer_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="customer_id">Customer *</Label>
+                      <Select 
+                        value={formData.customer_id} 
+                        onValueChange={(value) => {
+                          setFormData({ 
+                            ...formData, 
+                            customer_id: value, 
+                            customer_location_id: "",
+                            customer_contact_id: "",
+                            project_id: "" 
+                          });
+                          setCurrentField("customer_id");
+                          updateField("customer_id");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
 
-          <div className="grid grid-cols-3 gap-4">
-            <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select 
-                  value={formData.status} 
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, status: value });
-                    setCurrentField("status");
-                    updateField("status");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldPresenceWrapper>
-
-            <FieldPresenceWrapper fieldName="priority" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select 
-                  value={formData.priority} 
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, priority: value });
-                    setCurrentField("priority");
-                    updateField("priority");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldPresenceWrapper>
-
-            <FieldPresenceWrapper fieldName="skill_required" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="skill_required">Skill Required</Label>
-                <Input
-                  id="skill_required"
-                  value={formData.skill_required}
-                  onChange={(e) => setFormData({ ...formData, skill_required: e.target.value })}
-                  onFocus={() => {
-                    setCurrentField("skill_required");
-                    updateField("skill_required");
-                  }}
-                  placeholder="e.g., Electrician"
-                />
-              </div>
-            </FieldPresenceWrapper>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <FieldPresenceWrapper fieldName="preferred_date" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="preferred_date">Preferred Date</Label>
-                <Input
-                  id="preferred_date"
-                  type="date"
-                  value={formData.preferred_date}
-                  onChange={(e) => setFormData({ ...formData, preferred_date: e.target.value })}
-                  onFocus={() => {
-                    setCurrentField("preferred_date");
-                    updateField("preferred_date");
-                  }}
-                />
-              </div>
-            </FieldPresenceWrapper>
-
-            <FieldPresenceWrapper fieldName="preferred_date_start" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="preferred_date_start">Date Range Start</Label>
-                <Input
-                  id="preferred_date_start"
-                  type="date"
-                  value={formData.preferred_date_start}
-                  onChange={(e) => setFormData({ ...formData, preferred_date_start: e.target.value })}
-                  onFocus={() => {
-                    setCurrentField("preferred_date_start");
-                    updateField("preferred_date_start");
-                  }}
-                />
-              </div>
-            </FieldPresenceWrapper>
-
-            <FieldPresenceWrapper fieldName="preferred_date_end" onlineUsers={onlineUsers}>
-              <div className="space-y-2">
-                <Label htmlFor="preferred_date_end">Date Range End</Label>
-                <Input
-                  id="preferred_date_end"
-                  type="date"
-                  value={formData.preferred_date_end}
-                  onChange={(e) => setFormData({ ...formData, preferred_date_end: e.target.value })}
-                  onFocus={() => {
-                    setCurrentField("preferred_date_end");
-                    updateField("preferred_date_end");
-                  }}
-                />
-              </div>
-            </FieldPresenceWrapper>
-          </div>
-
-          {/* Line Items Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Line Items</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-
-            {lineItems.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40%]">Description</TableHead>
-                      <TableHead className="w-[15%]">Quantity</TableHead>
-                      <TableHead className="w-[15%]">Unit Price</TableHead>
-                      <TableHead className="w-[15%]">Total</TableHead>
-                      <TableHead className="w-[10%]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lineItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <Input
-                            value={item.description}
-                            onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                            placeholder="Item description"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.quantity}
-                            onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => updateLineItem(index, "unit_price", e.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          ${item.line_total.toFixed(2)}
-                        </TableCell>
-                        <TableCell>
+                  <FieldPresenceWrapper fieldName="customer_location_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="customer_location_id">Location</Label>
+                        {formData.customer_id && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeLineItem(index)}
+                            onClick={() => setQuickLocationOpen(true)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
+                        )}
+                      </div>
+                      <Select 
+                        value={formData.customer_location_id} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, customer_location_id: value });
+                          setCurrentField("customer_location_id");
+                          updateField("customer_location_id");
+                        }}
+                        disabled={!formData.customer_id || locations.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name} {location.address && `- ${location.address}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+                </div>
 
-          {/* Totals Section */}
-          <div className="flex justify-end">
-            <div className="w-64 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span>${totals.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span>Tax Rate (%):</span>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.tax_rate}
-                  onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                  className="w-20 h-8"
-                />
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax Amount:</span>
-                <span>${totals.taxAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>${totals.total.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FieldPresenceWrapper fieldName="customer_contact_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="customer_contact_id">Contact</Label>
+                        {formData.customer_id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setQuickContactOpen(true)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add
+                          </Button>
+                        )}
+                      </div>
+                      <Select 
+                        value={formData.customer_contact_id} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, customer_contact_id: value });
+                          setCurrentField("customer_contact_id");
+                          updateField("customer_contact_id");
+                        }}
+                        disabled={!formData.customer_id || contacts.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select contact" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contacts.map((contact) => (
+                            <SelectItem key={contact.id} value={contact.id}>
+                              {contact.first_name} {contact.last_name}
+                              {contact.email && ` (${contact.email})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
 
-          <div className="flex gap-2 justify-end border-t pt-4">
-            {orderId && (
-              <CreateTaskButton
-                linkedModule="service_order"
-                linkedRecordId={orderId}
-                variant="outline"
-                size="default"
-              />
-            )}
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {orderId ? "Update" : "Create"} Order
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+                  <FieldPresenceWrapper fieldName="project_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="project_id">Project (Optional)</Label>
+                      <Select 
+                        value={formData.project_id} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, project_id: value });
+                          setCurrentField("project_id");
+                          updateField("project_id");
+                        }}
+                        disabled={!formData.customer_id || projects.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+                </div>
+
+                <FieldPresenceWrapper fieldName="title" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title *</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("title");
+                        updateField("title");
+                      }}
+                      required
+                    />
+                  </div>
+                </FieldPresenceWrapper>
+
+                <FieldPresenceWrapper fieldName="description" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("description");
+                        updateField("description");
+                      }}
+                      rows={3}
+                    />
+                  </div>
+                </FieldPresenceWrapper>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FieldPresenceWrapper fieldName="work_order_number" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="work_order_number">Work Order Number</Label>
+                      <Input
+                        id="work_order_number"
+                        value={formData.work_order_number}
+                        onChange={(e) => setFormData({ ...formData, work_order_number: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("work_order_number");
+                          updateField("work_order_number");
+                        }}
+                        placeholder="WO-12345"
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="purchase_order_number" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="purchase_order_number">Purchase Order Number</Label>
+                      <Input
+                        id="purchase_order_number"
+                        value={formData.purchase_order_number}
+                        onChange={(e) => setFormData({ ...formData, purchase_order_number: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("purchase_order_number");
+                          updateField("purchase_order_number");
+                        }}
+                        placeholder="PO-12345"
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select 
+                        value={formData.status} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, status: value });
+                          setCurrentField("status");
+                          updateField("status");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="scheduled">Scheduled</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="priority" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="priority">Priority</Label>
+                      <Select 
+                        value={formData.priority} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, priority: value });
+                          setCurrentField("priority");
+                          updateField("priority");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="skill_required" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="skill_required">Skill Required</Label>
+                      <Input
+                        id="skill_required"
+                        value={formData.skill_required}
+                        onChange={(e) => setFormData({ ...formData, skill_required: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("skill_required");
+                          updateField("skill_required");
+                        }}
+                        placeholder="e.g., Electrician"
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FieldPresenceWrapper fieldName="preferred_date" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred_date">Preferred Date</Label>
+                      <Input
+                        id="preferred_date"
+                        type="date"
+                        value={formData.preferred_date}
+                        onChange={(e) => setFormData({ ...formData, preferred_date: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("preferred_date");
+                          updateField("preferred_date");
+                        }}
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="preferred_date_start" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred_date_start">Date Range Start</Label>
+                      <Input
+                        id="preferred_date_start"
+                        type="date"
+                        value={formData.preferred_date_start}
+                        onChange={(e) => setFormData({ ...formData, preferred_date_start: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("preferred_date_start");
+                          updateField("preferred_date_start");
+                        }}
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="preferred_date_end" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="preferred_date_end">Date Range End</Label>
+                      <Input
+                        id="preferred_date_end"
+                        type="date"
+                        value={formData.preferred_date_end}
+                        onChange={(e) => setFormData({ ...formData, preferred_date_end: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("preferred_date_end");
+                          updateField("preferred_date_end");
+                        }}
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="line-items" className="space-y-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <Label>Line Items</Label>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setPriceBookDialogOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Add from Price Book
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Item
+                    </Button>
+                  </div>
+                </div>
+
+                {lineItems.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[30%]">Description</TableHead>
+                          <TableHead className="w-[12%]">Quantity</TableHead>
+                          <TableHead className="w-[12%]">Unit Price</TableHead>
+                          <TableHead className="w-[12%]">Est. Hours</TableHead>
+                          <TableHead className="w-[12%]">Total</TableHead>
+                          <TableHead className="w-[10%]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lineItems.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Input
+                                value={item.description}
+                                onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                                placeholder="Item description"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.quantity}
+                                onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.unit_price}
+                                onChange={(e) => updateLineItem(index, "unit_price", e.target.value)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.25"
+                                value={item.estimated_hours}
+                                onChange={(e) => updateLineItem(index, "estimated_hours", e.target.value)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              ${item.line_total.toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeLineItem(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <div className="w-80 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal:</span>
+                      <span>${totals.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Tax ({taxRate}%):</span>
+                      <span>${totals.taxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold border-t pt-2">
+                      <span>Total:</span>
+                      <span>${totals.total.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Est. Total Hours:</span>
+                      <span>{totals.totalHours.toFixed(2)} hrs</span>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {orderId && (
+                <TabsContent value="attachments" className="space-y-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Attachments</Label>
+                    <div>
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        disabled={uploading}
+                      >
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-2" />
+                        )}
+                        Upload Files
+                      </Button>
+                    </div>
+                  </div>
+
+                  {attachments.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No attachments yet. Upload files to get started.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {attachments.map((attachment) => (
+                        <div key={attachment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">{attachment.file_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {(attachment.file_size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(attachment.file_url, '_blank')}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteAttachment(attachment.id, attachment.file_url)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              )}
+
+              {orderId && (
+                <TabsContent value="appointments" className="space-y-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Linked Appointments</Label>
+                    <Badge variant="outline">{appointments.length} Linked</Badge>
+                  </div>
+
+                  {appointments.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No appointments linked yet. Create appointments from the Scheduler page.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {appointments.map((appointment: any) => (
+                        <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">{appointment.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(appointment.start_time).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge>{appointment.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              )}
+
+              <div className="flex gap-2 justify-end border-t pt-4 mt-4">
+                {orderId && (
+                  <CreateTaskButton
+                    linkedModule="service_order"
+                    linkedRecordId={orderId}
+                    variant="outline"
+                    size="default"
+                  />
+                )}
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {orderId ? "Update" : "Create"} Order
+                </Button>
+              </div>
+            </form>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

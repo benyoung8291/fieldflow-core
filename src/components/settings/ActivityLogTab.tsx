@@ -56,6 +56,10 @@ const tableLabels: Record<string, string> = {
   lead_activities: "Lead Activity",
   quote_line_items: "Quote Line Item",
   tasks: "Task",
+  service_order_templates: "Service Order Template",
+  service_order_line_items: "Service Order Line Item",
+  service_order_attachments: "Service Order Attachment",
+  general_settings: "General Settings",
 };
 
 function formatFieldName(fieldName: string): string {
