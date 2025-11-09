@@ -1,49 +1,86 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  Users, 
-  Calendar,
-  Warehouse,
-  FileText,
-  Settings,
-  LogOut,
-  Menu,
-  UserPlus,
-  BarChart3,
-  Kanban,
-  FileCheck
-} from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useCustomMenu } from "@/hooks/useCustomMenu";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Pipeline", href: "/pipeline", icon: Kanban },
-  { name: "Quotes", href: "/quotes", icon: FileText },
-  { name: "Projects", href: "/projects", icon: FileText },
-  { name: "Service Orders", href: "/service-orders", icon: ClipboardList },
-  { name: "Service Contracts", href: "/service-contracts", icon: FileCheck },
-  { name: "Customers", href: "/customers", icon: Users },
-  { name: "Leads", href: "/leads", icon: UserPlus },
-  { name: "Scheduler", href: "/scheduler", icon: Calendar },
-  { name: "Workers", href: "/workers", icon: Users },
-  { name: "Warehouse", href: "/warehouse", icon: Warehouse },
-  { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
-
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { menuItems } = useCustomMenu();
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  const toggleFolder = (folderId: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId);
+    } else {
+      newExpanded.add(folderId);
+    }
+    setExpandedFolders(newExpanded);
+  };
+
+  const renderMenuItem = (item: any, isMobile = false) => {
+    const Icon = item.iconComponent;
+    const isActive = item.path && location.pathname === item.path;
+    const isExpanded = expandedFolders.has(item.id);
+
+    if (item.is_folder) {
+      return (
+        <div key={item.id}>
+          <button
+            onClick={() => toggleFolder(item.id)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full",
+              "text-sidebar-foreground hover:bg-sidebar-accent"
+            )}
+          >
+            <Icon className="h-5 w-5" />
+            <span className="flex-1 text-left">{item.label}</span>
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+          {isExpanded && item.children && (
+            <div className="ml-8 mt-1 space-y-1">
+              {item.children.map((child: any) => renderMenuItem(child, isMobile))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          if (item.path) {
+            navigate(item.path);
+            if (isMobile) setSidebarOpen(false);
+          }
+        }}
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full",
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        {item.label}
+      </button>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,25 +94,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
           </div>
           <nav className="flex flex-1 flex-col gap-2">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => navigate(item.href)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.name}
-                </button>
-              );
-            })}
+            {menuItems.map((item) => renderMenuItem(item))}
           </nav>
           <Button
             variant="outline"
@@ -114,28 +133,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
               </div>
               <nav className="flex flex-1 flex-col gap-2">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <button
-                      key={item.name}
-                      onClick={() => {
-                        navigate(item.href);
-                        setSidebarOpen(false);
-                      }}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent"
-                      )}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.name}
-                    </button>
-                  );
-                })}
+                {menuItems.map((item) => renderMenuItem(item, true))}
               </nav>
             </div>
           </aside>

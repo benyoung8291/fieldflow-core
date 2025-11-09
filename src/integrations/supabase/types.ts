@@ -694,6 +694,59 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_items: {
+        Row: {
+          created_at: string | null
+          icon: string
+          id: string
+          is_folder: boolean | null
+          is_system: boolean | null
+          is_visible: boolean | null
+          item_order: number
+          label: string
+          parent_id: string | null
+          path: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon: string
+          id?: string
+          is_folder?: boolean | null
+          is_system?: boolean | null
+          is_visible?: boolean | null
+          item_order?: number
+          label: string
+          parent_id?: string | null
+          path?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string
+          id?: string
+          is_folder?: boolean | null
+          is_system?: boolean | null
+          is_visible?: boolean | null
+          item_order?: number
+          label?: string
+          parent_id?: string | null
+          path?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pay_rate_categories: {
         Row: {
           created_at: string | null
