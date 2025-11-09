@@ -10,51 +10,9 @@ import { useNavigate } from "react-router-dom";
 import { usePresence } from "@/hooks/usePresence";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
-
-const mockCustomers = [
-  {
-    id: "1",
-    name: "Acme Corporation",
-    tradingName: "Acme Corp",
-    legalName: "Acme Corporation Pty Ltd",
-    abn: "12 345 678 901",
-    email: "accounts@acme.com",
-    phone: "(02) 9123 4567",
-    city: "Sydney",
-    state: "NSW",
-    serviceOrders: 12,
-    subAccounts: 3,
-    isActive: true,
-  },
-  {
-    id: "2",
-    name: "Best Tech Industries",
-    tradingName: "Best Tech",
-    legalName: "Best Tech Industries Pty Ltd",
-    abn: "23 456 789 012",
-    email: "billing@besttech.com.au",
-    phone: "(03) 8765 4321",
-    city: "Melbourne",
-    state: "VIC",
-    serviceOrders: 8,
-    subAccounts: 0,
-    isActive: true,
-  },
-  {
-    id: "3",
-    name: "Metro Services Group",
-    tradingName: "Metro Services",
-    legalName: "Metro Services Group Pty Ltd",
-    abn: "34 567 890 123",
-    email: "admin@metro.com.au",
-    phone: "(07) 3456 7890",
-    city: "Brisbane",
-    state: "QLD",
-    serviceOrders: 15,
-    subAccounts: 5,
-    isActive: true,
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -65,6 +23,73 @@ export default function Customers() {
   const { onlineUsers, updateCursorPosition } = usePresence({
     page: "customers-list",
   });
+
+  // Fetch customers from database
+  const { data: customers = [], isLoading } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch service orders count for each customer
+  const { data: serviceOrderCounts = {} } = useQuery({
+    queryKey: ["customer-service-order-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("customer_id");
+      
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data?.forEach(order => {
+        counts[order.customer_id] = (counts[order.customer_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  // Fetch sub-accounts count (customers with parent_customer_id)
+  const { data: subAccountCounts = {} } = useQuery({
+    queryKey: ["customer-sub-account-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("parent_customer_id");
+      
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data?.forEach(customer => {
+        if (customer.parent_customer_id) {
+          counts[customer.parent_customer_id] = (counts[customer.parent_customer_id] || 0) + 1;
+        }
+      });
+      return counts;
+    },
+  });
+
+  // Filter customers based on search query
+  const filteredCustomers = customers.filter(customer => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      customer.name?.toLowerCase().includes(searchLower) ||
+      customer.email?.toLowerCase().includes(searchLower) ||
+      customer.phone?.toLowerCase().includes(searchLower) ||
+      customer.abn?.toLowerCase().includes(searchLower) ||
+      customer.trading_name?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const totalServiceOrders = Object.values(serviceOrderCounts).reduce((sum: number, count) => sum + (count as number), 0);
+  const totalSubAccounts = Object.values(subAccountCounts).reduce((sum: number, count) => sum + (count as number), 0);
 
   // Track mouse movement
   useEffect(() => {
@@ -119,7 +144,7 @@ export default function Customers() {
               <Building2 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockCustomers.length}</div>
+              <div className="text-2xl font-bold">{customers.filter(c => c.is_active).length}</div>
               <p className="text-xs text-muted-foreground">All active accounts</p>
             </CardContent>
           </Card>
@@ -129,9 +154,7 @@ export default function Customers() {
               <Users className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {mockCustomers.reduce((sum, c) => sum + c.subAccounts, 0)}
-              </div>
+              <div className="text-2xl font-bold">{totalSubAccounts}</div>
               <p className="text-xs text-muted-foreground">Linked accounts</p>
             </CardContent>
           </Card>
@@ -141,9 +164,7 @@ export default function Customers() {
               <FileText className="h-4 w-4 text-info" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {mockCustomers.reduce((sum, c) => sum + c.serviceOrders, 0)}
-              </div>
+              <div className="text-2xl font-bold">{totalServiceOrders}</div>
               <p className="text-xs text-muted-foreground">Service orders</p>
             </CardContent>
           </Card>
@@ -173,95 +194,107 @@ export default function Customers() {
             <CardTitle>All Customers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b border-border">
-                  <tr>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Customer
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      ABN
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Contact
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Location
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Orders
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Sub-Accounts
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockCustomers.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(customer.id)}
-                    >
-                      <td className="py-4 px-4">
-                        <div>
-                          <div className="font-medium">{customer.name}</div>
-                          {customer.tradingName !== customer.name && (
-                            <div className="text-sm text-muted-foreground">
-                              T/A {customer.tradingName}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm">{customer.abn}</td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">{customer.email}</div>
-                        <div className="text-sm text-muted-foreground">{customer.phone}</div>
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        {customer.city}, {customer.state}
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge variant="outline">{customer.serviceOrders}</Badge>
-                      </td>
-                      <td className="py-4 px-4">
-                        {customer.subAccounts > 0 ? (
-                          <Badge variant="secondary">{customer.subAccounts}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        {customer.isActive ? (
-                          <Badge className="bg-success/10 text-success">Active</Badge>
-                        ) : (
-                          <Badge className="bg-muted text-muted-foreground">Inactive</Badge>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(customer);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </td>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredCustomers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchQuery ? "No customers found matching your search" : "No customers yet. Click 'New Customer' to add one."}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b border-border">
+                    <tr>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Customer
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        ABN
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Contact
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Location
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Orders
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Sub-Accounts
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map((customer) => (
+                      <tr
+                        key={customer.id}
+                        className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(customer.id)}
+                      >
+                        <td className="py-4 px-4">
+                          <div>
+                            <div className="font-medium">{customer.name}</div>
+                            {customer.trading_name && customer.trading_name !== customer.name && (
+                              <div className="text-sm text-muted-foreground">
+                                T/A {customer.trading_name}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-sm">{customer.abn || '-'}</td>
+                        <td className="py-4 px-4">
+                          <div className="text-sm">{customer.email || '-'}</div>
+                          <div className="text-sm text-muted-foreground">{customer.phone || '-'}</div>
+                        </td>
+                        <td className="py-4 px-4 text-sm">
+                          {customer.city && customer.state 
+                            ? `${customer.city}, ${customer.state}` 
+                            : customer.city || customer.state || '-'}
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge variant="outline">{serviceOrderCounts[customer.id] || 0}</Badge>
+                        </td>
+                        <td className="py-4 px-4">
+                          {subAccountCounts[customer.id] ? (
+                            <Badge variant="secondary">{subAccountCounts[customer.id]}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          {customer.is_active ? (
+                            <Badge className="bg-success/10 text-success">Active</Badge>
+                          ) : (
+                            <Badge className="bg-muted text-muted-foreground">Inactive</Badge>
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(customer);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
