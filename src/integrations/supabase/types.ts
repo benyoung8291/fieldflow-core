@@ -101,50 +101,150 @@ export type Database = {
           },
         ]
       }
-      customers: {
+      customer_contacts: {
         Row: {
-          address: string | null
-          city: string | null
           created_at: string | null
+          customer_id: string
           email: string | null
+          first_name: string
           id: string
-          name: string
+          is_primary: boolean | null
+          last_name: string
+          mobile: string | null
           notes: string | null
           phone: string | null
-          postcode: string | null
-          state: string | null
+          position: string | null
           tenant_id: string
           updated_at: string | null
         }
         Insert: {
-          address?: string | null
-          city?: string | null
           created_at?: string | null
+          customer_id: string
           email?: string | null
+          first_name: string
           id?: string
-          name: string
+          is_primary?: boolean | null
+          last_name: string
+          mobile?: string | null
           notes?: string | null
           phone?: string | null
-          postcode?: string | null
-          state?: string | null
+          position?: string | null
           tenant_id: string
           updated_at?: string | null
         }
         Update: {
-          address?: string | null
-          city?: string | null
           created_at?: string | null
+          customer_id?: string
           email?: string | null
+          first_name?: string
           id?: string
-          name?: string
+          is_primary?: boolean | null
+          last_name?: string
+          mobile?: string | null
           notes?: string | null
           phone?: string | null
-          postcode?: string | null
-          state?: string | null
+          position?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_contacts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          abn: string | null
+          address: string | null
+          billing_address: string | null
+          billing_email: string | null
+          billing_phone: string | null
+          city: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          legal_company_name: string | null
+          name: string
+          notes: string | null
+          parent_customer_id: string | null
+          payment_terms: number | null
+          phone: string | null
+          postcode: string | null
+          state: string | null
+          tax_exempt: boolean | null
+          tenant_id: string
+          trading_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          abn?: string | null
+          address?: string | null
+          billing_address?: string | null
+          billing_email?: string | null
+          billing_phone?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          legal_company_name?: string | null
+          name: string
+          notes?: string | null
+          parent_customer_id?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          tax_exempt?: boolean | null
+          tenant_id: string
+          trading_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          abn?: string | null
+          address?: string | null
+          billing_address?: string | null
+          billing_email?: string | null
+          billing_phone?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          legal_company_name?: string | null
+          name?: string
+          notes?: string | null
+          parent_customer_id?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          tax_exempt?: boolean | null
+          tenant_id?: string
+          trading_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_parent_customer_id_fkey"
+            columns: ["parent_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customers_tenant_id_fkey"
             columns: ["tenant_id"]
