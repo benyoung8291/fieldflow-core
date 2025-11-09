@@ -18,6 +18,9 @@ import { usePresence } from "@/hooks/usePresence";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import RemoteCursors from "@/components/presence/RemoteCursors";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -26,6 +29,8 @@ interface CustomerDialogProps {
 }
 
 export default function CustomerDialog({ open, onOpenChange, customer }: CustomerDialogProps) {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
   const [currentField, setCurrentField] = useState<string>("");
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
     page: "customer-dialog",
@@ -68,8 +73,8 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
     if (customer) {
       setFormData({
         name: customer.name || "",
-        tradingName: customer.tradingName || "",
-        legalName: customer.legalName || "",
+        tradingName: customer.trading_name || "",
+        legalName: customer.legal_company_name || "",
         abn: customer.abn || "",
         email: customer.email || "",
         phone: customer.phone || "",
@@ -77,12 +82,12 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
         city: customer.city || "",
         state: customer.state || "",
         postcode: customer.postcode || "",
-        billingEmail: customer.billingEmail || "",
-        billingPhone: customer.billingPhone || "",
-        billingAddress: customer.billingAddress || "",
-        paymentTerms: customer.paymentTerms?.toString() || "30",
-        taxExempt: customer.taxExempt || false,
-        isActive: customer.isActive ?? true,
+        billingEmail: customer.billing_email || "",
+        billingPhone: customer.billing_phone || "",
+        billingAddress: customer.billing_address || "",
+        paymentTerms: customer.payment_terms?.toString() || "30",
+        taxExempt: customer.tax_exempt || false,
+        isActive: customer.is_active ?? true,
         notes: customer.notes || "",
       });
     } else {
@@ -109,14 +114,73 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
     }
   }, [customer, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // TODO: Save to database
-    console.log("Saving customer:", formData);
-    
-    toast.success(customer ? "Customer updated successfully" : "Customer created successfully");
-    onOpenChange(false);
+    setSaving(true);
+
+    try {
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      // Map form data to database columns (snake_case)
+      const customerData = {
+        name: formData.name,
+        trading_name: formData.tradingName || null,
+        legal_company_name: formData.legalName || null,
+        abn: formData.abn || null,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        state: formData.state || null,
+        postcode: formData.postcode || null,
+        billing_email: formData.billingEmail || null,
+        billing_phone: formData.billingPhone || null,
+        billing_address: formData.billingAddress || null,
+        payment_terms: parseInt(formData.paymentTerms, 10),
+        tax_exempt: formData.taxExempt,
+        is_active: formData.isActive,
+        notes: formData.notes || null,
+        tenant_id: profile.tenant_id,
+      };
+
+      if (customer) {
+        // Update existing customer
+        const { error } = await supabase
+          .from("customers")
+          .update(customerData)
+          .eq("id", customer.id);
+
+        if (error) throw error;
+        toast.success("Customer updated successfully");
+      } else {
+        // Create new customer
+        const { error } = await supabase
+          .from("customers")
+          .insert(customerData);
+
+        if (error) throw error;
+        toast.success("Customer created successfully");
+      }
+
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error saving customer:", error);
+      toast.error(error.message || "Failed to save customer");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCopyBillingAddress = () => {
@@ -401,11 +465,18 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
           </Tabs>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">
-              {customer ? "Update" : "Create"} Customer
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>{customer ? "Update" : "Create"} Customer</>
+              )}
             </Button>
           </div>
         </form>
