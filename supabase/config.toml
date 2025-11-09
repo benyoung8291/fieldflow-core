@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-contract-service-orders]
 verify_jwt = false
+
+[functions.suggest-workers]
+verify_jwt = true

@@ -2126,6 +2126,7 @@ export type Database = {
           customer_contact_id: string | null
           customer_id: string
           customer_location_id: string | null
+          date_range_end: string | null
           description: string | null
           estimated_hours: number | null
           fixed_amount: number | null
@@ -2164,6 +2165,7 @@ export type Database = {
           customer_contact_id?: string | null
           customer_id: string
           customer_location_id?: string | null
+          date_range_end?: string | null
           description?: string | null
           estimated_hours?: number | null
           fixed_amount?: number | null
@@ -2202,6 +2204,7 @@ export type Database = {
           customer_contact_id?: string | null
           customer_id?: string
           customer_location_id?: string | null
+          date_range_end?: string | null
           description?: string | null
           estimated_hours?: number | null
           fixed_amount?: number | null

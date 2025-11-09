@@ -519,6 +519,35 @@ export default function Scheduler() {
     }
   };
 
+  const handleSelectWorkerForOrder = async (
+    workerId: string, 
+    serviceOrderId: string, 
+    suggestedDate?: string
+  ) => {
+    const serviceOrder = serviceOrders.find(so => so.id === serviceOrderId);
+    if (!serviceOrder) return;
+
+    const duration = serviceOrder.estimated_hours || 2;
+    const startDate = suggestedDate ? new Date(suggestedDate) : new Date(currentDate);
+    startDate.setHours(9, 0, 0, 0); // Default to 9 AM
+    
+    const endDate = new Date(startDate);
+    endDate.setHours(startDate.getHours() + duration);
+
+    try {
+      await createAppointmentMutation.mutateAsync({
+        serviceOrderId,
+        startTime: startDate,
+        endTime: endDate,
+        workerId,
+      });
+      toast.success("Appointment scheduled with recommended worker");
+    } catch (error) {
+      console.error("Error scheduling appointment:", error);
+      toast.error("Failed to schedule appointment");
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -929,7 +958,7 @@ export default function Scheduler() {
 
           {/* Draggable Service Orders Sidebar */}
           <div>
-            <ServiceOrdersSidebar />
+            <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
           </div>
         </div>
       </DndContext>
