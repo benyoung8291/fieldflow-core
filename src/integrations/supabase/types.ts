@@ -368,6 +368,7 @@ export type Database = {
           id: string
           order_number: string
           priority: string | null
+          project_id: string | null
           scheduled_date: string | null
           status: Database["public"]["Enums"]["service_order_status"] | null
           tenant_id: string
@@ -387,6 +388,7 @@ export type Database = {
           id?: string
           order_number: string
           priority?: string | null
+          project_id?: string | null
           scheduled_date?: string | null
           status?: Database["public"]["Enums"]["service_order_status"] | null
           tenant_id: string
@@ -406,6 +408,7 @@ export type Database = {
           id?: string
           order_number?: string
           priority?: string | null
+          project_id?: string | null
           scheduled_date?: string | null
           status?: Database["public"]["Enums"]["service_order_status"] | null
           tenant_id?: string
@@ -416,6 +419,13 @@ export type Database = {
           {
             foreignKeyName: "service_orders_customer_id_fkey"
             columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_project_id_fkey"
+            columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
