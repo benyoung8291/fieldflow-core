@@ -419,7 +419,7 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
                   <FieldPresenceWrapper fieldName="tradingName" onlineUsers={onlineUsers}>
                     <div className="space-y-2">
                       <Label htmlFor="tradingName">Trading Name *</Label>
-                      {availableTradingNames.length > 0 ? (
+                      {abnValidated && (formData.legalName || availableTradingNames.length > 0) ? (
                         <Select
                           value={formData.tradingName}
                           onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
@@ -437,16 +437,25 @@ export default function CustomerDialog({ open, onOpenChange, customer }: Custome
                               updateField("");
                             }}
                           >
-                            <SelectValue placeholder="Select a trading name" />
+                            <SelectValue placeholder="Select a name" />
                           </SelectTrigger>
                           <SelectContent className="bg-background border border-border shadow-lg z-[100]">
+                            {formData.legalName && (
+                              <SelectItem 
+                                key={formData.legalName} 
+                                value={formData.legalName}
+                                className="cursor-pointer hover:bg-accent"
+                              >
+                                {formData.legalName} <span className="text-muted-foreground text-xs">(Legal Name)</span>
+                              </SelectItem>
+                            )}
                             {availableTradingNames.map((name) => (
                               <SelectItem 
                                 key={name} 
                                 value={name}
                                 className="cursor-pointer hover:bg-accent"
                               >
-                                {name}
+                                {name} <span className="text-muted-foreground text-xs">(Trading Name)</span>
                               </SelectItem>
                             ))}
                           </SelectContent>
