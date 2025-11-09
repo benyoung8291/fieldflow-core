@@ -1,11 +1,11 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Menu, User, Settings } from "lucide-react";
+import { LogOut, Menu, User, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -18,8 +18,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
   const { menuItems } = useCustomMenu();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -58,21 +66,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                sidebarCollapsed && !isMobile ? "justify-center px-2" : ""
               )}
+              title={sidebarCollapsed && !isMobile ? item.label : undefined}
             >
-              {item.is_folder && (
+              {item.is_folder && !sidebarCollapsed && (
                 <div className="mr-1">
-                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
                 </div>
               )}
               <Icon className="h-5 w-5" style={item.color ? { color: item.color } : undefined} />
-              {item.label}
+              {!sidebarCollapsed && item.label}
             </button>
           </div>
           
           {/* Render children when folder is expanded */}
-          {item.is_folder && isExpanded && children.length > 0 && (
+          {item.is_folder && isExpanded && children.length > 0 && !sidebarCollapsed && (
             <div className="ml-6 mt-1 space-y-1 border-l-2 border-sidebar-border pl-2">
               {children.map((child) => {
                 const childIsActive = child.path && location.pathname === child.path;
@@ -109,45 +119,79 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col bg-sidebar border-r border-sidebar-border">
+      <aside className={cn(
+        "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
+        sidebarCollapsed ? "lg:w-20" : "lg:w-64"
+      )}>
         <div className="flex flex-1 flex-col gap-y-5 px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className={cn(
+            "flex items-center",
+            sidebarCollapsed ? "justify-center" : "justify-between"
+          )}>
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold text-lg">FF</span>
+                </div>
+                <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
+              </div>
+            )}
+            {sidebarCollapsed && (
               <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">FF</span>
               </div>
-              <h1 className="text-xl font-bold text-sidebar-foreground">FieldFlow</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <User className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate("/settings")}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      await supabase.auth.signOut();
-                      navigate("/auth");
-                      toast.success("Signed out successfully");
-                    }}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            )}
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <User className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate("/settings")}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await supabase.auth.signOut();
+                        navigate("/auth");
+                        toast.success("Signed out successfully");
+                      }}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
           </div>
           <nav className="flex flex-1 flex-col gap-2">
             {renderMenuContent()}
           </nav>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={cn(
+              "mt-auto",
+              sidebarCollapsed ? "px-2" : ""
+            )}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Collapse
+              </>
+            )}
+          </Button>
         </div>
       </aside>
 
@@ -214,7 +258,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="lg:pl-64">
+      <main className={cn(
+        "transition-all duration-300",
+        sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+      )}>
         <div className="px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
           {children}
         </div>
