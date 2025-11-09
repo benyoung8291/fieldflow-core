@@ -80,6 +80,55 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
     return profile?.tenant_id;
   };
 
+  const toggleAllDay = useMutation({
+    mutationFn: async (dayOfWeek: number) => {
+      const tenant_id = await getTenantId();
+      const existingDay = scheduleByDay[dayOfWeek];
+      
+      if (existingDay) {
+        // If exists, toggle between all-day and delete
+        const isCurrentlyAllDay = existingDay.start_time === "00:00" && existingDay.end_time === "23:59";
+        if (isCurrentlyAllDay) {
+          // Delete the schedule
+          const { error } = await supabase
+            .from("worker_schedule")
+            .delete()
+            .eq("id", existingDay.id);
+          if (error) throw error;
+        } else {
+          // Set to all-day
+          const { error } = await supabase
+            .from("worker_schedule")
+            .update({
+              start_time: "00:00",
+              end_time: "23:59",
+            })
+            .eq("id", existingDay.id);
+          if (error) throw error;
+        }
+      } else {
+        // Create new all-day schedule
+        const { error } = await supabase
+          .from("worker_schedule")
+          .insert({
+            tenant_id,
+            worker_id: workerId,
+            day_of_week: dayOfWeek,
+            start_time: "00:00",
+            end_time: "23:59",
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worker-schedule", workerId] });
+      toast.success("Schedule updated");
+    },
+    onError: () => {
+      toast.error("Failed to update schedule");
+    },
+  });
+
   const createOrUpdateSchedule = useMutation({
     mutationFn: async () => {
       const tenant_id = await getTenantId();
@@ -218,7 +267,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
               const daySchedule = scheduleByDay[index];
               return (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="font-medium w-24">{day}</div>
                     {daySchedule ? (
                       <div className="flex items-center gap-2 text-sm">
@@ -233,7 +282,17 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                       <span className="text-sm text-muted-foreground">Not working</span>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`anytime-${index}`} className="text-sm cursor-pointer">
+                        Anytime
+                      </Label>
+                      <Switch
+                        id={`anytime-${index}`}
+                        checked={daySchedule?.start_time === "00:00" && daySchedule?.end_time === "23:59"}
+                        onCheckedChange={() => toggleAllDay.mutate(index)}
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -256,7 +315,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                         setIsScheduleDialogOpen(true);
                       }}
                     >
-                      {daySchedule ? "Edit" : "Add"}
+                      {daySchedule ? "Edit Time" : "Set Time"}
                     </Button>
                     {daySchedule && (
                       <Button
