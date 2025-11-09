@@ -104,6 +104,7 @@ serve(async (req) => {
     
     const businessEntitySection = businessEntityTag[1];
     console.log('BusinessEntity section extracted, length:', businessEntitySection.length);
+    console.log('BusinessEntity section content (first 1000 chars):', businessEntitySection.substring(0, 1000));
 
     // Extract ABN status from entityStatusCode - search within businessEntity section
     const entityStatusMatch = businessEntitySection.match(/<entityStatus[^>]*>([\s\S]*?)<\/entityStatus>/i);
