@@ -79,16 +79,12 @@ export const UserManagementTab = () => {
 
       if (isWorker) {
         // Add worker role
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
-
         const { error } = await supabase
           .from("user_roles")
           .insert({
             user_id: userId,
             role: 'worker' as any,
             tenant_id: profile.tenant_id,
-            created_by: user.id,
           } as any);
 
         if (error) throw error;
