@@ -23,31 +23,28 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select(`
-          *,
-          assigned_to_profile:profiles!assigned_to(first_name, last_name, email)
-        `)
+        .select("*")
         .eq("service_order_id", serviceOrderId)
         .order("start_time", { ascending: false });
 
       if (error) throw error;
       
-      // Fetch assigned workers separately to avoid FK issues
-      const appointmentsWithWorkers = await Promise.all(
+      // Fetch assigned profiles separately
+      const appointmentsWithProfiles = await Promise.all(
         (data || []).map(async (apt: any) => {
-          if (apt.assigned_to) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("first_name, last_name, email")
-              .eq("id", apt.assigned_to)
-              .single();
-            return { ...apt, worker: profile };
-          }
-          return apt;
+          if (!apt.assigned_to) return { ...apt, assigned_to_profile: null };
+          
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("first_name, last_name, email")
+            .eq("id", apt.assigned_to)
+            .maybeSingle();
+          
+          return { ...apt, assigned_to_profile: profile };
         })
       );
       
-      return appointmentsWithWorkers;
+      return appointmentsWithProfiles;
     },
   });
 
@@ -93,10 +90,10 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                         {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
                       </span>
                     </div>
-                    {appointment.worker && (
+                    {appointment.assigned_to_profile && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <User className="h-4 w-4" />
-                        <span>{appointment.worker.first_name} {appointment.worker.last_name}</span>
+                        <span>{appointment.assigned_to_profile.first_name} {appointment.assigned_to_profile.last_name}</span>
                       </div>
                     )}
                   </div>

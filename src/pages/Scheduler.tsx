@@ -61,13 +61,28 @@ export default function Scheduler() {
         .select(`
           *,
           service_orders(order_number, title),
-          assigned_to_profile:profiles!assigned_to(first_name, last_name),
           appointment_workers(worker_id, profiles(first_name, last_name))
         `)
         .order("start_time", { ascending: true });
 
       if (error) throw error;
-      return data;
+      
+      // Fetch assigned profiles separately to avoid FK issues with null values
+      const appointmentsWithProfiles = await Promise.all(
+        (data || []).map(async (apt: any) => {
+          if (!apt.assigned_to) return { ...apt, assigned_to_profile: null };
+          
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("first_name, last_name")
+            .eq("id", apt.assigned_to)
+            .maybeSingle();
+          
+          return { ...apt, assigned_to_profile: profile };
+        })
+      );
+      
+      return appointmentsWithProfiles;
     },
   });
 
@@ -209,11 +224,21 @@ export default function Scheduler() {
       }).select(`
         *,
         service_orders(order_number, title),
-        assigned_to_profile:profiles!assigned_to(first_name, last_name),
         appointment_workers(worker_id, profiles(first_name, last_name))
       `).single();
 
       if (error) throw error;
+      
+      // Fetch assigned profile if exists
+      let assignedProfile = null;
+      if (newAppointment && workerId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", workerId)
+          .maybeSingle();
+        assignedProfile = profile;
+      }
 
       // Add to appointment_workers junction table
       if (workerId && newAppointment) {
@@ -224,7 +249,7 @@ export default function Scheduler() {
         });
       }
 
-      return newAppointment;
+      return { ...newAppointment, assigned_to_profile: assignedProfile };
     },
     onMutate: async ({ serviceOrderId, startTime, endTime, workerId }) => {
       // Cancel outgoing refetches
