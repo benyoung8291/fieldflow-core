@@ -104,6 +104,10 @@ serve(async (req) => {
       })
     );
 
+    console.log("Workers with appointments:", JSON.stringify(workersWithAppointments, null, 2));
+    console.log("Service Order:", JSON.stringify(serviceOrder, null, 2));
+    console.log("Required Skills:", JSON.stringify(requiredSkills, null, 2));
+
     // Prepare context for AI
     const systemPrompt = `You are a worker recommendation assistant. Analyze workers' skills, availability, and schedules to suggest the best workers for a service order.
 
@@ -166,6 +170,8 @@ AVAILABLE WORKERS:
 ${workersAnalysis}
 
 Analyze and rank workers by suitability. Heavily penalize workers missing required skills.`;
+
+    console.log("User prompt being sent to AI:", userPrompt);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -263,6 +269,8 @@ Analyze and rank workers by suitability. Heavily penalize workers missing requir
     }
 
     const suggestions = JSON.parse(toolCall.function.arguments);
+    
+    console.log("AI Suggestions:", JSON.stringify(suggestions, null, 2));
 
     return new Response(
       JSON.stringify(suggestions),
