@@ -82,20 +82,29 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
 
   const toggleAllDay = useMutation({
     mutationFn: async ({ dayOfWeek, currentSchedule }: { dayOfWeek: number; currentSchedule: any }) => {
+      console.log("Toggle called for day:", dayOfWeek, "Current schedule:", currentSchedule);
       const tenant_id = await getTenantId();
+      console.log("Tenant ID:", tenant_id);
       
       if (currentSchedule) {
         // If exists, toggle between all-day and delete
         const isCurrentlyAllDay = currentSchedule.start_time === "00:00" && currentSchedule.end_time === "23:59";
+        console.log("Is currently all day:", isCurrentlyAllDay);
+        
         if (isCurrentlyAllDay) {
           // Delete the schedule
+          console.log("Deleting schedule:", currentSchedule.id);
           const { error } = await supabase
             .from("worker_schedule")
             .delete()
             .eq("id", currentSchedule.id);
-          if (error) throw error;
+          if (error) {
+            console.error("Delete error:", error);
+            throw error;
+          }
         } else {
           // Set to all-day
+          console.log("Setting to all-day:", currentSchedule.id);
           const { error } = await supabase
             .from("worker_schedule")
             .update({
@@ -103,10 +112,14 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
               end_time: "23:59",
             })
             .eq("id", currentSchedule.id);
-          if (error) throw error;
+          if (error) {
+            console.error("Update error:", error);
+            throw error;
+          }
         }
       } else {
         // Create new all-day schedule
+        console.log("Creating new all-day schedule for day:", dayOfWeek);
         const { error } = await supabase
           .from("worker_schedule")
           .insert({
@@ -116,10 +129,14 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
             start_time: "00:00",
             end_time: "23:59",
           });
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
+      console.log("Toggle success, invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["worker-schedule", workerId] });
       toast.success("Schedule updated");
     },
