@@ -15,94 +15,6 @@ import AuditDrawer from "@/components/audit/AuditDrawer";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 
-const mockCustomer = {
-  id: "1",
-  name: "Acme Corporation",
-  tradingName: "Acme Corp",
-  legalName: "Acme Corporation Pty Ltd",
-  abn: "12 345 678 901",
-  email: "accounts@acme.com",
-  phone: "(02) 9123 4567",
-  address: "123 Business St",
-  city: "Sydney",
-  state: "NSW",
-  postcode: "2000",
-  billingEmail: "billing@acme.com",
-  billingPhone: "(02) 9123 4568",
-  billingAddress: "123 Business St, Sydney NSW 2000",
-  paymentTerms: 30,
-  taxExempt: false,
-  isActive: true,
-  notes: "Important client - priority service",
-};
-
-const mockContacts = [
-  {
-    id: "1",
-    firstName: "John",
-    lastName: "Smith",
-    position: "General Manager",
-    email: "john.smith@acme.com",
-    phone: "(02) 9123 4569",
-    mobile: "0412 345 678",
-    isPrimary: true,
-  },
-  {
-    id: "2",
-    firstName: "Sarah",
-    lastName: "Johnson",
-    position: "Facilities Manager",
-    email: "sarah.j@acme.com",
-    phone: "(02) 9123 4570",
-    mobile: "0423 456 789",
-    isPrimary: false,
-  },
-];
-
-const mockSubAccounts = [
-  {
-    id: "2",
-    name: "Acme Corp - North Branch",
-    address: "456 North St, North Sydney NSW 2060",
-    email: "north@acme.com",
-    phone: "(02) 9234 5678",
-  },
-  {
-    id: "3",
-    name: "Acme Corp - West Branch",
-    address: "789 West St, Parramatta NSW 2150",
-    email: "west@acme.com",
-    phone: "(02) 9345 6789",
-  },
-];
-
-const mockServiceOrders = [
-  {
-    id: "1",
-    orderNumber: "SO-2024001",
-    title: "HVAC Installation",
-    status: "completed",
-    date: "2024-01-10",
-    amount: "$2,500",
-  },
-  {
-    id: "2",
-    orderNumber: "SO-2024015",
-    title: "Plumbing Maintenance",
-    status: "in_progress",
-    date: "2024-01-18",
-    amount: "$850",
-  },
-  {
-    id: "3",
-    orderNumber: "SO-2024023",
-    title: "Electrical Inspection",
-    status: "scheduled",
-    date: "2024-01-25",
-    amount: "$450",
-  },
-];
-
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
   scheduled: "bg-info/10 text-info",
@@ -139,14 +51,14 @@ export default function CustomerDetails() {
     enabled: !!session?.user?.id,
   });
 
-  const { data: customer, isLoading } = useQuery({
+  const { data: customer, isLoading: customerLoading } = useQuery({
     queryKey: ["customer", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("customers")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -154,7 +66,52 @@ export default function CustomerDetails() {
     enabled: !!id,
   });
 
-  if (isLoading) {
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["customer-contacts", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customer_contacts")
+        .select("*")
+        .eq("customer_id", id)
+        .order("is_primary", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: serviceOrders = [] } = useQuery({
+    queryKey: ["customer-service-orders", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("*")
+        .eq("customer_id", id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: subAccounts = [] } = useQuery({
+    queryKey: ["customer-sub-accounts", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("parent_customer_id", id)
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  if (customerLoading) {
     return <DashboardLayout><div className="p-8">Loading...</div></DashboardLayout>;
   }
 
@@ -222,7 +179,7 @@ export default function CustomerDetails() {
               <div className="flex items-center gap-3">
                 <FileText className="h-8 w-8 text-primary" />
                 <div>
-                  <div className="text-2xl font-bold">12</div>
+                  <div className="text-2xl font-bold">{serviceOrders.length}</div>
                   <div className="text-xs text-muted-foreground">Service Orders</div>
                 </div>
               </div>
@@ -233,7 +190,7 @@ export default function CustomerDetails() {
               <div className="flex items-center gap-3">
                 <Phone className="h-8 w-8 text-success" />
                 <div>
-                  <div className="text-2xl font-bold">{mockContacts.length}</div>
+                  <div className="text-2xl font-bold">{contacts.length}</div>
                   <div className="text-xs text-muted-foreground">Contacts</div>
                 </div>
               </div>
@@ -244,7 +201,7 @@ export default function CustomerDetails() {
               <div className="flex items-center gap-3">
                 <Building2 className="h-8 w-8 text-info" />
                 <div>
-                  <div className="text-2xl font-bold">{mockSubAccounts.length}</div>
+                  <div className="text-2xl font-bold">{subAccounts.length}</div>
                   <div className="text-xs text-muted-foreground">Sub-Accounts</div>
                 </div>
               </div>
@@ -388,47 +345,59 @@ export default function CustomerDetails() {
                     Add Contact
                   </Button>
                 </div>
-                <div className="space-y-3">
-                  {mockContacts.map((contact) => (
-                    <Card key={contact.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold">
-                                {contact.firstName} {contact.lastName}
-                              </h4>
-                              {contact.isPrimary && (
-                                <Badge variant="secondary">Primary</Badge>
+                {contacts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No contacts found. Add a contact to get started.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {contacts.map((contact) => (
+                      <Card key={contact.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold">
+                                  {contact.first_name} {contact.last_name}
+                                </h4>
+                                {contact.is_primary && (
+                                  <Badge variant="secondary">Primary</Badge>
+                                )}
+                              </div>
+                              {contact.position && (
+                                <div className="text-sm text-muted-foreground mb-2">
+                                  {contact.position}
+                                </div>
                               )}
-                            </div>
-                            <div className="text-sm text-muted-foreground mb-2">
-                              {contact.position}
-                            </div>
-                            <div className="grid gap-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                {contact.email}
+                              <div className="grid gap-2">
+                                {contact.email && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Mail className="h-4 w-4 text-muted-foreground" />
+                                    {contact.email}
+                                  </div>
+                                )}
+                                {(contact.phone || contact.mobile) && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                    {contact.phone}
+                                    {contact.mobile && ` • Mobile: ${contact.mobile}`}
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex items-center gap-2 text-sm">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                {contact.phone}
-                                {contact.mobile && ` • Mobile: ${contact.mobile}`}
-                              </div>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditContact(contact)}
+                            >
+                              Edit
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditContact(contact)}
-                          >
-                            Edit
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="locations" className="space-y-4 mt-0">
@@ -439,84 +408,93 @@ export default function CustomerDetails() {
 
               <TabsContent value="service-history" className="space-y-4 mt-0">
                 <h3 className="text-lg font-semibold">Service Order History</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b border-border">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                          Order #
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                          Title
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                          Date
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                          Status
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
-                          Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mockServiceOrders.map((order) => (
-                        <tr key={order.id} className="border-b border-border hover:bg-muted/50">
-                          <td className="py-3 px-4 font-medium">{order.orderNumber}</td>
-                          <td className="py-3 px-4">{order.title}</td>
-                          <td className="py-3 px-4">{order.date}</td>
-                          <td className="py-3 px-4">
-                            <Badge className={statusColors[order.status as keyof typeof statusColors]}>
-                              {order.status.replace('_', ' ')}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 font-medium">{order.amount}</td>
+                {serviceOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No service orders found for this customer.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="border-b border-border">
+                        <tr>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                            Order #
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                            Title
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                            Date
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground text-sm">
+                            Status
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {serviceOrders.map((order) => (
+                          <tr key={order.id} className="border-b border-border hover:bg-muted/50 cursor-pointer"
+                            onClick={() => navigate(`/service-orders/${order.id}`)}>
+                            <td className="py-3 px-4 font-medium">{order.order_number || order.id.slice(0, 8)}</td>
+                            <td className="py-3 px-4">{order.title || "-"}</td>
+                            <td className="py-3 px-4">{order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</td>
+                            <td className="py-3 px-4">
+                              <Badge className={statusColors[order.status as keyof typeof statusColors] || statusColors.draft}>
+                                {order.status?.replace('_', ' ') || "Draft"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="sub-accounts" className="space-y-4 mt-0">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Sub-Accounts</h3>
-                  <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Sub-Account
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {mockSubAccounts.map((subAccount) => (
-                    <Card key={subAccount.id}>
+                <h3 className="text-lg font-semibold">Sub-Accounts</h3>
+                {subAccounts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No sub-accounts found for this customer.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {subAccounts.map((account) => (
+                    <Card key={account.id} className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => navigate(`/customers/${account.id}`)}>
                       <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold mb-2">{subAccount.name}</h4>
-                            <div className="grid gap-2 text-sm">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                {subAccount.address}
+                          <div>
+                            <h4 className="font-semibold mb-1">{account.name}</h4>
+                            {account.address && (
+                              <div className="text-sm text-muted-foreground mb-2">
+                                {account.address}
+                                {(account.city || account.state || account.postcode) && (
+                                  <>, {[account.city, account.state, account.postcode].filter(Boolean).join(", ")}</>
+                                )}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                {subAccount.email}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                {subAccount.phone}
-                              </div>
+                            )}
+                            <div className="flex gap-4 text-sm">
+                              {account.email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 text-muted-foreground" />
+                                  {account.email}
+                                </div>
+                              )}
+                              {account.phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-muted-foreground" />
+                                  {account.phone}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
+                )}
               </TabsContent>
 
               <TabsContent value="tasks" className="mt-0">
