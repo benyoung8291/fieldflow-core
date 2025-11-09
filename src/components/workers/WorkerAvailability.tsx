@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Clock, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,6 +27,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
   const [scheduleFormData, setScheduleFormData] = useState({
     start_time: "09:00",
     end_time: "17:00",
+    is_all_day: false,
   });
   const [unavailableFormData, setUnavailableFormData] = useState({
     start_date: new Date(),
@@ -84,13 +86,15 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
       
       const existingDay = schedule.find(s => s.day_of_week === selectedDayOfWeek);
       
+      const scheduleData = {
+        start_time: scheduleFormData.is_all_day ? "00:00" : scheduleFormData.start_time,
+        end_time: scheduleFormData.is_all_day ? "23:59" : scheduleFormData.end_time,
+      };
+      
       if (existingDay) {
         const { error } = await supabase
           .from("worker_schedule")
-          .update({
-            start_time: scheduleFormData.start_time,
-            end_time: scheduleFormData.end_time,
-          })
+          .update(scheduleData)
           .eq("id", existingDay.id);
 
         if (error) throw error;
@@ -101,8 +105,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
             tenant_id,
             worker_id: workerId,
             day_of_week: selectedDayOfWeek,
-            start_time: scheduleFormData.start_time,
-            end_time: scheduleFormData.end_time,
+            ...scheduleData,
           });
 
         if (error) throw error;
@@ -220,7 +223,11 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                     {daySchedule ? (
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{daySchedule.start_time} - {daySchedule.end_time}</span>
+                        {daySchedule.start_time === "00:00" && daySchedule.end_time === "23:59" ? (
+                          <span>Anytime</span>
+                        ) : (
+                          <span>{daySchedule.start_time} - {daySchedule.end_time}</span>
+                        )}
                       </div>
                     ) : (
                       <span className="text-sm text-muted-foreground">Not working</span>
@@ -233,14 +240,17 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                       onClick={() => {
                         setSelectedDayOfWeek(index);
                         if (daySchedule) {
+                          const isAllDay = daySchedule.start_time === "00:00" && daySchedule.end_time === "23:59";
                           setScheduleFormData({
-                            start_time: daySchedule.start_time,
-                            end_time: daySchedule.end_time,
+                            start_time: isAllDay ? "09:00" : daySchedule.start_time,
+                            end_time: isAllDay ? "17:00" : daySchedule.end_time,
+                            is_all_day: isAllDay,
                           });
                         } else {
                           setScheduleFormData({
                             start_time: "09:00",
                             end_time: "17:00",
+                            is_all_day: false,
                           });
                         }
                         setIsScheduleDialogOpen(true);
@@ -322,30 +332,43 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
             <DialogTitle>Set Schedule for {DAYS_OF_WEEK[selectedDayOfWeek]}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="start_time">Start Time</Label>
-                <Input
-                  id="start_time"
-                  type="time"
-                  value={scheduleFormData.start_time}
-                  onChange={(e) =>
-                    setScheduleFormData({ ...scheduleFormData, start_time: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="end_time">End Time</Label>
-                <Input
-                  id="end_time"
-                  type="time"
-                  value={scheduleFormData.end_time}
-                  onChange={(e) =>
-                    setScheduleFormData({ ...scheduleFormData, end_time: e.target.value })
-                  }
-                />
-              </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <Label htmlFor="is_all_day">Available Anytime</Label>
+              <Switch
+                id="is_all_day"
+                checked={scheduleFormData.is_all_day}
+                onCheckedChange={(checked) =>
+                  setScheduleFormData({ ...scheduleFormData, is_all_day: checked })
+                }
+              />
             </div>
+
+            {!scheduleFormData.is_all_day && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start_time">Start Time</Label>
+                  <Input
+                    id="start_time"
+                    type="time"
+                    value={scheduleFormData.start_time}
+                    onChange={(e) =>
+                      setScheduleFormData({ ...scheduleFormData, start_time: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end_time">End Time</Label>
+                  <Input
+                    id="end_time"
+                    type="time"
+                    value={scheduleFormData.end_time}
+                    onChange={(e) =>
+                      setScheduleFormData({ ...scheduleFormData, end_time: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
