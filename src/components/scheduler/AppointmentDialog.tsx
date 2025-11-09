@@ -71,6 +71,17 @@ export default function AppointmentDialog({
     notes: "",
   });
 
+  // Service order fields for creating new appointments
+  const [serviceOrderData, setServiceOrderData] = useState({
+    customer_id: "",
+    title: "",
+    description: "",
+    priority: "normal",
+  });
+  
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [createNewServiceOrder, setCreateNewServiceOrder] = useState(!defaultServiceOrderId);
+
   const [recurrenceConfig, setRecurrenceConfig] = useState<any>(null);
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false);
@@ -80,19 +91,36 @@ export default function AppointmentDialog({
 
   useEffect(() => {
     if (open) {
+      fetchCustomers();
       fetchServiceOrders();
       fetchTechnicians();
       if (appointmentId) {
         fetchAppointment();
+        setCreateNewServiceOrder(false);
       } else {
         resetForm();
+        setCreateNewServiceOrder(!defaultServiceOrderId);
         if (defaultDate) {
           const dateStr = defaultDate.toISOString().slice(0, 16);
           setFormData(prev => ({ ...prev, start_time: dateStr }));
         }
       }
     }
-  }, [open, appointmentId, defaultDate]);
+  }, [open, appointmentId, defaultDate, defaultServiceOrderId]);
+
+  const fetchCustomers = async () => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    
+    if (error) {
+      toast({ title: "Error fetching customers", variant: "destructive" });
+    } else {
+      setCustomers(data || []);
+    }
+  };
 
   const fetchServiceOrders = async () => {
     const { data, error } = await supabase
@@ -215,8 +243,78 @@ export default function AppointmentDialog({
         return;
       }
 
+      let serviceOrderId = formData.service_order_id;
+
+      // Create service order if needed
+      if (createNewServiceOrder && !appointmentId) {
+        if (!serviceOrderData.customer_id || !serviceOrderData.title) {
+          toast({ 
+            title: "Missing required fields", 
+            description: "Customer and Service Order Title are required",
+            variant: "destructive" 
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Get user's tenant_id
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", user.id)
+          .single();
+
+        if (!profile?.tenant_id) {
+          toast({ 
+            title: "Error", 
+            description: "Unable to determine tenant",
+            variant: "destructive" 
+          });
+          setLoading(false);
+          return;
+        }
+
+        const { data: newServiceOrder, error: soError } = await supabase
+          .from("service_orders")
+          .insert([{
+            customer_id: serviceOrderData.customer_id,
+            title: serviceOrderData.title,
+            description: serviceOrderData.description,
+            priority: serviceOrderData.priority,
+            status: "draft",
+            order_number: `SO-${Date.now()}`,
+            created_by: user.id,
+            tenant_id: profile.tenant_id,
+          }])
+          .select()
+          .single();
+
+        if (soError) {
+          toast({ 
+            title: "Error creating service order", 
+            description: soError.message,
+            variant: "destructive" 
+          });
+          setLoading(false);
+          return;
+        }
+
+        serviceOrderId = newServiceOrder.id;
+        queryClient.invalidateQueries({ queryKey: ["service-orders"] });
+      }
+
+      if (!serviceOrderId) {
+        toast({ 
+          title: "Service order required", 
+          description: "Please select or create a service order",
+          variant: "destructive" 
+        });
+        setLoading(false);
+        return;
+      }
+
       const appointmentData: any = {
-        service_order_id: formData.service_order_id || null,
+        service_order_id: serviceOrderId,
         title: formData.title,
         description: formData.description,
         start_time: formData.start_time,
@@ -370,30 +468,161 @@ export default function AppointmentDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <FieldPresenceWrapper fieldName="service_order_id" onlineUsers={onlineUsers}>
-            <div className="space-y-2">
-              <Label htmlFor="service_order_id">Service Order (Optional)</Label>
-              <Select 
-                value={formData.service_order_id} 
-                onValueChange={(value) => {
-                  setFormData({ ...formData, service_order_id: value });
-                  setCurrentField("service_order_id");
-                  updateField("service_order_id");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Link to service order" />
-                </SelectTrigger>
-                <SelectContent>
-                  {serviceOrders.map((order) => (
-                    <SelectItem key={order.id} value={order.id}>
-                      {order.order_number} - {order.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {!appointmentId && !defaultServiceOrderId && (
+            <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/50">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Service Order</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCreateNewServiceOrder(!createNewServiceOrder)}
+                >
+                  {createNewServiceOrder ? "Select Existing" : "Create New"}
+                </Button>
+              </div>
+
+              {createNewServiceOrder ? (
+                <>
+                  <FieldPresenceWrapper fieldName="so_customer_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="so_customer_id">Customer *</Label>
+                      <Select 
+                        value={serviceOrderData.customer_id} 
+                        onValueChange={(value) => {
+                          setServiceOrderData({ ...serviceOrderData, customer_id: value });
+                          setCurrentField("so_customer_id");
+                          updateField("so_customer_id");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="so_title" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="so_title">Service Order Title *</Label>
+                      <Input
+                        id="so_title"
+                        value={serviceOrderData.title}
+                        onChange={(e) => setServiceOrderData({ ...serviceOrderData, title: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("so_title");
+                          updateField("so_title");
+                        }}
+                        placeholder="e.g., HVAC Maintenance"
+                        required
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="so_description" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="so_description">Service Order Description</Label>
+                      <Textarea
+                        id="so_description"
+                        value={serviceOrderData.description}
+                        onChange={(e) => setServiceOrderData({ ...serviceOrderData, description: e.target.value })}
+                        onFocus={() => {
+                          setCurrentField("so_description");
+                          updateField("so_description");
+                        }}
+                        rows={2}
+                        placeholder="Details about the service order"
+                      />
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="so_priority" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="so_priority">Priority</Label>
+                      <Select 
+                        value={serviceOrderData.priority} 
+                        onValueChange={(value) => {
+                          setServiceOrderData({ ...serviceOrderData, priority: value });
+                          setCurrentField("so_priority");
+                          updateField("so_priority");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+                </>
+              ) : (
+                <FieldPresenceWrapper fieldName="service_order_id" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="service_order_id">Select Service Order *</Label>
+                    <Select 
+                      value={formData.service_order_id} 
+                      onValueChange={(value) => {
+                        setFormData({ ...formData, service_order_id: value });
+                        setCurrentField("service_order_id");
+                        updateField("service_order_id");
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service order" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {serviceOrders.map((order) => (
+                          <SelectItem key={order.id} value={order.id}>
+                            {order.order_number} - {order.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </FieldPresenceWrapper>
+              )}
             </div>
-          </FieldPresenceWrapper>
+          )}
+
+          {(appointmentId || defaultServiceOrderId) && (
+            <FieldPresenceWrapper fieldName="service_order_id" onlineUsers={onlineUsers}>
+              <div className="space-y-2">
+                <Label htmlFor="service_order_id">Service Order</Label>
+                <Select 
+                  value={formData.service_order_id} 
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, service_order_id: value });
+                    setCurrentField("service_order_id");
+                    updateField("service_order_id");
+                  }}
+                  disabled={!!defaultServiceOrderId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Link to service order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceOrders.map((order) => (
+                      <SelectItem key={order.id} value={order.id}>
+                        {order.order_number} - {order.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </FieldPresenceWrapper>
+          )}
 
           <FieldPresenceWrapper fieldName="title" onlineUsers={onlineUsers}>
             <div className="space-y-2">
