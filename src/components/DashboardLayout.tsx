@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           
           {/* Render children when folder is expanded */}
-          {item.is_folder && isExpanded && children.length > 0 && !sidebarCollapsed && (
+          {item.is_folder && isExpanded && children.length > 0 && (!sidebarCollapsed || isMobile) && (
             <div className="ml-6 mt-1 space-y-1 border-l-2 border-sidebar-border pl-2">
               {children.map((child) => {
                 const childIsActive = child.path && location.pathname === child.path;
@@ -92,7 +92,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     key={child.id}
                     onClick={() => child.path && handleNavigate(child.path, isMobile)}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full",
+                      "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left",
                       childIsActive
                         ? "bg-sidebar-primary text-sidebar-primary-foreground"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -117,11 +117,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar - Desktop */}
       <aside className={cn(
-        "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
-        sidebarCollapsed ? "lg:w-20" : "lg:w-64"
+        "hidden lg:flex lg:flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0",
+        sidebarCollapsed ? "w-20" : "w-64"
       )}>
         <div className="flex flex-col h-full">
           <div className="flex-shrink-0 px-6 py-8">
@@ -142,42 +142,45 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <span className="text-primary-foreground font-bold text-lg">FF</span>
                 </div>
               )}
-              {!sidebarCollapsed && (
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <User className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate("/settings")}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={async () => {
-                          await supabase.auth.signOut();
-                          navigate("/auth");
-                          toast.success("Signed out successfully");
-                        }}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
             </div>
           </div>
+          
+          {/* User dropdown moved here for better visibility */}
+          {!sidebarCollapsed && (
+            <div className="flex-shrink-0 px-6 pb-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <User className="h-4 w-4 mr-2" />
+                    Account
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      navigate("/auth");
+                      toast.success("Signed out successfully");
+                    }}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
           
           <nav className="flex-1 flex flex-col gap-2 px-6 overflow-y-auto">
             {renderMenuContent()}
           </nav>
           
-          <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4">
+          <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4 bg-sidebar">
             <Button
               variant="outline"
               size="sm"
@@ -218,9 +221,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           className="lg:hidden fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         >
-          <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border">
-            <div className="flex flex-1 flex-col gap-y-5 px-6 py-8">
-              <div className="flex items-center justify-between">
+          <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border overflow-y-auto">
+            <div className="flex flex-col h-full px-6 py-8">
+              <div className="flex-shrink-0 flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
                     <span className="text-primary-foreground font-bold text-lg">FF</span>
@@ -234,7 +237,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <User className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem onClick={() => { navigate("/settings"); setSidebarOpen(false); }}>
                         <Settings className="h-4 w-4 mr-2" />
                         Settings
@@ -255,7 +258,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </DropdownMenu>
                 </div>
               </div>
-              <nav className="flex flex-1 flex-col gap-2">
+              <nav className="flex-1 flex flex-col gap-2 overflow-y-auto">
                 {renderMenuContent(true)}
               </nav>
             </div>
@@ -264,11 +267,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className={cn(
-        "transition-all duration-300",
-        sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
-      )}>
-        <div className="px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+      <main className="flex-1 overflow-y-auto">
+        <div className="px-4 sm:px-6 lg:px-8 py-8 lg:py-10 pt-20 lg:pt-8">
           {children}
         </div>
       </main>
