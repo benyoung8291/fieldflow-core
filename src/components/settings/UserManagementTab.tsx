@@ -46,44 +46,28 @@ export const UserManagementTab = () => {
     queryFn: async () => {
       if (!profile?.tenant_id) return [];
 
-      // Fetch profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("tenant_id", profile.tenant_id);
-
-      if (profilesError) throw profilesError;
-
-      // Fetch roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .eq("tenant_id", profile.tenant_id);
-
-      if (rolesError) throw rolesError;
-
-      // Fetch user emails from auth.users via admin API
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-
-      if (authError) throw authError;
+      // Call edge function to get users with emails
+      const { data: { session } } = await supabase.auth.getSession();
       
-      const authUsers = authData.users || [];
+      if (!session) throw new Error("Not authenticated");
 
-      // Combine data
-      const combinedData = profilesData?.map((profile) => {
-        const authUser = authUsers.find((u: any) => u.id === profile.id);
-        const userRoles = rolesData?.filter((role) => role.user_id === profile.id) || [];
-        const hasWorkerRole = userRoles.some(r => r.role === 'worker');
-        
-        return {
-          ...profile,
-          email: authUser?.email || null,
-          user_roles: userRoles,
-          has_worker_role: hasWorkerRole,
-        };
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-tenant-users`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      return combinedData || [];
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch users');
+      }
+
+      const { users } = await response.json();
+      return users || [];
     },
     enabled: !!profile?.tenant_id && isAdmin,
   });
@@ -139,11 +123,26 @@ export const UserManagementTab = () => {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        password: password,
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
 
-      if (error) throw error;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, password }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reset password');
+      }
     },
     onSuccess: () => {
       toast.success("Password reset successfully");
