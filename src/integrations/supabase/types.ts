@@ -313,38 +313,119 @@ export type Database = {
           },
         ]
       }
+      pay_rate_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          hourly_rate: number
+          id: string
+          is_active: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          hourly_rate: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_rate_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          abn: string | null
           avatar_url: string | null
           created_at: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           first_name: string | null
           id: string
+          is_active: boolean | null
           last_name: string | null
+          pay_rate_category_id: string | null
           phone: string | null
+          preferred_days: string[] | null
+          preferred_end_time: string | null
+          preferred_start_time: string | null
+          super_fund_name: string | null
+          super_fund_number: string | null
+          tax_file_number: string | null
           tenant_id: string | null
           updated_at: string | null
         }
         Insert: {
+          abn?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name?: string | null
           id: string
+          is_active?: boolean | null
           last_name?: string | null
+          pay_rate_category_id?: string | null
           phone?: string | null
+          preferred_days?: string[] | null
+          preferred_end_time?: string | null
+          preferred_start_time?: string | null
+          super_fund_name?: string | null
+          super_fund_number?: string | null
+          tax_file_number?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          abn?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name?: string | null
           id?: string
+          is_active?: boolean | null
           last_name?: string | null
+          pay_rate_category_id?: string | null
           phone?: string | null
+          preferred_days?: string[] | null
+          preferred_end_time?: string | null
+          preferred_start_time?: string | null
+          super_fund_name?: string | null
+          super_fund_number?: string | null
+          tax_file_number?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_pay_rate_category_id_fkey"
+            columns: ["pay_rate_category_id"]
+            isOneToOne: false
+            referencedRelation: "pay_rate_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -506,6 +587,60 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_availability: {
+        Row: {
+          created_at: string | null
+          date: string
+          end_time: string
+          id: string
+          is_available: boolean | null
+          notes: string | null
+          start_time: string
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          end_time: string
+          id?: string
+          is_available?: boolean | null
+          notes?: string | null
+          start_time: string
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          notes?: string | null
+          start_time?: string
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_availability_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_availability_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

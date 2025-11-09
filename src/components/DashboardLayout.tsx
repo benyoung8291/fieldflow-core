@@ -24,6 +24,7 @@ const navigation = [
   { name: "Service Orders", href: "/service-orders", icon: ClipboardList },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Scheduler", href: "/scheduler", icon: Calendar },
+  { name: "Workers", href: "/workers", icon: Users },
   { name: "Warehouse", href: "/warehouse", icon: Warehouse },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
