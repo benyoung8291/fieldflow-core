@@ -12,6 +12,7 @@ import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
+import BryntumSchedulerView from "@/components/scheduler/BryntumSchedulerView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
@@ -30,7 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export default function Scheduler() {
-  const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban">("week");
+  const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban" | "bryntum">("week");
   const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -689,12 +690,13 @@ export default function Scheduler() {
                     Service Order View
                   </Label>
                 </div>
-                <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
+                <Tabs value={viewType} onValueChange={(v) => setViewType(v as "day" | "week" | "month" | "kanban" | "bryntum")}>
                   <TabsList>
                     <TabsTrigger value="day">Day</TabsTrigger>
                     <TabsTrigger value="week">Week</TabsTrigger>
                     <TabsTrigger value="month">Month</TabsTrigger>
                     <TabsTrigger value="kanban">Kanban</TabsTrigger>
+                    <TabsTrigger value="bryntum">Bryntum</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -767,6 +769,25 @@ export default function Scheduler() {
                     onAppointmentClick={(id) => {
                       const apt = appointments.find(a => a.id === id);
                       setDetailsAppointment(apt);
+                    }}
+                  />
+                )}
+                {viewType === "bryntum" && (
+                  <BryntumSchedulerView
+                    currentDate={currentDate}
+                    appointments={appointments}
+                    workers={workers}
+                    onAppointmentClick={(id) => {
+                      const apt = appointments.find(a => a.id === id);
+                      setDetailsAppointment(apt);
+                    }}
+                    onAppointmentUpdate={async (id, data) => {
+                      await updateAppointmentMutation.mutateAsync({
+                        appointmentId: id,
+                        startTime: new Date(data.start_time),
+                        endTime: new Date(data.end_time),
+                        workerId: data.assigned_to,
+                      });
                     }}
                   />
                 )}

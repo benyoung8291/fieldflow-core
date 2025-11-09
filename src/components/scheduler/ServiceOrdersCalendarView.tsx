@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
   appointments: any[];
-  viewType: "day" | "week" | "month" | "kanban";
+  viewType: "day" | "week" | "month" | "kanban" | "bryntum";
   onAppointmentClick: (id: string) => void;
 }
 
