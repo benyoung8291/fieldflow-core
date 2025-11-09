@@ -9,12 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, MoreVertical, Users, UserCheck, UserX, DollarSign } from "lucide-react";
+import { Search, MoreVertical, Users, UserCheck, UserX, DollarSign, Settings as SettingsIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import WorkerDialog from "@/components/workers/WorkerDialog";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Worker {
   id: string;
@@ -31,8 +31,6 @@ interface Worker {
 
 export default function Workers() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "workers-page" });
@@ -44,6 +42,19 @@ export default function Workers() {
   const { data: workers = [], isLoading } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
+      // First get all user_roles with worker role
+      const { data: workerRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "worker");
+
+      if (rolesError) throw rolesError;
+      
+      const workerUserIds = workerRoles?.map(r => r.user_id) || [];
+      
+      if (workerUserIds.length === 0) return [];
+
+      // Then fetch profiles for those users
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select(`
@@ -54,6 +65,7 @@ export default function Workers() {
           is_active,
           pay_rate_category:pay_rate_categories(name, hourly_rate)
         `)
+        .in("id", workerUserIds)
         .order("first_name");
 
       if (error) throw error;
@@ -64,20 +76,6 @@ export default function Workers() {
         ...profile,
         email: authUsers?.find((u: any) => u.id === profile.id)?.email
       })) as Worker[];
-    },
-  });
-
-  const deleteWorker = useMutation({
-    mutationFn: async (workerId: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(workerId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workers"] });
-      toast.success("Worker deleted successfully");
-    },
-    onError: () => {
-      toast.error("Failed to delete worker");
     },
   });
 
@@ -97,21 +95,6 @@ export default function Workers() {
     inactive: workers.filter((w) => !w.is_active).length,
   };
 
-  const handleEdit = (worker: Worker) => {
-    setSelectedWorker(worker);
-    setIsDialogOpen(true);
-  };
-
-  const handleCreate = () => {
-    setSelectedWorker(null);
-    setIsDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    setSelectedWorker(null);
-  };
-
   return (
     <DashboardLayout>
       <RemoteCursors users={onlineUsers} />
@@ -123,12 +106,20 @@ export default function Workers() {
           </div>
           <div className="flex items-center gap-2">
             <PresenceIndicator users={onlineUsers} />
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Worker
+            <Button onClick={() => navigate("/settings")} variant="outline">
+              <SettingsIcon className="h-4 w-4 mr-2" />
+              Manage Users
             </Button>
           </div>
         </div>
+
+        {workers.length === 0 && !isLoading && (
+          <Alert>
+            <AlertDescription>
+              No workers found. To add workers, go to <strong>Settings → Users</strong> and enable the "Is Worker" checkbox for user accounts.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -248,22 +239,25 @@ export default function Workers() {
                             }}>
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(worker);
-                            }}>
-                              Edit
-                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm("Are you sure you want to delete this worker?")) {
-                                  deleteWorker.mutate(worker.id);
+                                if (confirm("Are you sure you want to remove worker access? This will remove the worker role but keep the user account.")) {
+                                  // Remove worker role via user_roles
+                                  supabase
+                                    .from("user_roles")
+                                    .delete()
+                                    .eq("user_id", worker.id)
+                                    .eq("role", "worker")
+                                    .then(() => {
+                                      queryClient.invalidateQueries({ queryKey: ["workers"] });
+                                      toast.success("Worker access removed");
+                                    });
                                 }
                               }}
                               className="text-destructive"
                             >
-                              Delete
+                              Remove Worker Access
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -275,12 +269,6 @@ export default function Workers() {
             )}
           </CardContent>
         </Card>
-
-        <WorkerDialog
-          open={isDialogOpen}
-          onOpenChange={handleDialogClose}
-          worker={selectedWorker}
-        />
       </div>
     </DashboardLayout>
   );
