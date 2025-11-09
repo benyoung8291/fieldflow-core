@@ -18,6 +18,7 @@ import QuoteTemplatesTab from "@/components/settings/QuoteTemplatesTab";
 import MessageTemplatesTab from "@/components/settings/MessageTemplatesTab";
 import TermsTemplatesTab from "@/components/settings/TermsTemplatesTab";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
+import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
 
 interface PayRateCategory {
   id: string;
@@ -162,14 +163,23 @@ export default function Settings() {
           </div>
         </div>
 
-        <Tabs defaultValue="pay-rates" className="space-y-6">
+        <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
             <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
             <TabsTrigger value="quote-templates">Quote Templates</TabsTrigger>
             <TabsTrigger value="message-templates">Messages</TabsTrigger>
             <TabsTrigger value="terms-templates">Terms & Conditions</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="general">
+            <Card>
+              <CardContent className="pt-6">
+                <GeneralSettingsTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="pay-rates">
             <Card>

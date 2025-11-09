@@ -5,11 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, DollarSign, FileText, TrendingUp } from "lucide-react";
-import { format, addMonths, startOfMonth, endOfMonth, parseISO, addDays, addWeeks, isWithinInterval } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw } from "lucide-react";
+import { format, addMonths, parseISO, addWeeks } from "date-fns";
+import { useState } from "react";
+import RenewContractDialog from "@/components/quotes/RenewContractDialog";
 
 export default function ServiceContracts() {
   const navigate = useNavigate();
+  const [renewingContract, setRenewingContract] = useState<any>(null);
+  
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
     queryFn: async () => {
@@ -330,6 +335,7 @@ export default function ServiceContracts() {
                       <TableHead>End Date</TableHead>
                       <TableHead>Value</TableHead>
                       <TableHead>Days Until Renewal</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -347,6 +353,19 @@ export default function ServiceContracts() {
                               {daysUntil} days
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRenewingContract(contract);
+                              }}
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Renew
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -357,6 +376,14 @@ export default function ServiceContracts() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {renewingContract && (
+        <RenewContractDialog
+          open={!!renewingContract}
+          onOpenChange={(open) => !open && setRenewingContract(null)}
+          contract={renewingContract}
+        />
+      )}
     </div>
   );
 }
