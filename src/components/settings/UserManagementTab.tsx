@@ -87,21 +87,13 @@ export const UserManagementTab = () => {
         .from("profiles")
         .select("id, first_name, last_name, phone")
         .eq("tenant_id", profile.tenant_id)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("first_name");
 
       if (error) throw error;
-
-      // Filter to only those with worker role
-      const { data: workerRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("tenant_id", profile.tenant_id)
-        .eq("role", "worker");
-
-      const workerUserIds = new Set(workerRoles?.map(r => r.user_id) || []);
-      return data?.filter(p => workerUserIds.has(p.id)) || [];
+      return data || [];
     },
-    enabled: !!profile?.tenant_id && isAdmin,
+    enabled: !!profile?.tenant_id && isAdmin && isWorkerSetupDialogOpen,
   });
 
   const assignRoleMutation = useMutation({
