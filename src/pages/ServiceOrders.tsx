@@ -193,212 +193,200 @@ export default function ServiceOrders() {
         </AlertDialogContent>
       </AlertDialog>
       
-      <div className="space-y-8">
+      <div className="space-y-3">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Service Orders</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl font-bold text-foreground">Service Orders</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Manage field service jobs and assignments
             </p>
           </div>
           <div className="flex items-center gap-2">
             <PresenceIndicator users={onlineUsers} />
-            <Button className="gap-2" onClick={handleCreate}>
-              <Plus className="h-4 w-4" />
+            <Button size="sm" className="gap-2 h-8" onClick={handleCreate}>
+              <Plus className="h-3.5 w-3.5" />
               New Order
             </Button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Stats - Compact */}
+        <div className="grid grid-cols-5 gap-2">
           <Card className="shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-              <p className="text-sm text-muted-foreground mt-1">Total Orders</p>
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="text-xl font-bold text-foreground">{stats.total}</div>
+              <p className="text-[10px] text-muted-foreground">Total</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-muted-foreground">{stats.draft}</div>
-              <p className="text-sm text-muted-foreground mt-1">Draft</p>
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="text-xl font-bold text-muted-foreground">{stats.draft}</div>
+              <p className="text-[10px] text-muted-foreground">Draft</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-info">{stats.scheduled}</div>
-              <p className="text-sm text-muted-foreground mt-1">Scheduled</p>
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="text-xl font-bold text-info">{stats.scheduled}</div>
+              <p className="text-[10px] text-muted-foreground">Scheduled</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-warning">{stats.inProgress}</div>
-              <p className="text-sm text-muted-foreground mt-1">In Progress</p>
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="text-xl font-bold text-warning">{stats.inProgress}</div>
+              <p className="text-[10px] text-muted-foreground">In Progress</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-success">{stats.completed}</div>
-              <p className="text-sm text-muted-foreground mt-1">Completed</p>
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="text-xl font-bold text-success">{stats.completed}</div>
+              <p className="text-[10px] text-muted-foreground">Completed</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Filters */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Search & Filter
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Search and Filters - Compact */}
+        <Card className="shadow-sm">
+          <CardContent className="p-3 space-y-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search by order number, customer, or title..."
-                className="pl-10"
+                className="pl-8 h-8 text-xs"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div>
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Priorities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="All Priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div>
-                <Select value={customerFilter} onValueChange={setCustomerFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Customers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    {customers.map((customer: any) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="All Customers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  {customers.map((customer: any) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Orders Table */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>
+        {/* Orders Table - Very Compact */}
+        <Card className="shadow-sm">
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-sm">
               All Orders ({filteredOrders.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading orders...</div>
+              <div className="text-center py-6 text-xs text-muted-foreground">Loading orders...</div>
             ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No orders found</div>
+              <div className="text-center py-6 text-xs text-muted-foreground">No orders found</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border bg-muted/50">
+                <table className="w-full">
+                  <thead className="border-b border-border bg-muted/30">
                     <tr>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Order #
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Customer
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Location
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Priority
                       </th>
-                      <th className="text-right py-2 px-3 font-medium text-muted-foreground text-xs">
+                      <th className="text-right py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
                         Total
                       </th>
-                      <th className="text-right py-2 px-3 font-medium text-muted-foreground text-xs w-20">
-                        Actions
+                      <th className="text-right py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">
+                        
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-border/50">
                     {filteredOrders.map((order: any) => (
-                      <tr key={order.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="py-2 px-3">
-                          <div className="font-medium text-xs">{order.order_number}</div>
+                      <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-1 px-2">
+                          <div className="font-medium text-[11px]">{order.order_number}</div>
                           {order.work_order_number && (
-                            <div className="text-[10px] text-muted-foreground">WO: {order.work_order_number}</div>
+                            <div className="text-[9px] text-muted-foreground">WO: {order.work_order_number}</div>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-xs">{order.customers?.name || "-"}</td>
-                        <td className="py-2 px-3">
-                          <div className="text-xs">{order.title}</div>
+                        <td className="py-1 px-2 text-[11px]">{order.customers?.name || "-"}</td>
+                        <td className="py-1 px-2">
+                          <div className="text-[11px]">{order.title}</div>
                           {order.skill_required && (
-                            <div className="text-[10px] text-muted-foreground">Skill: {order.skill_required}</div>
+                            <div className="text-[9px] text-muted-foreground">Skill: {order.skill_required}</div>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-xs">
+                        <td className="py-1 px-2 text-[11px]">
                           {order.customer_locations?.name || "-"}
                         </td>
-                        <td className="py-2 px-3">
-                          <Badge variant="outline" className={`text-[10px] py-0 px-1.5 ${statusColors[order.status as keyof typeof statusColors]}`}>
+                        <td className="py-1 px-2">
+                          <Badge variant="outline" className={`text-[9px] py-0 px-1 ${statusColors[order.status as keyof typeof statusColors]}`}>
                             {order.status.replace('_', ' ')}
                           </Badge>
                         </td>
-                        <td className="py-2 px-3">
-                          <Badge variant="outline" className={`text-[10px] py-0 px-1.5 ${priorityColors[order.priority as keyof typeof priorityColors]}`}>
+                        <td className="py-1 px-2">
+                          <Badge variant="outline" className={`text-[9px] py-0 px-1 ${priorityColors[order.priority as keyof typeof priorityColors]}`}>
                             {order.priority}
                           </Badge>
                         </td>
-                        <td className="py-2 px-3 text-right text-xs font-medium">
+                        <td className="py-1 px-2 text-right text-[11px] font-medium">
                           ${order.total_amount?.toFixed(2) || "0.00"}
                         </td>
-                        <td className="py-2 px-3 text-right">
+                        <td className="py-1 px-2 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                                 <MoreVertical className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="text-xs">
                               <DropdownMenuItem onClick={() => handleEdit(order.id)}>
-                                <Edit className="h-4 w-4 mr-2" />
+                                <Edit className="h-3 w-3 mr-2" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setSelectedOrder(order.id)}>
@@ -412,7 +400,7 @@ export default function ServiceOrders() {
                                   setDeleteDialogOpen(true);
                                 }}
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="h-3 w-3 mr-2" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
