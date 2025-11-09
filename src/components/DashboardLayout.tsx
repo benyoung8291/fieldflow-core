@@ -21,6 +21,7 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Quotes", href: "/quotes", icon: FileText },
   { name: "Projects", href: "/projects", icon: FileText },
   { name: "Service Orders", href: "/service-orders", icon: ClipboardList },
   { name: "Customers", href: "/customers", icon: Users },

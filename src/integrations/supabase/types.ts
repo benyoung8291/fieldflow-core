@@ -602,6 +602,126 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_line_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          item_order: number
+          line_total: number
+          notes: string | null
+          quantity: number
+          quote_id: string
+          tenant_id: string
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          item_order?: number
+          line_total?: number
+          notes?: string | null
+          quantity?: number
+          quote_id: string
+          tenant_id: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          item_order?: number
+          line_total?: number
+          notes?: string | null
+          quantity?: number
+          quote_id?: string
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      quotes: {
+        Row: {
+          approved_at: string | null
+          converted_to_project_id: string | null
+          converted_to_service_order_id: string | null
+          created_at: string | null
+          created_by: string
+          customer_id: string
+          description: string | null
+          discount_amount: number | null
+          id: string
+          notes: string | null
+          quote_number: string
+          rejected_at: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          tenant_id: string
+          terms_conditions: string | null
+          title: string
+          total_amount: number
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          converted_to_project_id?: string | null
+          converted_to_service_order_id?: string | null
+          created_at?: string | null
+          created_by: string
+          customer_id: string
+          description?: string | null
+          discount_amount?: number | null
+          id?: string
+          notes?: string | null
+          quote_number: string
+          rejected_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          tenant_id: string
+          terms_conditions?: string | null
+          title: string
+          total_amount?: number
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          converted_to_project_id?: string | null
+          converted_to_service_order_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          discount_amount?: number | null
+          id?: string
+          notes?: string | null
+          quote_number?: string
+          rejected_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          tenant_id?: string
+          terms_conditions?: string | null
+          title?: string
+          total_amount?: number
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       service_order_templates: {
         Row: {
           billing_type: string | null
