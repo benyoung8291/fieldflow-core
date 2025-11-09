@@ -54,19 +54,51 @@ export default function WorkerSkillsTab({ workerId }: WorkerSkillsTabProps) {
   const { data: workerSkills = [], isLoading } = useQuery({
     queryKey: ["worker-skills", workerId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log("Fetching worker skills for:", workerId);
+      
+      // Fetch worker_skills
+      const { data: skillsData, error: skillsError } = await supabase
         .from("worker_skills")
-        .select(`
-          *,
-          skill:skills!inner(id, name, category)
-        `)
+        .select("*")
         .eq("worker_id", workerId)
         .order("created_at", { ascending: false });
-      if (error) {
-        console.error("Error fetching worker skills:", error);
-        throw error;
+      
+      if (skillsError) {
+        console.error("Error fetching worker_skills:", skillsError);
+        throw skillsError;
       }
-      return data || [];
+      
+      console.log("Worker skills raw data:", skillsData);
+
+      if (!skillsData || skillsData.length === 0) {
+        console.log("No worker skills found");
+        return [];
+      }
+
+      // Fetch the related skills
+      const skillIds = skillsData.map(ws => ws.skill_id);
+      console.log("Skill IDs to fetch:", skillIds);
+      
+      const { data: skills, error: skillsLookupError } = await supabase
+        .from("skills")
+        .select("id, name, category")
+        .in("id", skillIds);
+      
+      if (skillsLookupError) {
+        console.error("Error fetching skills:", skillsLookupError);
+        throw skillsLookupError;
+      }
+      
+      console.log("Skills lookup data:", skills);
+
+      // Combine the data
+      const combined = skillsData.map(ws => ({
+        ...ws,
+        skill: skills?.find(s => s.id === ws.skill_id)
+      }));
+      
+      console.log("Combined worker skills:", combined);
+      return combined;
     },
   });
 
@@ -326,7 +358,7 @@ export default function WorkerSkillsTab({ workerId }: WorkerSkillsTabProps) {
             <div className="text-center py-8">Loading...</div>
           ) : workerSkills.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No skills added yet
+              No skills added yet. Debug: isLoading={String(isLoading)}, count={workerSkills.length}
             </div>
           ) : (
             <div className="space-y-3">
