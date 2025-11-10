@@ -54,6 +54,7 @@ export default function TaskDialog({
   taskId,
 }: TaskDialogProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [previewChecklistItems, setPreviewChecklistItems] = useState<Array<{ title: string; item_order: number }>>([]);
   const [formData, setFormData] = useState<TaskFormData>({
     title: defaultValues?.title || "",
     description: defaultValues?.description || "",
@@ -108,28 +109,33 @@ export default function TaskDialog({
     if (template) {
       setFormData(prev => ({
         ...prev,
-        title: template.title || prev.title,
+        title: template.title || template.name || prev.title,
         description: template.description || prev.description,
-        priority: template.default_priority,
-        status: template.default_status,
+        priority: template.default_priority || prev.priority,
+        status: template.default_status || prev.status,
         estimated_hours: template.estimated_hours?.toString() || prev.estimated_hours,
         assigned_to: template.default_assigned_to || prev.assigned_to,
       }));
+      
+      // Load checklist items from template
+      if (template.checklist && template.checklist.length > 0) {
+        setPreviewChecklistItems(template.checklist.map((item: any) => ({
+          title: item.title,
+          item_order: item.item_order,
+        })));
+      } else {
+        setPreviewChecklistItems([]);
+      }
     }
   };
 
   const handleSubmit = async () => {
-    await onSubmit(formData);
-    
-    // If creating a new task with a template, apply checklist items
-    if (selectedTemplate && !taskId) {
-      const template: any = templates.find((t: any) => t.id === selectedTemplate);
-      if (template?.checklist && template.checklist.length > 0) {
-        // Store the selected template ID to apply checklist after task is created
-        (formData as any)._templateId = selectedTemplate;
-      }
+    // Store checklist items to be created with the task
+    if (previewChecklistItems.length > 0 && !taskId) {
+      (formData as any)._checklistItems = previewChecklistItems;
     }
     
+    await onSubmit(formData);
     onOpenChange(false);
   };
 
@@ -495,6 +501,20 @@ export default function TaskDialog({
                 </Popover>
               </div>
             </div>
+
+            {previewChecklistItems.length > 0 && (
+              <div className="space-y-2">
+                <Label>Template Checklist Items</Label>
+                <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                  {previewChecklistItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="h-4 w-4 rounded border border-input bg-background" />
+                      <span className="text-sm">{item.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {linkedModule && (
               <div className="p-3 bg-muted rounded-lg">

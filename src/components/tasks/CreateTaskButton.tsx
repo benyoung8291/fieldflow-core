@@ -98,24 +98,16 @@ export default function CreateTaskButton({
 
       if (error) throw error;
       
-      // Apply template checklist if template was selected
-      const templateId = (taskData as any)._templateId;
-      if (templateId && newTask) {
-        const { data: templateItems } = await supabase
-          .from("task_template_checklist_items" as any)
-          .select("*")
-          .eq("template_id", templateId)
-          .order("item_order");
+      // Apply checklist items if provided
+      const checklistItems = (taskData as any)._checklistItems;
+      if (checklistItems && checklistItems.length > 0 && newTask) {
+        const checklistData = checklistItems.map((item: any) => ({
+          task_id: (newTask as any).id,
+          title: item.title,
+          item_order: item.item_order,
+        }));
         
-        if (templateItems && templateItems.length > 0) {
-          const checklistData = templateItems.map((item: any) => ({
-            task_id: (newTask as any).id,
-            title: item.title,
-            item_order: item.item_order,
-          }));
-          
-          await supabase.from("task_checklist_items" as any).insert(checklistData);
-        }
+        await supabase.from("task_checklist_items" as any).insert(checklistData);
       }
     },
     onSuccess: () => {
