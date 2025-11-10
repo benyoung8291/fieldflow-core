@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Plus } from "lucide-react";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import ProjectGanttChart from "@/components/projects/ProjectGanttChart";
@@ -20,6 +20,7 @@ import ProjectFinanceTab from "@/components/projects/ProjectFinanceTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
+import { CardDescription } from "@/components/ui/card";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
@@ -122,10 +123,9 @@ export default function ProjectDetails() {
     queryKey: ["project-tasks", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("tasks" as any)
+        .from("project_tasks" as any)
         .select("*")
-        .eq("linked_module", "project")
-        .eq("linked_record_id", id)
+        .eq("project_id", id)
         .order("start_date", { ascending: true });
 
       if (error) throw error;
@@ -135,15 +135,15 @@ export default function ProjectDetails() {
   });
 
   const { data: taskDependencies } = useQuery({
-    queryKey: ["task-dependencies", "project", id],
+    queryKey: ["project-task-dependencies", id],
     queryFn: async () => {
       if (!tasks?.length) return [];
       
       const taskIds = tasks.map((t: any) => t.id);
       const { data, error } = await supabase
-        .from("task_dependencies")
+        .from("project_task_dependencies" as any)
         .select("*")
-        .in("task_id", taskIds);
+        .in("project_task_id", taskIds);
 
       if (error) throw error;
       return data || [];
@@ -151,22 +151,12 @@ export default function ProjectDetails() {
     enabled: !!tasks?.length && !!project,
   });
 
-  // Prepare tasks for Gantt chart - use actual project tasks
+  // Prepare tasks for Gantt chart - use project tasks with dependencies
   const ganttTasks = useMemo(() => {
-    if (!tasks || tasks.length === 0) {
-      // Fallback to service orders if no tasks
-      return serviceOrders?.map(so => ({
-        id: so.id,
-        name: so.title,
-        start_date: so.preferred_date || so.created_at,
-        end_date: so.date_range_end || so.preferred_date || so.created_at,
-        status: so.status,
-        progress: 0,
-      })) || [];
-    }
+    if (!tasks || tasks.length === 0) return [];
     
-    // Use project tasks with proper dates
-    return tasks.filter((t: any) => t.start_date && t.end_date).map((task: any) => ({
+    // Map project tasks to Gantt format
+    return tasks.map((task: any) => ({
       id: task.id,
       name: task.title,
       start_date: task.start_date,
@@ -174,7 +164,20 @@ export default function ProjectDetails() {
       status: task.status,
       progress: task.progress_percentage || 0,
     }));
-  }, [tasks, serviceOrders]);
+  }, [tasks]);
+
+  // Map dependencies to correct format
+  const ganttDependencies = useMemo(() => {
+    if (!taskDependencies || taskDependencies.length === 0) return [];
+    
+    return taskDependencies.map((dep: any) => ({
+      id: dep.id,
+      task_id: dep.project_task_id,
+      depends_on_task_id: dep.depends_on_task_id,
+      dependency_type: dep.dependency_type,
+      lag_days: dep.lag_days,
+    }));
+  }, [taskDependencies]);
 
   if (isLoading) {
     return (
@@ -349,8 +352,10 @@ export default function ProjectDetails() {
               <UserPlus className="h-4 w-4 mr-2" />
               Roster
             </TabsTrigger>
-            <TabsTrigger value="service-orders">Service Orders ({totalServiceOrders})</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments ({appointments?.length || 0})</TabsTrigger>
+            <TabsTrigger value="tasks">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Tasks ({tasks?.length || 0})
+            </TabsTrigger>
             <TabsTrigger value="files">
               <Folder className="h-4 w-4 mr-2" />
               Files
@@ -363,7 +368,6 @@ export default function ProjectDetails() {
               <GitCompare className="h-4 w-4 mr-2" />
               Change Orders
             </TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-2" />
               History
@@ -378,85 +382,59 @@ export default function ProjectDetails() {
             <ProjectFinanceTab projectId={id!} />
           </TabsContent>
 
-          <TabsContent value="service-orders" className="space-y-4">
-            {serviceOrders && serviceOrders.length > 0 ? (
-              <div className="space-y-3">
-                {serviceOrders.map((order) => (
-                  <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => navigate("/service-orders")}>
-                    <CardContent className="py-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{order.title}</p>
-                            <Badge variant="outline">{order.status}</Badge>
-                            {order.priority && (
-                              <Badge variant="outline">{order.priority}</Badge>
-                            )}
+          <TabsContent value="tasks">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Project Tasks</CardTitle>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Task
+                  </Button>
+                </div>
+                <CardDescription>
+                  Tasks specific to this project that appear on the Gantt chart
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tasks && tasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {tasks.map((task: any) => (
+                      <Card key={task.id}>
+                        <CardContent className="py-4">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{task.title}</p>
+                                <Badge variant="outline">{task.status}</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(task.start_date), "MMM d, yyyy")} - {format(new Date(task.end_date), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-muted-foreground">
+                                Progress: {task.progress_percentage}%
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            Order #{order.order_number}
-                          </p>
-                        </div>
-                        {order.assigned && (
-                          <div className="text-sm text-muted-foreground">
-                            Assigned to: {order.assigned.first_name} {order.assigned.last_name}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">No service orders yet</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="appointments" className="space-y-4">
-            {appointments && appointments.length > 0 ? (
-              <div className="space-y-3">
-                {appointments.map((apt) => (
-                  <Card key={apt.id}>
-                    <CardContent className="py-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{apt.title}</p>
-                            <Badge variant="outline">{apt.status}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(apt.start_time), "MMM d, yyyy h:mm a")} -{" "}
-                            {format(new Date(apt.end_time), "h:mm a")}
-                          </p>
-                        </div>
-                        {apt.assigned && (
-                          <div className="text-sm text-muted-foreground">
-                            {apt.assigned.first_name} {apt.assigned.last_name}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">No appointments scheduled</p>
-                </CardContent>
-              </Card>
-            )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground">
+                    No tasks yet. Add tasks to appear on the Gantt chart.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="gantt">
             <ProjectGanttChart 
               tasks={ganttTasks}
-              dependencies={taskDependencies || []}
+              dependencies={ganttDependencies}
               projectStart={project.start_date}
               projectEnd={project.end_date}
             />
@@ -476,10 +454,6 @@ export default function ProjectDetails() {
 
           <TabsContent value="change-orders">
             <ProjectChangeOrdersTab projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <LinkedTasksList linkedModule="project" linkedRecordId={id!} />
           </TabsContent>
 
           <TabsContent value="history">

@@ -24,6 +24,8 @@ import { TemplatesTab } from "@/components/settings/TemplatesTab";
 import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
 import NumberingTab from "@/components/settings/NumberingTab";
 
+import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
+
 interface PayRateCategory {
   id: string;
   name: string;
@@ -171,6 +173,7 @@ export default function Settings() {
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="numbering">Numbering</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
@@ -195,6 +198,10 @@ export default function Settings() {
                 <NumberingTab />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="integrations">
+            <ProjectIntegrationTab />
           </TabsContent>
 
           <TabsContent value="menu">
