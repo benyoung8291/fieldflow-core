@@ -2,20 +2,19 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
+import DocumentDetailLayout, { StatusBadge, DocumentAction, FileMenuAction, TabConfig } from "@/components/layout/DocumentDetailLayout";
+import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Send, CheckCircle, Download, Plus, Edit, Trash2, Check, ExternalLink } from "lucide-react";
+import { Send, CheckCircle, Download, Plus, Edit, Trash2, Check, ExternalLink, DollarSign, Calendar, FileText, User } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
 import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ProjectDialog from "@/components/projects/ProjectDialog";
-import AuditTimeline from "@/components/audit/AuditTimeline";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -485,264 +484,250 @@ export default function InvoiceDetails() {
     },
   });
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      draft: "outline",
-      sent: "secondary",
-      approved: "default",
-      paid: "default",
-      overdue: "destructive",
-    };
-    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
-  };
-
-  if (isLoading) {
+  if (isLoading || !invoice) {
     return (
-      <DashboardLayout>
-        <div className="p-8">
-          <div className="text-muted-foreground">Loading invoice...</div>
-        </div>
-      </DashboardLayout>
+      <DocumentDetailLayout
+        title="Loading..."
+        backPath="/invoices"
+        tabs={[]}
+        isLoading={isLoading}
+        notFoundMessage={!isLoading && !invoice ? "Invoice not found" : undefined}
+      />
     );
   }
 
-  if (!invoice) {
-    return (
-      <DashboardLayout>
-        <div className="p-8">
-          <div className="text-muted-foreground">Invoice not found</div>
-        </div>
-      </DashboardLayout>
-    );
+  // Status badges configuration
+  const statusBadges: StatusBadge[] = [
+    {
+      label: invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1),
+      variant: invoice.status === "draft" ? "outline" : invoice.status === "sent" ? "secondary" : invoice.status === "overdue" ? "destructive" : "default",
+    },
+    ...(invoice.is_progress_invoice ? [{
+      label: "Progress",
+      variant: "outline" as const,
+      className: "text-xs",
+    }] : []),
+  ];
+
+  // Primary actions configuration
+  const primaryActions: DocumentAction[] = [];
+  
+  if (invoice.status === "draft") {
+    primaryActions.push({
+      label: draftSaved ? "Saved" : "Save Draft",
+      icon: draftSaved ? <Check className="h-4 w-4" /> : undefined,
+      onClick: () => {
+        setDraftSaved(true);
+        toast.success("Draft saved successfully");
+        setTimeout(() => setDraftSaved(false), 2000);
+      },
+      variant: "outline",
+    });
+    primaryActions.push({
+      label: "Send to Customer",
+      icon: <Send className="h-4 w-4" />,
+      onClick: () => updateStatusMutation.mutate("sent"),
+      variant: "default",
+    });
+  } else if (invoice.status === "sent") {
+    primaryActions.push({
+      label: "Back to Draft",
+      onClick: () => updateStatusMutation.mutate("draft"),
+      variant: "outline",
+    });
+    primaryActions.push({
+      label: "Mark as Approved",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: () => updateStatusMutation.mutate("approved"),
+      variant: "default",
+    });
+  } else if (invoice.status === "approved") {
+    primaryActions.push({
+      label: "Unapprove",
+      onClick: () => updateStatusMutation.mutate("sent"),
+      variant: "outline",
+    });
   }
 
-  return (
-    <DashboardLayout>
-      <div className="p-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => navigate("/invoices")} className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Invoices
-          </Button>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Invoice {invoice.invoice_number}
-              </h1>
-              <p className="text-muted-foreground">View and manage invoice details</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {invoice.status === "draft" && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setDraftSaved(true);
-                      toast.success("Draft saved successfully");
-                      setTimeout(() => setDraftSaved(false), 2000);
-                    }}
-                    className={`transition-all duration-300 ${
-                      draftSaved 
-                        ? "bg-green-500/10 border-green-500 text-green-700 hover:bg-green-500/20" 
-                        : ""
-                    }`}
-                  >
-                    {draftSaved ? (
-                      <>
-                        <Check className="h-4 w-4 mr-2 animate-scale-in" />
-                        Saved
-                      </>
-                    ) : (
-                      "Save Draft"
-                    )}
-                  </Button>
-                  <Button onClick={() => updateStatusMutation.mutate("sent")}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send to Customer
-                  </Button>
-                </>
-              )}
-              {invoice.status === "sent" && (
-                <>
-                  <Button variant="outline" onClick={() => updateStatusMutation.mutate("draft")}>
-                    Back to Draft
-                  </Button>
-                  <Button onClick={() => updateStatusMutation.mutate("approved")}>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark as Approved
-                  </Button>
-                </>
-              )}
-              {invoice.status === "approved" && (
-                <Button variant="outline" onClick={() => updateStatusMutation.mutate("sent")}>
-                  Unapprove
-                </Button>
-              )}
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setDeleteInvoiceDialogOpen(true)}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
+  primaryActions.push({
+    label: "Download PDF",
+    icon: <Download className="h-4 w-4" />,
+    onClick: () => {},
+    variant: "outline",
+  });
 
-        <div className="grid grid-cols-3 gap-6">
-          <Card className="col-span-2">
-            <CardHeader>
+  // File menu actions configuration
+  const fileMenuActions: FileMenuAction[] = [
+    {
+      label: "Delete Invoice",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => setDeleteInvoiceDialogOpen(true),
+      destructive: true,
+    },
+  ];
+
+  // Key info section
+  const keyInfoSection = (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <KeyInfoCard
+        icon={User}
+        label="Customer"
+        value={invoice.customers?.name || "N/A"}
+        iconColor="text-primary"
+      />
+      <KeyInfoCard
+        icon={Calendar}
+        label="Invoice Date"
+        value={format(new Date(invoice.invoice_date), "dd MMM yyyy")}
+        description={invoice.due_date ? `Due: ${format(new Date(invoice.due_date), "dd MMM yyyy")}` : undefined}
+        iconColor="text-blue-500"
+      />
+      <KeyInfoCard
+        icon={FileText}
+        label="Line Items"
+        value={lineItems?.lineItems?.length || 0}
+        iconColor="text-purple-500"
+      />
+      <KeyInfoCard
+        icon={DollarSign}
+        label="Total Amount"
+        value={`$${invoice.total_amount.toFixed(2)}`}
+        description={`Subtotal: $${invoice.subtotal.toFixed(2)}`}
+        iconColor="text-green-500"
+      />
+    </div>
+  );
+
+  // Tabs configuration
+  const tabs: TabConfig[] = [
+    {
+      value: "line-items",
+      label: "Line Items",
+      icon: <FileText className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <CardTitle>Invoice Details</CardTitle>
-                <div className="flex items-center gap-2">
-                  {invoice.is_progress_invoice && (
-                    <Badge variant="outline" className="text-xs">
-                      Progress
-                    </Badge>
-                  )}
-                  {getStatusBadge(invoice.status)}
-                </div>
+                <div className="text-sm font-medium">Invoice Line Items</div>
+                {invoice.status === "draft" && (
+                  <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Line
+                  </Button>
+                )}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Invoice Date</div>
-                  <div className="font-medium">{format(new Date(invoice.invoice_date), "dd MMM yyyy")}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Due Date</div>
-                  <div className="font-medium">
-                    {invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "-"}
-                  </div>
-                </div>
-              </div>
-
+              
               {invoice.notes && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Notes</div>
-                  <div className="text-sm">{invoice.notes}</div>
-                </div>
+                <>
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Notes</div>
+                    <div className="text-sm">{invoice.notes}</div>
+                  </div>
+                  <Separator />
+                </>
               )}
 
-              <Separator />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Work Order</TableHead>
+                    <TableHead>PO</TableHead>
+                    <TableHead>Project Date</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    {invoice.status === "draft" && <TableHead className="w-[100px]"></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lineItems?.lineItems?.map((item: any) => {
+                    const sourceKey = `${item.source_type}-${item.source_id}`;
+                    const sourceDoc = lineItems.sourceDocuments?.get(sourceKey);
 
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-sm font-medium">Line Items</div>
-                  {invoice.status === "draft" && (
-                    <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Line
-                    </Button>
-                  )}
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Work Order</TableHead>
-                      <TableHead>PO</TableHead>
-                      <TableHead>Project Date</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      {invoice.status === "draft" && <TableHead className="w-[100px]"></TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lineItems?.lineItems?.map((item: any) => {
-                      const sourceKey = `${item.source_type}-${item.source_id}`;
-                      const sourceDoc = lineItems.sourceDocuments?.get(sourceKey);
-
-                      return (
-                        <TableRow key={item.id}>
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div>
+                            <div>{item.description}</div>
+                            {sourceDoc && (
+                              <button
+                                onClick={() => {
+                                  setSelectedSourceId(sourceDoc.id);
+                                  if (sourceDoc.type === "project") {
+                                    setProjectDialogOpen(true);
+                                  } else {
+                                    setServiceOrderDialogOpen(true);
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-xs text-muted-foreground mt-1 hover:text-primary transition-colors group"
+                              >
+                                {sourceDoc.type === "project" ? (
+                                  <>
+                                    <span>from Project: {sourceDoc.name}</span>
+                                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>from {sourceDoc.order_number} - {sourceDoc.title}</span>
+                                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {sourceDoc?.type === "service_order" && sourceDoc.work_order_number
+                            ? sourceDoc.work_order_number
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {sourceDoc?.type === "service_order" && sourceDoc.purchase_order_number
+                            ? sourceDoc.purchase_order_number
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {sourceDoc?.type === "project" && sourceDoc.start_date
+                            ? format(new Date(sourceDoc.start_date), "dd MMM yyyy")
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ${item.line_total.toFixed(2)}
+                        </TableCell>
+                        {invoice.status === "draft" && (
                           <TableCell>
-                            <div>
-                              <div>{item.description}</div>
-                              {sourceDoc && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedSourceId(sourceDoc.id);
-                                    if (sourceDoc.type === "project") {
-                                      setProjectDialogOpen(true);
-                                    } else {
-                                      setServiceOrderDialogOpen(true);
-                                    }
-                                  }}
-                                  className="flex items-center gap-1 text-xs text-muted-foreground mt-1 hover:text-primary transition-colors group"
-                                >
-                                  {sourceDoc.type === "project" ? (
-                                    <>
-                                      <span>from Project: {sourceDoc.name}</span>
-                                      <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span>from {sourceDoc.order_number} - {sourceDoc.title}</span>
-                                      <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </>
-                                  )}
-                                </button>
-                              )}
+                            <div className="flex items-center gap-1 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingItem({ ...item, source_type: item.source_type, source_id: item.source_id })}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setItemToDelete(item.id);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {sourceDoc?.type === "service_order" && sourceDoc.work_order_number
-                              ? sourceDoc.work_order_number
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {sourceDoc?.type === "service_order" && sourceDoc.purchase_order_number
-                              ? sourceDoc.purchase_order_number
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {sourceDoc?.type === "project" && sourceDoc.start_date
-                              ? format(new Date(sourceDoc.start_date), "dd MMM yyyy")
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            ${item.line_total.toFixed(2)}
-                          </TableCell>
-                          {invoice.status === "draft" && (
-                            <TableCell>
-                              <div className="flex items-center gap-1 justify-end">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingItem({ ...item, source_type: item.source_type, source_id: item.source_id })}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setItemToDelete(item.id);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
 
               <Separator />
 
@@ -761,62 +746,79 @@ export default function InvoiceDetails() {
                   <span className="font-bold text-lg text-primary">${invoice.total_amount.toFixed(2)}</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "customer",
+      label: "Customer",
+      icon: <User className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Customer Name</div>
+              <div className="font-medium">{invoice.customers?.name}</div>
+            </div>
+            {invoice.customers?.email && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Email</div>
+                <div className="text-sm">{invoice.customers.email}</div>
+              </div>
+            )}
+            {invoice.customers?.billing_address && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Billing Address</div>
+                <div className="text-sm">{invoice.customers.billing_address}</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "tasks",
+      label: "Tasks",
+      content: (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Linked Tasks</CardTitle>
+              <CreateTaskButton
+                linkedModule="invoice"
+                linkedRecordId={id!}
+                variant="default"
+                size="sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <LinkedTasksList linkedModule="invoice" linkedRecordId={id!} />
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Customer Name</div>
-                  <div className="font-medium">{invoice.customers?.name}</div>
-                </div>
-                {invoice.customers?.email && (
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Email</div>
-                    <div className="text-sm">{invoice.customers.email}</div>
-                  </div>
-                )}
-                {invoice.customers?.billing_address && (
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Billing Address</div>
-                    <div className="text-sm">{invoice.customers.billing_address}</div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Change History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AuditTimeline tableName="invoices" recordId={id!} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Tasks</CardTitle>
-                  <CreateTaskButton
-                    linkedModule="invoice"
-                    linkedRecordId={id!}
-                    variant="default"
-                    size="sm"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <LinkedTasksList linkedModule="invoice" linkedRecordId={id!} />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+  return (
+    <>
+      <DocumentDetailLayout
+        title={`Invoice ${invoice.invoice_number}`}
+        subtitle="View and manage invoice details"
+        backPath="/invoices"
+        statusBadges={statusBadges}
+        primaryActions={primaryActions}
+        fileMenuActions={fileMenuActions}
+        keyInfoSection={keyInfoSection}
+        tabs={tabs}
+        auditTableName="invoices"
+        auditRecordId={id!}
+      />
 
       {editingItem && (
         <EditInvoiceLineDialog
@@ -906,6 +908,6 @@ export default function InvoiceDetails() {
           />
         </>
       )}
-    </DashboardLayout>
+    </>
   );
 }
