@@ -103,13 +103,29 @@ export default function Invoices() {
     queryKey: ["customer-service-orders", selectedCustomerId],
     queryFn: async () => {
       if (!selectedCustomerId) return [];
-      const { data, error } = await supabase
+      const { data: ordersData, error: ordersError } = await supabase
         .from("service_orders")
         .select("id, order_number, title, created_at, customer_id")
         .eq("customer_id", selectedCustomerId)
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      
+      if (ordersError) throw ordersError;
+
+      // Fetch line items for each service order
+      const ordersWithLineItems = await Promise.all(
+        (ordersData || []).map(async (order) => {
+          const { data: lineItems, error: lineItemsError } = await supabase
+            .from("service_order_line_items")
+            .select("*")
+            .eq("service_order_id", order.id)
+            .order("item_order");
+          
+          if (lineItemsError) throw lineItemsError;
+          return { ...order, service_order_line_items: lineItems };
+        })
+      );
+
+      return ordersWithLineItems;
     },
     enabled: !!selectedCustomerId,
   });
@@ -146,6 +162,20 @@ export default function Invoices() {
               line_total: item.line_total,
               item_order: itemOrder++,
               source_type: "project",
+              source_id: id,
+            });
+          });
+        } else if (type === "service_order") {
+          const serviceOrder = serviceOrders?.find(so => so.id === id);
+          serviceOrder?.service_order_line_items?.forEach((item: any) => {
+            lineItems.push({
+              tenant_id: profile.tenant_id,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.sell_price || item.unit_price,
+              line_total: item.line_total,
+              item_order: itemOrder++,
+              source_type: "service_order",
               source_id: id,
             });
           });
@@ -242,6 +272,11 @@ export default function Invoices() {
       if (type === "project") {
         const project = projects?.find(p => p.id === id);
         project?.project_line_items?.forEach((item: any) => {
+          subtotal += Number(item.line_total) || 0;
+        });
+      } else if (type === "service_order") {
+        const serviceOrder = serviceOrders?.find(so => so.id === id);
+        serviceOrder?.service_order_line_items?.forEach((item: any) => {
           subtotal += Number(item.line_total) || 0;
         });
       }
@@ -349,9 +384,14 @@ export default function Invoices() {
                             className="flex-1 cursor-pointer"
                             onClick={() => toggleItemSelection(`service_order-${order.id}`)}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
-                              <span className="font-medium text-foreground">{order.title}</span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
+                                <span className="font-medium text-foreground">{order.title}</span>
+                              </div>
+                              <div className="text-sm text-muted-foreground mt-1">
+                                {order.service_order_line_items?.length || 0} line items
+                              </div>
                             </div>
                           </div>
                           <Button
@@ -459,7 +499,7 @@ export default function Invoices() {
                                   ))}
                                 </>
                               );
-                            } else {
+                              } else {
                               const order = serviceOrders?.find(so => so.id === id);
                               return (
                                 <>
@@ -468,11 +508,26 @@ export default function Invoices() {
                                       {order?.order_number} - {order?.title}
                                     </td>
                                   </tr>
-                                  <tr key={itemId} className="border-b">
-                                    <td className="p-2 text-muted-foreground italic" colSpan={4}>
-                                      Service order line items to be configured
-                                    </td>
-                                  </tr>
+                                  {order?.service_order_line_items && order.service_order_line_items.length > 0 ? (
+                                    order.service_order_line_items.map((lineItem: any) => (
+                                      <tr key={lineItem.id} className="border-b hover:bg-muted/10">
+                                        <td className="p-2 text-foreground">{lineItem.description}</td>
+                                        <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
+                                        <td className="p-2 text-right text-foreground">
+                                          ${(lineItem.sell_price || lineItem.unit_price || 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-medium text-foreground">
+                                          ${(lineItem.line_total || 0).toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <tr key={itemId} className="border-b">
+                                      <td className="p-2 text-muted-foreground italic" colSpan={4}>
+                                        No line items available
+                                      </td>
+                                    </tr>
+                                  )}
                                 </>
                               );
                             }
