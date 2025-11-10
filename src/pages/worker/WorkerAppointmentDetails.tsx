@@ -139,13 +139,18 @@ export default function WorkerAppointmentDetails() {
   const handleClockIn = async () => {
     setProcessing(true);
     try {
+      console.log('[Clock In] Starting clock-in process...');
+      
       // First check/request location permission
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
+        console.log('[Clock In] Location permission denied');
         setProcessing(false);
         return;
       }
 
+      console.log('[Clock In] Permission granted, getting location...');
+      
       // Show loading toast while getting location
       const loadingToast = toast.loading('Getting your location...');
 
@@ -161,22 +166,44 @@ export default function WorkerAppointmentDetails() {
         );
       });
 
+      console.log('[Clock In] Location obtained:', {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      });
+
       toast.dismiss(loadingToast);
 
+      console.log('[Clock In] Getting user data...');
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        console.error('[Clock In] User not authenticated');
+        throw new Error('Not authenticated');
+      }
 
-      const { data: worker } = await (supabase as any)
+      console.log('[Clock In] Getting worker data for user:', user.id);
+      const { data: worker, error: workerError } = await (supabase as any)
         .from('workers')
         .select('id, tenant_id, pay_rate_category:pay_rate_categories(hourly_rate)')
         .eq('user_id', user.id)
         .single();
 
-      if (!worker) throw new Error('Worker not found');
+      if (workerError) {
+        console.error('[Clock In] Worker query error:', workerError);
+        throw workerError;
+      }
+
+      if (!worker) {
+        console.error('[Clock In] Worker not found for user:', user.id);
+        throw new Error('Worker profile not found. Please contact support.');
+      }
+
+      console.log('[Clock In] Worker found:', { workerId: worker.id, tenantId: worker.tenant_id });
 
       const hourlyRate = (worker.pay_rate_category as any)?.hourly_rate || 0;
 
-      const { error } = await (supabase as any).from('time_logs').insert({
+      console.log('[Clock In] Inserting time log...');
+      const timeLogData = {
         tenant_id: worker.tenant_id,
         appointment_id: id,
         worker_id: worker.id,
@@ -186,20 +213,37 @@ export default function WorkerAppointmentDetails() {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         notes: `Clocked in at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`,
-      });
+      };
+      
+      console.log('[Clock In] Time log data:', timeLogData);
+      
+      const { error, data: insertedLog } = await (supabase as any).from('time_logs').insert(timeLogData).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Clock In] Time log insert error:', error);
+        throw error;
+      }
 
-      await supabase
+      console.log('[Clock In] Time log inserted successfully:', insertedLog);
+
+      console.log('[Clock In] Updating appointment status...');
+      const { error: updateError } = await supabase
         .from('appointments')
         .update({ status: 'checked_in' })
         .eq('id', id);
 
+      if (updateError) {
+        console.error('[Clock In] Appointment update error:', updateError);
+        throw updateError;
+      }
+
+      console.log('[Clock In] Clock-in completed successfully!');
       toast.success(`Clocked in successfully at your location!`);
       loadAppointmentData();
     } catch (error: any) {
-      console.error('Clock in error:', error);
+      console.error('[Clock In] Error caught:', error);
       
+      // Geolocation errors
       if (error.code === 1) {
         toast.error('Location permission denied. Please enable location access in your browser settings and try again.', {
           duration: 6000,
@@ -208,8 +252,18 @@ export default function WorkerAppointmentDetails() {
         toast.error('Unable to determine your location. Please check your device settings.');
       } else if (error.code === 3) {
         toast.error('Location request timed out. Please try again.');
+      } else if (error.message?.includes('Worker profile not found')) {
+        toast.error('Worker profile not found. Please contact support.');
+      } else if (error.message?.includes('Not authenticated')) {
+        toast.error('Session expired. Please log in again.');
+        navigate('/worker/auth');
       } else {
-        toast.error('Failed to clock in. Please try again.');
+        // Database or other errors
+        const errorMessage = error.message || error.hint || 'Unknown error';
+        toast.error(`Failed to clock in: ${errorMessage}`, {
+          duration: 6000,
+        });
+        console.error('[Clock In] Full error details:', JSON.stringify(error, null, 2));
       }
     } finally {
       setProcessing(false);
