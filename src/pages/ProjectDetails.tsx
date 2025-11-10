@@ -354,7 +354,7 @@ export default function ProjectDetails() {
             </TabsTrigger>
             <TabsTrigger value="tasks">
               <ClipboardList className="h-4 w-4 mr-2" />
-              Tasks ({tasks?.length || 0})
+              Project Tasks ({tasks?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="files">
               <Folder className="h-4 w-4 mr-2" />
