@@ -72,15 +72,21 @@ export default function WorkerAppointmentDetails() {
 
       setAppointment(aptData);
 
-      // Get worker profile (worker ID is same as user ID)
-      const workerId = user.id;
+      // Get worker data (worker ID is same as user ID)
+      const { data: worker } = await supabase
+        .from('workers')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!worker) return;
 
       // Load active time log
       const { data: logData } = await supabase
         .from('time_logs')
         .select('*')
         .eq('appointment_id', id)
-        .eq('worker_id', workerId)
+        .eq('worker_id', worker.id)
         .is('clock_out', null)
         .maybeSingle();
 
@@ -178,24 +184,24 @@ export default function WorkerAppointmentDetails() {
         throw new Error('Not authenticated');
       }
 
-      console.log('[Clock In] Getting worker profile for user:', user.id);
+      console.log('[Clock In] Getting worker data for user:', user.id);
       const { data: worker, error: workerError } = await supabase
-        .from('profiles')
+        .from('workers')
         .select('id, tenant_id, pay_rate_category:pay_rate_categories(hourly_rate)')
         .eq('id', user.id)
         .single();
 
       if (workerError) {
-        console.error('[Clock In] Worker profile query error:', workerError);
+        console.error('[Clock In] Worker query error:', workerError);
         throw workerError;
       }
 
       if (!worker) {
-        console.error('[Clock In] Worker profile not found for user:', user.id);
+        console.error('[Clock In] Worker not found for user:', user.id);
         throw new Error('Worker profile not found. Please contact support.');
       }
 
-      console.log('[Clock In] Worker profile found:', { workerId: worker.id, tenantId: worker.tenant_id });
+      console.log('[Clock In] Worker found:', { workerId: worker.id, tenantId: worker.tenant_id });
 
       const hourlyRate = (worker.pay_rate_category as any)?.hourly_rate || 0;
       const timestamp = new Date().toISOString();
@@ -347,12 +353,12 @@ export default function WorkerAppointmentDetails() {
         if (!user) throw new Error('Not authenticated');
 
         const { data: worker } = await supabase
-          .from('profiles')
+          .from('workers')
           .select('id, tenant_id')
           .eq('id', user.id)
           .single();
 
-        if (!worker) throw new Error('Worker profile not found');
+        if (!worker) throw new Error('Worker not found');
 
         await queueTimeEntry({
           appointmentId: id!,
