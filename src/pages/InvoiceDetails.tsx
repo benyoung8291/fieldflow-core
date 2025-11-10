@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Send, CheckCircle, Download, Plus, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Download, Plus, Edit, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
@@ -23,6 +23,7 @@ export default function InvoiceDetails() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -369,8 +370,27 @@ export default function InvoiceDetails() {
             <div className="flex items-center gap-2">
               {invoice.status === "draft" && (
                 <>
-                  <Button variant="outline" onClick={() => toast.success("Draft saved")}>
-                    Save Draft
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setDraftSaved(true);
+                      toast.success("Draft saved successfully");
+                      setTimeout(() => setDraftSaved(false), 2000);
+                    }}
+                    className={`transition-all duration-300 ${
+                      draftSaved 
+                        ? "bg-green-500/10 border-green-500 text-green-700 hover:bg-green-500/20" 
+                        : ""
+                    }`}
+                  >
+                    {draftSaved ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2 animate-scale-in" />
+                        Saved
+                      </>
+                    ) : (
+                      "Save Draft"
+                    )}
                   </Button>
                   <Button onClick={() => updateStatusMutation.mutate("sent")}>
                     <Send className="h-4 w-4 mr-2" />
