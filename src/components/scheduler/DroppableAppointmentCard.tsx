@@ -33,6 +33,14 @@ export default function DroppableAppointmentCard({
   const totalWorkerHours = workers.length * calculateAppointmentHours(appointment);
   const remainingHours = (estimatedHours || 0) - totalWorkerHours;
 
+  // Temporary debug logging
+  console.log('DroppableAppointmentCard render:', {
+    appointmentId: appointment.id,
+    workersCount: workers.length,
+    workers: workers,
+    appointmentData: appointment.appointment_workers
+  });
+
   return (
     <Card
       ref={setNodeRef}
