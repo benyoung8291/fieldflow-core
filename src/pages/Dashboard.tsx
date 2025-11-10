@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, startOfMonth } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
+import { ActiveUsers } from "@/components/dashboard/ActiveUsers";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -321,6 +322,16 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Real-time Activity Feed and Active Users */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <RecentActivityFeed />
+          </div>
+          <div>
+            <ActiveUsers />
+          </div>
         </div>
       </div>
     </DashboardLayout>
