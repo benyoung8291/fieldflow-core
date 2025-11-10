@@ -1,26 +1,34 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Clock, User } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DroppableTimeSlot from "./DroppableTimeSlot";
-import { cn } from "@/lib/utils";
+import DroppableAppointmentCard from "./DroppableAppointmentCard";
+import CreateAppointmentButton from "./CreateAppointmentButton";
+import DraggableWorker from "./DraggableWorker";
 
 interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
   appointments: any[];
   viewType: "day" | "week" | "month" | "kanban";
   onAppointmentClick: (id: string) => void;
+  onCreateAppointment: (serviceOrderId: string, date: Date, startTime: string, endTime: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  workers: any[];
 }
 
 export default function ServiceOrdersCalendarView({
   currentDate,
   appointments,
   viewType,
-  onAppointmentClick
+  onAppointmentClick,
+  onCreateAppointment,
+  onRemoveWorker,
+  workers,
 }: ServiceOrdersCalendarViewProps) {
-  // Fetch service orders with appointments
+  // Fetch service orders with appointments and line items
   const { data: serviceOrders = [] } = useQuery({
     queryKey: ["service-orders-for-calendar"],
     queryFn: async () => {
@@ -28,7 +36,8 @@ export default function ServiceOrdersCalendarView({
         .from("service_orders")
         .select(`
           *,
-          customers!service_orders_customer_id_fkey(name)
+          customers!service_orders_customer_id_fkey(name),
+          service_order_line_items(*)
         `)
         .in("status", ["draft", "scheduled", "in_progress"])
         .order("created_at", { ascending: false });
@@ -43,11 +52,22 @@ export default function ServiceOrdersCalendarView({
   const weekEnd = endOfWeek(currentDate);
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Group appointments by service order
-  const appointmentsByServiceOrder = serviceOrders.map(order => ({
-    ...order,
-    appointments: appointments.filter(apt => apt.service_order_id === order.id)
-  }));
+  // Group appointments by service order and calculate summaries
+  const appointmentsByServiceOrder = serviceOrders.map(order => {
+    const lineItems = order.service_order_line_items || [];
+    const lineItemsSummary = lineItems.length > 0
+      ? lineItems
+          .slice(0, 3)
+          .map((item: any) => `${item.quantity}x ${item.description}`)
+          .join(", ") + (lineItems.length > 3 ? "..." : "")
+      : "";
+
+    return {
+      ...order,
+      appointments: appointments.filter(apt => apt.service_order_id === order.id),
+      lineItemsSummary,
+    };
+  });
 
   const getAppointmentsForDay = (serviceOrderId: string, day: Date) => {
     return appointments.filter(apt => 
@@ -64,114 +84,104 @@ export default function ServiceOrdersCalendarView({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[800px]">
-        {/* Header Row - Days */}
-        <div className="grid grid-cols-8 gap-2 mb-2">
-          <div className="font-semibold text-sm p-2">Service Order</div>
-          {days.map(day => (
-            <div key={day.toISOString()} className="text-center font-semibold text-sm p-2">
-              <div>{format(day, "EEE")}</div>
-              <div className="text-xs text-muted-foreground">{format(day, "MMM d")}</div>
-            </div>
-          ))}
-        </div>
+    <div className="flex gap-4 h-full">
+      {/* Workers Sidebar */}
+      <Card className="w-64 flex-shrink-0 p-4">
+        <h3 className="font-semibold mb-3">Available Workers</h3>
+        <ScrollArea className="h-[calc(100vh-300px)]">
+          <div className="space-y-2">
+            {workers.map(worker => (
+              <DraggableWorker key={worker.id} worker={worker} />
+            ))}
+          </div>
+        </ScrollArea>
+      </Card>
 
-        {/* Service Order Rows */}
-        <div className="space-y-2">
-          {appointmentsByServiceOrder.map(order => (
-            <div key={order.id} className="grid grid-cols-8 gap-2">
-              {/* Service Order Info */}
-              <Card className="p-2 flex flex-col justify-center">
-                <div className="space-y-1">
-                  <Badge variant="outline" className="text-xs w-fit">
-                    {order.order_number}
-                  </Badge>
-                  <div className="font-semibold text-sm truncate">{order.title}</div>
-                  {order.customers && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {order.customers.name}
-                    </div>
-                  )}
-                </div>
-              </Card>
+      {/* Calendar View */}
+      <div className="flex-1 overflow-x-auto">
+        <div className="min-w-[800px]">
+          {/* Header Row - Days */}
+          <div className="grid grid-cols-8 gap-2 mb-2">
+            <div className="font-semibold text-sm p-2">Service Order</div>
+            {days.map(day => (
+              <div key={day.toISOString()} className="text-center font-semibold text-sm p-2">
+                <div>{format(day, "EEE")}</div>
+                <div className="text-xs text-muted-foreground">{format(day, "MMM d")}</div>
+              </div>
+            ))}
+          </div>
 
-              {/* Appointments for each day */}
-              {days.map(day => {
-                const dayAppointments = getAppointmentsForDay(order.id, day);
-                
-                return (
-                  <DroppableTimeSlot
-                    key={day.toISOString()}
-                    id={`so-slot-${order.id}-${day.toISOString()}`}
-                    date={day}
-                    workerId={null}
-                    className="min-h-[80px]"
-                  >
-                    {dayAppointments.length > 0 ? (
-                      <div className="space-y-1">
-                        {dayAppointments.map(apt => {
-                          const workers = apt.appointment_workers || [];
-                          return (
-                            <Card
-                              key={apt.id}
-                              className="p-2 cursor-pointer hover:shadow-md transition-shadow"
-                              onClick={() => onAppointmentClick(apt.id)}
-                            >
-                              <div className="space-y-1">
-                                {workers.length > 0 ? (
-                                  <div className="flex items-center gap-1 text-xs">
-                                    <User className="h-3 w-3" />
-                                    <span className="truncate">
-                                      {workers.map((w: any) => 
-                                        `${w.profiles?.first_name || ''} ${w.profiles?.last_name || ''}`
-                                      ).join(', ')}
-                                    </span>
-                                  </div>
-                                ) : apt.assigned_to_profile && (
-                                  <div className="flex items-center gap-1 text-xs">
-                                    <User className="h-3 w-3" />
-                                    <span className="truncate">
-                                      {apt.assigned_to_profile.first_name} {apt.assigned_to_profile.last_name}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  <span>
-                                    {format(new Date(apt.start_time), "HH:mm")} - {format(new Date(apt.end_time), "HH:mm")}
-                                  </span>
-                                </div>
-                                <div className="text-xs font-semibold">
-                                  {calculateTotalHours(apt.start_time, apt.end_time)}h
-                                </div>
-                                <Badge 
-                                  variant={apt.status === "completed" ? "default" : "secondary"}
-                                  className="text-xs w-fit"
-                                >
-                                  {apt.status}
-                                </Badge>
-                              </div>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-                        -
+          {/* Service Order Rows */}
+          <div className="space-y-2">
+            {appointmentsByServiceOrder.map(order => (
+              <div key={order.id} className="grid grid-cols-8 gap-2">
+                {/* Service Order Info */}
+                <Card className="p-2 flex flex-col justify-center">
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="text-xs w-fit">
+                      {order.order_number}
+                    </Badge>
+                    <div className="font-semibold text-sm truncate">{order.title}</div>
+                    {order.customers && (
+                      <div className="text-xs text-muted-foreground truncate">
+                        {order.customers.name}
                       </div>
                     )}
-                  </DroppableTimeSlot>
-                );
-              })}
-            </div>
-          ))}
+                    {order.estimated_hours && (
+                      <div className="text-xs text-muted-foreground">
+                        Est: {order.estimated_hours}h
+                      </div>
+                    )}
+                  </div>
+                </Card>
 
-          {appointmentsByServiceOrder.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No service orders found
-            </div>
-          )}
+                {/* Appointments for each day */}
+                {days.map(day => {
+                  const dayAppointments = getAppointmentsForDay(order.id, day);
+                  
+                  return (
+                    <DroppableTimeSlot
+                      key={day.toISOString()}
+                      id={`so-slot-${order.id}-${day.toISOString()}`}
+                      date={day}
+                      workerId={null}
+                      className="min-h-[120px] p-2"
+                    >
+                      <div className="space-y-2 h-full">
+                        {dayAppointments.length > 0 ? (
+                          dayAppointments.map(apt => (
+                            <DroppableAppointmentCard
+                              key={apt.id}
+                              appointment={apt}
+                              lineItemsSummary={order.lineItemsSummary}
+                              estimatedHours={order.estimated_hours}
+                              onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
+                              onClick={() => onAppointmentClick(apt.id)}
+                            />
+                          ))
+                        ) : (
+                          <div className="h-full flex items-center justify-center">
+                            <CreateAppointmentButton
+                              serviceOrderId={order.id}
+                              serviceOrderTitle={order.title}
+                              date={day}
+                              onCreateAppointment={onCreateAppointment}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </DroppableTimeSlot>
+                  );
+                })}
+              </div>
+            ))}
+
+            {appointmentsByServiceOrder.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                No service orders found
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

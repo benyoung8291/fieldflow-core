@@ -557,6 +557,14 @@ export default function Scheduler() {
     const draggedItem = active.data.current;
     const dropTarget = over.data.current;
 
+    // Handle dropping worker onto appointment card
+    if (draggedItem?.type === "worker" && dropTarget?.type === "appointment-card") {
+      const workerId = draggedItem.worker.id;
+      const appointmentId = dropTarget.appointmentId;
+      addWorkerToAppointmentMutation.mutate({ appointmentId, workerId });
+      return;
+    }
+
     if (dropTarget?.type !== "time-slot") return;
 
     const { date, workerId, hour } = dropTarget;
@@ -881,7 +889,27 @@ export default function Scheduler() {
                 currentDate={currentDate}
                 appointments={appointments}
                 viewType={viewType}
-                onAppointmentClick={(id) => setSelectedAppointment(id)}
+                onAppointmentClick={(id) => {
+                  const apt = appointments.find(a => a.id === id);
+                  setDetailsAppointment(apt);
+                }}
+                onCreateAppointment={(serviceOrderId, date, startTime, endTime) => {
+                  const [hours, minutes] = startTime.split(':');
+                  const [endHours, endMinutes] = endTime.split(':');
+                  const start = new Date(date);
+                  start.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                  const end = new Date(date);
+                  end.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+                  
+                  createAppointmentMutation.mutate({
+                    serviceOrderId,
+                    startTime: start,
+                    endTime: end,
+                    workerId: null,
+                  });
+                }}
+                onRemoveWorker={handleRemoveWorker}
+                workers={workers}
               />
             ) : (
               <>
