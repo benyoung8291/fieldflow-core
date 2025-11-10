@@ -79,16 +79,16 @@ export default function ServiceOrderDialog({
     field: currentField,
   });
 
-  // Fetch tax rate from settings
+  // Fetch tax rate and project integration settings
   const { data: settings } = useQuery({
     queryKey: ["general-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("general_settings" as any)
-        .select("default_tax_rate")
+        .from("tenant_settings" as any)
+        .select("default_tax_rate, projects_service_orders_integration")
         .single();
       if (error && error.code !== 'PGRST116') throw error;
-      return data as unknown as { default_tax_rate: number } | null;
+      return data as any;
     },
     enabled: open,
   });
@@ -777,7 +777,7 @@ export default function ServiceOrderDialog({
                   </FieldPresenceWrapper>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${settings?.projects_service_orders_integration ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <FieldPresenceWrapper fieldName="customer_contact_id" onlineUsers={onlineUsers}>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -818,31 +818,33 @@ export default function ServiceOrderDialog({
                     </div>
                   </FieldPresenceWrapper>
 
-                  <FieldPresenceWrapper fieldName="project_id" onlineUsers={onlineUsers}>
-                    <div className="space-y-2">
-                      <Label htmlFor="project_id">Project (Optional)</Label>
-                      <Select 
-                        value={formData.project_id} 
-                        onValueChange={(value) => {
-                          setFormData({ ...formData, project_id: value });
-                          setCurrentField("project_id");
-                          updateField("project_id");
-                        }}
-                        disabled={!formData.customer_id || projects.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </FieldPresenceWrapper>
+                  {settings?.projects_service_orders_integration && (
+                    <FieldPresenceWrapper fieldName="project_id" onlineUsers={onlineUsers}>
+                      <div className="space-y-2">
+                        <Label htmlFor="project_id">Project (Optional)</Label>
+                        <Select 
+                          value={formData.project_id} 
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, project_id: value });
+                            setCurrentField("project_id");
+                            updateField("project_id");
+                          }}
+                          disabled={!formData.customer_id || projects.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select project" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {projects.map((project) => (
+                              <SelectItem key={project.id} value={project.id}>
+                                {project.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </FieldPresenceWrapper>
+                  )}
                 </div>
 
                 <FieldPresenceWrapper fieldName="title" onlineUsers={onlineUsers}>

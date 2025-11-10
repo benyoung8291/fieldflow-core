@@ -71,6 +71,19 @@ export default function ServiceOrderDetails() {
   const [appointmentEndTime, setAppointmentEndTime] = useState("17:00");
   const [addToInvoiceDialogOpen, setAddToInvoiceDialogOpen] = useState(false);
 
+  // Fetch project integration setting
+  const { data: integrationSettings } = useQuery({
+    queryKey: ["project-integration-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_settings" as any)
+        .select("projects_service_orders_integration")
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as unknown as { projects_service_orders_integration: boolean } | null;
+    },
+  });
+
   const { data: order, isLoading } = useQuery({
     queryKey: ["service_order", id],
     queryFn: async () => {
@@ -515,29 +528,31 @@ export default function ServiceOrderDetails() {
             </CardContent>
           </Card>
 
-          {/* Project Assignment */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Project</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(order as any).projects ? (
-                <div 
-                  className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 -mx-3 -mt-3 -mb-3 p-3 rounded-lg transition-colors"
-                  onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
-                >
-                  <FolderKanban className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{(order as any).projects.name}</div>
+          {/* Project Assignment - Only show if integration is enabled */}
+          {integrationSettings?.projects_service_orders_integration && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Project</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(order as any).projects ? (
+                  <div 
+                    className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 -mx-3 -mt-3 -mb-3 p-3 rounded-lg transition-colors"
+                    onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
+                  >
+                    <FolderKanban className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{(order as any).projects.name}</div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground text-center py-2">
-                  No project assigned
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="text-xs text-muted-foreground text-center py-2">
+                    No project assigned
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Tabs */}
