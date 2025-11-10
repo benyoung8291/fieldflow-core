@@ -482,7 +482,7 @@ export default function Invoices() {
                           {Array.from(selectedItems).map((itemId) => {
                             const [type, id] = itemId.split("-");
                             
-                            if (type === "project") {
+                             if (type === "project") {
                               const project = projects?.find(p => p.id === id);
                               return (
                                 <>
@@ -491,21 +491,21 @@ export default function Invoices() {
                                       Project: {project?.name}
                                     </td>
                                   </tr>
-                                  {project?.project_line_items?.map((lineItem: any, idx: number) => (
-                                      <tr key={lineItem.id} className="border-b hover:bg-muted/10">
-                                        <td className="p-2 text-foreground">{lineItem.description}</td>
-                                        <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
-                                        <td className="p-2 text-right text-foreground">
-                                          ${(lineItem.unit_price || 0).toFixed(2)}
-                                        </td>
-                                        <td className="p-2 text-right font-medium text-foreground">
-                                          ${(lineItem.line_total || 0).toFixed(2)}
-                                        </td>
-                                      </tr>
+                                  {project?.project_line_items?.map((lineItem: any) => (
+                                    <tr key={lineItem.id} className="border-b hover:bg-muted/10">
+                                      <td className="p-2 text-foreground">{lineItem.description}</td>
+                                      <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
+                                      <td className="p-2 text-right text-foreground">
+                                        ${(lineItem.unit_price || 0).toFixed(2)}
+                                      </td>
+                                      <td className="p-2 text-right font-medium text-foreground">
+                                        ${(lineItem.line_total || 0).toFixed(2)}
+                                      </td>
+                                    </tr>
                                   ))}
                                 </>
                               );
-                              } else {
+                            } else {
                               const order = serviceOrders?.find(so => so.id === id);
                               return (
                                 <>
@@ -520,7 +520,7 @@ export default function Invoices() {
                                         <td className="p-2 text-foreground">{lineItem.description}</td>
                                         <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
                                         <td className="p-2 text-right text-foreground">
-                                          ${(lineItem.sell_price || lineItem.unit_price || 0).toFixed(2)}
+                                          ${(lineItem.unit_price || 0).toFixed(2)}
                                         </td>
                                         <td className="p-2 text-right font-medium text-foreground">
                                           ${(lineItem.line_total || 0).toFixed(2)}
