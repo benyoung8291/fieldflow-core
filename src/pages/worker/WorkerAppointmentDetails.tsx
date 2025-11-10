@@ -277,6 +277,7 @@ export default function WorkerAppointmentDetails() {
           clock_in: timestamp,
           notes,
           worker_id: worker.id,
+          tenant_id: worker.tenant_id,
         });
         
         if (appointment) {
@@ -302,7 +303,7 @@ export default function WorkerAppointmentDetails() {
       
       console.log('[Clock In] Time log data:', timeLogData);
       
-      const { error, data: insertedLog } = await (supabase as any).from('time_logs').insert(timeLogData).select();
+      const { error, data: insertedLog } = await supabase.from('time_logs').insert(timeLogData).select();
 
       if (error) {
         console.error('[Clock In] Time log insert error:', error);
@@ -351,6 +352,7 @@ export default function WorkerAppointmentDetails() {
         console.error('[Clock In] Full error details:', JSON.stringify(error, null, 2));
       }
     } finally {
+      // Always reset processing state
       setProcessing(false);
     }
   };
