@@ -105,7 +105,7 @@ export default function Invoices() {
       if (!selectedCustomerId) return [];
       const { data: ordersData, error: ordersError } = await supabase
         .from("service_orders")
-        .select("id, order_number, title, created_at, customer_id")
+        .select("id, order_number, title, created_at, customer_id, work_order_number, purchase_order_number")
         .eq("customer_id", selectedCustomerId)
         .order("created_at", { ascending: false });
       
@@ -479,6 +479,8 @@ export default function Invoices() {
                         <thead className="bg-muted/50 sticky top-0">
                           <tr className="border-b">
                             <th className="text-left p-2 font-medium text-muted-foreground">Description</th>
+                            <th className="text-left p-2 font-medium text-muted-foreground w-28">Work Order #</th>
+                            <th className="text-left p-2 font-medium text-muted-foreground w-24">PO #</th>
                             <th className="text-right p-2 font-medium text-muted-foreground w-20">Qty</th>
                             <th className="text-right p-2 font-medium text-muted-foreground w-24">Unit Price</th>
                             <th className="text-right p-2 font-medium text-muted-foreground w-28">Line Total</th>
@@ -498,13 +500,15 @@ export default function Invoices() {
                               return (
                                 <>
                                   <tr key={`${itemId}-header`} className="bg-muted/30">
-                                    <td colSpan={4} className="p-2 text-xs font-medium text-muted-foreground">
+                                    <td colSpan={6} className="p-2 text-xs font-medium text-muted-foreground">
                                       Project: {project?.name}
                                     </td>
                                   </tr>
                                   {project?.project_line_items?.map((lineItem: any) => (
                                     <tr key={lineItem.id} className="border-b hover:bg-muted/10">
                                       <td className="p-2 text-foreground">{lineItem.description}</td>
+                                      <td className="p-2 text-muted-foreground">-</td>
+                                      <td className="p-2 text-muted-foreground">-</td>
                                       <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
                                       <td className="p-2 text-right text-foreground">
                                         ${(lineItem.unit_price || 0).toFixed(2)}
@@ -516,20 +520,20 @@ export default function Invoices() {
                                   ))}
                                   {(!project?.project_line_items || project.project_line_items.length === 0) && (
                                     <tr key={`${itemId}-empty`} className="border-b">
-                                      <td className="p-2 text-muted-foreground italic" colSpan={4}>
+                                      <td className="p-2 text-muted-foreground italic" colSpan={6}>
                                         No line items available
                                       </td>
                                     </tr>
                                   )}
                                 </>
                               );
-                            } else {
+                              } else {
                               const order = serviceOrders?.find(so => so.id === id);
                               console.log("Found service order:", order?.order_number, "Line items:", order?.service_order_line_items);
                               return (
                                 <>
                                   <tr key={`${itemId}-header`} className="bg-muted/30">
-                                    <td colSpan={4} className="p-2 text-xs font-medium text-muted-foreground">
+                                    <td colSpan={6} className="p-2 text-xs font-medium text-muted-foreground">
                                       {order?.order_number} - {order?.title}
                                     </td>
                                   </tr>
@@ -537,6 +541,8 @@ export default function Invoices() {
                                     order.service_order_line_items.map((lineItem: any) => (
                                       <tr key={lineItem.id} className="border-b hover:bg-muted/10">
                                         <td className="p-2 text-foreground">{lineItem.description}</td>
+                                        <td className="p-2 text-foreground">{order?.work_order_number || '-'}</td>
+                                        <td className="p-2 text-foreground">{order?.purchase_order_number || '-'}</td>
                                         <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
                                         <td className="p-2 text-right text-foreground">
                                           ${(lineItem.unit_price || 0).toFixed(2)}
@@ -548,7 +554,7 @@ export default function Invoices() {
                                     ))
                                   ) : (
                                     <tr key={`${itemId}-empty`} className="border-b">
-                                      <td className="p-2 text-muted-foreground italic" colSpan={4}>
+                                      <td className="p-2 text-muted-foreground italic" colSpan={6}>
                                         No line items available
                                       </td>
                                     </tr>
