@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Calendar, DollarSign, TrendingUp, ClipboardList, Users, FileText, Folder, UserPlus, GitCompare } from "lucide-react";
-import ProjectDialog from "@/components/projects/ProjectDialog";
+import { ArrowLeft, Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History } from "lucide-react";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import ProjectGanttChart from "@/components/projects/ProjectGanttChart";
@@ -18,12 +17,13 @@ import ProjectFilesTab from "@/components/projects/ProjectFilesTab";
 import ProjectContractsTab from "@/components/projects/ProjectContractsTab";
 import ProjectChangeOrdersTab from "@/components/projects/ProjectAttachmentsTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
+import AuditTimeline from "@/components/audit/AuditTimeline";
+import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -230,17 +230,10 @@ export default function ProjectDetails() {
             </div>
             <p className="text-muted-foreground">{project.customer?.name}</p>
           </div>
-          <div className="flex gap-2">
-            <CreateTaskButton
-              linkedModule="project"
-              linkedRecordId={id!}
-              variant="outline"
-            />
-            <Button onClick={() => setDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Project
-            </Button>
-          </div>
+          <CreateTaskButton
+            linkedModule="project"
+            linkedRecordId={id!}
+          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -323,59 +316,14 @@ export default function ProjectDetails() {
               Change Orders
             </TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-2" />
+              History
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {project.description && (
-                  <div>
-                    <Label className="text-sm font-medium">Description</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  {project.start_date && (
-                    <div>
-                      <Label className="text-sm font-medium">Start Date</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {format(new Date(project.start_date), "MMM d, yyyy")}
-                      </p>
-                    </div>
-                  )}
-
-                  {project.end_date && (
-                    <div>
-                      <Label className="text-sm font-medium">End Date</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {format(new Date(project.end_date), "MMM d, yyyy")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {project.notes && (
-                  <div>
-                    <Label className="text-sm font-medium">Notes</Label>
-                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                      {project.notes}
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <Label className="text-sm font-medium">Created By</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {project.creator?.first_name} {project.creator?.last_name} on{" "}
-                    {format(new Date(project.created_at), "MMM d, yyyy")}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <InlineProjectDetails project={project} />
           </TabsContent>
 
           <TabsContent value="service-orders" className="space-y-4">
@@ -481,14 +429,20 @@ export default function ProjectDetails() {
           <TabsContent value="tasks">
             <LinkedTasksList linkedModule="project" linkedRecordId={id!} />
           </TabsContent>
+
+          <TabsContent value="history">
+            <Card>
+              <CardHeader>
+                <CardTitle>Change History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AuditTimeline tableName="projects" recordId={id!} />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
-
-      <ProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} projectId={id} />
     </DashboardLayout>
   );
 }
 
-function Label({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <p className={className}>{children}</p>;
-}
