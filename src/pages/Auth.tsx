@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +101,9 @@ export default function Auth() {
           return;
         }
 
+        // Store login type preference
+        localStorage.setItem("loginType", "admin");
+        
         toast.success("Welcome back!");
         navigate("/dashboard");
       }
@@ -186,16 +189,34 @@ export default function Auth() {
                 : "Sign In"}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-3">
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-primary hover:underline block w-full"
             >
               {isSignUp
                 ? "Already have an account? Sign in"
                 : "Don't have an account? Sign up"}
             </button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  or
+                </span>
+              </div>
+            </div>
+            
+            <Link
+              to="/worker/auth"
+              className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+            >
+              Login as field worker
+            </Link>
           </div>
         </CardContent>
       </Card>

@@ -4,11 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Monitor } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
-import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
 import { toast } from 'sonner';
@@ -19,21 +18,12 @@ export default function WorkerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { showToggle, isSupervisorOrAbove } = useWorkerRole();
   const [user, setUser] = useState<any>(null);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
-
-  const toggleView = () => {
-    if (isSupervisorOrAbove) {
-      navigate('/worker/supervisor-dashboard');
-    } else {
-      navigate('/dashboard');
-    }
-  };
 
   useEffect(() => {
     loadUserAndAppointments();
@@ -43,7 +33,7 @@ export default function WorkerDashboard() {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) {
-        navigate('/auth');
+        navigate('/worker/auth');
         return;
       }
 
@@ -97,7 +87,7 @@ export default function WorkerDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/auth');
+    navigate('/worker/auth');
   };
 
   const handleInstallClick = async () => {
@@ -157,16 +147,6 @@ export default function WorkerDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isMobile && showToggle && (
-              <Button
-                onClick={toggleView}
-                size="sm"
-                variant="ghost"
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-              >
-                <Monitor className="h-4 w-4" />
-              </Button>
-            )}
             {isOnline ? (
               <Wifi className="h-5 w-5 text-green-300" />
             ) : (

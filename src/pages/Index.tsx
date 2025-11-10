@@ -100,7 +100,7 @@ const Index = () => {
             <div className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
               <a href="#coming-soon" className="text-muted-foreground hover:text-foreground transition-colors">Roadmap</a>
-              <Button variant="ghost" onClick={() => navigate("/auth")}>Log In</Button>
+              <Button variant="ghost" onClick={() => navigate("/auth")}>Office Login</Button>
               <Button onClick={() => navigate("/auth")}>Start Free Trial</Button>
             </div>
 
@@ -118,7 +118,8 @@ const Index = () => {
             <div className="md:hidden py-4 space-y-4">
               <a href="#features" className="block text-muted-foreground hover:text-foreground transition-colors">Features</a>
               <a href="#coming-soon" className="block text-muted-foreground hover:text-foreground transition-colors">Roadmap</a>
-              <Button variant="ghost" className="w-full" onClick={() => navigate("/auth")}>Log In</Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate("/auth")}>Office Login</Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate("/worker/auth")}>Field Worker Login</Button>
               <Button className="w-full" onClick={() => navigate("/auth")}>Start Free Trial</Button>
             </div>
           )}
@@ -307,6 +308,14 @@ const Index = () => {
               <ul className="space-y-3 text-muted-foreground">
                 <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
                 <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
+                <li>
+                  <button 
+                    onClick={() => navigate("/worker/auth")} 
+                    className="hover:text-foreground transition-colors text-left"
+                  >
+                    Field Worker Login
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
