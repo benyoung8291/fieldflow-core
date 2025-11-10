@@ -14,7 +14,16 @@ export default function WorkerAppointments() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTimeLogs, setActiveTimeLogs] = useState<Record<string, any>>({});
+  const [currentTime, setCurrentTime] = useState(new Date());
   const { isOnline } = useOfflineSync();
+
+  // Update current time every second for elapsed time calculation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     loadAppointments();
@@ -93,6 +102,20 @@ export default function WorkerAppointments() {
     }
   };
 
+
+  const formatElapsedTime = (clockInTime: string) => {
+    const start = new Date(clockInTime);
+    const diffMs = currentTime.getTime() - start.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -154,12 +177,17 @@ export default function WorkerAppointments() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-lg">{apt.title}</h3>
                         {isClockedIn && (
-                          <div className="flex items-center gap-1.5">
-                            <div className="relative flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <div className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                              </div>
+                              <span className="text-xs font-medium text-green-600">Clocked In</span>
                             </div>
-                            <span className="text-xs font-medium text-green-600">Clocked In</span>
+                            <Badge variant="outline" className="text-xs font-mono border-green-200 text-green-700">
+                              {formatElapsedTime(isClockedIn.timestamp || isClockedIn.clock_in)}
+                            </Badge>
                           </div>
                         )}
                       </div>
