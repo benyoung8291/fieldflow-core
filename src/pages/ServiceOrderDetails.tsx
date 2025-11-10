@@ -14,6 +14,7 @@ import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAtt
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import AppointmentsTab from "@/components/service-orders/AppointmentsTab";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -221,6 +222,7 @@ export default function ServiceOrderDetails() {
             <TabsTrigger value="appointments">Appointments & Time</TabsTrigger>
             <TabsTrigger value="items">Line Items ({lineItems.length})</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
+            <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
@@ -368,6 +370,10 @@ export default function ServiceOrderDetails() {
                 <ServiceOrderAttachments serviceOrderId={id!} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="invoices">
+            <RelatedInvoicesCard sourceType="service_order" sourceId={id!} />
           </TabsContent>
 
           <TabsContent value="history">

@@ -779,6 +779,7 @@ export type Database = {
           id: string
           invoice_id: string
           item_order: number
+          line_item_id: string | null
           line_total: number
           quantity: number
           source_id: string | null
@@ -792,6 +793,7 @@ export type Database = {
           id?: string
           invoice_id: string
           item_order?: number
+          line_item_id?: string | null
           line_total?: number
           quantity?: number
           source_id?: string | null
@@ -805,6 +807,7 @@ export type Database = {
           id?: string
           invoice_id?: string
           item_order?: number
+          line_item_id?: string | null
           line_total?: number
           quantity?: number
           source_id?: string | null
@@ -831,6 +834,7 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          is_progress_invoice: boolean | null
           notes: string | null
           status: string
           subtotal: number
@@ -848,6 +852,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
+          is_progress_invoice?: boolean | null
           notes?: string | null
           status?: string
           subtotal?: number
@@ -865,6 +870,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          is_progress_invoice?: boolean | null
           notes?: string | null
           status?: string
           subtotal?: number
@@ -1877,6 +1883,7 @@ export type Database = {
       projects: {
         Row: {
           actual_cost: number | null
+          billing_status: Database["public"]["Enums"]["billing_status"] | null
           budget: number | null
           created_at: string | null
           created_by: string
@@ -1900,6 +1907,7 @@ export type Database = {
         }
         Insert: {
           actual_cost?: number | null
+          billing_status?: Database["public"]["Enums"]["billing_status"] | null
           budget?: number | null
           created_at?: string | null
           created_by: string
@@ -1923,6 +1931,7 @@ export type Database = {
         }
         Update: {
           actual_cost?: number | null
+          billing_status?: Database["public"]["Enums"]["billing_status"] | null
           budget?: number | null
           created_at?: string | null
           created_by?: string
@@ -2926,6 +2935,7 @@ export type Database = {
       service_orders: {
         Row: {
           allow_bidding: boolean | null
+          billing_status: Database["public"]["Enums"]["billing_status"] | null
           billing_type: string | null
           completed_date: string | null
           created_at: string | null
@@ -2965,6 +2975,7 @@ export type Database = {
         }
         Insert: {
           allow_bidding?: boolean | null
+          billing_status?: Database["public"]["Enums"]["billing_status"] | null
           billing_type?: string | null
           completed_date?: string | null
           created_at?: string | null
@@ -3004,6 +3015,7 @@ export type Database = {
         }
         Update: {
           allow_bidding?: boolean | null
+          billing_status?: Database["public"]["Enums"]["billing_status"] | null
           billing_type?: string | null
           completed_date?: string | null
           created_at?: string | null
@@ -3964,6 +3976,7 @@ export type Database = {
         | "checked_in"
         | "completed"
         | "cancelled"
+      billing_status: "not_billed" | "partially_billed" | "billed"
       permission_type: "view" | "create" | "edit" | "delete"
       recurrence_frequency:
         | "daily"
@@ -4138,6 +4151,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      billing_status: ["not_billed", "partially_billed", "billed"],
       permission_type: ["view", "create", "edit", "delete"],
       recurrence_frequency: [
         "daily",

@@ -21,6 +21,7 @@ import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
 import ProjectTasksGrid from "@/components/projects/ProjectTasksGrid";
+import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
@@ -368,6 +369,10 @@ export default function ProjectDetails() {
               <GitCompare className="h-4 w-4 mr-2" />
               Change Orders
             </TabsTrigger>
+            <TabsTrigger value="invoices">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Invoices
+            </TabsTrigger>
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-2" />
               History
@@ -409,6 +414,10 @@ export default function ProjectDetails() {
 
           <TabsContent value="change-orders">
             <ProjectChangeOrdersTab projectId={id!} />
+          </TabsContent>
+
+          <TabsContent value="invoices">
+            <RelatedInvoicesCard sourceType="project" sourceId={id!} />
           </TabsContent>
 
           <TabsContent value="history">
