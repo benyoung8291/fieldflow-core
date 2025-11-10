@@ -17,7 +17,8 @@ interface Quote {
   quote_number: string;
   title: string;
   total_amount: number;
-  crm_status: string;
+  stage_id: string;
+  pipeline_id: string;
   created_at: string;
   expected_close_date: string | null;
   customer?: { name: string };
@@ -96,10 +97,12 @@ export default function QuotePipeline() {
     enabled: !!selectedPipelineId,
   });
 
-  // Fetch quotes
+  // Fetch quotes filtered by pipeline
   const { data: quotes = [], isLoading } = useQuery<Quote[]>({
-    queryKey: ['quotes-pipeline'],
+    queryKey: ['quotes-pipeline', selectedPipelineId],
     queryFn: async () => {
+      if (!selectedPipelineId) return [];
+      
       const { data, error } = await supabase
         .from('quotes')
         .select(`
@@ -108,20 +111,21 @@ export default function QuotePipeline() {
           lead:leads(name),
           quote_owner:profiles!quote_owner(first_name, last_name)
         `)
-        .not('crm_status', 'in', '(won,lost)')
+        .eq('pipeline_id', selectedPipelineId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as unknown as Quote[];
     },
+    enabled: !!selectedPipelineId,
   });
 
-  // Update quote status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ quoteId, newStatus }: { quoteId: string; newStatus: string }) => {
+  // Update quote stage mutation
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ quoteId, newStageId }: { quoteId: string; newStageId: string }) => {
       const { error } = await supabase
         .from('quotes')
-        .update({ crm_status: newStatus } as any)
+        .update({ stage_id: newStageId } as any)
         .eq('id', quoteId);
       
       if (error) throw error;
@@ -129,30 +133,30 @@ export default function QuotePipeline() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes-pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['quotes-analytics'] });
-      toast({ title: 'Quote status updated' });
+      toast({ title: 'Quote stage updated' });
     },
     onError: (error: any) => {
       toast({
-        title: 'Error updating status',
+        title: 'Error updating stage',
         description: error.message,
         variant: 'destructive',
       });
     },
   });
 
-  // Group quotes by status
-  const quotesByStatus = crmStatuses.reduce((acc, status) => {
-    acc[status.status] = quotes.filter(q => q.crm_status === status.status);
+  // Group quotes by stage
+  const quotesByStage = crmStatuses.reduce((acc, status) => {
+    acc[status.id] = quotes.filter(q => q.stage_id === status.id);
     return acc;
   }, {} as Record<string, Quote[]>);
 
   // Calculate weighted totals for each column
   const getColumnMetrics = (status: CRMStatus) => {
-    const statusQuotes = quotesByStatus[status.status] || [];
-    const total = statusQuotes.reduce((sum, q) => sum + (q.total_amount || 0), 0);
+    const stageQuotes = quotesByStage[status.id] || [];
+    const total = stageQuotes.reduce((sum, q) => sum + (q.total_amount || 0), 0);
     const probability = Number(status.probability_percentage) / 100;
     const weighted = total * probability;
-    return { total, weighted, count: statusQuotes.length };
+    return { total, weighted, count: stageQuotes.length };
   };
 
   // Handle drag start
@@ -167,9 +171,9 @@ export default function QuotePipeline() {
     
     if (over && active.id !== over.id) {
       const quoteId = active.id as string;
-      const newStatus = over.id as string;
+      const newStageId = over.id as string;
       
-      updateStatusMutation.mutate({ quoteId, newStatus });
+      updateStageMutation.mutate({ quoteId, newStageId });
     }
     
     setActiveQuote(null);
@@ -238,7 +242,7 @@ export default function QuotePipeline() {
 
   const KanbanColumn = ({ status }: { status: CRMStatus }) => {
     const metrics = getColumnMetrics(status);
-    const columnQuotes = quotesByStatus[status.status] || [];
+    const columnQuotes = quotesByStage[status.id] || [];
 
     return (
       <div className="flex flex-col h-full min-w-[300px]">
@@ -265,7 +269,7 @@ export default function QuotePipeline() {
 
         <div 
           className="flex-1 space-y-3 p-3 rounded-lg bg-muted/20 min-h-[400px] overflow-y-auto"
-          id={status.status}
+          id={status.id}
         >
           {columnQuotes.map(quote => (
             <div
