@@ -395,18 +395,11 @@ export default function WorkerAppointmentDetails() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        const { data: worker } = await supabase
-          .from('workers')
-          .select('id, tenant_id')
-          .eq('id', user.id)
-          .single();
-
-        if (!worker) throw new Error('Worker not found');
-
+        // Use data from the cached timeLog instead of querying database
         await queueTimeEntry({
           appointmentId: id!,
-          workerId: worker.id,
-          tenantId: worker.tenant_id,
+          workerId: timeLog.worker_id,
+          tenantId: timeLog.tenant_id || appointment?.tenant_id,
           action: 'clock_out',
           timestamp,
           location: {
