@@ -1,7 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sanitizeError } from "../_shared/errorHandler.ts";
+
+const createUserSchema = z.object({
+  email: z.string().email("Invalid email address").max(255, "Email too long"),
+  password: z.string()
+    .min(12, "Password must be at least 12 characters")
+    .regex(/[A-Z]/, "Password must contain uppercase letter")
+    .regex(/[a-z]/, "Password must contain lowercase letter")
+    .regex(/[0-9]/, "Password must contain number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain special character"),
+  firstName: z.string().trim().min(1, "First name required").max(100, "First name too long"),
+  lastName: z.string().trim().max(100, "Last name too long").optional(),
+  role: z.enum(["tenant_admin", "supervisor", "worker"]).optional()
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -51,11 +65,10 @@ serve(async (req) => {
       throw new Error("Unauthorized: Admin access required");
     }
 
-    const { email, firstName, lastName, role, password } = await req.json();
-
-    if (!email || !firstName || !password) {
-      throw new Error("Email, first name, and password are required");
-    }
+    const requestBody = await req.json();
+    const validatedData = createUserSchema.parse(requestBody);
+    
+    const { email, firstName, lastName, role, password } = validatedData;
 
     // Create the new user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
