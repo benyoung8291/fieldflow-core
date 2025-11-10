@@ -333,6 +333,88 @@ export type Database = {
           },
         ]
       }
+      change_order_line_items: {
+        Row: {
+          change_order_id: string
+          cost_price: number | null
+          created_at: string | null
+          description: string
+          id: string
+          is_from_price_book: boolean | null
+          item_order: number
+          line_total: number
+          margin_percentage: number | null
+          notes: string | null
+          parent_line_item_id: string | null
+          price_book_item_id: string | null
+          quantity: number
+          sell_price: number | null
+          tenant_id: string
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          change_order_id: string
+          cost_price?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          margin_percentage?: number | null
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          quantity?: number
+          sell_price?: number | null
+          tenant_id: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          change_order_id?: string
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          margin_percentage?: number | null
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          quantity?: number
+          sell_price?: number | null
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_line_items_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "project_change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_line_items_parent_line_item_id_fkey"
+            columns: ["parent_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_line_items_price_book_item_id_fkey"
+            columns: ["price_book_item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_contacts: {
         Row: {
           created_at: string | null
@@ -1158,8 +1240,14 @@ export type Database = {
           requested_by: string
           schedule_impact_days: number | null
           status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          tax_rate: number | null
           tenant_id: string
           title: string
+          total_amount: number | null
+          total_cost: number | null
+          total_margin: number | null
           updated_at: string | null
         }
         Insert: {
@@ -1178,8 +1266,14 @@ export type Database = {
           requested_by: string
           schedule_impact_days?: number | null
           status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
           tenant_id: string
           title: string
+          total_amount?: number | null
+          total_cost?: number | null
+          total_margin?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -1198,8 +1292,14 @@ export type Database = {
           requested_by?: string
           schedule_impact_days?: number | null
           status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
           tenant_id?: string
           title?: string
+          total_amount?: number | null
+          total_cost?: number | null
+          total_margin?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1296,6 +1396,66 @@ export type Database = {
           },
         ]
       }
+      project_line_items: {
+        Row: {
+          cost_price: number | null
+          created_at: string | null
+          description: string
+          id: string
+          is_from_price_book: boolean | null
+          item_order: number
+          line_total: number
+          margin_percentage: number | null
+          notes: string | null
+          parent_line_item_id: string | null
+          price_book_item_id: string | null
+          project_id: string
+          quantity: number
+          sell_price: number | null
+          tenant_id: string
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          cost_price?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          margin_percentage?: number | null
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          project_id: string
+          quantity?: number
+          sell_price?: number | null
+          tenant_id: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          margin_percentage?: number | null
+          notes?: string | null
+          parent_line_item_id?: string | null
+          price_book_item_id?: string | null
+          project_id?: string
+          quantity?: number
+          sell_price?: number | null
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       project_workers: {
         Row: {
           assigned_at: string | null
@@ -1370,6 +1530,8 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          invoiced_to_date: number | null
+          labour_cost_total: number | null
           name: string
           notes: string | null
           original_budget: number | null
@@ -1380,6 +1542,7 @@ export type Database = {
           tenant_id: string
           total_change_orders: number | null
           updated_at: string | null
+          wip_total: number | null
         }
         Insert: {
           actual_cost?: number | null
@@ -1390,6 +1553,8 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          invoiced_to_date?: number | null
+          labour_cost_total?: number | null
           name: string
           notes?: string | null
           original_budget?: number | null
@@ -1400,6 +1565,7 @@ export type Database = {
           tenant_id: string
           total_change_orders?: number | null
           updated_at?: string | null
+          wip_total?: number | null
         }
         Update: {
           actual_cost?: number | null
@@ -1410,6 +1576,8 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          invoiced_to_date?: number | null
+          labour_cost_total?: number | null
           name?: string
           notes?: string | null
           original_budget?: number | null
@@ -1420,6 +1588,7 @@ export type Database = {
           tenant_id?: string
           total_change_orders?: number | null
           updated_at?: string | null
+          wip_total?: number | null
         }
         Relationships: []
       }

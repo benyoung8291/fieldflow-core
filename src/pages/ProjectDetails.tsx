@@ -15,7 +15,8 @@ import ProjectGanttChart from "@/components/projects/ProjectGanttChart";
 import ProjectRosterTab from "@/components/projects/ProjectRosterTab";
 import ProjectFilesTab from "@/components/projects/ProjectFilesTab";
 import ProjectContractsTab from "@/components/projects/ProjectContractsTab";
-import ProjectChangeOrdersTab from "@/components/projects/ProjectAttachmentsTab";
+import ProjectChangeOrdersTab from "@/components/projects/ProjectChangeOrdersTab";
+import ProjectFinanceTab from "@/components/projects/ProjectFinanceTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
@@ -208,7 +209,15 @@ export default function ProjectDetails() {
 
   const totalServiceOrders = serviceOrders?.length || 0;
   const completedServiceOrders = serviceOrders?.filter(so => so.status === 'completed').length || 0;
-  const budgetVariance = project.budget ? ((project.actual_cost / project.budget) * 100) - 100 : 0;
+  
+  // Calculate revenue budget details
+  const originalBudget = project.original_budget || project.budget || 0;
+  const revisedBudget = project.revised_budget || originalBudget;
+  const changeOrdersTotal = project.total_change_orders || 0;
+  const invoicedToDate = project.invoiced_to_date || 0;
+  const wipTotal = project.wip_total || 0;
+  const labourCostTotal = project.labour_cost_total || 0;
+  const budgetVariance = originalBudget > 0 ? ((project.actual_cost / originalBudget) * 100) - 100 : 0;
 
   return (
     <DashboardLayout>
@@ -237,7 +246,7 @@ export default function ProjectDetails() {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Progress</CardTitle>
@@ -251,42 +260,76 @@ export default function ProjectDetails() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Budget</CardTitle>
+              <CardTitle className="text-sm font-medium">Revenue Budget</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${project.budget?.toLocaleString() || "N/A"}
+                ${revisedBudget.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Actual: ${project.actual_cost?.toLocaleString() || 0}
+                Original: ${originalBudget.toLocaleString()}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Service Orders</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Change Orders</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalServiceOrders}</div>
+              <div className={`text-2xl font-bold ${changeOrdersTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                ${Math.abs(changeOrdersTotal).toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {completedServiceOrders} completed
+                {changeOrdersTotal >= 0 ? 'Addition' : 'Reduction'}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Variance</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Invoiced</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${budgetVariance > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                {budgetVariance > 0 ? '+' : ''}{budgetVariance.toFixed(1)}%
+              <div className="text-2xl font-bold">
+                ${invoicedToDate.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Budget variance</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                To date
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">WIP</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ${wipTotal.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Work in Progress
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Labour Cost</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ${labourCostTotal.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total labour
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -294,6 +337,10 @@ export default function ProjectDetails() {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="finance">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Finance
+            </TabsTrigger>
             <TabsTrigger value="gantt">
               <Calendar className="h-4 w-4 mr-2" />
               Gantt Chart
@@ -325,6 +372,10 @@ export default function ProjectDetails() {
 
           <TabsContent value="overview" className="space-y-4">
             <InlineProjectDetails project={project} />
+          </TabsContent>
+
+          <TabsContent value="finance">
+            <ProjectFinanceTab projectId={id!} />
           </TabsContent>
 
           <TabsContent value="service-orders" className="space-y-4">
