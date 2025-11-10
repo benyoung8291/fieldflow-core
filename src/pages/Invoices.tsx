@@ -415,44 +415,71 @@ export default function Invoices() {
               <Separator />
 
               <div className="space-y-2">
-                <div className="text-sm font-medium text-foreground">Selected Items</div>
+                <div className="text-sm font-medium text-foreground">Line Items</div>
                 {selectedItems.size === 0 ? (
                   <div className="text-sm text-muted-foreground py-8 text-center">
                     No items selected. Choose projects or service orders from the left panel.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {Array.from(selectedItems).map((itemId) => {
-                      const [type, id] = itemId.split("-");
-                      
-                      if (type === "project") {
-                        const project = projects?.find(p => p.id === id);
-                        return (
-                          <div key={itemId} className="border-l-2 border-primary pl-3 py-1">
-                            <div className="text-xs text-muted-foreground">
-                              Project: {project?.name}
-                            </div>
-                            {project?.project_line_items?.map((lineItem: any) => (
-                              <div key={lineItem.id} className="text-sm text-foreground mt-1">
-                                • {lineItem.description}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      } else {
-                        const order = serviceOrders?.find(so => so.id === id);
-                        return (
-                          <div key={itemId} className="border-l-2 border-primary pl-3 py-1">
-                            <div className="text-xs text-muted-foreground">
-                              {order?.order_number} - {order?.title}
-                            </div>
-                            <div className="text-sm text-foreground mt-1">
-                              • Service order (line items to be configured)
-                            </div>
-                          </div>
-                        );
-                      }
-                    })}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-[300px] overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 sticky top-0">
+                          <tr className="border-b">
+                            <th className="text-left p-2 font-medium text-muted-foreground">Description</th>
+                            <th className="text-right p-2 font-medium text-muted-foreground w-20">Qty</th>
+                            <th className="text-right p-2 font-medium text-muted-foreground w-24">Unit Price</th>
+                            <th className="text-right p-2 font-medium text-muted-foreground w-28">Line Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.from(selectedItems).map((itemId) => {
+                            const [type, id] = itemId.split("-");
+                            
+                            if (type === "project") {
+                              const project = projects?.find(p => p.id === id);
+                              return (
+                                <>
+                                  <tr key={`${itemId}-header`} className="bg-muted/30">
+                                    <td colSpan={4} className="p-2 text-xs font-medium text-muted-foreground">
+                                      Project: {project?.name}
+                                    </td>
+                                  </tr>
+                                  {project?.project_line_items?.map((lineItem: any, idx: number) => (
+                                    <tr key={lineItem.id} className="border-b hover:bg-muted/10">
+                                      <td className="p-2 text-foreground">{lineItem.description}</td>
+                                      <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
+                                      <td className="p-2 text-right text-foreground">
+                                        ${(lineItem.sell_price || lineItem.unit_price || 0).toFixed(2)}
+                                      </td>
+                                      <td className="p-2 text-right font-medium text-foreground">
+                                        ${(lineItem.line_total || 0).toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </>
+                              );
+                            } else {
+                              const order = serviceOrders?.find(so => so.id === id);
+                              return (
+                                <>
+                                  <tr key={`${itemId}-header`} className="bg-muted/30">
+                                    <td colSpan={4} className="p-2 text-xs font-medium text-muted-foreground">
+                                      {order?.order_number} - {order?.title}
+                                    </td>
+                                  </tr>
+                                  <tr key={itemId} className="border-b">
+                                    <td className="p-2 text-muted-foreground italic" colSpan={4}>
+                                      Service order line items to be configured
+                                    </td>
+                                  </tr>
+                                </>
+                              );
+                            }
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
