@@ -114,15 +114,6 @@ export default function NumberingTab() {
     }));
   };
 
-  const getPreview = (entityType: string) => {
-    const setting = settings[entityType];
-    return `${setting.prefix}${setting.next_number.toString().padStart(setting.number_length, '0')}`;
-  };
-
-  if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading settings...</div>;
-  }
-
   const saveOverheadMutation = useMutation({
     mutationFn: async () => {
       const { data: profile } = await supabase
@@ -150,6 +141,15 @@ export default function NumberingTab() {
       toast.error("Failed to save overhead percentage");
     },
   });
+
+  const getPreview = (entityType: string) => {
+    const setting = settings[entityType];
+    return `${setting.prefix}${setting.next_number.toString().padStart(setting.number_length, '0')}`;
+  };
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground">Loading settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
