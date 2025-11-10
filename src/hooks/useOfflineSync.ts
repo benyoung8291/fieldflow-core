@@ -32,36 +32,67 @@ export const useOfflineSync = () => {
     for (const item of queue) {
       try {
         if (item.type === 'time_entry') {
-          const { appointmentId, action, timestamp, location } = item.data;
+          const { 
+            appointmentId, 
+            workerId, 
+            tenantId, 
+            action, 
+            timestamp, 
+            location,
+            hourlyRate,
+            notes,
+            timeLogId
+          } = item.data;
 
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) continue;
+          if (action === 'clock_in') {
+            // Insert new time log for clock in
+            const timeLogData: any = {
+              appointment_id: appointmentId,
+              worker_id: workerId,
+              tenant_id: tenantId,
+              clock_in: timestamp,
+              hourly_rate: hourlyRate || 0,
+              overhead_percentage: 0,
+            };
 
-          // Get tenant_id from profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('tenant_id')
-            .eq('id', user.id)
-            .single();
+            if (location) {
+              timeLogData.latitude = location.latitude;
+              timeLogData.longitude = location.longitude;
+            }
 
-          if (!profile?.tenant_id) continue;
+            if (notes) {
+              timeLogData.notes = notes;
+            }
 
-          // Insert time log
-          const { error } = await supabase.from('time_logs').insert({
-            appointment_id: appointmentId,
-            worker_id: user.id,
-            tenant_id: profile.tenant_id,
-            clock_in: action === 'check_in' ? timestamp : null,
-            clock_out: action === 'check_out' ? timestamp : null,
-          });
+            const { error } = await supabase.from('time_logs').insert(timeLogData);
+            if (error) throw error;
 
-          if (error) throw error;
-
-          // Update appointment status if checking in
-          if (action === 'check_in') {
+            // Update appointment status
             await supabase
               .from('appointments')
               .update({ status: 'checked_in' })
+              .eq('id', appointmentId);
+          } else if (action === 'clock_out' && timeLogId) {
+            // Update existing time log for clock out
+            const updateData: any = {
+              clock_out: timestamp,
+            };
+
+            if (notes) {
+              updateData.notes = notes;
+            }
+
+            const { error } = await supabase
+              .from('time_logs')
+              .update(updateData)
+              .eq('id', timeLogId);
+
+            if (error) throw error;
+
+            // Update appointment status
+            await supabase
+              .from('appointments')
+              .update({ status: 'completed' })
               .eq('id', appointmentId);
           }
 

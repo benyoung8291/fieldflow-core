@@ -11,9 +11,14 @@ interface OfflineDB extends DBSchema {
     value: {
       id: string;
       appointmentId: string;
-      action: 'check_in' | 'check_out';
+      workerId: string;
+      tenantId: string;
+      action: 'clock_in' | 'clock_out';
       timestamp: string;
       location?: { latitude: number; longitude: number };
+      hourlyRate?: number;
+      notes?: string;
+      timeLogId?: string;
       synced: boolean;
     };
   };
@@ -85,9 +90,14 @@ export const getCachedAppointments = async () => {
 // Queue time entry for sync
 export const queueTimeEntry = async (entry: {
   appointmentId: string;
-  action: 'check_in' | 'check_out';
+  workerId: string;
+  tenantId: string;
+  action: 'clock_in' | 'clock_out';
   timestamp: string;
   location?: { latitude: number; longitude: number };
+  hourlyRate?: number;
+  notes?: string;
+  timeLogId?: string;
 }) => {
   const db = await getDB();
   const id = `${entry.appointmentId}-${entry.action}-${Date.now()}`;

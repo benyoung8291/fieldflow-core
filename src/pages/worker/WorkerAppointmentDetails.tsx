@@ -27,10 +27,13 @@ import { toast } from 'sonner';
 import PhotoCapture from '@/components/worker/PhotoCapture';
 import SignaturePad from '@/components/worker/SignaturePad';
 import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHelp';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { queueTimeEntry } from '@/lib/offlineSync';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { isOnline } = useOfflineSync();
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -139,7 +142,7 @@ export default function WorkerAppointmentDetails() {
   const handleClockIn = async () => {
     setProcessing(true);
     try {
-      console.log('[Clock In] Starting clock-in process...');
+      console.log('[Clock In] Starting clock-in process...', { isOnline });
       
       // First check/request location permission
       const hasPermission = await requestLocationPermission();
@@ -201,18 +204,57 @@ export default function WorkerAppointmentDetails() {
       console.log('[Clock In] Worker found:', { workerId: worker.id, tenantId: worker.tenant_id });
 
       const hourlyRate = (worker.pay_rate_category as any)?.hourly_rate || 0;
+      const timestamp = new Date().toISOString();
+      const notes = `Clocked in at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
 
-      console.log('[Clock In] Inserting time log...');
+      // If offline, queue the action
+      if (!isOnline) {
+        console.log('[Clock In] Offline - queueing action');
+        await queueTimeEntry({
+          appointmentId: id!,
+          workerId: worker.id,
+          tenantId: worker.tenant_id,
+          action: 'clock_in',
+          timestamp,
+          location: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          },
+          hourlyRate,
+          notes,
+        });
+
+        toast.success('Clocked in offline - will sync when online', {
+          description: 'Your clock-in has been saved and will sync automatically',
+          duration: 5000,
+        });
+        
+        // Update local state
+        setTimeLog({
+          clock_in: timestamp,
+          notes,
+          worker_id: worker.id,
+        });
+        
+        if (appointment) {
+          setAppointment({ ...appointment, status: 'checked_in' });
+        }
+        
+        setProcessing(false);
+        return;
+      }
+
+      console.log('[Clock In] Online - inserting directly to database');
       const timeLogData = {
         tenant_id: worker.tenant_id,
         appointment_id: id,
         worker_id: worker.id,
-        clock_in: new Date().toISOString(),
+        clock_in: timestamp,
         hourly_rate: hourlyRate,
         overhead_percentage: 0,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-        notes: `Clocked in at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`,
+        notes,
       };
       
       console.log('[Clock In] Time log data:', timeLogData);
@@ -275,6 +317,8 @@ export default function WorkerAppointmentDetails() {
 
     setProcessing(true);
     try {
+      console.log('[Clock Out] Starting clock-out process...', { isOnline });
+      
       // Check location permission
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
@@ -298,17 +342,71 @@ export default function WorkerAppointmentDetails() {
 
       toast.dismiss(loadingToast);
 
-      const clockOutNotes = `${timeLog.notes || ''}\nClocked out at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`.trim();
+      const timestamp = new Date().toISOString();
+      const clockOutNotes = `${timeLog.notes || ''}\nClocked out at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}${workNotes ? `\nWork Notes: ${workNotes}` : ''}`.trim();
 
+      // If offline, queue the action
+      if (!isOnline) {
+        console.log('[Clock Out] Offline - queueing action');
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const { data: worker } = await (supabase as any)
+          .from('workers')
+          .select('id, tenant_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!worker) throw new Error('Worker not found');
+
+        await queueTimeEntry({
+          appointmentId: id!,
+          workerId: worker.id,
+          tenantId: worker.tenant_id,
+          action: 'clock_out',
+          timestamp,
+          location: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          },
+          notes: clockOutNotes,
+          timeLogId: timeLog.id,
+        });
+
+        toast.success('Clocked out offline - will sync when online', {
+          description: 'Your clock-out has been saved and will sync automatically',
+          duration: 5000,
+        });
+        
+        // Update local state
+        setTimeLog(null);
+        setWorkNotes('');
+        
+        if (appointment) {
+          setAppointment({ ...appointment, status: 'completed' });
+        }
+        
+        setProcessing(false);
+        return;
+      }
+
+      console.log('[Clock Out] Online - updating database directly');
       const { error } = await supabase
         .from('time_logs')
         .update({
-          clock_out: new Date().toISOString(),
-          notes: clockOutNotes + (workNotes ? `\nWork Notes: ${workNotes}` : ''),
+          clock_out: timestamp,
+          notes: clockOutNotes,
         })
         .eq('id', timeLog.id);
 
       if (error) throw error;
+
+      // Update appointment status
+      await supabase
+        .from('appointments')
+        .update({ status: 'completed' })
+        .eq('id', id);
 
       toast.success('Clocked out successfully!');
       setWorkNotes('');
@@ -325,7 +423,10 @@ export default function WorkerAppointmentDetails() {
       } else if (error.code === 3) {
         toast.error('Location request timed out. Please try again.');
       } else {
-        toast.error('Failed to clock out. Please try again.');
+        const errorMessage = error.message || error.hint || 'Unknown error';
+        toast.error(`Failed to clock out: ${errorMessage}`, {
+          duration: 6000,
+        });
       }
     } finally {
       setProcessing(false);
