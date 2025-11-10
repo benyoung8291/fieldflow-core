@@ -71,6 +71,46 @@ export const getDB = async () => {
   return dbInstance!;
 };
 
+// Cache active time logs for offline access
+export const cacheActiveTimeLogs = async (appointmentId: string, timeLog: any) => {
+  const db = await getDB();
+  if (timeLog) {
+    await db.put('timeEntries', {
+      id: timeLog.id,
+      appointmentId: appointmentId,
+      workerId: timeLog.worker_id,
+      tenantId: timeLog.tenant_id,
+      action: 'clock_in',
+      timestamp: timeLog.clock_in,
+      notes: timeLog.notes,
+      timeLogId: timeLog.id,
+      synced: true, // Already synced to server
+    });
+  }
+};
+
+export const getCachedTimeLog = async (appointmentId: string, workerId: string) => {
+  const db = await getDB();
+  const entries = await db.getAll('timeEntries');
+  // Return the most recent clock-in entry for this appointment and worker
+  // This could be either synced (cached from server) or unsynced (offline entry)
+  const clockInEntries = entries.filter(
+    (entry) => 
+      entry.appointmentId === appointmentId && 
+      entry.workerId === workerId && 
+      entry.action === 'clock_in'
+  );
+  
+  // Return the most recent one
+  if (clockInEntries.length > 0) {
+    return clockInEntries.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )[0];
+  }
+  
+  return null;
+};
+
 // Cache appointments for offline access
 export const cacheAppointments = async (appointments: any[]) => {
   const db = await getDB();

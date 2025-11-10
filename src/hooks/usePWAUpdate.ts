@@ -20,9 +20,7 @@ export const usePWAUpdate = () => {
 
   useEffect(() => {
     if (offlineReady) {
-      toast.success('App ready to work offline', {
-        duration: 3000,
-      });
+      console.log('App ready for offline use');
       setOfflineReady(false);
     }
   }, [offlineReady, setOfflineReady]);
@@ -30,20 +28,9 @@ export const usePWAUpdate = () => {
   useEffect(() => {
     if (needRefreshState) {
       setNeedRefresh(true);
-      
-      // Show update toast with action button
-      toast.info('New version available!', {
-        description: 'Click to update and get the latest features',
-        duration: Infinity, // Keep visible until action taken
-        action: {
-          label: 'Update Now',
-          onClick: () => {
-            updateServiceWorker(true);
-            setNeedRefresh(false);
-            setNeedRefreshState(false);
-          },
-        },
-      });
+      // Automatically update without showing notification
+      updateServiceWorker(true);
+      setNeedRefreshState(false);
     }
   }, [needRefreshState, setNeedRefreshState, updateServiceWorker]);
 

@@ -58,30 +58,23 @@ export default function WorkerAppointmentDetails() {
       // Try to load from cache first if offline
       if (!isOnline) {
         console.log('[Offline] Loading from cache...');
-        const { getCachedAppointments } = await import('@/lib/offlineSync');
+        const { getCachedAppointments, getCachedTimeLog } = await import('@/lib/offlineSync');
         const cached = await getCachedAppointments();
         const cachedApt = cached.find((apt: any) => apt.id === id);
         
         if (cachedApt) {
           setAppointment(cachedApt);
           
-          // Load cached time log from IndexedDB
-          const { getDB } = await import('@/lib/offlineSync');
-          const db = await getDB();
-          const timeLogs = await db.getAll('timeEntries');
-          const activeLog = timeLogs.find(
-            (log: any) => 
-              log.appointmentId === id && 
-              log.workerId === user.id && 
-              log.action === 'clock_in'
-          );
+          // Load cached active time log
+          const cachedLog = await getCachedTimeLog(id!, user.id);
           
-          if (activeLog) {
+          if (cachedLog) {
             setTimeLog({
-              id: activeLog.timeLogId || activeLog.id,
-              clock_in: activeLog.timestamp,
-              notes: activeLog.notes,
-              worker_id: activeLog.workerId,
+              id: cachedLog.timeLogId || cachedLog.id,
+              clock_in: cachedLog.timestamp,
+              notes: cachedLog.notes,
+              worker_id: cachedLog.workerId,
+              tenant_id: cachedLog.tenantId,
             });
           }
           
@@ -110,12 +103,6 @@ export default function WorkerAppointmentDetails() {
         .single();
 
       setAppointment(aptData);
-      
-      // Cache appointment for offline access
-      if (aptData) {
-        const { cacheAppointments } = await import('@/lib/offlineSync');
-        await cacheAppointments([aptData]);
-      }
 
       // Get worker data (worker ID is same as user ID)
       const { data: worker } = await supabase
@@ -136,6 +123,17 @@ export default function WorkerAppointmentDetails() {
         .maybeSingle();
 
       setTimeLog(logData);
+      
+      // Cache appointment and time log for offline access
+      if (aptData) {
+        const { cacheAppointments, cacheActiveTimeLogs } = await import('@/lib/offlineSync');
+        await cacheAppointments([aptData]);
+        
+        // Cache active time log if exists
+        if (logData) {
+          await cacheActiveTimeLogs(id!, logData);
+        }
+      }
 
       // Load attachments
       const { data: files } = await supabase
