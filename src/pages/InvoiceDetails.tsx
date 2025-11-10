@@ -30,6 +30,7 @@ export default function InvoiceDetails() {
   const [serviceOrderDialogOpen, setServiceOrderDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -402,6 +403,86 @@ export default function InvoiceDetails() {
     },
   });
 
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get invoice line items to potentially update source documents
+      const { data: invoiceLineItems } = await supabase
+        .from("invoice_line_items")
+        .select("source_type, source_id, line_item_id")
+        .eq("invoice_id", id);
+
+      // Group by source document to update billing status
+      const sourceDocUpdates = new Map<string, { type: string; id: string; lineItemIds: string[] }>();
+      
+      invoiceLineItems?.forEach(item => {
+        if (item.source_id && item.source_type && item.line_item_id) {
+          const key = `${item.source_type}-${item.source_id}`;
+          if (!sourceDocUpdates.has(key)) {
+            sourceDocUpdates.set(key, {
+              type: item.source_type,
+              id: item.source_id,
+              lineItemIds: []
+            });
+          }
+          sourceDocUpdates.get(key)!.lineItemIds.push(item.line_item_id);
+        }
+      });
+
+      // Delete line items first (foreign key constraint)
+      const { error: lineItemsError } = await supabase
+        .from("invoice_line_items")
+        .delete()
+        .eq("invoice_id", id);
+
+      if (lineItemsError) throw lineItemsError;
+
+      // Delete the invoice
+      const { error: invoiceError } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", id);
+
+      if (invoiceError) throw invoiceError;
+
+      // Update billing status of source documents
+      // Check if there are other invoices referencing the same source documents
+      for (const [key, doc] of sourceDocUpdates.entries()) {
+        const { data: remainingInvoices } = await supabase
+          .from("invoice_line_items")
+          .select("invoice_id")
+          .eq("source_type", doc.type)
+          .eq("source_id", doc.id)
+          .limit(1);
+
+        // If no other invoices reference this source, reset billing status
+        if (!remainingInvoices || remainingInvoices.length === 0) {
+          if (doc.type === "service_order") {
+            await supabase
+              .from("service_orders")
+              .update({ billing_status: "not_billed" })
+              .eq("id", doc.id);
+          } else if (doc.type === "project") {
+            await supabase
+              .from("projects")
+              .update({ billing_status: "not_billed" })
+              .eq("id", doc.id);
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success("Invoice deleted successfully");
+      navigate("/invoices");
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error("Failed to delete invoice");
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       draft: "outline",
@@ -498,6 +579,14 @@ export default function InvoiceDetails() {
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteInvoiceDialogOpen(true)}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
               </Button>
             </div>
           </div>
@@ -753,6 +842,26 @@ export default function InvoiceDetails() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteInvoiceDialogOpen} onOpenChange={setDeleteInvoiceDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete invoice {invoice?.invoice_number}? This will permanently remove the invoice and all its line items. Source documents will have their billing status reset if no other invoices reference them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteInvoiceMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Invoice
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
