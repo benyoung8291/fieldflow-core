@@ -140,7 +140,7 @@ export default function Dashboard() {
           id,
           order_number,
           status,
-          customers (name)
+          customers!service_orders_customer_id_fkey (name)
         `)
         .order("created_at", { ascending: false })
         .limit(3);
