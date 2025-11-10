@@ -3409,6 +3409,7 @@ export type Database = {
           logo_url: string | null
           postcode: string | null
           primary_color: string | null
+          projects_service_orders_integration: boolean | null
           renewal_notification_email: string | null
           secondary_color: string | null
           state: string | null
@@ -3431,6 +3432,7 @@ export type Database = {
           logo_url?: string | null
           postcode?: string | null
           primary_color?: string | null
+          projects_service_orders_integration?: boolean | null
           renewal_notification_email?: string | null
           secondary_color?: string | null
           state?: string | null
@@ -3453,6 +3455,7 @@ export type Database = {
           logo_url?: string | null
           postcode?: string | null
           primary_color?: string | null
+          projects_service_orders_integration?: boolean | null
           renewal_notification_email?: string | null
           secondary_color?: string | null
           state?: string | null
