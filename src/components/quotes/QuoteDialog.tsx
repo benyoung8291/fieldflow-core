@@ -602,9 +602,22 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         return;
       }
 
+      // Get user's tenant_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) {
+        toast({ title: "No tenant found", variant: "destructive" });
+        return;
+      }
+
       const { subtotal, taxAmount, total } = calculateTotals();
 
       const quoteData: any = {
+        tenant_id: profile.tenant_id,
         customer_id: isForLead ? null : formData.customer_id || null,
         lead_id: isForLead ? formData.lead_id || null : null,
         is_for_lead: isForLead,
@@ -625,7 +638,9 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       let savedQuoteId = quoteId;
 
       if (quoteId) {
-        const { error } = await supabase.from("quotes").update(quoteData).eq("id", quoteId);
+        // For updates, remove tenant_id (it should never change)
+        const { tenant_id, ...updateData } = quoteData;
+        const { error } = await supabase.from("quotes").update(updateData).eq("id", quoteId);
         if (error) throw error;
 
         await supabase.from("quote_line_items").delete().eq("quote_id", quoteId);
@@ -642,12 +657,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         if (error) throw error;
         savedQuoteId = newQuote.id;
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
 
       // Save line items with hierarchy
       const allItems: any[] = [];
