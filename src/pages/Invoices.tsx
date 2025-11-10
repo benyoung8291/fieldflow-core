@@ -481,9 +481,11 @@ export default function Invoices() {
                         <tbody>
                           {Array.from(selectedItems).map((itemId) => {
                             const [type, id] = itemId.split("-");
+                            console.log("Rendering line items for:", itemId, "Type:", type, "ID:", id);
                             
-                             if (type === "project") {
+                            if (type === "project") {
                               const project = projects?.find(p => p.id === id);
+                              console.log("Found project:", project?.name, "Line items:", project?.project_line_items);
                               return (
                                 <>
                                   <tr key={`${itemId}-header`} className="bg-muted/30">
@@ -507,6 +509,7 @@ export default function Invoices() {
                               );
                             } else {
                               const order = serviceOrders?.find(so => so.id === id);
+                              console.log("Found service order:", order?.order_number, "Line items:", order?.service_order_line_items);
                               return (
                                 <>
                                   <tr key={`${itemId}-header`} className="bg-muted/30">
