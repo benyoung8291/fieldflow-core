@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Edit,
   Send,
@@ -101,6 +108,40 @@ export default function QuoteDetails() {
     },
   });
 
+  // Fetch pipelines
+  const { data: pipelines = [] } = useQuery({
+    queryKey: ["crm-pipelines"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_pipelines" as any)
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
+
+  // Fetch stages for selected pipeline
+  const { data: stages = [] } = useQuery({
+    queryKey: ["crm-stages", quote?.pipeline_id],
+    queryFn: async () => {
+      if (!quote?.pipeline_id) return [];
+
+      const { data, error } = await supabase
+        .from("crm_status_settings")
+        .select("*")
+        .eq("pipeline_id", quote.pipeline_id)
+        .eq("is_active", true)
+        .order("display_order");
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!quote?.pipeline_id,
+  });
+
   const handleDownloadAttachment = async (fileUrl: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage
@@ -139,6 +180,31 @@ export default function QuoteDetails() {
       if (error) throw error;
 
       toast({ title: `Quote ${newStatus} successfully` });
+      queryClient.invalidateQueries({ queryKey: ["quote", id] });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (error: any) {
+      toast({
+        title: "Error updating quote",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updatePipelineStage = async (field: 'pipeline_id' | 'stage_id', value: string) => {
+    try {
+      const updates: any = { [field]: value };
+      
+      // If updating pipeline, reset stage
+      if (field === 'pipeline_id') {
+        updates.stage_id = null;
+      }
+
+      const { error } = await supabase.from("quotes").update(updates).eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: `Quote ${field === 'pipeline_id' ? 'pipeline' : 'stage'} updated` });
       queryClient.invalidateQueries({ queryKey: ["quote", id] });
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
     } catch (error: any) {
@@ -422,6 +488,52 @@ export default function QuoteDetails() {
                     <p className="text-sm text-muted-foreground">{quote.customer.phone}</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>CRM Pipeline</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Pipeline</Label>
+                  <Select
+                    value={quote.pipeline_id || ''}
+                    onValueChange={(value) => updatePipelineStage('pipeline_id', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select pipeline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pipelines.map((pipeline: any) => (
+                        <SelectItem key={pipeline.id} value={pipeline.id}>
+                          {pipeline.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Stage</Label>
+                  <Select
+                    value={quote.stage_id || ''}
+                    onValueChange={(value) => updatePipelineStage('stage_id', value)}
+                    disabled={!quote.pipeline_id || stages.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages.map((stage: any) => (
+                        <SelectItem key={stage.id} value={stage.id}>
+                          {stage.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
 
