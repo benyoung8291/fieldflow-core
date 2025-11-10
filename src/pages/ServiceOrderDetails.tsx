@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
@@ -227,7 +228,7 @@ export default function ServiceOrderDetails() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, first_name, last_name")
         .eq("id", user.id)
         .single();
       
@@ -254,11 +255,13 @@ export default function ServiceOrderDetails() {
 
       const { data: invoice } = await supabase
         .from("invoices")
-        .select("subtotal, tax_rate")
+        .select("invoice_number, subtotal, tax_rate")
         .eq("id", invoiceId)
         .single();
 
-      const newSubtotal = (invoice?.subtotal || 0) + lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
+      const oldSubtotal = invoice?.subtotal || 0;
+      const lineItemsTotal = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
+      const newSubtotal = oldSubtotal + lineItemsTotal;
       const taxAmount = newSubtotal * ((invoice?.tax_rate || 0) / 100);
       const totalAmount = newSubtotal + taxAmount;
 
@@ -272,8 +275,27 @@ export default function ServiceOrderDetails() {
         .eq("id", invoiceId);
       
       if (updateError) throw updateError;
+
+      // Create audit log entry for the service order showing it was added to invoice
+      const userName = `${profile.first_name} ${profile.last_name || ''}`.trim();
+      await supabase
+        .from("audit_logs")
+        .insert({
+          tenant_id: profile.tenant_id,
+          user_id: user.id,
+          user_name: userName,
+          table_name: 'service_orders',
+          record_id: id,
+          action: 'update',
+          field_name: 'billing_status',
+          old_value: order?.billing_status || 'not_billed',
+          new_value: 'partially_billed',
+          note: `Added ${lineItems.length} line item(s) to invoice ${invoice?.invoice_number || invoiceId}. Total amount: $${lineItemsTotal.toFixed(2)}. Link: /invoices/${invoiceId}`,
+        });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "service_orders", id] });
       setAddToInvoiceDialogOpen(false);
       toast({ title: "Service order added to invoice" });
     },
@@ -385,161 +407,91 @@ export default function ServiceOrderDetails() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-          <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+          {/* Customer & Location Info */}
+          <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Customer
-              </CardTitle>
+              <CardTitle className="text-sm">Customer & Location</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-sm font-medium">{order.customers?.name}</div>
-              {order.customers?.email && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                  <Mail className="h-3 w-3" />
-                  {order.customers.email}
+            <CardContent className="space-y-3">
+              <div className="flex items-start gap-3">
+                <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{order.customers?.name}</div>
+                  {order.customers?.email && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                      <Mail className="h-3 w-3" />
+                      {order.customers.email}
+                    </div>
+                  )}
+                  {order.customers?.phone && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                      <Phone className="h-3 w-3" />
+                      {order.customers.phone}
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {order.customer_locations && (
+                <>
+                  <Separator />
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{order.customer_locations.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {order.customer_locations.address}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {order.customer_locations.city}, {order.customer_locations.state} {order.customer_locations.postcode}
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
-              {order.customers?.phone && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                  <Phone className="h-3 w-3" />
-                  {order.customers.phone}
-                </div>
-              )}
             </CardContent>
           </Card>
 
-          {order.customer_locations && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Location
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm font-medium">{order.customer_locations.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {order.customer_locations.address}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {order.customer_locations.city}, {order.customer_locations.state} {order.customer_locations.postcode}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {(order as any).assigned_profile && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Assigned To</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm font-medium">
-                  {(order as any).assigned_profile.first_name} {(order as any).assigned_profile.last_name}
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                  <Mail className="h-3 w-3" />
-                  {(order as any).assigned_profile.email}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {(order as any).projects && (
-            <Card 
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
-            >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <FolderKanban className="h-4 w-4" />
-                  Project
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm font-medium">{(order as any).projects.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  #{(order as any).projects.project_number}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
+          {/* Financial Summary */}
+          <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Subtotal
+                Financial Summary
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">
-                ${((order as any).subtotal || totalRevenue).toFixed(2)}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Total</div>
+                  <div className="text-2xl font-bold">
+                    ${((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0))).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Subtotal: ${((order as any).subtotal || totalRevenue).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Tax ({((order as any).tax_rate || 0).toFixed(1)}%): ${((order as any).tax_amount || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Profit</div>
+                  <div className="text-2xl font-bold text-success">
+                    ${totalProfit.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Margin: {profitMargin.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Costs: ${totalCost.toFixed(2)}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Tax ({((order as any).tax_rate || 0).toFixed(1)}%)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
-                ${((order as any).tax_amount || 0).toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Total
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
-                ${((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0))).toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Est. Costs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
-                ${totalCost.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Profit Margin
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-success">
-                ${totalProfit.toFixed(2)}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {profitMargin.toFixed(1)}%
-              </div>
-            </CardContent>
-          </Card>
-
+          {/* Hours Summary */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -555,6 +507,7 @@ export default function ServiceOrderDetails() {
                     {(order as any)?.estimated_hours ? `${Number((order as any).estimated_hours).toFixed(1)} hrs` : "N/A"}
                   </div>
                 </div>
+                <Separator />
                 <div>
                   <div className="text-xs text-muted-foreground">Scheduled</div>
                   <div className="text-lg font-semibold">
@@ -571,6 +524,51 @@ export default function ServiceOrderDetails() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Assignment & Project */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Assignment</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(order as any).assigned_profile && (
+                <div className="flex items-start gap-2">
+                  <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-muted-foreground">Worker</div>
+                    <div className="text-sm font-medium truncate">
+                      {(order as any).assigned_profile.first_name} {(order as any).assigned_profile.last_name}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {(order as any).projects && (
+                <>
+                  {(order as any).assigned_profile && <Separator />}
+                  <div 
+                    className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 -mx-3 -mb-3 p-3 rounded-b-lg transition-colors"
+                    onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
+                  >
+                    <FolderKanban className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-muted-foreground">Project</div>
+                      <div className="text-sm font-medium truncate">{(order as any).projects.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        #{(order as any).projects.project_number}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!(order as any).assigned_profile && !(order as any).projects && (
+                <div className="text-xs text-muted-foreground text-center py-2">
+                  No assignments
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
