@@ -9,24 +9,24 @@ export const useWorkerRole = () => {
       if (!user) return null;
 
       // Check if user has supervisor or admin role
-      const { data: roles } = await supabase
+      const rolesQuery = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
 
-      const isSupervisorOrAbove = roles?.some((r) => 
-        r.role === "super_admin"
+      const isSupervisorOrAbove = rolesQuery.data?.some((r: any) => 
+        r.role === "tenant_admin" || r.role === "supervisor"
       ) || false;
 
-      // Check if user is also a worker
-      const { data: profile } = await supabase
-        .from("profiles")
+      // Check if user is also a worker (exists in workers table)
+      // Using any cast to avoid TypeScript deep instantiation error with complex Supabase types
+      const workerQuery = await (supabase as any)
+        .from("workers")
         .select("id")
-        .eq("id", user.id)
-        .single();
+        .eq("user_id", user.id)
+        .limit(1);
 
-      // Check if profile exists in workers context (could check a worker-specific field)
-      const isWorker = !!profile;
+      const isWorker = workerQuery?.data && workerQuery.data.length > 0;
 
       return {
         userId: user.id,
