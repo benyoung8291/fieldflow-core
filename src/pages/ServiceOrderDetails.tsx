@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
@@ -79,7 +79,8 @@ export default function ServiceOrderDetails() {
           *,
           customers!service_orders_customer_id_fkey(name, email, phone),
           customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
-          customer_contacts(first_name, last_name, email, phone)
+          customer_contacts(first_name, last_name, email, phone),
+          projects(id, project_number, name)
         `)
         .eq("id", id)
         .single();
@@ -324,6 +325,13 @@ export default function ServiceOrderDetails() {
             <Badge variant="outline" className={priorityColors[order.priority as keyof typeof priorityColors]}>
               {order.priority}
             </Badge>
+            <Badge variant="outline" className={
+              (order as any).billing_status === 'billed' ? 'bg-success/10 text-success' :
+              (order as any).billing_status === 'partially_billed' ? 'bg-warning/10 text-warning' :
+              'bg-muted text-muted-foreground'
+            }>
+              {(order as any).billing_status?.replace('_', ' ') || 'not billed'}
+            </Badge>
             {order.status === "completed" && order.billing_status !== "billed" && (
               <>
                 <Button 
@@ -377,7 +385,7 @@ export default function ServiceOrderDetails() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -439,16 +447,36 @@ export default function ServiceOrderDetails() {
             </Card>
           )}
 
+          {(order as any).projects && (
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FolderKanban className="h-4 w-4" />
+                  Project
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm font-medium">{(order as any).projects.name}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  #{(order as any).projects.project_number}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Total Revenue
+                Subtotal
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold">
-                ${totalRevenue.toFixed(2)}
+                ${((order as any).subtotal || totalRevenue).toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -457,7 +485,35 @@ export default function ServiceOrderDetails() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Total Costs
+                Tax ({((order as any).tax_rate || 0).toFixed(1)}%)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">
+                ${((order as any).tax_amount || 0).toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Total
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">
+                ${((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0))).toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Est. Costs
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -496,11 +552,7 @@ export default function ServiceOrderDetails() {
                 <div>
                   <div className="text-xs text-muted-foreground">Estimated</div>
                   <div className="text-lg font-semibold">
-                    {(() => {
-                      if (!(order as any)?.estimated_duration) return "N/A";
-                      const match = (order as any).estimated_duration.match(/(\d+)\s*(hour|hr|h)/i);
-                      return match ? `${match[1]} hrs` : (order as any).estimated_duration;
-                    })()}
+                    {(order as any)?.estimated_hours ? `${Number((order as any).estimated_hours).toFixed(1)} hrs` : "N/A"}
                   </div>
                 </div>
                 <div>
@@ -543,22 +595,56 @@ export default function ServiceOrderDetails() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
+                      <div className="text-xs text-muted-foreground mb-1">Work Order #</div>
+                      <div className="text-sm font-medium">{(order as any).work_order_number || "N/A"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Purchase Order #</div>
+                      <div className="text-sm font-medium">{(order as any).purchase_order_number || "N/A"}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
                       <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Start Date
+                        Preferred Start Date
                       </div>
                       <div className="text-sm">
-                        {(order as any).start_date ? format(new Date((order as any).start_date), "PPP") : "Not set"}
+                        {(order as any).preferred_date_start ? format(new Date((order as any).preferred_date_start), "PPP") : "Not set"}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Estimated Duration
+                        <Calendar className="h-3 w-3" />
+                        Preferred End Date
                       </div>
-                      <div className="text-sm">{(order as any).estimated_duration || "Not set"}</div>
+                      <div className="text-sm">
+                        {(order as any).preferred_date_end ? format(new Date((order as any).preferred_date_end), "PPP") : "Not set"}
+                      </div>
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Estimated Hours
+                      </div>
+                      <div className="text-sm">{(order as any).estimated_hours ? `${Number((order as any).estimated_hours).toFixed(1)} hrs` : "Not set"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Billing Type</div>
+                      <div className="text-sm">{(order as any).billing_type || "N/A"}</div>
+                    </div>
+                  </div>
+
+                  {(order as any).skill_required && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Skills Required</div>
+                      <div className="text-sm">{(order as any).skill_required}</div>
+                    </div>
+                  )}
 
                   <div>
                     <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
@@ -568,10 +654,21 @@ export default function ServiceOrderDetails() {
                     <div className="text-sm">{order.description || "No description"}</div>
                   </div>
 
-                  {(order as any).internal_notes && (
+                  {(order as any).is_recurring && (
                     <div>
-                      <div className="text-xs text-muted-foreground mb-1">Internal Notes</div>
-                      <div className="text-sm text-muted-foreground">{(order as any).internal_notes}</div>
+                      <div className="text-xs text-muted-foreground mb-1">Recurring</div>
+                      <div className="text-sm">
+                        Pattern: {(order as any).recurrence_pattern || "N/A"}
+                        {(order as any).recurrence_frequency && ` (Every ${(order as any).recurrence_frequency} ${(order as any).recurrence_pattern}${(order as any).recurrence_frequency > 1 ? 's' : ''})`}
+                        {(order as any).recurrence_end_date && ` until ${format(new Date((order as any).recurrence_end_date), "PPP")}`}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(order as any).completed_date && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Completed Date</div>
+                      <div className="text-sm">{format(new Date((order as any).completed_date), "PPP")}</div>
                     </div>
                   )}
                 </CardContent>
