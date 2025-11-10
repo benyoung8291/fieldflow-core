@@ -115,6 +115,18 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  const { data: appointments = [] } = useQuery({
+    queryKey: ["service-order-appointments", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("*")
+        .eq("service_order_id", id);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: draftInvoices = [] } = useQuery({
     queryKey: ["draft_invoices"],
     queryFn: async () => {
@@ -128,6 +140,16 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
+
+  const totalCost = lineItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0) * item.quantity, 0);
+  const totalRevenue = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
+  const totalProfit = totalRevenue - totalCost;
+  const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+  const allAppointmentsCompleteOrCancelled = appointments.length > 0 && 
+    appointments.every((apt: any) => apt.status === "completed" || apt.status === "cancelled");
+
   const updateOrderStatusMutation = useMutation({
     mutationFn: async (status: "draft" | "scheduled" | "in_progress" | "completed" | "cancelled") => {
       const { error } = await supabase
@@ -138,12 +160,25 @@ export default function ServiceOrderDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+      setCompleteConfirmOpen(false);
       toast({ title: "Service order status updated" });
     },
     onError: (error: any) => {
       toast({ title: "Error updating status", description: error.message, variant: "destructive" });
     },
   });
+
+  const handleCompleteOrder = () => {
+    if (!allAppointmentsCompleteOrCancelled && appointments.length > 0) {
+      toast({ 
+        title: "Cannot complete order", 
+        description: "All appointments must be completed or cancelled first",
+        variant: "destructive"
+      });
+      return;
+    }
+    setCompleteConfirmOpen(true);
+  };
 
   const createAppointmentMutation = useMutation({
     mutationFn: async () => {
@@ -288,46 +323,60 @@ export default function ServiceOrderDetails() {
             <Badge variant="outline" className={priorityColors[order.priority as keyof typeof priorityColors]}>
               {order.priority}
             </Badge>
+            {order.status === "completed" && order.billing_status !== "billed" && (
+              <>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => navigate("/invoices/create", { state: { serviceOrderId: id } })}
+                >
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Run Billing
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setAddToInvoiceDialogOpen(true)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Add to Draft Invoice
+                </Button>
+              </>
+            )}
+            <Button 
+              size="sm" 
+              onClick={handleCompleteOrder}
+              disabled={order.status === "completed"}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Complete Order
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline">
-                  Actions
+                  More Actions
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="bg-background z-50">
                 <DropdownMenuItem onClick={() => setDialogOpen(true)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Order
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("completed")}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete Order
+                <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("draft")}>
+                  Set to Waiting
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("cancelled")}>
                   <XCircle className="h-4 w-4 mr-2" />
                   Cancel Order
                 </DropdownMenuItem>
-                {order.status === "completed" && order.billing_status !== "billed" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/invoices/create", { state: { serviceOrderId: id } })}>
-                      <Receipt className="h-4 w-4 mr-2" />
-                      Run Billing
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setAddToInvoiceDialogOpen(true)}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Add to Draft Invoice
-                    </DropdownMenuItem>
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -393,12 +442,43 @@ export default function ServiceOrderDetails() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Total Amount
+                Total Revenue
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold">
-                ${order.total_amount?.toFixed(2) || "0.00"}
+                ${totalRevenue.toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Total Costs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">
+                ${totalCost.toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Profit Margin
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold text-success">
+                ${totalProfit.toFixed(2)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {profitMargin.toFixed(1)}%
               </div>
             </CardContent>
           </Card>
@@ -634,6 +714,24 @@ export default function ServiceOrderDetails() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Complete Order Confirmation */}
+      <AlertDialog open={completeConfirmOpen} onOpenChange={setCompleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Service Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark this service order as completed? This will allow the order to be invoiced.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => updateOrderStatusMutation.mutate("completed")}>
+              Complete Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Add to Invoice Dialog */}
       <AlertDialog open={addToInvoiceDialogOpen} onOpenChange={setAddToInvoiceDialogOpen}>
         <AlertDialogContent>
@@ -652,7 +750,7 @@ export default function ServiceOrderDetails() {
               <SelectTrigger>
                 <SelectValue placeholder="Select draft invoice" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 {draftInvoices.map((invoice: any) => (
                   <SelectItem key={invoice.id} value={invoice.id}>
                     {invoice.invoice_number} - {invoice.customers?.name}

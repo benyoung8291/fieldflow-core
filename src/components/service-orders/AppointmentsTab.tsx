@@ -3,10 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, User, Clock, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import TimeLogsTable from "./TimeLogsTable";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AppointmentsTabProps {
   serviceOrderId: string;
@@ -125,30 +131,39 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                   )}
                 </div>
                 
-                <div className="flex gap-2 ml-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateAppointmentStatusMutation.mutate({
-                      appointmentId: appointment.id,
-                      status: "completed",
-                    })}
-                    title="Complete"
-                  >
-                    <CheckCircle className="h-4 w-4 text-success" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateAppointmentStatusMutation.mutate({
-                      appointmentId: appointment.id,
-                      status: "cancelled",
-                    })}
-                    title="Cancel"
-                  >
-                    <XCircle className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background z-50">
+                    <DropdownMenuItem 
+                      onClick={() => updateAppointmentStatusMutation.mutate({
+                        appointmentId: appointment.id,
+                        status: "draft",
+                      })}
+                    >
+                      Set to Draft
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => updateAppointmentStatusMutation.mutate({
+                        appointmentId: appointment.id,
+                        status: "completed",
+                      })}
+                    >
+                      Mark as Completed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => updateAppointmentStatusMutation.mutate({
+                        appointmentId: appointment.id,
+                        status: "cancelled",
+                      })}
+                    >
+                      Cancel Appointment
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Time Logs for this Appointment */}
