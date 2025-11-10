@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase } from 'lucide-react';
+import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -31,6 +32,7 @@ export default function WorkerDashboard() {
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+  const { isSupervisorOrAbove } = useWorkerRole();
 
   useEffect(() => {
     loadUserAndAppointments();
@@ -283,6 +285,24 @@ export default function WorkerDashboard() {
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-800"></div>
                 <p className="text-sm">Syncing offline data...</p>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Supervisor Access */}
+        {isSupervisorOrAbove && (
+          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <Button
+                onClick={() => navigate('/worker/supervisor/dashboard')}
+                className="w-full h-16 flex items-center justify-start gap-3"
+              >
+                <Briefcase className="h-6 w-6" />
+                <div className="text-left">
+                  <p className="font-semibold">Supervisor Dashboard</p>
+                  <p className="text-xs opacity-90">Manage team & operations</p>
+                </div>
+              </Button>
             </CardContent>
           </Card>
         )}

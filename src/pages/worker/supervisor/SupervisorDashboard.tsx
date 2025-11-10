@@ -1,0 +1,293 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Map, Users, Calendar, ListTodo, Clock, CheckCircle, AlertCircle, LogOut, User } from 'lucide-react';
+import { useWorkerRole } from '@/hooks/useWorkerRole';
+import { toast } from 'sonner';
+
+export default function SupervisorDashboard() {
+  const navigate = useNavigate();
+  const { isSupervisorOrAbove } = useWorkerRole();
+  const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState({
+    activeWorkers: 0,
+    todayAppointments: 0,
+    pendingServiceOrders: 0,
+    completedToday: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isSupervisorOrAbove) {
+      navigate('/worker/dashboard');
+      return;
+    }
+    loadDashboardData();
+  }, [isSupervisorOrAbove]);
+
+  const loadDashboardData = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        navigate('/worker/auth');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      setUser(profile);
+
+      // Get active workers (currently clocked in)
+      const { data: activeLogs } = await supabase
+        .from('time_logs')
+        .select('worker_id', { count: 'exact', head: true })
+        .is('clock_out_time', null);
+
+      // Get today's appointments
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayApts } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .gte('start_time', today)
+        .lt('start_time', `${today}T23:59:59`);
+
+      // Get pending service orders
+      const { data: pendingSOs } = await supabase
+        .from('service_orders')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['draft', 'scheduled']);
+
+      // Get completed appointments today
+      const { data: completedApts } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('check_out_time', today);
+
+      setStats({
+        activeWorkers: activeLogs?.length || 0,
+        todayAppointments: todayApts?.length || 0,
+        pendingServiceOrders: pendingSOs?.length || 0,
+        completedToday: completedApts?.length || 0,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/worker/auth');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <header className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
+        <div className="flex items-center justify-between max-w-screen-lg mx-auto">
+          <div className="flex items-center gap-3">
+            <User className="h-8 w-8" />
+            <div>
+              <h1 className="text-xl font-bold">Supervisor Dashboard</h1>
+              <p className="text-sm opacity-90">{user?.first_name} {user?.last_name}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
+
+      <div className="max-w-screen-lg mx-auto p-4 space-y-4">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Users className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.activeWorkers}</p>
+                  <p className="text-xs text-muted-foreground">Active Workers</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.todayAppointments}</p>
+                  <p className="text-xs text-muted-foreground">Today's Jobs</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.pendingServiceOrders}</p>
+                  <p className="text-xs text-muted-foreground">Pending Orders</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.completedToday}</p>
+                  <p className="text-xs text-muted-foreground">Completed Today</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Management Tools</CardTitle>
+            <CardDescription>Monitor and manage field operations</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              size="lg"
+              onClick={() => navigate('/worker/supervisor/map')}
+              className="w-full h-20 flex items-center justify-start gap-4"
+            >
+              <Map className="h-8 w-8" />
+              <div className="text-left">
+                <p className="font-semibold">Worker Locations</p>
+                <p className="text-xs opacity-90">Real-time GPS tracking</p>
+              </div>
+              {stats.activeWorkers > 0 && (
+                <Badge variant="secondary" className="ml-auto">
+                  {stats.activeWorkers} active
+                </Badge>
+              )}
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/worker/supervisor/appointments')}
+              className="w-full h-20 flex items-center justify-start gap-4"
+            >
+              <Calendar className="h-8 w-8" />
+              <div className="text-left">
+                <p className="font-semibold">Appointments</p>
+                <p className="text-xs text-muted-foreground">Manage schedules</p>
+              </div>
+              {stats.todayAppointments > 0 && (
+                <Badge variant="secondary" className="ml-auto">
+                  {stats.todayAppointments} today
+                </Badge>
+              )}
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/worker/supervisor/service-orders')}
+              className="w-full h-20 flex items-center justify-start gap-4"
+            >
+              <ListTodo className="h-8 w-8" />
+              <div className="text-left">
+                <p className="font-semibold">Service Orders</p>
+                <p className="text-xs text-muted-foreground">Track work orders</p>
+              </div>
+              {stats.pendingServiceOrders > 0 && (
+                <Badge variant="secondary" className="ml-auto">
+                  {stats.pendingServiceOrders} pending
+                </Badge>
+              )}
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/worker/supervisor/workers')}
+              className="w-full h-20 flex items-center justify-start gap-4"
+            >
+              <Users className="h-8 w-8" />
+              <div className="text-left">
+                <p className="font-semibold">Worker Management</p>
+                <p className="text-xs text-muted-foreground">Team overview</p>
+              </div>
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/worker/supervisor/timesheets')}
+              className="w-full h-20 flex items-center justify-start gap-4"
+            >
+              <Clock className="h-8 w-8" />
+              <div className="text-left">
+                <p className="font-semibold">Timesheets</p>
+                <p className="text-xs text-muted-foreground">Review time logs</p>
+              </div>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Quick Access */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Access</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/worker/dashboard')}
+              className="w-full"
+            >
+              Switch to Worker View
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

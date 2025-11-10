@@ -44,7 +44,10 @@ import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
-import SupervisorDashboard from "./pages/worker/SupervisorDashboard";
+import SupervisorDashboard from "./pages/worker/supervisor/SupervisorDashboard";
+import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashboard";
+import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
+import SupervisorServiceOrders from "./pages/worker/supervisor/SupervisorServiceOrders";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,7 +125,10 @@ const App = () => {
             {/* Worker Mobile Routes */}
             <Route path="/worker/auth" element={<WorkerAuth />} />
             <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
-            <Route path="/worker/supervisor-dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
+            <Route path="/worker/supervisor/dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
+            <Route path="/worker/supervisor/map" element={<ProtectedRoute><SupervisorMapDashboard /></ProtectedRoute>} />
+            <Route path="/worker/supervisor/appointments" element={<ProtectedRoute><SupervisorAppointments /></ProtectedRoute>} />
+            <Route path="/worker/supervisor/service-orders" element={<ProtectedRoute><SupervisorServiceOrders /></ProtectedRoute>} />
             <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
             <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
             <Route path="/worker/schedule" element={<ProtectedRoute><WorkerSchedule /></ProtectedRoute>} />
