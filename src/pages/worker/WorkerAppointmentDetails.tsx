@@ -26,6 +26,7 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import PhotoCapture from '@/components/worker/PhotoCapture';
 import SignaturePad from '@/components/worker/SignaturePad';
+import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHelp';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
@@ -448,6 +449,9 @@ export default function WorkerAppointmentDetails() {
           }>
             {isCompleted ? 'Completed' : timeLog ? 'In Progress' : 'Pending'}
           </Badge>
+        </div>
+        <div className="flex justify-end mt-2">
+          <LocationPermissionHelp />
         </div>
       </header>
 
