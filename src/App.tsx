@@ -18,6 +18,7 @@ import ServiceOrderDetails from "./pages/ServiceOrderDetails";
 import ServiceContracts from "./pages/ServiceContracts";
 import ServiceContractDetails from "./pages/ServiceContractDetails";
 import Scheduler from "./pages/Scheduler";
+import Appointments from "./pages/Appointments";
 import Customers from "./pages/Customers";
 import CustomerDetails from "./pages/CustomerDetails";
 import CustomerLocationDetails from "./pages/CustomerLocationDetails";
@@ -80,6 +81,7 @@ const App = () => (
           <Route path="/service-contracts" element={<ProtectedRoute><ServiceContracts /></ProtectedRoute>} />
           <Route path="/service-contracts/:id" element={<ProtectedRoute><ServiceContractDetails /></ProtectedRoute>} />
           <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
+          <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
           <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
           <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetails /></ProtectedRoute>} />
           <Route path="/customer-locations/:id" element={<ProtectedRoute><CustomerLocationDetails /></ProtectedRoute>} />
