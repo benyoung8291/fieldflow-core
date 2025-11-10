@@ -266,9 +266,11 @@ export type Database = {
           gps_check_in_radius: number | null
           id: string
           is_recurring: boolean | null
+          latitude: number | null
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
+          longitude: number | null
           notes: string | null
           parent_appointment_id: string | null
           recurrence_days_of_week: string[] | null
@@ -295,9 +297,11 @@ export type Database = {
           gps_check_in_radius?: number | null
           id?: string
           is_recurring?: boolean | null
+          latitude?: number | null
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          longitude?: number | null
           notes?: string | null
           parent_appointment_id?: string | null
           recurrence_days_of_week?: string[] | null
@@ -324,9 +328,11 @@ export type Database = {
           gps_check_in_radius?: number | null
           id?: string
           is_recurring?: boolean | null
+          latitude?: number | null
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          longitude?: number | null
           notes?: string | null
           parent_appointment_id?: string | null
           recurrence_days_of_week?: string[] | null
@@ -3853,6 +3859,8 @@ export type Database = {
           created_at: string | null
           hourly_rate: number
           id: string
+          latitude: number | null
+          longitude: number | null
           notes: string | null
           overhead_percentage: number
           status: string
@@ -3869,6 +3877,8 @@ export type Database = {
           created_at?: string | null
           hourly_rate?: number
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           notes?: string | null
           overhead_percentage?: number
           status?: string
@@ -3885,6 +3895,8 @@ export type Database = {
           created_at?: string | null
           hourly_rate?: number
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           notes?: string | null
           overhead_percentage?: number
           status?: string
@@ -4285,6 +4297,7 @@ export type Database = {
         | "analytics"
         | "settings"
         | "price_book"
+      app_role: "tenant_admin" | "supervisor" | "manager" | "user"
       appointment_status:
         | "draft"
         | "published"
@@ -4459,6 +4472,7 @@ export const Constants = {
         "settings",
         "price_book",
       ],
+      app_role: ["tenant_admin", "supervisor", "manager", "user"],
       appointment_status: [
         "draft",
         "published",

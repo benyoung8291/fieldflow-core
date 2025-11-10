@@ -43,6 +43,8 @@ import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
+import SupervisorDashboard from "./pages/worker/SupervisorDashboard";
+import { MobileAppToggle } from "./components/worker/MobileAppToggle";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +76,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <MobileAppToggle />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -110,6 +113,7 @@ const App = () => (
           <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
           {/* Worker Mobile Routes */}
           <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
+          <Route path="/worker/supervisor-dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
           <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
           <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
           <Route path="/worker/schedule" element={<ProtectedRoute><WorkerSchedule /></ProtectedRoute>} />
