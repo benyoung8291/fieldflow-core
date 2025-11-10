@@ -22,14 +22,11 @@ export default function WorkerDashboard() {
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
-  const [currentTimeLog, setCurrentTimeLog] = useState<any>(null);
-  const [todayHours, setTodayHours] = useState(0);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
   useEffect(() => {
     loadUserAndAppointments();
-    loadTimeData();
   }, []);
 
   const loadUserAndAppointments = async () => {
@@ -85,47 +82,6 @@ export default function WorkerDashboard() {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadTimeData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: worker } = await (supabase as any)
-        .from('workers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!worker) return;
-
-      // Get current active time log
-      const { data: activeLog } = await supabase
-        .from('time_logs')
-        .select('*')
-        .eq('worker_id', worker.id)
-        .is('clock_out', null)
-        .maybeSingle();
-
-      setCurrentTimeLog(activeLog);
-
-      // Get today's total hours
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const { data: logs } = await supabase
-        .from('time_logs')
-        .select('total_hours')
-        .eq('worker_id', worker.id)
-        .gte('clock_in', `${today}T00:00:00`)
-        .not('clock_out', 'is', null);
-
-      if (logs) {
-        const total = logs.reduce((sum, log) => sum + (log.total_hours || 0), 0);
-        setTodayHours(total);
-      }
-    } catch (error) {
-      console.error('Error loading time data:', error);
     }
   };
 
@@ -291,21 +247,7 @@ export default function WorkerDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <Button
             size="lg"
-            onClick={() => navigate('/worker/clock')}
-            className={`h-24 flex-col gap-2 ${currentTimeLog ? 'bg-green-600 hover:bg-green-700' : ''}`}
-          >
-            <Clock className="h-8 w-8" />
-            <span>{currentTimeLog ? 'Clocked In' : 'Time Clock'}</span>
-            {currentTimeLog && (
-              <span className="text-xs opacity-90">
-                {format(new Date(currentTimeLog.clock_in), 'h:mm a')}
-              </span>
-            )}
-          </Button>
-          <Button
-            size="lg"
             onClick={() => navigate('/worker/appointments')}
-            variant="outline"
             className="h-24 flex-col gap-2"
           >
             <CalendarDays className="h-8 w-8" />
@@ -316,30 +258,16 @@ export default function WorkerDashboard() {
               </Badge>
             )}
           </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => navigate('/worker/schedule')}
+            className="h-24 flex-col gap-2"
+          >
+            <Clock className="h-8 w-8" />
+            <span>My Schedule</span>
+          </Button>
         </div>
-
-        {/* Daily Stats */}
-        {(todayHours > 0 || todayAppointments.length > 0) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Today's Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <p className="text-3xl font-bold text-primary">{todayHours.toFixed(1)}h</p>
-                  <p className="text-sm text-muted-foreground">Hours Worked</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-primary">
-                    {todayAppointments.filter(a => a.status === 'completed').length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Jobs Complete</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Today's Appointments */}
         <Card>
