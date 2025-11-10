@@ -368,15 +368,30 @@ export default function InvoiceDetails() {
             </div>
             <div className="flex items-center gap-2">
               {invoice.status === "draft" && (
-                <Button onClick={() => updateStatusMutation.mutate("sent")}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send to Customer
-                </Button>
+                <>
+                  <Button variant="outline" onClick={() => toast.success("Draft saved")}>
+                    Save Draft
+                  </Button>
+                  <Button onClick={() => updateStatusMutation.mutate("sent")}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send to Customer
+                  </Button>
+                </>
               )}
               {invoice.status === "sent" && (
-                <Button onClick={() => updateStatusMutation.mutate("approved")}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Mark as Approved
+                <>
+                  <Button variant="outline" onClick={() => updateStatusMutation.mutate("draft")}>
+                    Back to Draft
+                  </Button>
+                  <Button onClick={() => updateStatusMutation.mutate("approved")}>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Approved
+                  </Button>
+                </>
+              )}
+              {invoice.status === "approved" && (
+                <Button variant="outline" onClick={() => updateStatusMutation.mutate("sent")}>
+                  Unapprove
                 </Button>
               )}
               <Button variant="outline">
