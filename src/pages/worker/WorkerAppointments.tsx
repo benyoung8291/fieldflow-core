@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react';
 import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
-import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
+import { cacheAppointments, getCachedAppointments, getDB } from '@/lib/offlineSync';
 
 export default function WorkerAppointments() {
   const navigate = useNavigate();
@@ -65,8 +65,26 @@ export default function WorkerAppointments() {
           setActiveTimeLogs(timeLogsMap);
         }
       } else {
+        // Offline mode - load from cache
         const cached = await getCachedAppointments();
         setAppointments(cached);
+        
+        // Load cached time logs
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const db = await getDB();
+          const cachedTimeLogs = await db.getAll('timeEntries');
+          
+          // Filter for active (clock_in without clock_out) time logs for this worker
+          const timeLogsMap: Record<string, any> = {};
+          cachedTimeLogs
+            .filter(log => log.workerId === user.id && log.action === 'clock_in')
+            .forEach(log => {
+              timeLogsMap[log.appointmentId] = log;
+            });
+          
+          setActiveTimeLogs(timeLogsMap);
+        }
       }
     } catch (error) {
       console.error('Error loading appointments:', error);
