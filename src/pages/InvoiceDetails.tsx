@@ -138,6 +138,7 @@ export default function InvoiceDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
       toast.success("Invoice status updated successfully");
     },
     onError: () => {
@@ -149,6 +150,13 @@ export default function InvoiceDetails() {
     mutationFn: async ({ itemId, updates, isFromSource }: { itemId: string; updates: any; isFromSource: boolean }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Get the line item before update to log the change
+      const { data: oldItem } = await supabase
+        .from("invoice_line_items")
+        .select("*")
+        .eq("id", itemId)
+        .single();
 
       // Update the line item
       const { error } = await supabase
@@ -163,16 +171,32 @@ export default function InvoiceDetails() {
 
       if (error) throw error;
 
-      // If this was from a source document, log the change in audit history
-      if (isFromSource && updates.source_type && updates.source_id) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("tenant_id, first_name, last_name")
-          .eq("id", user.id)
-          .single();
+      // Get user profile for audit logging
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id, first_name, last_name")
+        .eq("id", user.id)
+        .single();
 
-        if (profile) {
-          const userName = `${profile.first_name} ${profile.last_name || ""}`.trim();
+      if (profile) {
+        const userName = `${profile.first_name} ${profile.last_name || ""}`.trim();
+
+        // Log to invoice audit history
+        await supabase.from("audit_logs").insert({
+          tenant_id: profile.tenant_id,
+          user_id: user.id,
+          user_name: userName,
+          table_name: "invoices",
+          record_id: id!,
+          action: "update",
+          field_name: "line_item_edited",
+          old_value: oldItem ? `${oldItem.description} (Qty: ${oldItem.quantity}, Price: $${oldItem.unit_price})` : null,
+          new_value: `${updates.description} (Qty: ${updates.quantity}, Price: $${updates.unit_price})`,
+          note: isFromSource ? `Line item from ${updates.source_type?.replace('_', ' ')} was modified` : "Line item modified",
+        });
+
+        // If this was from a source document, also log the change there
+        if (isFromSource && updates.source_type && updates.source_id) {
           const sourceTable = updates.source_type === "project" ? "projects" : "service_orders";
 
           await supabase.from("audit_logs").insert({
@@ -183,7 +207,7 @@ export default function InvoiceDetails() {
             record_id: updates.source_id,
             action: "update",
             field_name: "line_item_modified_in_invoice",
-            old_value: `Original: ${updates.description}`,
+            old_value: `Original: ${oldItem?.description}`,
             new_value: `Modified in invoice ${invoice?.invoice_number}`,
             note: `Line item edited in invoice. Link: /invoices/${id}`,
           });
@@ -214,6 +238,7 @@ export default function InvoiceDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
       toast.success("Line item updated successfully");
     },
     onError: () => {
@@ -228,7 +253,7 @@ export default function InvoiceDetails() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, first_name, last_name")
         .eq("id", user.id)
         .single();
 
@@ -258,6 +283,21 @@ export default function InvoiceDetails() {
 
       if (error) throw error;
 
+      // Log to invoice audit history
+      const userName = `${profile.first_name} ${profile.last_name || ""}`.trim();
+      await supabase.from("audit_logs").insert({
+        tenant_id: profile.tenant_id,
+        user_id: user.id,
+        user_name: userName,
+        table_name: "invoices",
+        record_id: id!,
+        action: "update",
+        field_name: "line_item_added",
+        old_value: null,
+        new_value: `${newItem.description} (Qty: ${newItem.quantity}, Price: $${newItem.unit_price})`,
+        note: "New line item added to invoice",
+      });
+
       // Recalculate invoice totals
       const { data: allItems } = await supabase
         .from("invoice_line_items")
@@ -282,6 +322,7 @@ export default function InvoiceDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
       toast.success("Line item added successfully");
     },
     onError: () => {
@@ -291,12 +332,45 @@ export default function InvoiceDetails() {
 
   const deleteLineItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get the line item before deletion to log the change
+      const { data: deletedItem } = await supabase
+        .from("invoice_line_items")
+        .select("*")
+        .eq("id", itemId)
+        .single();
+
       const { error } = await supabase
         .from("invoice_line_items")
         .delete()
         .eq("id", itemId);
 
       if (error) throw error;
+
+      // Log to invoice audit history
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id, first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && deletedItem) {
+        const userName = `${profile.first_name} ${profile.last_name || ""}`.trim();
+        await supabase.from("audit_logs").insert({
+          tenant_id: profile.tenant_id,
+          user_id: user.id,
+          user_name: userName,
+          table_name: "invoices",
+          record_id: id!,
+          action: "update",
+          field_name: "line_item_deleted",
+          old_value: `${deletedItem.description} (Qty: ${deletedItem.quantity}, Price: $${deletedItem.unit_price})`,
+          new_value: null,
+          note: "Line item removed from invoice",
+        });
+      }
 
       // Recalculate invoice totals
       const { data: allItems } = await supabase
@@ -320,6 +394,7 @@ export default function InvoiceDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
       toast.success("Line item deleted successfully");
     },
     onError: () => {
