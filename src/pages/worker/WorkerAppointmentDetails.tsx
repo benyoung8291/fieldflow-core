@@ -104,15 +104,63 @@ export default function WorkerAppointmentDetails() {
     }
   };
 
+  const requestLocationPermission = async (): Promise<boolean> => {
+    try {
+      // Check if geolocation is supported
+      if (!navigator.geolocation) {
+        toast.error('Geolocation is not supported by your browser');
+        return false;
+      }
+
+      // Check current permission state
+      if ('permissions' in navigator) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        
+        if (permission.state === 'denied') {
+          toast.error('Location permission denied. Please enable location access in your browser settings.');
+          return false;
+        }
+        
+        if (permission.state === 'granted') {
+          return true;
+        }
+      }
+
+      // Request permission by attempting to get position
+      // This will trigger the browser's permission prompt
+      return true;
+    } catch (error) {
+      console.error('Permission check error:', error);
+      return true; // Still try to get location
+    }
+  };
+
   const handleClockIn = async () => {
     setProcessing(true);
     try {
+      // First check/request location permission
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        setProcessing(false);
+        return;
+      }
+
+      // Show loading toast while getting location
+      const loadingToast = toast.loading('Getting your location...');
+
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
+        navigator.geolocation.getCurrentPosition(
+          resolve, 
+          reject, 
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          }
+        );
       });
+
+      toast.dismiss(loadingToast);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -146,11 +194,22 @@ export default function WorkerAppointmentDetails() {
         .update({ status: 'checked_in' })
         .eq('id', id);
 
-      toast.success('Clocked in successfully!');
+      toast.success(`Clocked in successfully at your location!`);
       loadAppointmentData();
     } catch (error: any) {
       console.error('Clock in error:', error);
-      toast.error(error.code === 1 ? 'Location permission denied' : 'Failed to clock in');
+      
+      if (error.code === 1) {
+        toast.error('Location permission denied. Please enable location access in your browser settings and try again.', {
+          duration: 6000,
+        });
+      } else if (error.code === 2) {
+        toast.error('Unable to determine your location. Please check your device settings.');
+      } else if (error.code === 3) {
+        toast.error('Location request timed out. Please try again.');
+      } else {
+        toast.error('Failed to clock in. Please try again.');
+      }
     } finally {
       setProcessing(false);
     }
@@ -161,12 +220,28 @@ export default function WorkerAppointmentDetails() {
 
     setProcessing(true);
     try {
+      // Check location permission
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        setProcessing(false);
+        return;
+      }
+
+      const loadingToast = toast.loading('Getting your location...');
+
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
+        navigator.geolocation.getCurrentPosition(
+          resolve, 
+          reject, 
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          }
+        );
       });
+
+      toast.dismiss(loadingToast);
 
       const clockOutNotes = `${timeLog.notes || ''}\nClocked out at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`.trim();
 
@@ -185,7 +260,18 @@ export default function WorkerAppointmentDetails() {
       loadAppointmentData();
     } catch (error: any) {
       console.error('Clock out error:', error);
-      toast.error('Failed to clock out');
+      
+      if (error.code === 1) {
+        toast.error('Location permission denied. Please enable location access and try again.', {
+          duration: 6000,
+        });
+      } else if (error.code === 2) {
+        toast.error('Unable to determine your location. Please check your device settings.');
+      } else if (error.code === 3) {
+        toast.error('Location request timed out. Please try again.');
+      } else {
+        toast.error('Failed to clock out. Please try again.');
+      }
     } finally {
       setProcessing(false);
     }
