@@ -25,6 +25,7 @@ import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
 import NumberingTab from "@/components/settings/NumberingTab";
 import IntegrationsTab from "@/components/settings/IntegrationsTab";
 import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
+import UserProfileTab from "@/components/settings/UserProfileTab";
 
 interface PayRateCategory {
   id: string;
@@ -172,6 +173,7 @@ export default function Settings() {
         <Tabs defaultValue="general" className="space-y-6">
             <TabsList>
               <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="user-profile">My Profile</TabsTrigger>
               <TabsTrigger value="numbering">Numbering</TabsTrigger>
               <TabsTrigger value="integrations">Integrations</TabsTrigger>
               <TabsTrigger value="accounting">Accounting</TabsTrigger>
@@ -189,6 +191,14 @@ export default function Settings() {
             <Card>
               <CardContent className="pt-6">
                 <GeneralSettingsTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="user-profile">
+            <Card>
+              <CardContent className="pt-6">
+                <UserProfileTab />
               </CardContent>
             </Card>
           </TabsContent>
