@@ -149,7 +149,10 @@ export default function Invoices() {
       let itemOrder = 0;
 
       selectedItems.forEach((itemId) => {
-        const [type, id] = itemId.split("-");
+        // Split only on first dash to preserve UUID
+        const dashIndex = itemId.indexOf("-");
+        const type = itemId.substring(0, dashIndex);
+        const id = itemId.substring(dashIndex + 1);
         
         if (type === "project") {
           const project = projects?.find(p => p.id === id);
@@ -267,7 +270,10 @@ export default function Invoices() {
     let subtotal = 0;
 
     selectedItems.forEach((itemId) => {
-      const [type, id] = itemId.split("-");
+      // Split only on first dash to preserve UUID
+      const dashIndex = itemId.indexOf("-");
+      const type = itemId.substring(0, dashIndex);
+      const id = itemId.substring(dashIndex + 1);
       
       if (type === "project") {
         const project = projects?.find(p => p.id === id);
@@ -480,7 +486,10 @@ export default function Invoices() {
                         </thead>
                         <tbody>
                           {Array.from(selectedItems).map((itemId) => {
-                            const [type, id] = itemId.split("-");
+                            // Split only on first dash to preserve UUID
+                            const dashIndex = itemId.indexOf("-");
+                            const type = itemId.substring(0, dashIndex);
+                            const id = itemId.substring(dashIndex + 1);
                             console.log("Rendering line items for:", itemId, "Type:", type, "ID:", id);
                             
                             if (type === "project") {
@@ -505,6 +514,13 @@ export default function Invoices() {
                                       </td>
                                     </tr>
                                   ))}
+                                  {(!project?.project_line_items || project.project_line_items.length === 0) && (
+                                    <tr key={`${itemId}-empty`} className="border-b">
+                                      <td className="p-2 text-muted-foreground italic" colSpan={4}>
+                                        No line items available
+                                      </td>
+                                    </tr>
+                                  )}
                                 </>
                               );
                             } else {
@@ -531,7 +547,7 @@ export default function Invoices() {
                                       </tr>
                                     ))
                                   ) : (
-                                    <tr key={itemId} className="border-b">
+                                    <tr key={`${itemId}-empty`} className="border-b">
                                       <td className="p-2 text-muted-foreground italic" colSpan={4}>
                                         No line items available
                                       </td>
