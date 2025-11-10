@@ -80,6 +80,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     terms_conditions: "",
     internal_notes: "",
     customer_message: "",
+    pipeline_id: "",
+    stage_id: "",
   });
 
   const [attachments, setAttachments] = useState<any[]>([]);
@@ -149,11 +151,21 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     if (user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, default_pipeline_id, default_stage_id")
         .eq("id", user.id)
         .single();
-      if (profile?.tenant_id) {
+        
+      if (profile) {
         setTenantId(profile.tenant_id);
+        
+        // Set default pipeline and stage for new quotes
+        if (!quoteId && profile.default_pipeline_id) {
+          setFormData(prev => ({
+            ...prev,
+            pipeline_id: profile.default_pipeline_id || '',
+            stage_id: profile.default_stage_id || '',
+          }));
+        }
       }
     }
   };
@@ -223,6 +235,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         terms_conditions: quoteData.terms_conditions || "",
         internal_notes: quoteData.internal_notes || "",
         customer_message: quoteData.customer_message || "",
+        pipeline_id: quoteData.pipeline_id || "",
+        stage_id: quoteData.stage_id || "",
       });
 
       // Fetch attachments
@@ -285,6 +299,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       terms_conditions: "",
       internal_notes: "",
       customer_message: "",
+      pipeline_id: "",
+      stage_id: "",
     });
     setLineItems([{ 
       description: "", 
@@ -647,6 +663,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         terms_conditions: formData.terms_conditions || null,
         internal_notes: formData.internal_notes || null,
         customer_message: formData.customer_message || null,
+        pipeline_id: formData.pipeline_id || null,
+        stage_id: formData.stage_id || null,
       };
 
       let savedQuoteId = quoteId;

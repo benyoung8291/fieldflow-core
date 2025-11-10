@@ -505,6 +505,39 @@ export type Database = {
           },
         ]
       }
+      crm_pipelines: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       crm_status_settings: {
         Row: {
           color: string
@@ -513,6 +546,7 @@ export type Database = {
           display_order: number
           id: string
           is_active: boolean
+          pipeline_id: string | null
           probability_percentage: number
           status: string
           tenant_id: string
@@ -525,6 +559,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          pipeline_id?: string | null
           probability_percentage?: number
           status: string
           tenant_id: string
@@ -537,12 +572,21 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          pipeline_id?: string | null
           probability_percentage?: number
           status?: string
           tenant_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_status_settings_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_contacts: {
         Row: {
@@ -1395,6 +1439,8 @@ export type Database = {
           abn: string | null
           avatar_url: string | null
           created_at: string | null
+          default_pipeline_id: string | null
+          default_stage_id: string | null
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -1419,6 +1465,8 @@ export type Database = {
           abn?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          default_pipeline_id?: string | null
+          default_stage_id?: string | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -1443,6 +1491,8 @@ export type Database = {
           abn?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          default_pipeline_id?: string | null
+          default_stage_id?: string | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -1464,6 +1514,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_default_pipeline_id_fkey"
+            columns: ["default_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_default_stage_id_fkey"
+            columns: ["default_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_status_settings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_pay_rate_category_id_fkey"
             columns: ["pay_rate_category_id"]
@@ -2432,10 +2496,12 @@ export type Database = {
           is_for_lead: boolean | null
           lead_id: string | null
           notes: string | null
+          pipeline_id: string | null
           quote_number: string
           quote_type: string | null
           rejected_at: string | null
           sent_at: string | null
+          stage_id: string | null
           status: string
           subtotal: number
           tax_amount: number | null
@@ -2466,10 +2532,12 @@ export type Database = {
           is_for_lead?: boolean | null
           lead_id?: string | null
           notes?: string | null
+          pipeline_id?: string | null
           quote_number: string
           quote_type?: string | null
           rejected_at?: string | null
           sent_at?: string | null
+          stage_id?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number | null
@@ -2500,10 +2568,12 @@ export type Database = {
           is_for_lead?: boolean | null
           lead_id?: string | null
           notes?: string | null
+          pipeline_id?: string | null
           quote_number?: string
           quote_type?: string | null
           rejected_at?: string | null
           sent_at?: string | null
+          stage_id?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number | null
@@ -2535,6 +2605,20 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_status_settings"
             referencedColumns: ["id"]
           },
         ]

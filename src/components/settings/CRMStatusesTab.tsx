@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ interface CRMStatus {
   color: string;
   display_order: number;
   is_active: boolean;
+  pipeline_id: string | null;
 }
 
 export default function CRMStatusesTab() {
@@ -40,23 +42,45 @@ export default function CRMStatusesTab() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<CRMStatus | null>(null);
+  const [selectedPipeline, setSelectedPipeline] = useState<string>('');
   const [formData, setFormData] = useState({
     status: '',
     display_name: '',
     probability_percentage: '50',
     color: '#0891B2',
     display_order: '0',
+    pipeline_id: '',
+  });
+
+  // Fetch pipelines
+  const { data: pipelines = [] } = useQuery({
+    queryKey: ['crm-pipelines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_pipelines' as any)
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
   });
 
   // Fetch statuses
   const { data: statuses = [], isLoading } = useQuery({
-    queryKey: ['crm-statuses-settings'],
+    queryKey: ['crm-statuses-settings', selectedPipeline],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('crm_status_settings' as any)
-        .select('*')
+        .select('*, crm_pipelines(name)')
         .order('display_order');
       
+      if (selectedPipeline) {
+        query = query.eq('pipeline_id', selectedPipeline);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as CRMStatus[];
     },
@@ -156,6 +180,7 @@ export default function CRMStatusesTab() {
       probability_percentage: '50',
       color: '#0891B2',
       display_order: '0',
+      pipeline_id: '',
     });
   };
 
@@ -167,6 +192,7 @@ export default function CRMStatusesTab() {
       probability_percentage: status.probability_percentage.toString(),
       color: status.color,
       display_order: status.display_order.toString(),
+      pipeline_id: status.pipeline_id || '',
     });
     setIsDialogOpen(true);
   };
@@ -180,6 +206,7 @@ export default function CRMStatusesTab() {
       probability_percentage: parseFloat(formData.probability_percentage),
       color: formData.color,
       display_order: parseInt(formData.display_order),
+      pipeline_id: formData.pipeline_id || null,
     };
 
     if (selectedStatus) {
@@ -204,10 +231,25 @@ export default function CRMStatusesTab() {
             Configure your sales pipeline stages and probability ratings
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Stage
-        </Button>
+        <div className="flex gap-2 items-center">
+          <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All Pipelines" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Pipelines</SelectItem>
+              {pipelines.map((pipeline: any) => (
+                <SelectItem key={pipeline.id} value={pipeline.id}>
+                  {pipeline.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Stage
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -282,6 +324,28 @@ export default function CRMStatusesTab() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pipeline">Pipeline *</Label>
+              <Select 
+                value={formData.pipeline_id} 
+                onValueChange={(value) => setFormData({ ...formData, pipeline_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a pipeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pipelines.map((pipeline: any) => (
+                    <SelectItem key={pipeline.id} value={pipeline.id}>
+                      {pipeline.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Assign this stage to a pipeline
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="status">Status Key *</Label>
               <Input
