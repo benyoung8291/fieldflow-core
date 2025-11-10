@@ -29,6 +29,8 @@ import SignaturePad from '@/components/worker/SignaturePad';
 import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHelp';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { queueTimeEntry } from '@/lib/offlineSync';
+import TimeLogsTable from '@/components/service-orders/TimeLogsTable';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
@@ -43,6 +45,7 @@ export default function WorkerAppointmentDetails() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [workNotes, setWorkNotes] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     loadAppointmentData();
@@ -247,6 +250,19 @@ export default function WorkerAppointmentDetails() {
       }
 
       console.log('[Clock In] Worker found:', { workerId: worker.id, tenantId: worker.tenant_id });
+
+      // Auto clock-out from other appointments
+      console.log('[Clock In] Checking for other active appointments...');
+      const { error: clockOutError } = await supabase.rpc('auto_clock_out_other_appointments', {
+        p_worker_id: worker.id,
+        p_new_appointment_id: id,
+        p_tenant_id: worker.tenant_id,
+      });
+
+      if (clockOutError) {
+        console.warn('[Clock In] Auto clock-out warning:', clockOutError);
+        // Don't fail the clock-in if auto clock-out fails
+      }
 
       const hourlyRate = (worker.pay_rate_category as any)?.hourly_rate || 0;
       const timestamp = new Date().toISOString();
@@ -478,6 +494,80 @@ export default function WorkerAppointmentDetails() {
     }
   };
 
+  const handlePause = async () => {
+    if (!timeLog) return;
+    
+    setProcessing(true);
+    try {
+      const timestamp = new Date().toISOString();
+      
+      // Clock out the current time log (pause)
+      const { error } = await supabase
+        .from('time_logs')
+        .update({
+          clock_out: timestamp,
+          notes: (timeLog.notes || '') + '\n[Paused]',
+        })
+        .eq('id', timeLog.id);
+      
+      if (error) throw error;
+      
+      toast.success('Timer paused');
+      setTimeLog(null);
+      setIsPaused(true);
+    } catch (error: any) {
+      console.error('Pause error:', error);
+      toast.error('Failed to pause timer');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleResume = async () => {
+    setProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: worker } = await supabase
+        .from('workers')
+        .select('id, tenant_id, pay_rate_category:pay_rate_categories(hourly_rate)')
+        .eq('id', user.id)
+        .single();
+
+      if (!worker) throw new Error('Worker not found');
+
+      const hourlyRate = (worker.pay_rate_category as any)?.hourly_rate || 0;
+      const timestamp = new Date().toISOString();
+
+      // Create a new time log entry (resume)
+      const { data: newLog, error } = await supabase
+        .from('time_logs')
+        .insert({
+          tenant_id: worker.tenant_id,
+          appointment_id: id,
+          worker_id: worker.id,
+          clock_in: timestamp,
+          hourly_rate: hourlyRate,
+          overhead_percentage: 0,
+          notes: '[Resumed]',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Timer resumed');
+      setTimeLog(newLog);
+      setIsPaused(false);
+    } catch (error: any) {
+      console.error('Resume error:', error);
+      toast.error('Failed to resume timer');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleCompleteAppointment = () => {
     setShowSignature(true);
   };
@@ -682,15 +772,45 @@ export default function WorkerAppointmentDetails() {
                     />
                   </div>
 
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handlePause}
+                      disabled={processing}
+                      size="lg"
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Pause
+                    </Button>
+                    <Button
+                      onClick={handleClockOut}
+                      disabled={processing}
+                      size="lg"
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      <Square className="h-5 w-5 mr-2" />
+                      Clock Out
+                    </Button>
+                  </div>
+                </div>
+              ) : isPaused ? (
+                <div className="text-center space-y-4">
+                  <div>
+                    <Clock className="h-12 w-12 mx-auto text-warning mb-2" />
+                    <p className="text-lg font-semibold">Timer Paused</p>
+                    <p className="text-sm text-muted-foreground">
+                      Resume when you're ready to continue
+                    </p>
+                  </div>
                   <Button
-                    onClick={handleClockOut}
+                    onClick={handleResume}
                     disabled={processing}
                     size="lg"
-                    variant="destructive"
                     className="w-full"
                   >
-                    <Square className="h-5 w-5 mr-2" />
-                    Clock Out
+                    <Play className="h-5 w-5 mr-2" />
+                    Resume
                   </Button>
                 </div>
               ) : (
@@ -856,6 +976,16 @@ export default function WorkerAppointmentDetails() {
             Complete Job & Get Signature
           </Button>
         )}
+
+        {/* Time Logs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Time Logs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TimeLogsTable appointmentId={id!} />
+          </CardContent>
+        </Card>
 
         {/* Notes */}
         {appointment.notes && (

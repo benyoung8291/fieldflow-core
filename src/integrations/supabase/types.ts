@@ -4264,6 +4264,15 @@ export type Database = {
       }
     }
     Functions: {
+      auto_clock_out_other_appointments: {
+        Args: {
+          p_new_appointment_id: string
+          p_tenant_id: string
+          p_worker_id: string
+        }
+        Returns: undefined
+      }
+      cleanup_overlapping_time_logs: { Args: never; Returns: undefined }
       get_next_sequential_number: {
         Args: { p_entity_type: string; p_tenant_id: string }
         Returns: string
