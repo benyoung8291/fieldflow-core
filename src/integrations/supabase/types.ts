@@ -2958,6 +2958,7 @@ export type Database = {
           priority: string | null
           project_id: string | null
           purchase_order_number: string | null
+          ready_for_billing: boolean | null
           recurrence_days_of_week: string[] | null
           recurrence_end_date: string | null
           recurrence_frequency: number | null
@@ -2998,6 +2999,7 @@ export type Database = {
           priority?: string | null
           project_id?: string | null
           purchase_order_number?: string | null
+          ready_for_billing?: boolean | null
           recurrence_days_of_week?: string[] | null
           recurrence_end_date?: string | null
           recurrence_frequency?: number | null
@@ -3038,6 +3040,7 @@ export type Database = {
           priority?: string | null
           project_id?: string | null
           purchase_order_number?: string | null
+          ready_for_billing?: boolean | null
           recurrence_days_of_week?: string[] | null
           recurrence_end_date?: string | null
           recurrence_frequency?: number | null

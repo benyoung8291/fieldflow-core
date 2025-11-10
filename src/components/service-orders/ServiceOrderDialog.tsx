@@ -126,6 +126,7 @@ export default function ServiceOrderDialog({
     preferred_date_start: "",
     preferred_date_end: "",
     allow_bidding: false,
+    ready_for_billing: false,
   });
 
   useEffect(() => {
@@ -253,6 +254,7 @@ export default function ServiceOrderDialog({
           preferred_date_start: orderData.preferred_date_start || "",
           preferred_date_end: orderData.preferred_date_end || "",
           allow_bidding: orderData.allow_bidding || false,
+          ready_for_billing: orderData.ready_for_billing || false,
         });
 
         if (lineItemsData) {
@@ -303,6 +305,7 @@ export default function ServiceOrderDialog({
       preferred_date_start: "",
       preferred_date_end: "",
       allow_bidding: false,
+      ready_for_billing: false,
     });
     setLineItems([]);
     setAttachments([]);
@@ -537,6 +540,7 @@ export default function ServiceOrderDialog({
         total_amount: totals.total,
         estimated_hours: totals.totalHours,
         allow_bidding: formData.allow_bidding,
+        ready_for_billing: formData.status === "completed" ? formData.ready_for_billing : false,
       };
 
       if (!orderId) {
@@ -1037,6 +1041,25 @@ export default function ServiceOrderDialog({
                     </Label>
                   </div>
                 </FieldPresenceWrapper>
+
+                {formData.status === "completed" && (
+                  <FieldPresenceWrapper fieldName="ready_for_billing" onlineUsers={onlineUsers}>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="ready_for_billing"
+                        checked={formData.ready_for_billing}
+                        onCheckedChange={(checked) => {
+                          setFormData({ ...formData, ready_for_billing: checked });
+                          setCurrentField("ready_for_billing");
+                          updateField("ready_for_billing");
+                        }}
+                      />
+                      <Label htmlFor="ready_for_billing">
+                        Ready for Billing (show in invoice creation)
+                      </Label>
+                    </div>
+                  </FieldPresenceWrapper>
+                )}
               </TabsContent>
 
               <TabsContent value="line-items" className="space-y-4 mt-4">

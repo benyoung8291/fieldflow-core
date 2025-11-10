@@ -100,7 +100,7 @@ export default function Invoices() {
     enabled: !!selectedCustomerId,
   });
 
-  // Fetch service orders for selected customer
+  // Fetch service orders for selected customer (completed and ready for billing only)
   const { data: serviceOrders } = useQuery({
     queryKey: ["customer-service-orders", selectedCustomerId],
     queryFn: async () => {
@@ -109,6 +109,8 @@ export default function Invoices() {
         .from("service_orders")
         .select("id, order_number, title, created_at, customer_id, work_order_number, purchase_order_number")
         .eq("customer_id", selectedCustomerId)
+        .eq("status", "completed")
+        .eq("ready_for_billing", true)
         .order("created_at", { ascending: false });
       
       if (ordersError) throw ordersError;
@@ -260,7 +262,15 @@ export default function Invoices() {
 
       if (lineItemsError) throw lineItemsError;
 
-      // Update billing status for source documents
+      // Update billing status for source documents and log invoice creation
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+      
+      const userName = profileData ? `${profileData.first_name} ${profileData.last_name || ""}`.trim() : user.email?.split("@")[0] || "User";
+
       for (const [key, doc] of sourceDocuments.entries()) {
         if (doc.type === "service_order") {
           // Check if 100% invoiced
@@ -269,12 +279,40 @@ export default function Invoices() {
             .from("service_orders")
             .update({ billing_status: status })
             .eq("id", doc.id);
+
+          // Log invoice creation in audit history
+          await supabase.from("audit_logs").insert({
+            tenant_id: profile.tenant_id,
+            user_id: user.id,
+            user_name: userName,
+            table_name: "service_orders",
+            record_id: doc.id,
+            action: "update",
+            field_name: "invoice_created",
+            old_value: null,
+            new_value: `Invoice ${nextInvoiceNumber} created`,
+            note: `Invoice created from service order. Link: /invoices/${invoice.id}`,
+          });
         } else if (doc.type === "project") {
           const status = doc.selectedCount === doc.totalLineItems ? "billed" : "partially_billed";
           await supabase
             .from("projects")
             .update({ billing_status: status })
             .eq("id", doc.id);
+
+          // Log invoice creation in audit history
+          await supabase.from("audit_logs").insert({
+            tenant_id: profile.tenant_id,
+            user_id: user.id,
+            user_name: userName,
+            table_name: "projects",
+            record_id: doc.id,
+            action: "update",
+            field_name: "invoice_created",
+            old_value: null,
+            new_value: `Invoice ${nextInvoiceNumber} created`,
+            note: `Invoice created from project. Link: /invoices/${invoice.id}`,
+          });
         }
       }
 

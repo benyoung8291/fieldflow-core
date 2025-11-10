@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,14 +8,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Send, CheckCircle, Download } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Download, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
+import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -130,6 +138,188 @@ export default function InvoiceDetails() {
     },
   });
 
+  const updateLineItemMutation = useMutation({
+    mutationFn: async ({ itemId, updates, isFromSource }: { itemId: string; updates: any; isFromSource: boolean }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Update the line item
+      const { error } = await supabase
+        .from("invoice_line_items")
+        .update({
+          description: updates.description,
+          quantity: updates.quantity,
+          unit_price: updates.unit_price,
+          line_total: updates.line_total,
+        })
+        .eq("id", itemId);
+
+      if (error) throw error;
+
+      // If this was from a source document, log the change in audit history
+      if (isFromSource && updates.source_type && updates.source_id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id, first_name, last_name")
+          .eq("id", user.id)
+          .single();
+
+        if (profile) {
+          const userName = `${profile.first_name} ${profile.last_name || ""}`.trim();
+          const sourceTable = updates.source_type === "project" ? "projects" : "service_orders";
+
+          await supabase.from("audit_logs").insert({
+            tenant_id: profile.tenant_id,
+            user_id: user.id,
+            user_name: userName,
+            table_name: sourceTable,
+            record_id: updates.source_id,
+            action: "update",
+            field_name: "line_item_modified_in_invoice",
+            old_value: `Original: ${updates.description}`,
+            new_value: `Modified in invoice ${invoice?.invoice_number}`,
+            note: `Line item edited in invoice. Link: /invoices/${id}`,
+          });
+        }
+      }
+
+      // Recalculate invoice totals
+      const { data: allItems } = await supabase
+        .from("invoice_line_items")
+        .select("line_total")
+        .eq("invoice_id", id);
+
+      if (allItems) {
+        const subtotal = allItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
+        const taxAmount = subtotal * (invoice?.tax_rate || 0);
+        const totalAmount = subtotal + taxAmount;
+
+        await supabase
+          .from("invoices")
+          .update({
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: totalAmount,
+          })
+          .eq("id", id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+      toast.success("Line item updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update line item");
+    },
+  });
+
+  const addLineItemMutation = useMutation({
+    mutationFn: async (newItem: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile) throw new Error("No profile found");
+
+      // Get the max item_order
+      const { data: existingItems } = await supabase
+        .from("invoice_line_items")
+        .select("item_order")
+        .eq("invoice_id", id)
+        .order("item_order", { ascending: false })
+        .limit(1);
+
+      const nextOrder = existingItems && existingItems.length > 0 ? existingItems[0].item_order + 1 : 0;
+
+      const { error } = await supabase
+        .from("invoice_line_items")
+        .insert({
+          tenant_id: profile.tenant_id,
+          invoice_id: id,
+          description: newItem.description,
+          quantity: newItem.quantity,
+          unit_price: newItem.unit_price,
+          line_total: newItem.line_total,
+          item_order: nextOrder,
+        });
+
+      if (error) throw error;
+
+      // Recalculate invoice totals
+      const { data: allItems } = await supabase
+        .from("invoice_line_items")
+        .select("line_total")
+        .eq("invoice_id", id);
+
+      if (allItems) {
+        const subtotal = allItems.reduce((sum, item) => sum + (item.line_total || 0), 0) + newItem.line_total;
+        const taxAmount = subtotal * (invoice?.tax_rate || 0);
+        const totalAmount = subtotal + taxAmount;
+
+        await supabase
+          .from("invoices")
+          .update({
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: totalAmount,
+          })
+          .eq("id", id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+      toast.success("Line item added successfully");
+    },
+    onError: () => {
+      toast.error("Failed to add line item");
+    },
+  });
+
+  const deleteLineItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase
+        .from("invoice_line_items")
+        .delete()
+        .eq("id", itemId);
+
+      if (error) throw error;
+
+      // Recalculate invoice totals
+      const { data: allItems } = await supabase
+        .from("invoice_line_items")
+        .select("line_total")
+        .eq("invoice_id", id);
+
+      const subtotal = allItems?.reduce((sum, item) => sum + (item.line_total || 0), 0) || 0;
+      const taxAmount = subtotal * (invoice?.tax_rate || 0);
+      const totalAmount = subtotal + taxAmount;
+
+      await supabase
+        .from("invoices")
+        .update({
+          subtotal,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+        })
+        .eq("id", id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+      toast.success("Line item deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete line item");
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       draft: "outline",
@@ -236,7 +426,15 @@ export default function InvoiceDetails() {
               <Separator />
 
               <div>
-                <div className="text-sm font-medium mb-4">Line Items</div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm font-medium">Line Items</div>
+                  {invoice.status === "draft" && (
+                    <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Line
+                    </Button>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -247,6 +445,7 @@ export default function InvoiceDetails() {
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">Unit Price</TableHead>
                       <TableHead className="text-right">Total</TableHead>
+                      {invoice.status === "draft" && <TableHead className="w-[100px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -262,7 +461,7 @@ export default function InvoiceDetails() {
                       if (isFirstFromSource && sourceDoc) {
                         acc.push(
                           <TableRow key={`${sourceKey}-header`} className="bg-muted/30">
-                            <TableCell colSpan={7} className="font-medium text-sm">
+                            <TableCell colSpan={invoice.status === "draft" ? 8 : 7} className="font-medium text-sm">
                               {sourceDoc.type === "project" ? (
                                 <>Project: {sourceDoc.name}</>
                               ) : (
@@ -297,6 +496,31 @@ export default function InvoiceDetails() {
                           <TableCell className="text-right font-medium">
                             ${item.line_total.toFixed(2)}
                           </TableCell>
+                          {invoice.status === "draft" && (
+                            <TableCell>
+                              <div className="flex items-center gap-1 justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingItem({ ...item, source_type: item.source_type, source_id: item.source_id })}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setItemToDelete(item.id);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
 
@@ -353,6 +577,54 @@ export default function InvoiceDetails() {
           </div>
         </div>
       </div>
+
+      {editingItem && (
+        <EditInvoiceLineDialog
+          open={!!editingItem}
+          onOpenChange={(open) => !open && setEditingItem(null)}
+          lineItem={editingItem}
+          isFromSource={!!editingItem.source_id}
+          onSave={(updatedItem) => {
+            updateLineItemMutation.mutate({
+              itemId: editingItem.id,
+              updates: updatedItem,
+              isFromSource: !!editingItem.source_id,
+            });
+            setEditingItem(null);
+          }}
+        />
+      )}
+
+      <AddInvoiceLineDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onAdd={(newItem) => addLineItemMutation.mutate(newItem)}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this line item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (itemToDelete) {
+                  deleteLineItemMutation.mutate(itemToDelete);
+                  setItemToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

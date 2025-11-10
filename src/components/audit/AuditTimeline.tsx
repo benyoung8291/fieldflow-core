@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { Link } from "react-router-dom";
+import { ExternalLink } from "lucide-react";
 
 interface AuditTimelineProps {
   tableName: string;
@@ -55,12 +57,27 @@ function formatValue(value: string | undefined): string {
   if (!value) return "—";
   if (value === "null" || value === "undefined") return "—";
   
+  // Check if value contains a link pattern
+  if (value.includes("Link: /")) {
+    const linkMatch = value.match(/Link: (\/[^\s]+)/);
+    if (linkMatch) {
+      const parts = value.split("Link:");
+      return parts[0].trim();
+    }
+  }
+  
   // Truncate long values
   if (value.length > 100) {
     return value.substring(0, 100) + "...";
   }
   
   return value;
+}
+
+function extractLink(note: string | undefined): string | null {
+  if (!note) return null;
+  const linkMatch = note.match(/Link: (\/[^\s]+)/);
+  return linkMatch ? linkMatch[1] : null;
 }
 
 export default function AuditTimeline({ tableName, recordId }: AuditTimelineProps) {
@@ -196,7 +213,18 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
                         <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <div className="text-muted-foreground text-[10px] mb-0.5">Note:</div>
-                          <div className="text-foreground">{log.note}</div>
+                          <div className="text-foreground">
+                            {formatValue(log.note)}
+                            {extractLink(log.note) && (
+                              <Link 
+                                to={extractLink(log.note)!} 
+                                className="inline-flex items-center gap-1 ml-2 text-primary hover:underline"
+                              >
+                                View Document
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
