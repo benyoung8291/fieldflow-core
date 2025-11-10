@@ -11,6 +11,7 @@ import { format } from "date-fns";
 
 interface TimeLogsTableProps {
   appointmentId: string;
+  hideFinancials?: boolean;
 }
 
 const statusColors = {
@@ -19,7 +20,7 @@ const statusColors = {
   approved: "bg-success/10 text-success",
 };
 
-export default function TimeLogsTable({ appointmentId }: TimeLogsTableProps) {
+export default function TimeLogsTable({ appointmentId, hideFinancials = false }: TimeLogsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, userRoles } = usePermissions();
@@ -148,9 +149,13 @@ export default function TimeLogsTable({ appointmentId }: TimeLogsTableProps) {
             <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Clock In</th>
             <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Clock Out</th>
             <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Hours</th>
-            <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Rate</th>
-            <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Overhead</th>
-            <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Total Cost</th>
+            {!hideFinancials && (
+              <>
+                <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Rate</th>
+                <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Overhead</th>
+                <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Total Cost</th>
+              </>
+            )}
             <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Status</th>
             {canEdit && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-20"></th>}
           </tr>
@@ -195,37 +200,41 @@ export default function TimeLogsTable({ appointmentId }: TimeLogsTableProps) {
                 <td className="py-2 px-2 text-right text-xs font-medium">
                   {log.total_hours ? log.total_hours.toFixed(2) : "-"}
                 </td>
-                <td className="py-2 px-2 text-right text-xs">
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={editData.hourly_rate}
-                      onChange={(e) => setEditData({ ...editData, hourly_rate: e.target.value })}
-                      className="h-7 text-xs text-right"
-                    />
-                  ) : (
-                    `$${log.hourly_rate.toFixed(2)}/hr`
-                  )}
-                </td>
-                <td className="py-2 px-2 text-right text-xs">
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={editData.overhead_percentage}
-                      onChange={(e) =>
-                        setEditData({ ...editData, overhead_percentage: e.target.value })
-                      }
-                      className="h-7 text-xs text-right"
-                    />
-                  ) : (
-                    `${log.overhead_percentage}%`
-                  )}
-                </td>
-                <td className="py-2 px-2 text-right text-xs font-bold">
-                  {log.total_cost ? `$${log.total_cost.toFixed(2)}` : "-"}
-                </td>
+                {!hideFinancials && (
+                  <>
+                    <td className="py-2 px-2 text-right text-xs">
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editData.hourly_rate}
+                          onChange={(e) => setEditData({ ...editData, hourly_rate: e.target.value })}
+                          className="h-7 text-xs text-right"
+                        />
+                      ) : (
+                        `$${log.hourly_rate.toFixed(2)}/hr`
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-right text-xs">
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={editData.overhead_percentage}
+                          onChange={(e) =>
+                            setEditData({ ...editData, overhead_percentage: e.target.value })
+                          }
+                          className="h-7 text-xs text-right"
+                        />
+                      ) : (
+                        `${log.overhead_percentage}%`
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-right text-xs font-bold">
+                      {log.total_cost ? `$${log.total_cost.toFixed(2)}` : "-"}
+                    </td>
+                  </>
+                )}
                 <td className="py-2 px-2 text-xs">
                   {isEditing ? (
                     <select

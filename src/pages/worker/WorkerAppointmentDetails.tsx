@@ -983,7 +983,7 @@ export default function WorkerAppointmentDetails() {
             <CardTitle>Time Logs</CardTitle>
           </CardHeader>
           <CardContent>
-            <TimeLogsTable appointmentId={id!} />
+            <TimeLogsTable appointmentId={id!} hideFinancials={true} />
           </CardContent>
         </Card>
 

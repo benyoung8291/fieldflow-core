@@ -209,9 +209,15 @@ export default function WorkerAppointments() {
                         </div>
                       )}
                     </div>
-                    <Badge className={getStatusColor(apt.status)}>
-                      {apt.status?.replace('_', ' ')}
-                    </Badge>
+                    {isClockedIn ? (
+                      <Badge className="bg-blue-500 text-white">
+                        Clocked In
+                      </Badge>
+                    ) : (
+                      <Badge className={getStatusColor(apt.status)}>
+                        {apt.status?.replace('_', ' ')}
+                      </Badge>
+                    )}
                   </div>
                 {apt.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2">
