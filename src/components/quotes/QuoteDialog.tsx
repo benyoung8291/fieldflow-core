@@ -114,6 +114,41 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     enabled: open,
   });
 
+  // Fetch pipelines
+  const { data: pipelines = [] } = useQuery({
+    queryKey: ["crm-pipelines"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_pipelines" as any)
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: open,
+  });
+
+  // Fetch stages for selected pipeline
+  const { data: stages = [] } = useQuery({
+    queryKey: ["crm-stages", formData.pipeline_id],
+    queryFn: async () => {
+      if (!formData.pipeline_id) return [];
+
+      const { data, error } = await supabase
+        .from("crm_status_settings")
+        .select("*")
+        .eq("pipeline_id", formData.pipeline_id)
+        .eq("is_active", true)
+        .order("display_order");
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!formData.pipeline_id,
+  });
+
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { 
       description: "", 
@@ -850,6 +885,53 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                   value={formData.valid_until}
                   onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pipeline">Pipeline</Label>
+                <Select
+                  value={formData.pipeline_id}
+                  onValueChange={(value) => {
+                    setFormData({ 
+                      ...formData, 
+                      pipeline_id: value,
+                      stage_id: '' // Reset stage when pipeline changes
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pipeline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map((pipeline: any) => (
+                      <SelectItem key={pipeline.id} value={pipeline.id}>
+                        {pipeline.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stage">Stage</Label>
+                <Select
+                  value={formData.stage_id}
+                  onValueChange={(value) => setFormData({ ...formData, stage_id: value })}
+                  disabled={!formData.pipeline_id || stages.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages.map((stage: any) => (
+                      <SelectItem key={stage.id} value={stage.id}>
+                        {stage.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
