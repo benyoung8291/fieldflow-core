@@ -59,21 +59,49 @@ export default function Scheduler() {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch appointments
+      const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
           *,
-          service_orders(order_number, title),
-          appointment_workers(worker_id, profiles(first_name, last_name))
+          service_orders(order_number, title)
         `)
         .order("start_time", { ascending: true });
 
-      if (error) throw error;
+      if (appointmentsError) throw appointmentsError;
       
-      // Fetch assigned profiles separately to avoid FK issues with null values
+      // Then fetch all appointment_workers with profiles
+      const { data: appointmentWorkersData, error: workersError } = await supabase
+        .from("appointment_workers")
+        .select(`
+          appointment_id,
+          worker_id,
+          profiles(first_name, last_name)
+        `);
+      
+      if (workersError) {
+        console.error("Error fetching appointment workers:", workersError);
+      }
+      
+      // Group workers by appointment_id
+      const workersByAppointment = (appointmentWorkersData || []).reduce((acc: any, worker: any) => {
+        if (!acc[worker.appointment_id]) {
+          acc[worker.appointment_id] = [];
+        }
+        acc[worker.appointment_id].push(worker);
+        return acc;
+      }, {});
+      
+      // Fetch assigned profiles separately for appointments with assigned_to
       const appointmentsWithProfiles = await Promise.all(
-        (data || []).map(async (apt: any) => {
-          if (!apt.assigned_to) return { ...apt, assigned_to_profile: null };
+        (appointmentsData || []).map(async (apt: any) => {
+          const appointmentWorkers = workersByAppointment[apt.id] || [];
+          
+          if (!apt.assigned_to) return { 
+            ...apt, 
+            assigned_to_profile: null,
+            appointment_workers: appointmentWorkers 
+          };
           
           const { data: profile } = await supabase
             .from("profiles")
@@ -81,7 +109,11 @@ export default function Scheduler() {
             .eq("id", apt.assigned_to)
             .maybeSingle();
           
-          return { ...apt, assigned_to_profile: profile };
+          return { 
+            ...apt, 
+            assigned_to_profile: profile,
+            appointment_workers: appointmentWorkers 
+          };
         })
       );
       
