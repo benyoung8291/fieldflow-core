@@ -21,19 +21,30 @@ export interface MenuItemWithIcon extends MenuItem {
 }
 
 const defaultNavigation = [
-  { name: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", color: "#3b82f6" },
-  { name: "Quotes", href: "/quotes", icon: "FileText", color: "#3b82f6" },
-  { name: "Pipeline", href: "/pipeline", icon: "GitBranch", color: "#3b82f6" },
-  { name: "Projects", href: "/projects", icon: "FolderKanban", color: "#3b82f6" },
-  { name: "Service Orders", href: "/service-orders", icon: "Wrench", color: "#f59e0b" },
-  { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature", color: "#f59e0b" },
-  { name: "Scheduler", href: "/scheduler", icon: "Calendar", color: "#f59e0b" },
-  { name: "Appointments", href: "/appointments", icon: "CalendarCheck", color: "#f59e0b" },
-  { name: "Customers", href: "/customers", icon: "Users", color: "#10b981" },
-  { name: "Leads", href: "/leads", icon: "Target", color: "#10b981" },
-  { name: "Workers", href: "/workers", icon: "HardHat", color: "#f59e0b" },
-  { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899" },
-  { name: "Settings", href: "/settings", icon: "Settings", color: "#6366f1" },
+  { name: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", color: "#3b82f6", isFolder: false },
+  { name: "Quotes", href: "/quotes", icon: "FileText", color: "#3b82f6", isFolder: false },
+  { name: "Pipeline", href: "/pipeline", icon: "GitBranch", color: "#3b82f6", isFolder: false },
+  { name: "Projects", href: "/projects", icon: "FolderKanban", color: "#3b82f6", isFolder: false },
+  { name: "Service Orders", href: "/service-orders", icon: "Wrench", color: "#f59e0b", isFolder: false },
+  { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature", color: "#f59e0b", isFolder: false },
+  { name: "Scheduler", href: "/scheduler", icon: "Calendar", color: "#f59e0b", isFolder: false },
+  { name: "Appointments", href: "/appointments", icon: "CalendarCheck", color: "#f59e0b", isFolder: false },
+  { name: "Customers", href: "/customers", icon: "Users", color: "#10b981", isFolder: false },
+  { name: "Leads", href: "/leads", icon: "Target", color: "#10b981", isFolder: false },
+  { name: "Workers", href: "/workers", icon: "HardHat", color: "#f59e0b", isFolder: false },
+  { 
+    name: "Accounts", 
+    href: null, 
+    icon: "DollarSign", 
+    color: "#8b5cf6", 
+    isFolder: true,
+    children: [
+      { name: "Invoices", href: "/invoices", icon: "Receipt", color: "#8b5cf6" },
+      { name: "Recurring Invoices", href: "/recurring-invoices", icon: "RefreshCw", color: "#8b5cf6" },
+    ]
+  },
+  { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899", isFolder: false },
+  { name: "Settings", href: "/settings", icon: "Settings", color: "#6366f1", isFolder: false },
 ];
 
 export function useCustomMenu() {
@@ -55,19 +66,40 @@ export function useCustomMenu() {
   const buildMenuStructure = (): MenuItemWithIcon[] => {
     if (menuItems.length === 0) {
       // Return default navigation if no custom menu
-      return defaultNavigation.map((item) => ({
-        id: item.href,
-        label: item.name,
-        icon: item.icon,
-        path: item.href,
-        parent_id: null,
-        item_order: 0,
-        is_folder: false,
-        is_visible: true,
-        is_system: true,
-        color: item.color,
-        iconComponent: (LucideIcons as any)[item.icon] || LucideIcons.Circle,
-      }));
+      return defaultNavigation.map((item, index) => {
+        const menuItem: MenuItemWithIcon = {
+          id: item.href || `folder-${item.name}`,
+          label: item.name,
+          icon: item.icon,
+          path: item.href,
+          parent_id: null,
+          item_order: index,
+          is_folder: item.isFolder || false,
+          is_visible: true,
+          is_system: true,
+          color: item.color,
+          iconComponent: (LucideIcons as any)[item.icon] || LucideIcons.Circle,
+        };
+
+        // Add children if it's a folder
+        if (item.isFolder && item.children) {
+          menuItem.children = item.children.map((child: any, childIndex: number) => ({
+            id: child.href,
+            label: child.name,
+            icon: child.icon,
+            path: child.href,
+            parent_id: menuItem.id,
+            item_order: childIndex,
+            is_folder: false,
+            is_visible: true,
+            is_system: true,
+            color: child.color,
+            iconComponent: (LucideIcons as any)[child.icon] || LucideIcons.Circle,
+          }));
+        }
+
+        return menuItem;
+      });
     }
 
     const topLevelItems = menuItems
