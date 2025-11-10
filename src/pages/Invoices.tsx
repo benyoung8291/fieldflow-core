@@ -172,7 +172,7 @@ export default function Invoices() {
               tenant_id: profile.tenant_id,
               description: item.description,
               quantity: item.quantity,
-              unit_price: item.sell_price || item.unit_price,
+              unit_price: item.unit_price,
               line_total: item.line_total,
               item_order: itemOrder++,
               source_type: "service_order",
@@ -486,16 +486,16 @@ export default function Invoices() {
                                     </td>
                                   </tr>
                                   {project?.project_line_items?.map((lineItem: any, idx: number) => (
-                                    <tr key={lineItem.id} className="border-b hover:bg-muted/10">
-                                      <td className="p-2 text-foreground">{lineItem.description}</td>
-                                      <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
-                                      <td className="p-2 text-right text-foreground">
-                                        ${(lineItem.sell_price || lineItem.unit_price || 0).toFixed(2)}
-                                      </td>
-                                      <td className="p-2 text-right font-medium text-foreground">
-                                        ${(lineItem.line_total || 0).toFixed(2)}
-                                      </td>
-                                    </tr>
+                                      <tr key={lineItem.id} className="border-b hover:bg-muted/10">
+                                        <td className="p-2 text-foreground">{lineItem.description}</td>
+                                        <td className="p-2 text-right text-foreground">{lineItem.quantity}</td>
+                                        <td className="p-2 text-right text-foreground">
+                                          ${(lineItem.unit_price || 0).toFixed(2)}
+                                        </td>
+                                        <td className="p-2 text-right font-medium text-foreground">
+                                          ${(lineItem.line_total || 0).toFixed(2)}
+                                        </td>
+                                      </tr>
                                   ))}
                                 </>
                               );
