@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon } from 'lucide-react';
+import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -13,21 +13,28 @@ import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLocation } from 'react-router-dom';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+
+type ViewFilter = 'today' | 'week' | 'all' | 'custom';
 
 export default function WorkerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [user, setUser] = useState<any>(null);
-  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('week');
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
   useEffect(() => {
     loadUserAndAppointments();
-  }, []);
+  }, [viewFilter, customDate]);
 
   const loadUserAndAppointments = async () => {
     try {
@@ -46,10 +53,27 @@ export default function WorkerDashboard() {
 
       setUser(profile);
 
+      // Calculate date range based on filter
+      let startDate: string;
+      let endDate: string;
+
+      if (viewFilter === 'custom' && customDate) {
+        startDate = format(startOfDay(customDate), 'yyyy-MM-dd');
+        endDate = format(endOfDay(customDate), "yyyy-MM-dd'T'HH:mm:ss");
+      } else if (viewFilter === 'week') {
+        startDate = format(new Date(), 'yyyy-MM-dd');
+        endDate = format(addDays(new Date(), 7), "yyyy-MM-dd'T'23:59:59");
+      } else if (viewFilter === 'today') {
+        startDate = format(new Date(), 'yyyy-MM-dd');
+        endDate = format(new Date(), "yyyy-MM-dd'T'23:59:59");
+      } else {
+        // 'all' - get all future appointments
+        startDate = format(new Date(), 'yyyy-MM-dd');
+        endDate = format(addDays(new Date(), 365), "yyyy-MM-dd'T'23:59:59");
+      }
+
       // Try to load from network first
       if (isOnline) {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        
         // Get worker ID from user ID
         const { data: workerData } = await supabase
           .from('workers')
@@ -76,26 +100,26 @@ export default function WorkerDashboard() {
             )
           `)
           .eq('worker_id', workerData.id)
-          .gte('appointment.start_time', today)
-          .lt('appointment.start_time', `${today}T23:59:59`);
+          .gte('appointment.start_time', startDate)
+          .lte('appointment.start_time', endDate);
 
         if (appointmentWorkers) {
-          const appointments = appointmentWorkers
+          const fetchedAppointments = appointmentWorkers
             .map((aw: any) => aw.appointment)
             .filter((apt: any) => apt !== null)
             .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
           
-          setTodayAppointments(appointments);
-          await cacheAppointments(appointments);
+          setAppointments(fetchedAppointments);
+          await cacheAppointments(fetchedAppointments);
         }
       } else {
         // Load from cache when offline
         const cached = await getCachedAppointments();
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const todayCached = cached.filter((apt) =>
-          apt.start_time?.startsWith(today)
-        );
-        setTodayAppointments(todayCached);
+        const filteredCached = cached.filter((apt) => {
+          const aptDate = new Date(apt.start_time);
+          return aptDate >= new Date(startDate) && aptDate <= new Date(endDate);
+        });
+        setAppointments(filteredCached);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -271,12 +295,7 @@ export default function WorkerDashboard() {
             className="h-24 flex-col gap-2"
           >
             <CalendarDays className="h-8 w-8" />
-            <span>My Appointments</span>
-            {todayAppointments.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {todayAppointments.length} today
-              </Badge>
-            )}
+            <span>All Appointments</span>
           </Button>
           <Button
             size="lg"
@@ -289,21 +308,97 @@ export default function WorkerDashboard() {
           </Button>
         </div>
 
-        {/* Today's Appointments */}
+        {/* View Filter Controls */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">View:</span>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant={viewFilter === 'today' ? 'default' : 'outline'}
+                  onClick={() => setViewFilter('today')}
+                  className="text-xs"
+                >
+                  Today
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewFilter === 'week' ? 'default' : 'outline'}
+                  onClick={() => setViewFilter('week')}
+                  className="text-xs"
+                >
+                  Next 7 Days
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setViewFilter('all')}
+                  className="text-xs"
+                >
+                  All
+                </Button>
+              </div>
+            </div>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    viewFilter === 'custom' && "border-primary",
+                    !customDate && viewFilter !== 'custom' && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {customDate && viewFilter === 'custom'
+                    ? format(customDate, "PPP")
+                    : "Pick a custom date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customDate}
+                  onSelect={(date) => {
+                    setCustomDate(date);
+                    if (date) {
+                      setViewFilter('custom');
+                    }
+                  }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </CardContent>
+        </Card>
+
+        {/* Appointments List */}
         <Card>
           <CardHeader>
-            <CardTitle>Today's Appointments</CardTitle>
+            <CardTitle>
+              {viewFilter === 'today' && 'Today\'s Appointments'}
+              {viewFilter === 'week' && 'Next 7 Days'}
+              {viewFilter === 'all' && 'All Upcoming Appointments'}
+              {viewFilter === 'custom' && customDate && format(customDate, 'MMMM d, yyyy')}
+            </CardTitle>
             <CardDescription>
-              {format(new Date(), 'EEEE, MMMM d, yyyy')}
+              {appointments.length} appointment{appointments.length !== 1 ? 's' : ''} scheduled
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {todayAppointments.length === 0 ? (
+            {appointments.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                No appointments scheduled for today
+                No appointments scheduled for this period
               </p>
             ) : (
-              todayAppointments.map((apt) => (
+              appointments.map((apt) => (
                 <Card
                   key={apt.id}
                   className="cursor-pointer hover:shadow-md transition-shadow"
@@ -311,7 +406,7 @@ export default function WorkerDashboard() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-semibold">{apt.title}</h3>
                         <p className="text-sm text-muted-foreground">
                           {apt.service_order?.customer?.name}
@@ -323,11 +418,12 @@ export default function WorkerDashboard() {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
+                        <CalendarDays className="h-4 w-4" />
+                        {format(parseISO(apt.start_time), 'MMM d, yyyy')}
+                      </div>
+                      <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {format(parseISO(apt.start_time), 'h:mm a')}
-                      </div>
-                      <div>
-                        {apt.estimated_hours}h estimated
                       </div>
                     </div>
                   </CardContent>
