@@ -28,6 +28,7 @@ const defaultNavigation = [
   { name: "Service Orders", href: "/service-orders", icon: "Wrench", color: "#f59e0b" },
   { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature", color: "#f59e0b" },
   { name: "Scheduler", href: "/scheduler", icon: "Calendar", color: "#f59e0b" },
+  { name: "Appointments", href: "/appointments", icon: "CalendarCheck", color: "#f59e0b" },
   { name: "Customers", href: "/customers", icon: "Users", color: "#10b981" },
   { name: "Leads", href: "/leads", icon: "Target", color: "#10b981" },
   { name: "Workers", href: "/workers", icon: "HardHat", color: "#f59e0b" },

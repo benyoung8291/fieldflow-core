@@ -205,6 +205,7 @@ export default function ServiceOrderDetails() {
           status: "draft" as const,
           created_by: user.id,
           tenant_id: profile.tenant_id,
+          service_order_id: id,
         });
       if (error) throw error;
     },
@@ -479,6 +480,44 @@ export default function ServiceOrderDetails() {
               </div>
               <div className="text-xs text-muted-foreground mt-1">
                 {profitMargin.toFixed(1)}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Hours
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div>
+                  <div className="text-xs text-muted-foreground">Estimated</div>
+                  <div className="text-lg font-semibold">
+                    {(() => {
+                      if (!(order as any)?.estimated_duration) return "N/A";
+                      const match = (order as any).estimated_duration.match(/(\d+)\s*(hour|hr|h)/i);
+                      return match ? `${match[1]} hrs` : (order as any).estimated_duration;
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Scheduled</div>
+                  <div className="text-lg font-semibold">
+                    {(() => {
+                      const totalHours = appointments.reduce((sum: number, apt: any) => {
+                        if (apt.start_time && apt.end_time) {
+                          const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
+                          return sum + hours;
+                        }
+                        return sum;
+                      }, 0);
+                      return totalHours > 0 ? `${totalHours.toFixed(1)} hrs` : "0 hrs";
+                    })()}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
