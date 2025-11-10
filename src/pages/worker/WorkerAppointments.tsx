@@ -13,6 +13,7 @@ export default function WorkerAppointments() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTimeLogs, setActiveTimeLogs] = useState<Record<string, any>>({});
   const { isOnline } = useOfflineSync();
 
   useEffect(() => {
@@ -46,6 +47,22 @@ export default function WorkerAppointments() {
         if (data) {
           setAppointments(data);
           await cacheAppointments(data);
+          
+          // Load active time logs for all appointments
+          const appointmentIds = data.map(apt => apt.id);
+          const { data: timeLogs } = await supabase
+            .from('time_logs')
+            .select('*')
+            .in('appointment_id', appointmentIds)
+            .eq('worker_id', user.id)
+            .is('clock_out', null);
+          
+          // Create a map of appointment_id -> time_log
+          const timeLogsMap: Record<string, any> = {};
+          timeLogs?.forEach(log => {
+            timeLogsMap[log.appointment_id] = log;
+          });
+          setActiveTimeLogs(timeLogsMap);
         }
       } else {
         const cached = await getCachedAppointments();
@@ -104,38 +121,52 @@ export default function WorkerAppointments() {
             </CardContent>
           </Card>
         ) : (
-          appointments.map((apt) => (
-            <Card
-              key={apt.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => navigate(`/worker/appointments/${apt.id}`)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">{apt.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {apt.service_order?.customer?.name}
-                    </p>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                      <Calendar className="h-4 w-4" />
-                      {format(parseISO(apt.start_time), 'EEEE, MMM d')}
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                      <Clock className="h-4 w-4" />
-                      {format(parseISO(apt.start_time), 'h:mm a')} • {apt.estimated_hours}h
-                    </div>
-                    {apt.location && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        {apt.location}
+          appointments.map((apt) => {
+            const isClockedIn = activeTimeLogs[apt.id];
+            
+            return (
+              <Card
+                key={apt.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/worker/appointments/${apt.id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-lg">{apt.title}</h3>
+                        {isClockedIn && (
+                          <div className="flex items-center gap-1.5">
+                            <div className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </div>
+                            <span className="text-xs font-medium text-green-600">Clocked In</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {apt.service_order?.customer?.name}
+                      </p>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                        <Calendar className="h-4 w-4" />
+                        {format(parseISO(apt.start_time), 'EEEE, MMM d')}
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                        <Clock className="h-4 w-4" />
+                        {format(parseISO(apt.start_time), 'h:mm a')} • {apt.estimated_hours}h
+                      </div>
+                      {apt.location && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          {apt.location}
+                        </div>
+                      )}
+                    </div>
+                    <Badge className={getStatusColor(apt.status)}>
+                      {apt.status?.replace('_', ' ')}
+                    </Badge>
                   </div>
-                  <Badge className={getStatusColor(apt.status)}>
-                    {apt.status?.replace('_', ' ')}
-                  </Badge>
-                </div>
                 {apt.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {apt.description}
@@ -143,7 +174,8 @@ export default function WorkerAppointments() {
                 )}
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
     </div>
