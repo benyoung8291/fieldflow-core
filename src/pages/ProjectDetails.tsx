@@ -1,14 +1,12 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Plus, Receipt } from "lucide-react";
+import { Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2 } from "lucide-react";
+import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
+import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import ProjectGanttChart from "@/components/projects/ProjectGanttChart";
@@ -17,12 +15,10 @@ import ProjectFilesTab from "@/components/projects/ProjectFilesTab";
 import ProjectContractsTab from "@/components/projects/ProjectContractsTab";
 import ProjectChangeOrdersTab from "@/components/projects/ProjectChangeOrdersTab";
 import ProjectFinanceTab from "@/components/projects/ProjectFinanceTab";
-import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
 import ProjectTasksGrid from "@/components/projects/ProjectTasksGrid";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
-import { format } from "date-fns";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -180,29 +176,6 @@ export default function ProjectDetails() {
     }));
   }, [taskDependencies]);
 
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading project...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!project) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Project not found</p>
-          <Button onClick={() => navigate("/projects")} className="mt-4">
-            Back to Projects
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   const statusColors: Record<string, string> = {
     planning: "bg-blue-500/10 text-blue-500 border-blue-500/20",
     active: "bg-green-500/10 text-green-500 border-green-500/20",
@@ -223,226 +196,194 @@ export default function ProjectDetails() {
   const labourCostTotal = project.labour_cost_total || 0;
   const budgetVariance = originalBudget > 0 ? ((project.actual_cost / originalBudget) * 100) - 100 : 0;
 
-  return (
-    <DashboardLayout>
-      <AuditDrawer
-        tableName="projects"
-        recordId={id!}
-        recordTitle={project.name}
+  // Status badge configuration
+  const statusBadges: StatusBadge[] = [
+    {
+      label: project?.status.replace("_", " ") || "",
+      variant: "outline",
+      className: statusColors[project?.status || "planning"],
+    },
+  ];
+
+  // Primary action buttons
+  const primaryActions: DocumentAction[] = [
+    {
+      label: "Create Invoice",
+      icon: <Receipt className="h-4 w-4" />,
+      onClick: () => navigate("/invoices/create", { state: { projectId: id } }),
+      variant: "outline",
+    },
+  ];
+
+  // File menu actions
+  const fileMenuActions: FileMenuAction[] = [
+    {
+      label: "Edit Project",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => {/* Open edit dialog */},
+    },
+    {
+      label: "Duplicate",
+      icon: <Copy className="h-4 w-4" />,
+      onClick: () => {/* Duplicate project */},
+    },
+    {
+      label: "Change Status",
+      onClick: () => {/* Change status dialog */},
+      separator: true,
+    },
+    {
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => {/* Delete confirmation */},
+      destructive: true,
+      separator: true,
+    },
+  ];
+
+  // Key information cards
+  const keyInfoSection = (
+    <div className="grid gap-4 md:grid-cols-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Progress</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{project?.progress}%</div>
+          <Progress value={project?.progress} className="mt-2" />
+        </CardContent>
+      </Card>
+      <KeyInfoCard
+        icon={DollarSign}
+        label="Revenue Budget"
+        value={`$${revisedBudget.toLocaleString()}`}
+        description={`Original: $${originalBudget.toLocaleString()}`}
       />
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-foreground">{project.name}</h1>
-              <Badge variant="outline" className={statusColors[project.status]}>
-                {project.status.replace("_", " ")}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">{project.customer?.name}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/invoices/create", { state: { projectId: id } })}
-            >
-              <Receipt className="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
-            <CreateTaskButton
-              linkedModule="project"
-              linkedRecordId={id!}
-            />
-          </div>
-        </div>
+      <KeyInfoCard
+        icon={DollarSign}
+        label="Change Orders"
+        value={`$${Math.abs(changeOrdersTotal).toLocaleString()}`}
+        description={changeOrdersTotal >= 0 ? "Addition" : "Reduction"}
+        iconColor={changeOrdersTotal >= 0 ? "text-green-500" : "text-red-500"}
+      />
+      <KeyInfoCard
+        icon={DollarSign}
+        label="Invoiced"
+        value={`$${invoicedToDate.toLocaleString()}`}
+        description="To date"
+      />
+      <KeyInfoCard
+        icon={DollarSign}
+        label="WIP"
+        value={`$${wipTotal.toLocaleString()}`}
+        description="Work in Progress"
+      />
+      <KeyInfoCard
+        icon={DollarSign}
+        label="Labour Cost"
+        value={`$${labourCostTotal.toLocaleString()}`}
+        description="Total labour"
+      />
+    </div>
+  );
 
-        <div className="grid gap-4 md:grid-cols-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Progress</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{project.progress}%</div>
-              <Progress value={project.progress} className="mt-2" />
-            </CardContent>
-          </Card>
+  // Tab configuration
+  const tabs: TabConfig[] = [
+    {
+      value: "overview",
+      label: "Overview",
+      content: <InlineProjectDetails project={project!} />,
+    },
+    {
+      value: "finance",
+      label: "Finance",
+      icon: <DollarSign className="h-4 w-4" />,
+      content: <ProjectFinanceTab projectId={id!} />,
+    },
+    {
+      value: "gantt",
+      label: "Gantt Chart",
+      icon: <Calendar className="h-4 w-4" />,
+      content: (
+        <ProjectGanttChart
+          tasks={ganttTasks}
+          dependencies={ganttDependencies}
+          projectStart={project?.start_date}
+          projectEnd={project?.end_date}
+        />
+      ),
+    },
+    {
+      value: "roster",
+      label: "Roster",
+      icon: <UserPlus className="h-4 w-4" />,
+      content: <ProjectRosterTab projectId={id!} />,
+    },
+    {
+      value: "tasks",
+      label: "Project Tasks",
+      icon: <ClipboardList className="h-4 w-4" />,
+      badge: tasks?.length || 0,
+      content: <ProjectTasksGrid projectId={id!} />,
+    },
+    {
+      value: "files",
+      label: "Files",
+      icon: <Folder className="h-4 w-4" />,
+      content: <ProjectFilesTab projectId={id!} />,
+    },
+    {
+      value: "contracts",
+      label: "Contracts",
+      icon: <FileText className="h-4 w-4" />,
+      content: <ProjectContractsTab projectId={id!} />,
+    },
+    {
+      value: "change-orders",
+      label: "Change Orders",
+      icon: <GitCompare className="h-4 w-4" />,
+      content: <ProjectChangeOrdersTab projectId={id!} />,
+    },
+    {
+      value: "invoices",
+      label: "Invoices",
+      icon: <DollarSign className="h-4 w-4" />,
+      content: <RelatedInvoicesCard sourceType="project" sourceId={id!} />,
+    },
+    {
+      value: "history",
+      label: "History",
+      icon: <History className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Change History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AuditTimeline tableName="projects" recordId={id!} />
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenue Budget</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${revisedBudget.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Original: ${originalBudget.toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Change Orders</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${changeOrdersTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                ${Math.abs(changeOrdersTotal).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {changeOrdersTotal >= 0 ? 'Addition' : 'Reduction'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Invoiced</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${invoicedToDate.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                To date
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">WIP</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${wipTotal.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Work in Progress
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Labour Cost</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${labourCostTotal.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total labour
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="finance">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Finance
-            </TabsTrigger>
-            <TabsTrigger value="gantt">
-              <Calendar className="h-4 w-4 mr-2" />
-              Gantt Chart
-            </TabsTrigger>
-            <TabsTrigger value="roster">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Roster
-            </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Project Tasks ({tasks?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="files">
-              <Folder className="h-4 w-4 mr-2" />
-              Files
-            </TabsTrigger>
-            <TabsTrigger value="contracts">
-              <FileText className="h-4 w-4 mr-2" />
-              Contracts
-            </TabsTrigger>
-            <TabsTrigger value="change-orders">
-              <GitCompare className="h-4 w-4 mr-2" />
-              Change Orders
-            </TabsTrigger>
-            <TabsTrigger value="invoices">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Invoices
-            </TabsTrigger>
-            <TabsTrigger value="history">
-              <History className="h-4 w-4 mr-2" />
-              History
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-4">
-            <InlineProjectDetails project={project} />
-          </TabsContent>
-
-          <TabsContent value="finance">
-            <ProjectFinanceTab projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <ProjectTasksGrid projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="gantt">
-            <ProjectGanttChart 
-              tasks={ganttTasks}
-              dependencies={ganttDependencies}
-              projectStart={project.start_date}
-              projectEnd={project.end_date}
-            />
-          </TabsContent>
-
-          <TabsContent value="roster">
-            <ProjectRosterTab projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="files">
-            <ProjectFilesTab projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="contracts">
-            <ProjectContractsTab projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="change-orders">
-            <ProjectChangeOrdersTab projectId={id!} />
-          </TabsContent>
-
-          <TabsContent value="invoices">
-            <RelatedInvoicesCard sourceType="project" sourceId={id!} />
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle>Change History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AuditTimeline tableName="projects" recordId={id!} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </DashboardLayout>
+  return (
+    <DocumentDetailLayout
+      title={project?.name || ""}
+      subtitle={project?.customer?.name}
+      backPath="/projects"
+      statusBadges={statusBadges}
+      primaryActions={primaryActions}
+      fileMenuActions={fileMenuActions}
+      auditTableName="projects"
+      auditRecordId={id!}
+      keyInfoSection={keyInfoSection}
+      tabs={tabs}
+      defaultTab="overview"
+      isLoading={isLoading}
+      notFoundMessage={!project ? "Project not found" : undefined}
+    />
   );
 }
 
