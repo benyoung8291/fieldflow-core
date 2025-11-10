@@ -48,7 +48,53 @@ export default function InvoiceDetails() {
         .order("item_order");
 
       if (error) throw error;
-      return data;
+
+      // Fetch source document details for each line item
+      const sourceDocuments = new Map();
+      
+      for (const item of data || []) {
+        if (!item.source_id || !item.source_type) continue;
+        
+        const key = `${item.source_type}-${item.source_id}`;
+        if (sourceDocuments.has(key)) continue;
+
+        if (item.source_type === "project") {
+          const { data: project, error: projectError } = await supabase
+            .from("projects")
+            .select("id, name, start_date, end_date")
+            .eq("id", item.source_id)
+            .single();
+          
+          if (!projectError && project) {
+            sourceDocuments.set(key, { 
+              type: "project" as const, 
+              id: project.id,
+              name: project.name,
+              start_date: project.start_date,
+              end_date: project.end_date
+            });
+          }
+        } else if (item.source_type === "service_order") {
+          const { data: order, error: orderError } = await supabase
+            .from("service_orders")
+            .select("id, order_number, title, work_order_number, purchase_order_number")
+            .eq("id", item.source_id)
+            .single();
+          
+          if (!orderError && order) {
+            sourceDocuments.set(key, { 
+              type: "service_order" as const,
+              id: order.id,
+              order_number: order.order_number,
+              title: order.title,
+              work_order_number: order.work_order_number,
+              purchase_order_number: order.purchase_order_number
+            });
+          }
+        }
+      }
+
+      return { lineItems: data, sourceDocuments };
     },
     enabled: !!id,
   });
@@ -156,7 +202,14 @@ export default function InvoiceDetails() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Invoice Details</CardTitle>
-                {getStatusBadge(invoice.status)}
+                <div className="flex items-center gap-2">
+                  {invoice.is_progress_invoice && (
+                    <Badge variant="outline" className="text-xs">
+                      Progress
+                    </Badge>
+                  )}
+                  {getStatusBadge(invoice.status)}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -188,20 +241,67 @@ export default function InvoiceDetails() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead>Work Order</TableHead>
+                      <TableHead>PO</TableHead>
+                      <TableHead>Project Date</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">Unit Price</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems?.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-medium">${item.line_total.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {lineItems?.lineItems?.reduce((acc: JSX.Element[], item: any) => {
+                      const sourceKey = `${item.source_type}-${item.source_id}`;
+                      const sourceDoc = lineItems.sourceDocuments?.get(sourceKey);
+
+                      // Add header row if this is the first item from this source
+                      const isFirstFromSource = !acc.some(
+                        (row: any) => row.key?.startsWith(`${sourceKey}-header`)
+                      );
+
+                      if (isFirstFromSource && sourceDoc) {
+                        acc.push(
+                          <TableRow key={`${sourceKey}-header`} className="bg-muted/30">
+                            <TableCell colSpan={7} className="font-medium text-sm">
+                              {sourceDoc.type === "project" ? (
+                                <>Project: {sourceDoc.name}</>
+                              ) : (
+                                <>{sourceDoc.order_number} - {sourceDoc.title}</>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+
+                      // Add the line item row
+                      acc.push(
+                        <TableRow key={item.id}>
+                          <TableCell>{item.description}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {sourceDoc?.type === "service_order" && sourceDoc.work_order_number
+                              ? sourceDoc.work_order_number
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {sourceDoc?.type === "service_order" && sourceDoc.purchase_order_number
+                              ? sourceDoc.purchase_order_number
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {sourceDoc?.type === "project" && sourceDoc.start_date
+                              ? format(new Date(sourceDoc.start_date), "dd MMM yyyy")
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">{item.quantity}</TableCell>
+                          <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            ${item.line_total.toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+
+                      return acc;
+                    }, [])}
                   </TableBody>
                 </Table>
               </div>
