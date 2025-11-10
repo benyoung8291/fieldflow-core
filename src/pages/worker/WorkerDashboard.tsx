@@ -211,55 +211,6 @@ export default function WorkerDashboard() {
       </header>
 
       <div className="max-w-screen-lg mx-auto p-4 space-y-4">
-        {/* Install App Banner */}
-        {isInstallable && showInstallBanner && !isInstalled && (
-          <Alert className="bg-primary/10 border-primary">
-            <Download className="h-5 w-5 text-primary" />
-            <AlertDescription className="flex items-center justify-between gap-3 ml-2">
-              <div className="flex-1">
-                <p className="font-medium text-primary mb-1">Install Service Pulse</p>
-                <p className="text-sm text-muted-foreground">
-                  Install the app for quick access and offline capabilities
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleInstallClick}
-                  size="sm"
-                  className="whitespace-nowrap"
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Install
-                </Button>
-                <Button
-                  onClick={dismissInstallBanner}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Already Installed Badge */}
-        {isInstalled && (
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-green-800">
-                <CheckCircle2 className="h-5 w-5" />
-                <div>
-                  <p className="font-medium">App Installed</p>
-                  <p className="text-sm text-green-700">
-                    You're using the installed version of Service Pulse
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Sync Status */}
         {!isOnline && (
           <Card className="bg-yellow-50 border-yellow-200">
