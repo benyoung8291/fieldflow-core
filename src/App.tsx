@@ -41,6 +41,7 @@ import RecurringInvoices from "./pages/RecurringInvoices";
 import RecurringInvoiceDetails from "./pages/RecurringInvoiceDetails";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
+import WorkerClock from "./pages/worker/WorkerClock";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
@@ -122,6 +123,7 @@ const App = () => {
             {/* Worker Mobile Routes */}
             <Route path="/worker/auth" element={<WorkerAuth />} />
             <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
+            <Route path="/worker/clock" element={<ProtectedRoute><WorkerClock /></ProtectedRoute>} />
             <Route path="/worker/supervisor-dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
             <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
             <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
