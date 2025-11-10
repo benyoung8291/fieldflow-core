@@ -70,10 +70,12 @@ export default function ServiceOrdersCalendarView({
   });
 
   const getAppointmentsForDay = (serviceOrderId: string, day: Date) => {
-    return appointments.filter(apt => 
+    const filtered = appointments.filter(apt => 
       apt.service_order_id === serviceOrderId &&
       format(new Date(apt.start_time), "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
     );
+    console.log('ServiceOrdersCalendarView - appointments for day:', filtered.length, 'sample:', filtered[0]);
+    return filtered;
   };
 
   const calculateTotalHours = (startTime: string, endTime: string) => {
