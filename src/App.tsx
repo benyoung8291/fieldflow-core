@@ -69,58 +69,60 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/auth" replace />;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-          <Route path="/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
-          <Route path="/quotes/:id" element={<ProtectedRoute><QuoteDetails /></ProtectedRoute>} />
-          <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
-          <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetails /></ProtectedRoute>} />
-          <Route path="/service-orders" element={<ProtectedRoute><ServiceOrders /></ProtectedRoute>} />
-          <Route path="/service-orders/:id" element={<ProtectedRoute><ServiceOrderDetails /></ProtectedRoute>} />
-          <Route path="/service-contracts" element={<ProtectedRoute><ServiceContracts /></ProtectedRoute>} />
-          <Route path="/service-contracts/:id" element={<ProtectedRoute><ServiceContractDetails /></ProtectedRoute>} />
-          <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
-          <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
-          <Route path="/appointments/:id" element={<ProtectedRoute><AppointmentDetails /></ProtectedRoute>} />
-          <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-          <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetails /></ProtectedRoute>} />
-          <Route path="/customer-locations/:id" element={<ProtectedRoute><CustomerLocationDetails /></ProtectedRoute>} />
-          <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-          <Route path="/leads/:id" element={<ProtectedRoute><LeadDetails /></ProtectedRoute>} />
-          <Route path="/workers" element={<ProtectedRoute><Workers /></ProtectedRoute>} />
-          <Route path="/workers/:id" element={<ProtectedRoute><WorkerDetails /></ProtectedRoute>} />
-          <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
-          <Route path="/training-matrix" element={<ProtectedRoute><TrainingMatrix /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-          <Route path="/pipeline" element={<ProtectedRoute><QuotePipeline /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-          <Route path="/invoices" element={<ProtectedRoute><InvoicesList /></ProtectedRoute>} />
-          <Route path="/invoices/create" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetails /></ProtectedRoute>} />
-          <Route path="/recurring-invoices" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
-          <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
-          {/* Worker Mobile Routes */}
-          <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
-          <Route path="/worker/supervisor-dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
-          <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
-          <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
-          <Route path="/worker/schedule" element={<ProtectedRoute><WorkerSchedule /></ProtectedRoute>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+            <Route path="/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
+            <Route path="/quotes/:id" element={<ProtectedRoute><QuoteDetails /></ProtectedRoute>} />
+            <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+            <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetails /></ProtectedRoute>} />
+            <Route path="/service-orders" element={<ProtectedRoute><ServiceOrders /></ProtectedRoute>} />
+            <Route path="/service-orders/:id" element={<ProtectedRoute><ServiceOrderDetails /></ProtectedRoute>} />
+            <Route path="/service-contracts" element={<ProtectedRoute><ServiceContracts /></ProtectedRoute>} />
+            <Route path="/service-contracts/:id" element={<ProtectedRoute><ServiceContractDetails /></ProtectedRoute>} />
+            <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
+            <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
+            <Route path="/appointments/:id" element={<ProtectedRoute><AppointmentDetails /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetails /></ProtectedRoute>} />
+            <Route path="/customer-locations/:id" element={<ProtectedRoute><CustomerLocationDetails /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+            <Route path="/leads/:id" element={<ProtectedRoute><LeadDetails /></ProtectedRoute>} />
+            <Route path="/workers" element={<ProtectedRoute><Workers /></ProtectedRoute>} />
+            <Route path="/workers/:id" element={<ProtectedRoute><WorkerDetails /></ProtectedRoute>} />
+            <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
+            <Route path="/training-matrix" element={<ProtectedRoute><TrainingMatrix /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/pipeline" element={<ProtectedRoute><QuotePipeline /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><InvoicesList /></ProtectedRoute>} />
+            <Route path="/invoices/create" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+            <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetails /></ProtectedRoute>} />
+            <Route path="/recurring-invoices" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
+            <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
+            {/* Worker Mobile Routes */}
+            <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
+            <Route path="/worker/supervisor-dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
+            <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
+            <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
+            <Route path="/worker/schedule" element={<ProtectedRoute><WorkerSchedule /></ProtectedRoute>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
