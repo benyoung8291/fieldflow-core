@@ -263,54 +263,46 @@ export default function QuoteDetails() {
     },
   ];
 
-  // Primary actions
-  const primaryActions: DocumentAction[] = [
+  // File menu actions
+  const fileMenuActions: FileMenuAction[] = [
     {
-      label: "Mark as Sent",
-      icon: <Send className="h-4 w-4" />,
-      onClick: () => updateStatus("sent"),
-      variant: "outline",
-      show: quote?.status === "draft",
-    },
-    {
-      label: "Approve",
-      icon: <CheckCircle className="h-4 w-4" />,
-      onClick: () => updateStatus("approved"),
-      variant: "outline",
-      show: quote?.status === "sent",
-    },
-    {
-      label: "Reject",
-      icon: <XCircle className="h-4 w-4" />,
-      onClick: () => updateStatus("rejected"),
-      variant: "outline",
-      show: quote?.status === "sent",
-    },
-    {
-      label: "Convert Quote",
-      icon: <RefreshCw className="h-4 w-4" />,
-      onClick: () => setConvertDialogOpen(true),
-      show:
-        (quote?.status === "approved" || quote?.status === "sent") &&
-        !quote?.converted_to_service_order_id &&
-        !quote?.converted_to_project_id &&
-        !quote?.converted_to_contract_id,
-    },
-    {
-      label: "PDF / Email",
-      icon: <Download className="h-4 w-4" />,
-      onClick: () => setPdfDialogOpen(true),
-      variant: "outline",
-    },
-    {
-      label: "Edit",
+      label: "Edit Quote",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
     },
-  ];
-
-  // File menu actions
-  const fileMenuActions: FileMenuAction[] = [
+    {
+      label: "PDF / Email",
+      icon: <Mail className="h-4 w-4" />,
+      onClick: () => setPdfDialogOpen(true),
+    },
+    ...(quote?.status === "draft" ? [{
+      label: "Mark as Sent",
+      icon: <Send className="h-4 w-4" />,
+      onClick: () => updateStatus("sent"),
+      separator: true,
+    }] : []),
+    ...(quote?.status === "sent" ? [
+      {
+        label: "Approve Quote",
+        icon: <CheckCircle className="h-4 w-4" />,
+        onClick: () => updateStatus("approved"),
+        separator: true,
+      },
+      {
+        label: "Reject Quote",
+        icon: <XCircle className="h-4 w-4" />,
+        onClick: () => updateStatus("rejected"),
+      },
+    ] : []),
+    ...((quote?.status === "approved" || quote?.status === "sent") &&
+      !quote?.converted_to_service_order_id &&
+      !quote?.converted_to_project_id &&
+      !quote?.converted_to_contract_id ? [{
+        label: "Convert Quote",
+        icon: <RefreshCw className="h-4 w-4" />,
+        onClick: () => setConvertDialogOpen(true),
+        separator: true,
+      }] : []),
     {
       label: "Delete Quote",
       icon: <Trash2 className="h-4 w-4" />,
@@ -659,7 +651,6 @@ export default function QuoteDetails() {
         subtitle={`${quote?.quote_number} • ${quote?.customer?.name}`}
         backPath="/quotes"
         statusBadges={statusBadges}
-        primaryActions={primaryActions}
         fileMenuActions={fileMenuActions}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
