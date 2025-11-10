@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Plus } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Plus, Receipt } from "lucide-react";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import ProjectGanttChart from "@/components/projects/ProjectGanttChart";
@@ -244,10 +244,20 @@ export default function ProjectDetails() {
             </div>
             <p className="text-muted-foreground">{project.customer?.name}</p>
           </div>
-          <CreateTaskButton
-            linkedModule="project"
-            linkedRecordId={id!}
-          />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/invoices/create", { state: { projectId: id } })}
+            >
+              <Receipt className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+            <CreateTaskButton
+              linkedModule="project"
+              linkedRecordId={id!}
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-6">

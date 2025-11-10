@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -12,10 +12,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus, FileText, ExternalLink } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Invoices() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as { serviceOrderId?: string; projectId?: string } | null;
+  
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [viewType, setViewType] = useState<"all" | "projects" | "service_orders">("all");
   const [invoiceDate, setInvoiceDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -133,6 +136,76 @@ export default function Invoices() {
     },
     enabled: !!selectedCustomerId,
   });
+
+  // Handle pre-selection from location state (when coming from service order or project)
+  useEffect(() => {
+    if (!locationState) return;
+
+    const { serviceOrderId, projectId } = locationState;
+
+    if (serviceOrderId) {
+      // Fetch service order to get customer
+      supabase
+        .from("service_orders")
+        .select("customer_id")
+        .eq("id", serviceOrderId)
+        .single()
+        .then(({ data, error }) => {
+          if (error || !data) return;
+          
+          setSelectedCustomerId(data.customer_id);
+          setViewType("service_orders");
+          
+          // Wait for service orders to load, then pre-select
+          setTimeout(() => {
+            setSelectedItems(new Set([serviceOrderId]));
+            
+            // Pre-select all line items from this service order
+            supabase
+              .from("service_order_line_items")
+              .select("id")
+              .eq("service_order_id", serviceOrderId)
+              .then(({ data: lineItems }) => {
+                if (lineItems) {
+                  const lineItemKeys = lineItems.map(li => `service_order|${serviceOrderId}|${li.id}`);
+                  setSelectedLineItems(new Set(lineItemKeys));
+                }
+              });
+          }, 500);
+        });
+    } else if (projectId) {
+      // Fetch project to get customer
+      supabase
+        .from("projects")
+        .select("customer_id")
+        .eq("id", projectId)
+        .single()
+        .then(({ data, error }) => {
+          if (error || !data) return;
+          
+          setSelectedCustomerId(data.customer_id);
+          setViewType("projects");
+          
+          // Wait for projects to load, then pre-select
+          setTimeout(() => {
+            setSelectedItems(new Set([projectId]));
+            
+            // Pre-select all line items from this project
+            supabase
+              .from("project_line_items")
+              .select("id")
+              .eq("project_id", projectId)
+              .is("parent_line_item_id", null)
+              .then(({ data: lineItems }) => {
+                if (lineItems) {
+                  const lineItemKeys = lineItems.map(li => `project|${projectId}|${li.id}`);
+                  setSelectedLineItems(new Set(lineItemKeys));
+                }
+              });
+          }, 500);
+        });
+    }
+  }, [locationState]);
 
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
