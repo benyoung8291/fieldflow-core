@@ -2,14 +2,11 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban } from "lucide-react";
+import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAttachments";
 import AuditTimeline from "@/components/audit/AuditTimeline";
@@ -18,13 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 const statusColors = {
@@ -307,110 +298,87 @@ export default function ServiceOrderDetails() {
     },
   });
 
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">Loading order details...</div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  // Status badges configuration
+  const statusBadges: StatusBadge[] = [
+    {
+      label: statusLabels[order?.status as keyof typeof statusLabels] || order?.status.replace('_', ' ') || '',
+      variant: "outline",
+      className: statusColors[order?.status as keyof typeof statusColors] || 'bg-muted text-muted-foreground',
+    },
+    {
+      label: order?.priority || '',
+      variant: "outline",
+      className: priorityColors[order?.priority as keyof typeof priorityColors] || 'bg-muted text-muted-foreground',
+    },
+    {
+      label: (order as any)?.billing_status?.replace('_', ' ') || 'not billed',
+      variant: "outline",
+      className: (order as any)?.billing_status === 'billed' ? 'bg-success/10 text-success' :
+                 (order as any)?.billing_status === 'partially_billed' ? 'bg-warning/10 text-warning' :
+                 'bg-muted text-muted-foreground',
+    },
+  ];
 
-  if (!order) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">Order not found</div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  // Primary actions
+  const primaryActions: DocumentAction[] = [
+    {
+      label: "Complete Order",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: handleCompleteOrder,
+      variant: "default",
+      show: order?.status !== "completed",
+    },
+    {
+      label: "Run Billing",
+      icon: <Receipt className="h-4 w-4" />,
+      onClick: () => navigate("/invoices/create", { state: { serviceOrderId: id } }),
+      variant: "outline",
+      show: order?.status === "completed" && order?.billing_status !== "billed",
+    },
+    {
+      label: "Add to Draft Invoice",
+      icon: <FileText className="h-4 w-4" />,
+      onClick: () => setAddToInvoiceDialogOpen(true),
+      variant: "outline",
+      show: order?.status === "completed" && order?.billing_status !== "billed",
+    },
+  ];
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/service-orders")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Service Order {order.order_number}
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">{order.title}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={statusColors[order.status as keyof typeof statusColors]}>
-              {statusLabels[order.status as keyof typeof statusLabels] || order.status.replace('_', ' ')}
-            </Badge>
-            <Badge variant="outline" className={priorityColors[order.priority as keyof typeof priorityColors]}>
-              {order.priority}
-            </Badge>
-            <Badge variant="outline" className={
-              (order as any).billing_status === 'billed' ? 'bg-success/10 text-success' :
-              (order as any).billing_status === 'partially_billed' ? 'bg-warning/10 text-warning' :
-              'bg-muted text-muted-foreground'
-            }>
-              {(order as any).billing_status?.replace('_', ' ') || 'not billed'}
-            </Badge>
-            {order.status === "completed" && order.billing_status !== "billed" && (
-              <>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => navigate("/invoices/create", { state: { serviceOrderId: id } })}
-                >
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Run Billing
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => setAddToInvoiceDialogOpen(true)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Add to Draft Invoice
-                </Button>
-              </>
-            )}
-            <Button 
-              size="sm" 
-              onClick={handleCompleteOrder}
-              disabled={order.status === "completed"}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Complete Order
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  More Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background z-50">
-                <DropdownMenuItem onClick={() => setDialogOpen(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Order
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("draft")}>
-                  Set to Waiting
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("cancelled")}>
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Cancel Order
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+  // File menu actions
+  const fileMenuActions: FileMenuAction[] = [
+    {
+      label: "Edit Order",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => setDialogOpen(true),
+    },
+    {
+      label: "Duplicate",
+      icon: <Copy className="h-4 w-4" />,
+      onClick: () => {/* Duplicate order */},
+    },
+    {
+      label: "Set to Waiting",
+      onClick: () => updateOrderStatusMutation.mutate("draft"),
+      separator: true,
+    },
+    {
+      label: "Cancel Order",
+      icon: <XCircle className="h-4 w-4" />,
+      onClick: () => updateOrderStatusMutation.mutate("cancelled"),
+      destructive: false,
+    },
+    {
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => {/* Delete confirmation */},
+      destructive: true,
+      separator: true,
+    },
+  ];
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+  // Key information section
+  const keyInfoSection = (
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Customer & Location Info */}
           <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
@@ -555,21 +523,16 @@ export default function ServiceOrderDetails() {
               </CardContent>
             </Card>
           )}
-        </div>
+    </div>
+  );
 
-        {/* Tabs */}
-        <Tabs defaultValue="details" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments & Time</TabsTrigger>
-            <TabsTrigger value="items">Line Items ({lineItems.length})</TabsTrigger>
-            <TabsTrigger value="attachments">Attachments</TabsTrigger>
-            <TabsTrigger value="invoices">Invoices</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="details">
+  // Tabs configuration
+  const tabs: TabConfig[] = [
+    {
+      value: "details",
+      label: "Details",
+      icon: <FileText className="h-4 w-4" />,
+      content: (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
@@ -698,24 +661,34 @@ export default function ServiceOrderDetails() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="appointments">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Appointments & Time Logs</CardTitle>
-                <Button size="sm" onClick={() => setCreateAppointmentDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Appointment
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <AppointmentsTab serviceOrderId={id!} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="items">
+      ),
+    },
+    {
+      value: "appointments",
+      label: "Appointments & Time",
+      icon: <Calendar className="h-4 w-4" />,
+      badge: appointments?.length || 0,
+      content: (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Appointments & Time Logs</CardTitle>
+            <Button size="sm" onClick={() => setCreateAppointmentDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Appointment
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <AppointmentsTab serviceOrderId={id!} />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "items",
+      label: "Line Items",
+      icon: <FileText className="h-4 w-4" />,
+      badge: lineItems?.length || 0,
+      content: (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Line Items</CardTitle>
@@ -751,54 +724,86 @@ export default function ServiceOrderDetails() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+      ),
+    },
+    {
+      value: "attachments",
+      label: "Attachments",
+      icon: <Paperclip className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Attachments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ServiceOrderAttachments serviceOrderId={id!} />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "invoices",
+      label: "Invoices",
+      icon: <Receipt className="h-4 w-4" />,
+      content: <RelatedInvoicesCard sourceType="service_order" sourceId={id!} />,
+    },
+    {
+      value: "tasks",
+      label: "Tasks",
+      icon: <CheckCircle className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Tasks</CardTitle>
+              <CreateTaskButton
+                linkedModule="service_order"
+                linkedRecordId={id!}
+                variant="default"
+                size="sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <LinkedTasksList linkedModule="service_order" linkedRecordId={id!} />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "history",
+      label: "History",
+      icon: <History className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Audit History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AuditTimeline tableName="service_orders" recordId={id!} />
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
 
-          <TabsContent value="attachments">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Attachments</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ServiceOrderAttachments serviceOrderId={id!} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="invoices">
-            <RelatedInvoicesCard sourceType="service_order" sourceId={id!} />
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Tasks</CardTitle>
-                  <CreateTaskButton
-                    linkedModule="service_order"
-                    linkedRecordId={id!}
-                    variant="default"
-                    size="sm"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <LinkedTasksList linkedModule="service_order" linkedRecordId={id!} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Audit History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AuditTimeline tableName="service_orders" recordId={id!} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+  return (
+    <>
+      <DocumentDetailLayout
+        title={`Service Order ${order?.order_number || ''}`}
+        subtitle={order?.title}
+        backPath="/service-orders"
+        statusBadges={statusBadges}
+        primaryActions={primaryActions}
+        fileMenuActions={fileMenuActions}
+        auditTableName="service_orders"
+        auditRecordId={id!}
+        keyInfoSection={keyInfoSection}
+        tabs={tabs}
+        defaultTab="details"
+        isLoading={isLoading}
+        notFoundMessage={!order ? "Order not found" : undefined}
+      />
 
       <ServiceOrderDialog
         open={dialogOpen}
@@ -902,6 +907,6 @@ export default function ServiceOrderDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }
