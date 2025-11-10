@@ -44,7 +44,6 @@ import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
 import SupervisorDashboard from "./pages/worker/SupervisorDashboard";
-import { MobileAppToggle } from "./components/worker/MobileAppToggle";
 
 const queryClient = new QueryClient();
 
@@ -76,7 +75,6 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <MobileAppToggle />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />

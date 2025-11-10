@@ -15,9 +15,7 @@ export const useWorkerRole = () => {
         .eq("user_id", user.id);
 
       const isSupervisorOrAbove = roles?.some((r) => 
-        r.role === "tenant_admin" || 
-        r.role === "supervisor" || 
-        r.role === "manager"
+        r.role === "super_admin"
       ) || false;
 
       // Check if user is also a worker
