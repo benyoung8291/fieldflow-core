@@ -15,6 +15,7 @@ import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
 import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ProjectDialog from "@/components/projects/ProjectDialog";
+import AuditTimeline from "@/components/audit/AuditTimeline";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function InvoiceDetails() {
@@ -633,6 +634,15 @@ export default function InvoiceDetails() {
                     <div className="text-sm">{invoice.customers.billing_address}</div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Change History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AuditTimeline tableName="invoices" recordId={id!} />
               </CardContent>
             </Card>
           </div>
