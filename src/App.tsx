@@ -39,6 +39,10 @@ import InvoicesList from "./pages/InvoicesList";
 import InvoiceDetails from "./pages/InvoiceDetails";
 import RecurringInvoices from "./pages/RecurringInvoices";
 import RecurringInvoiceDetails from "./pages/RecurringInvoiceDetails";
+import WorkerDashboard from "./pages/worker/WorkerDashboard";
+import WorkerAppointments from "./pages/worker/WorkerAppointments";
+import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
+import WorkerSchedule from "./pages/worker/WorkerSchedule";
 
 const queryClient = new QueryClient();
 
@@ -104,6 +108,11 @@ const App = () => (
           <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetails /></ProtectedRoute>} />
           <Route path="/recurring-invoices" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
           <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
+          {/* Worker Mobile Routes */}
+          <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
+          <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
+          <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
+          <Route path="/worker/schedule" element={<ProtectedRoute><WorkerSchedule /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
