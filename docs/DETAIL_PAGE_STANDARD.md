@@ -7,7 +7,7 @@ All document detail pages (projects, service orders, invoices, quotes, customers
 1. **Consistent Toolbar** with back button, title, status badges, File menu, and action buttons
 2. **Key Information Section** for metrics and summary cards
 3. **Tabbed Content Area** for detailed information and related documents
-4. **Integrated Audit History** via the floating audit drawer
+4. **Integrated Audit History Tab** - audit history is displayed in a dedicated tab (no floating drawer)
 
 ## Benefits
 
@@ -138,8 +138,6 @@ export default function MyDocumentDetails() {
       statusBadges={statusBadges}
       primaryActions={primaryActions}
       fileMenuActions={fileMenuActions}
-      auditTableName="my_table"
-      auditRecordId={id!}
       keyInfoSection={keyInfoSection}
       tabs={tabs}
       defaultTab="overview"
@@ -162,8 +160,8 @@ export default function MyDocumentDetails() {
 | `statusBadges` | `StatusBadge[]` | No | Array of status badges to display |
 | `primaryActions` | `DocumentAction[]` | No | Primary action buttons |
 | `fileMenuActions` | `FileMenuAction[]` | No | File dropdown menu items |
-| `auditTableName` | `string` | Yes | Database table name for audit logs |
-| `auditRecordId` | `string` | Yes | Record ID for audit logs |
+| `auditTableName` | `string` | No | *(Deprecated - kept for compatibility)* |
+| `auditRecordId` | `string` | No | *(Deprecated - kept for compatibility)* |
 | `keyInfoSection` | `ReactNode` | No | Key metrics/info cards section |
 | `tabs` | `TabConfig[]` | Yes | Tab configuration array |
 | `defaultTab` | `string` | No | Default active tab value |
@@ -243,7 +241,7 @@ Use `KeyInfoCard` for consistent metric cards in the key info section:
 2. **Remove old layout imports**:
    - Remove `DashboardLayout` wrapper
    - Remove `Button`, `Badge`, `Tabs` related imports (still needed for content)
-   - Remove `AuditDrawer` import (integrated in layout)
+   - Remove `AuditDrawer` import (audit history is now in a tab, not a floating drawer)
 
 3. **Configure the layout props**:
    - Define `statusBadges` array
@@ -263,7 +261,7 @@ Use `KeyInfoCard` for consistent metric cards in the key info section:
    - Verify all actions work
    - Check tab navigation
    - Test file menu dropdowns
-   - Verify audit history opens
+   - Verify audit history displays in the History tab (no floating drawer button)
 
 ### Example Migration: Before & After
 
@@ -291,6 +289,7 @@ return (
 
 **After:**
 ```tsx
+// Note: auditTableName and auditRecordId are optional (kept for backward compatibility)
 return (
   <DocumentDetailLayout
     title={project.name}
@@ -298,10 +297,8 @@ return (
     statusBadges={statusBadges}
     primaryActions={primaryActions}
     fileMenuActions={fileMenuActions}
-    auditTableName="projects"
-    auditRecordId={id!}
     keyInfoSection={keyInfoSection}
-    tabs={tabs}
+    tabs={tabs} // Include a History tab with AuditTimeline component
   />
 );
 ```
@@ -326,5 +323,5 @@ return (
 2. **Use KeyInfoCard**: For consistency in metric displays
 3. **Badge Counts**: Add badge counts to tabs showing lists (e.g., "Tasks (5)")
 4. **Conditional Actions**: Use `show` property to conditionally display actions
-5. **History Tab**: Always include a History tab with `AuditTimeline`
+5. **History Tab**: Always include a History tab with `AuditTimeline` component - this is the only way to view audit history
 6. **Loading States**: Pass `isLoading` and `notFoundMessage` for proper state handling

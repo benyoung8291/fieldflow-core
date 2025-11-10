@@ -11,8 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import AuditDrawer from "@/components/audit/AuditDrawer";
-import { ArrowLeft, FileText, History } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 
 export interface DocumentAction {
   label: string;
@@ -55,9 +54,9 @@ interface DocumentDetailLayoutProps {
   primaryActions?: DocumentAction[];
   fileMenuActions?: FileMenuAction[];
   
-  // Audit
-  auditTableName: string;
-  auditRecordId: string;
+  // Audit (kept for backward compatibility but not used for drawer)
+  auditTableName?: string;
+  auditRecordId?: string;
   
   // Key information section
   keyInfoSection?: ReactNode;
@@ -113,12 +112,6 @@ export default function DocumentDetailLayout({
 
   return (
     <DashboardLayout>
-      <AuditDrawer
-        tableName={auditTableName}
-        recordId={auditRecordId}
-        recordTitle={title}
-      />
-      
       <div className="space-y-6">
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b pb-4">
