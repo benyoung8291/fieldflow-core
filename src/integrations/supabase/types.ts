@@ -505,6 +505,45 @@ export type Database = {
           },
         ]
       }
+      crm_status_settings: {
+        Row: {
+          color: string
+          created_at: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          probability_percentage: number
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          display_name: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          probability_percentage?: number
+          status: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          display_name?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          probability_percentage?: number
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customer_contacts: {
         Row: {
           created_at: string | null
