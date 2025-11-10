@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { UserPlus, Shield, KeyRound, ExternalLink } from "lucide-react";
+import { UserPlus, Shield, KeyRound, ExternalLink, UserRoundPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -21,9 +21,15 @@ export const UserManagementTab = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserFirstName, setNewUserFirstName] = useState("");
+  const [newUserLastName, setNewUserLastName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState("");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -158,6 +164,50 @@ export const UserManagementTab = () => {
     },
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: async ({ email, firstName, lastName, password, role }: { 
+      email: string; 
+      firstName: string; 
+      lastName: string; 
+      password: string; 
+      role?: string;
+    }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-tenant-user`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, firstName, lastName, password, role }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create user');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("User created successfully");
+      setIsCreateUserDialogOpen(false);
+      setNewUserEmail("");
+      setNewUserFirstName("");
+      setNewUserLastName("");
+      setNewUserPassword("");
+      setNewUserRole("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create user");
+    },
+  });
+
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -199,6 +249,26 @@ export const UserManagementTab = () => {
     }
 
     assignRoleMutation.mutate({ userId: selectedUserId, role: selectedRole });
+  };
+
+  const handleCreateUser = () => {
+    if (!newUserEmail || !newUserFirstName || !newUserPassword) {
+      toast.error("Email, first name, and password are required");
+      return;
+    }
+
+    if (newUserPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    createUserMutation.mutate({
+      email: newUserEmail,
+      firstName: newUserFirstName,
+      lastName: newUserLastName,
+      password: newUserPassword,
+      role: newUserRole || undefined,
+    });
   };
 
   const handleResetPassword = () => {
@@ -245,14 +315,88 @@ export const UserManagementTab = () => {
             Manage users, assign roles, and reset passwords
           </p>
         </div>
-        <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Assign Role
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+        <div className="flex gap-2">
+          <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserRoundPlus className="h-4 w-4 mr-2" />
+                Create User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                  Add a new user to your organization
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    placeholder="user@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={newUserFirstName}
+                    onChange={(e) => setNewUserFirstName(e.target.value)}
+                    placeholder="John"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={newUserLastName}
+                    onChange={(e) => setNewUserLastName(e.target.value)}
+                    placeholder="Doe"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    placeholder="Minimum 6 characters"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Initial Role (Optional)</Label>
+                  <Select value={newUserRole} onValueChange={setNewUserRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="worker">Worker</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleCreateUser} className="w-full">
+                  Create User
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Assign Role
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>Assign Role to User</DialogTitle>
               <DialogDescription>
@@ -293,8 +437,9 @@ export const UserManagementTab = () => {
                 Assign Role
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
