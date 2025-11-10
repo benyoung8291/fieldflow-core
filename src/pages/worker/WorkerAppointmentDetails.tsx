@@ -114,7 +114,8 @@ export default function WorkerAppointmentDetails() {
       if (!worker) return;
 
       // Load active time log
-      const { data: logData } = await supabase
+      console.log('[Load Data] Querying for active time log...', { appointmentId: id, workerId: worker.id });
+      const { data: logData, error: logError } = await supabase
         .from('time_logs')
         .select('*')
         .eq('appointment_id', id)
@@ -122,6 +123,7 @@ export default function WorkerAppointmentDetails() {
         .is('clock_out', null)
         .maybeSingle();
 
+      console.log('[Load Data] Time log query result:', { logData, logError });
       setTimeLog(logData);
       
       // Cache appointment and time log for offline access
