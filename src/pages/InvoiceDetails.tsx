@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Send, CheckCircle, Download, Plus, Edit, Trash2, Check } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Download, Plus, Edit, Trash2, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
 import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
+import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
+import ProjectDialog from "@/components/projects/ProjectDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function InvoiceDetails() {
@@ -24,6 +26,9 @@ export default function InvoiceDetails() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [serviceOrderDialogOpen, setServiceOrderDialogOpen] = useState(false);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -495,13 +500,34 @@ export default function InvoiceDetails() {
 
                       if (isFirstFromSource && sourceDoc) {
                         acc.push(
-                          <TableRow key={`${sourceKey}-header`} className="bg-muted/30">
-                            <TableCell colSpan={invoice.status === "draft" ? 8 : 7} className="font-medium text-sm">
-                              {sourceDoc.type === "project" ? (
-                                <>Project: {sourceDoc.name}</>
-                              ) : (
-                                <>{sourceDoc.order_number} - {sourceDoc.title}</>
-                              )}
+                          <TableRow key={`${sourceKey}-header`} className="bg-muted/30 hover:bg-muted/40">
+                            <TableCell 
+                              colSpan={invoice.status === "draft" ? 8 : 7} 
+                              className="font-medium text-sm"
+                            >
+                              <button
+                                onClick={() => {
+                                  setSelectedSourceId(sourceDoc.id);
+                                  if (sourceDoc.type === "project") {
+                                    setProjectDialogOpen(true);
+                                  } else {
+                                    setServiceOrderDialogOpen(true);
+                                  }
+                                }}
+                                className="flex items-center gap-2 hover:text-primary transition-colors group"
+                              >
+                                {sourceDoc.type === "project" ? (
+                                  <>
+                                    <span>Project: {sourceDoc.name}</span>
+                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>{sourceDoc.order_number} - {sourceDoc.title}</span>
+                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </>
+                                )}
+                              </button>
                             </TableCell>
                           </TableRow>
                         );
@@ -660,6 +686,27 @@ export default function InvoiceDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selectedSourceId && (
+        <>
+          <ServiceOrderDialog
+            open={serviceOrderDialogOpen}
+            onOpenChange={(open) => {
+              setServiceOrderDialogOpen(open);
+              if (!open) setSelectedSourceId(null);
+            }}
+            orderId={selectedSourceId}
+          />
+          <ProjectDialog
+            open={projectDialogOpen}
+            onOpenChange={(open) => {
+              setProjectDialogOpen(open);
+              if (!open) setSelectedSourceId(null);
+            }}
+            projectId={selectedSourceId}
+          />
+        </>
+      )}
     </DashboardLayout>
   );
 }
