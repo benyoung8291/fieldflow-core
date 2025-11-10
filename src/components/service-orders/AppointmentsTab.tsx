@@ -144,12 +144,14 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                     )}
                   </div>
                   
-                  {appointment.assigned_workers.length > 0 && (
+                  {appointment.assigned_workers?.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {appointment.assigned_workers.map((aw: any) => (
-                        <Badge key={aw.worker_id} variant="secondary" className="text-xs">
-                          {aw.profiles.first_name} {aw.profiles.last_name}
-                        </Badge>
+                        aw.profiles && (
+                          <Badge key={aw.worker_id} variant="secondary" className="text-xs">
+                            {aw.profiles.first_name} {aw.profiles.last_name}
+                          </Badge>
+                        )
                       ))}
                     </div>
                   )}
