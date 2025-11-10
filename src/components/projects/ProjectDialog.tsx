@@ -110,6 +110,20 @@ export default function ProjectDialog({ open, onOpenChange, projectId }: Project
         return;
       }
 
+      // Get user's tenant_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) {
+        toast({ title: "User profile not found", variant: "destructive" });
+        return;
+      }
+
+      const budgetValue = formData.budget ? parseFloat(formData.budget) : null;
+
       const projectData: any = {
         customer_id: formData.customer_id,
         name: formData.name,
@@ -117,13 +131,16 @@ export default function ProjectDialog({ open, onOpenChange, projectId }: Project
         status: formData.status,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
+        budget: budgetValue,
+        original_budget: budgetValue,
+        revised_budget: budgetValue,
         progress: parseInt(formData.progress) || 0,
         notes: formData.notes,
       };
 
       if (!projectId) {
         projectData.created_by = user.id;
+        projectData.tenant_id = profile.tenant_id;
       }
 
       if (projectId) {
