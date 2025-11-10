@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
+import DraggableWorker from "@/components/scheduler/DraggableWorker";
 import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -990,6 +991,61 @@ export default function Scheduler() {
             <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
           </div>
         </div>
+        
+        {/* Drag Overlay - shows the item being dragged */}
+        <DragOverlay dropAnimation={null}>
+          {activeId && (() => {
+            // Worker being dragged
+            if (activeId.toString().startsWith('worker-')) {
+              const workerId = activeId.toString().replace('worker-', '');
+              const worker = workers.find(w => w.id === workerId);
+              if (worker) {
+                return <DraggableWorker worker={worker} isDragOverlay />;
+              }
+            }
+            // Service order being dragged
+            if (activeId.toString().startsWith('service-order-')) {
+              const serviceOrderId = activeId.toString().replace('service-order-', '');
+              const serviceOrder = serviceOrders.find(so => so.id === serviceOrderId);
+              if (serviceOrder) {
+                // Calculate remaining hours for display
+                const scheduledAppointments = appointments.filter(apt => apt.service_order_id === serviceOrder.id);
+                const totalScheduledHours = scheduledAppointments.reduce((sum, apt) => {
+                  const workers = apt.appointment_workers?.length || 0;
+                  const start = new Date(apt.start_time);
+                  const end = new Date(apt.end_time);
+                  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                  return sum + (hours * workers);
+                }, 0);
+                const remainingHours = (serviceOrder.estimated_hours || 0) - totalScheduledHours;
+                
+                return (
+                  <Card className="p-2 shadow-2xl ring-2 ring-primary rotate-3 scale-105 w-[280px]">
+                    <div className="space-y-1.5">
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {serviceOrder.order_number}
+                            </Badge>
+                          </div>
+                          <h4 className="font-semibold text-xs mt-1 truncate">{serviceOrder.title}</h4>
+                        </div>
+                      </div>
+                      {serviceOrder.estimated_hours && (
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>Need {remainingHours.toFixed(1)}h</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              }
+            }
+            return null;
+          })()}
+        </DragOverlay>
       </DndContext>
     </DashboardLayout>
   );

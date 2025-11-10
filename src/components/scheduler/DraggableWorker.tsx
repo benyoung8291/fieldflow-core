@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 
 interface DraggableWorkerProps {
   worker: any;
+  isDragOverlay?: boolean;
 }
 
-export default function DraggableWorker({ worker }: DraggableWorkerProps) {
+export default function DraggableWorker({ worker, isDragOverlay }: DraggableWorkerProps) {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: `worker-${worker.id}`,
     data: {
@@ -25,13 +26,14 @@ export default function DraggableWorker({ worker }: DraggableWorkerProps) {
 
   return (
     <Card
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
+      ref={!isDragOverlay ? setNodeRef : undefined}
+      style={!isDragOverlay ? style : undefined}
+      {...(!isDragOverlay ? listeners : {})}
+      {...(!isDragOverlay ? attributes : {})}
       className={cn(
         "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
-        isDragging && "opacity-50 cursor-grabbing"
+        isDragging && !isDragOverlay && "opacity-20 cursor-grabbing",
+        isDragOverlay && "shadow-2xl ring-2 ring-primary rotate-3 scale-105"
       )}
     >
       <div className="flex items-center gap-2">

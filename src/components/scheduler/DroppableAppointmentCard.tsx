@@ -31,17 +31,24 @@ export default function DroppableAppointmentCard({
 
   const workers = appointment.appointment_workers || [];
   const totalWorkerHours = workers.length * calculateAppointmentHours(appointment);
-  const remainingHours = Math.max(0, (estimatedHours || 0) - totalWorkerHours);
+  const remainingHours = (estimatedHours || 0) - totalWorkerHours;
 
   return (
     <Card
       ref={setNodeRef}
       className={cn(
-        "p-2 cursor-pointer hover:shadow-md transition-all group",
-        isOver && "ring-2 ring-primary ring-offset-2"
+        "p-2 cursor-pointer hover:shadow-md transition-all group relative",
+        isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5"
       )}
       onClick={onClick}
     >
+      {isOver && (
+        <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
+          <span className="text-xs font-semibold text-primary bg-background px-2 py-1 rounded">
+            Drop to assign worker
+          </span>
+        </div>
+      )}
       <div className="space-y-2">
         {/* Time */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -92,17 +99,27 @@ export default function DroppableAppointmentCard({
 
         {/* Remaining Hours */}
         {estimatedHours && (
-          <div className="text-xs">
+          <div className={cn(
+            "text-xs p-1.5 rounded-md border",
+            remainingHours < 0 
+              ? "bg-destructive/10 border-destructive/30" 
+              : remainingHours > 0 
+                ? "bg-warning/10 border-warning/30"
+                : "bg-success/10 border-success/30"
+          )}>
             <span className="text-muted-foreground">Remaining: </span>
             <span className={cn(
-              "font-semibold",
-              remainingHours > 0 ? "text-warning" : "text-success"
+              "font-bold",
+              remainingHours < 0 ? "text-destructive" : remainingHours > 0 ? "text-warning" : "text-success"
             )}>
               {remainingHours.toFixed(1)}h
             </span>
-            {estimatedHours && (
-              <span className="text-muted-foreground ml-1">
-                / {estimatedHours.toFixed(1)}h estimated
+            <span className="text-muted-foreground ml-1">
+              / {estimatedHours.toFixed(1)}h estimated
+            </span>
+            {remainingHours < 0 && (
+              <span className="block text-[10px] text-destructive font-semibold mt-0.5">
+                ⚠ OVER CAPACITY
               </span>
             )}
           </div>
