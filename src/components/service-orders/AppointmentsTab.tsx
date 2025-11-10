@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Clock, MoreVertical } from "lucide-react";
+import { Calendar, User, Clock, MoreVertical, Edit } from "lucide-react";
 import { format } from "date-fns";
 import TimeLogsTable from "./TimeLogsTable";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
+import { useState } from "react";
 
 interface AppointmentsTabProps {
   serviceOrderId: string;
@@ -28,6 +30,8 @@ const statusColors = {
 export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["service-order-appointments", serviceOrderId],
@@ -40,22 +44,35 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
 
       if (error) throw error;
       
-      // Fetch assigned profiles separately
-      const appointmentsWithProfiles = await Promise.all(
+      // Fetch assigned profiles and workers separately
+      const appointmentsWithData = await Promise.all(
         (data || []).map(async (apt: any) => {
-          if (!apt.assigned_to) return { ...apt, assigned_to_profile: null };
+          // Get primary assigned user
+          let assigned_to_profile = null;
+          if (apt.assigned_to) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("first_name, last_name, email")
+              .eq("id", apt.assigned_to)
+              .maybeSingle();
+            assigned_to_profile = profile;
+          }
           
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("first_name, last_name, email")
-            .eq("id", apt.assigned_to)
-            .maybeSingle();
+          // Get all assigned workers
+          const { data: workers } = await supabase
+            .from("appointment_workers")
+            .select("worker_id, profiles(first_name, last_name)")
+            .eq("appointment_id", apt.id);
           
-          return { ...apt, assigned_to_profile: profile };
+          return { 
+            ...apt, 
+            assigned_to_profile,
+            assigned_workers: workers || []
+          };
         })
       );
       
-      return appointmentsWithProfiles;
+      return appointmentsWithData;
     },
   });
 
@@ -89,29 +106,30 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
   }
 
   return (
-    <div className="space-y-4">
-      {appointments.map((appointment: any) => (
-        <Card key={appointment.id}>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              {/* Appointment Header */}
-              <div className="flex items-start justify-between">
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-base">{appointment.title}</h3>
-                    <Badge 
-                      variant="outline" 
-                      className={statusColors[appointment.status as keyof typeof statusColors]}
-                    >
-                      {appointment.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
+    <>
+      <div className="space-y-4">
+        {appointments.map((appointment: any) => (
+          <Card key={appointment.id}>
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                {/* Appointment Header */}
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-base">{appointment.title}</h3>
+                      <Badge 
+                        variant="outline" 
+                        className={statusColors[appointment.status as keyof typeof statusColors]}
+                      >
+                        {appointment.status}
+                      </Badge>
                     </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
+                      </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
                       <span>
@@ -126,55 +144,92 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                     )}
                   </div>
                   
+                  {appointment.assigned_workers.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {appointment.assigned_workers.map((aw: any) => (
+                        <Badge key={aw.worker_id} variant="secondary" className="text-xs">
+                          {aw.profiles.first_name} {aw.profiles.last_name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  
                   {appointment.description && (
                     <p className="text-sm text-muted-foreground">{appointment.description}</p>
                   )}
-                </div>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="ghost">
-                      <MoreVertical className="h-4 w-4" />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setEditingAppointmentId(appointment.id);
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background z-50">
-                    <DropdownMenuItem 
-                      onClick={() => updateAppointmentStatusMutation.mutate({
-                        appointmentId: appointment.id,
-                        status: "draft",
-                      })}
-                    >
-                      Set to Draft
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => updateAppointmentStatusMutation.mutate({
-                        appointmentId: appointment.id,
-                        status: "completed",
-                      })}
-                    >
-                      Mark as Completed
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => updateAppointmentStatusMutation.mutate({
-                        appointmentId: appointment.id,
-                        status: "cancelled",
-                      })}
-                    >
-                      Cancel Appointment
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-background z-50">
+                        <DropdownMenuItem 
+                          onClick={() => updateAppointmentStatusMutation.mutate({
+                            appointmentId: appointment.id,
+                            status: "draft",
+                          })}
+                        >
+                          Set to Draft
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => updateAppointmentStatusMutation.mutate({
+                            appointmentId: appointment.id,
+                            status: "completed",
+                          })}
+                        >
+                          Mark as Completed
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => updateAppointmentStatusMutation.mutate({
+                            appointmentId: appointment.id,
+                            status: "cancelled",
+                          })}
+                        >
+                          Cancel Appointment
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
 
-              {/* Time Logs for this Appointment */}
-              <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold mb-3">Time Logs</h4>
-                <TimeLogsTable appointmentId={appointment.id} />
+                {/* Time Logs for this Appointment */}
+                <div className="pt-4 border-t">
+                  <h4 className="text-sm font-semibold mb-3">Time Logs</h4>
+                  <TimeLogsTable appointmentId={appointment.id} />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <AppointmentDialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setEditingAppointmentId(null);
+            queryClient.invalidateQueries({ queryKey: ["service-order-appointments", serviceOrderId] });
+          }
+        }}
+        appointmentId={editingAppointmentId || undefined}
+        defaultServiceOrderId={serviceOrderId}
+      />
+    </>
   );
 }

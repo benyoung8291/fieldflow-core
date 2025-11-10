@@ -89,6 +89,7 @@ export default function AppointmentDialog({
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
   const [parentAppointmentId, setParentAppointmentId] = useState<string | null>(null);
+  const [assignedWorkers, setAssignedWorkers] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -174,6 +175,20 @@ export default function AppointmentDialog({
         gps_check_in_radius: data.gps_check_in_radius?.toString() || "100",
         notes: data.notes || "",
       });
+      
+      // Fetch assigned workers
+      const { data: workers } = await supabase
+        .from("appointment_workers")
+        .select("worker_id, profiles(id, first_name, last_name)")
+        .eq("appointment_id", appointmentId);
+      
+      if (workers) {
+        setAssignedWorkers(workers.map((w: any) => ({
+          id: w.worker_id,
+          first_name: w.profiles.first_name,
+          last_name: w.profiles.last_name,
+        })));
+      }
     }
     setLoading(false);
   };
@@ -360,6 +375,35 @@ export default function AppointmentDialog({
 
           if (error) throw error;
           toast({ title: "Appointment updated successfully" });
+        }
+        
+        // Update appointment workers if editing
+        if (appointmentId) {
+          // Remove existing workers
+          await supabase
+            .from("appointment_workers")
+            .delete()
+            .eq("appointment_id", appointmentId);
+          
+          // Add new workers
+          if (assignedWorkers.length > 0) {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("tenant_id")
+              .eq("id", user!.id)
+              .single();
+              
+            await supabase
+              .from("appointment_workers")
+              .insert(
+                assignedWorkers.map(worker => ({
+                  appointment_id: appointmentId,
+                  worker_id: worker.id,
+                  tenant_id: profile!.tenant_id,
+                }))
+              );
+          }
         }
       } else {
         // Creating new appointment(s)
@@ -728,6 +772,59 @@ export default function AppointmentDialog({
               }}
               selectedWorkerId={formData.assigned_to}
             />
+          )}
+
+          {appointmentId && (
+            <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/50">
+              <Label className="text-base font-semibold">Assigned Workers</Label>
+              
+              <div className="space-y-2">
+                {assignedWorkers.map((worker) => (
+                  <div key={worker.id} className="flex items-center justify-between p-2 bg-background rounded-md border">
+                    <span className="text-sm">
+                      {worker.first_name} {worker.last_name}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setAssignedWorkers(assignedWorkers.filter(w => w.id !== worker.id));
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                
+                {assignedWorkers.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No workers assigned</p>
+                )}
+              </div>
+
+              <Select
+                value=""
+                onValueChange={(workerId) => {
+                  const worker = technicians.find(t => t.id === workerId);
+                  if (worker && !assignedWorkers.find(w => w.id === workerId)) {
+                    setAssignedWorkers([...assignedWorkers, worker]);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add worker" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians
+                    .filter(tech => !assignedWorkers.find(w => w.id === tech.id))
+                    .map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.first_name} {tech.last_name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
           <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
