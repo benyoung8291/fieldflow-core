@@ -87,18 +87,6 @@ export default function ServiceOrderDetails() {
         .single();
 
       if (error) throw error;
-      
-      // Fetch assigned worker separately if exists
-      if ((data as any).assigned_to) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", (data as any).assigned_to)
-          .single();
-        
-        return { ...data, assigned_profile: profile };
-      }
-      
       return data;
     },
   });
@@ -527,43 +515,25 @@ export default function ServiceOrderDetails() {
             </CardContent>
           </Card>
 
-          {/* Assignment & Project */}
+          {/* Project Assignment */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Assignment</CardTitle>
+              <CardTitle className="text-sm">Project</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {(order as any).assigned_profile && (
-                <div className="flex items-start gap-2">
-                  <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <CardContent>
+              {(order as any).projects ? (
+                <div 
+                  className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 -mx-3 -mt-3 -mb-3 p-3 rounded-lg transition-colors"
+                  onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
+                >
+                  <FolderKanban className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-muted-foreground">Worker</div>
-                    <div className="text-sm font-medium truncate">
-                      {(order as any).assigned_profile.first_name} {(order as any).assigned_profile.last_name}
-                    </div>
+                    <div className="text-sm font-medium truncate">{(order as any).projects.name}</div>
                   </div>
                 </div>
-              )}
-              
-              {(order as any).projects && (
-                <>
-                  {(order as any).assigned_profile && <Separator />}
-                  <div 
-                    className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 -mx-3 -mb-3 p-3 rounded-b-lg transition-colors"
-                    onClick={() => navigate(`/projects/${(order as any).projects.id}`)}
-                  >
-                    <FolderKanban className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs text-muted-foreground">Project</div>
-                      <div className="text-sm font-medium truncate">{(order as any).projects.name}</div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {!(order as any).assigned_profile && !(order as any).projects && (
+              ) : (
                 <div className="text-xs text-muted-foreground text-center py-2">
-                  No assignments
+                  No project assigned
                 </div>
               )}
             </CardContent>
