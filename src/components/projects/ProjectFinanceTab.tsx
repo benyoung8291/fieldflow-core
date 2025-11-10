@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Lock, Save, X } from "lucide-react";
+import { Plus, Trash2, Lock, Save, X, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PriceBookDialog from "@/components/quotes/PriceBookDialog";
+import { Label } from "@/components/ui/label";
 
 interface ProjectFinanceTabProps {
   projectId: string;
@@ -64,12 +64,6 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
     },
   });
 
-  const topLevelItems = (lineItems as any)?.filter((item: any) => !item.parent_line_item_id) || [];
-  
-  const getChildItems = (parentId: string) => {
-    return (lineItems as any)?.filter((item: any) => item.parent_line_item_id === parentId) || [];
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
@@ -92,23 +86,22 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
     setIsEditing(false);
   };
 
-  const addLineItem = () => {
-    setEditingItems([
-      ...editingItems,
-      {
-        description: "",
-        quantity: 1,
-        unit_price: 0,
-        cost_price: 0,
-        sell_price: 0,
-        margin_percentage: 0,
-        line_total: 0,
-        is_from_price_book: false,
-        from_quote: false,
-        is_locked: false,
-        item_order: editingItems.length,
-      },
-    ]);
+  const addLineItem = (parentId?: string) => {
+    const newItem: LineItem = {
+      description: "",
+      quantity: 1,
+      unit_price: 0,
+      cost_price: 0,
+      sell_price: 0,
+      margin_percentage: 0,
+      line_total: 0,
+      is_from_price_book: false,
+      from_quote: false,
+      is_locked: false,
+      parent_line_item_id: parentId,
+      item_order: editingItems.length,
+    };
+    setEditingItems([...editingItems, newItem]);
   };
 
   const removeLineItem = (index: number) => {
@@ -177,7 +170,7 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
           project_id: projectId,
           tenant_id: tenantId,
           item_order: index,
-          id: undefined, // Let DB generate new IDs
+          id: undefined,
         }));
 
       if (itemsToInsert.length > 0) {
@@ -220,13 +213,14 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
     from_quote: item.from_quote ?? false,
     is_locked: item.is_locked ?? false,
   })) || []);
+
   const totalCost = displayItems.reduce((sum, item) => sum + (Number(item.cost_price) * Number(item.quantity)), 0);
   const totalRevenue = displayItems.reduce((sum, item) => sum + Number(item.line_total), 0);
   const totalMargin = totalRevenue - totalCost;
   const marginPercentage = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
 
-  const topLevel = displayItems.filter(item => !item.parent_line_item_id);
-  const getChildren = (parentId?: string) => {
+  const topLevelItems = displayItems.filter(item => !item.parent_line_item_id);
+  const getSubItems = (parentId?: string) => {
     return displayItems.filter(item => item.parent_line_item_id === parentId);
   };
 
@@ -277,7 +271,7 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
               <div>
                 <CardTitle>Project Budget Line Items</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {isEditing ? "Editing line items (locked items from quotes cannot be modified)" : "Items marked with a lock are from the original quote and cannot be edited"}
+                  {isEditing ? "Editing line items (locked items from quotes cannot be modified)" : "Items marked with a lock are from the original quote"}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -301,145 +295,273 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
           <CardContent>
             {isEditing ? (
               <div className="space-y-4">
-                <Button onClick={addLineItem} size="sm">
+                <Button onClick={() => addLineItem()} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Line Item
                 </Button>
 
-                {displayItems.map((item, index) => (
-                  <div key={index} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-start gap-2">
-                      {item.is_locked && (
-                        <Lock className="h-5 w-5 text-muted-foreground mt-6" />
-                      )}
-                      <div className="flex-1 grid gap-3 md:grid-cols-6">
-                        <div className="md:col-span-2">
-                          <label className="text-sm font-medium">Description</label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={item.description}
-                              onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                              disabled={item.is_locked}
-                            />
+                {topLevelItems.map((item, parentIndex) => {
+                  const subItems = getSubItems(item.id);
+                  const actualIndex = displayItems.indexOf(item);
+                  
+                  return (
+                    <div key={actualIndex} className="border rounded-lg overflow-hidden">
+                      {/* Parent Item */}
+                      <div className="bg-muted/20 p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          {item.is_locked && (
+                            <Lock className="h-5 w-5 text-muted-foreground mt-2 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 space-y-3">
+                            <div className="grid gap-3 md:grid-cols-6">
+                              <div className="md:col-span-2">
+                                <Label className="text-xs">Description</Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(actualIndex, "description", e.target.value)}
+                                    disabled={item.is_locked}
+                                    className="font-medium"
+                                  />
+                                  {!item.is_locked && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setCurrentLineIndex(actualIndex);
+                                        setShowPriceBook(true);
+                                      }}
+                                    >
+                                      <Package className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Qty</Label>
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updateLineItem(actualIndex, "quantity", parseFloat(e.target.value) || 0)}
+                                  disabled={item.is_locked}
+                                />
+                              </div>
+                              {subItems.length === 0 && (
+                                <>
+                                  <div>
+                                    <Label className="text-xs">Unit Price</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.unit_price}
+                                      onChange={(e) => updateLineItem(actualIndex, "unit_price", parseFloat(e.target.value) || 0)}
+                                      disabled={item.is_locked}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Cost</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.cost_price}
+                                      onChange={(e) => updateLineItem(actualIndex, "cost_price", parseFloat(e.target.value) || 0)}
+                                      disabled={item.is_locked}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                              <div>
+                                <Label className="text-xs">Total</Label>
+                                <Input
+                                  type="number"
+                                  value={item.line_total.toFixed(2)}
+                                  disabled
+                                  className="font-semibold"
+                                />
+                              </div>
+                            </div>
+                            
                             {!item.is_locked && (
                               <Button
-                                type="button"
-                                variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  setCurrentLineIndex(index);
-                                  setShowPriceBook(true);
-                                }}
+                                variant="outline"
+                                onClick={() => addLineItem(item.id)}
                               >
-                                Pricebook
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Sub-item
                               </Button>
                             )}
                           </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Qty</label>
-                          <Input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)}
-                            disabled={item.is_locked}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Unit Price</label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
-                            disabled={item.is_locked}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Cost</label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.cost_price}
-                            onChange={(e) => updateLineItem(index, "cost_price", parseFloat(e.target.value) || 0)}
-                            disabled={item.is_locked}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Total</label>
-                          <Input
-                            type="number"
-                            value={item.line_total.toFixed(2)}
-                            disabled
-                          />
+                          
+                          {!item.is_locked && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeLineItem(actualIndex)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      {!item.is_locked && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLineItem(index)}
-                          className="mt-6"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+
+                      {/* Sub Items */}
+                      {subItems.map((subItem) => {
+                        const subIndex = displayItems.indexOf(subItem);
+                        return (
+                          <div key={subIndex} className="border-t bg-background/50 p-4 pl-12 space-y-3">
+                            <div className="flex items-start gap-2">
+                              {subItem.is_locked && (
+                                <Lock className="h-5 w-5 text-muted-foreground mt-2 flex-shrink-0" />
+                              )}
+                              <div className="flex-1 grid gap-3 md:grid-cols-6">
+                                <div className="md:col-span-2">
+                                  <Label className="text-xs">Description</Label>
+                                  <Input
+                                    value={subItem.description}
+                                    onChange={(e) => updateLineItem(subIndex, "description", e.target.value)}
+                                    disabled={subItem.is_locked}
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Qty</Label>
+                                  <Input
+                                    type="number"
+                                    value={subItem.quantity}
+                                    onChange={(e) => updateLineItem(subIndex, "quantity", parseFloat(e.target.value) || 0)}
+                                    disabled={subItem.is_locked}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Unit Price</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={subItem.unit_price}
+                                    onChange={(e) => updateLineItem(subIndex, "unit_price", parseFloat(e.target.value) || 0)}
+                                    disabled={subItem.is_locked}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Cost</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={subItem.cost_price}
+                                    onChange={(e) => updateLineItem(subIndex, "cost_price", parseFloat(e.target.value) || 0)}
+                                    disabled={subItem.is_locked}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Total</Label>
+                                  <Input
+                                    type="number"
+                                    value={subItem.line_total.toFixed(2)}
+                                    disabled
+                                    className="font-medium"
+                                  />
+                                </div>
+                              </div>
+                              
+                              {!subItem.is_locked && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeLineItem(subIndex)}
+                                  className="mt-5"
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Margin %</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topLevel.map((item) => {
-                    const children = getChildren(item.id);
-                    return (
-                      <>
-                        <TableRow key={item.id} className="font-medium">
-                          <TableCell>
+              <div className="space-y-2">
+                {topLevelItems.map((item) => {
+                  const subItems = getSubItems(item.id);
+                  const hasSubItems = subItems.length > 0;
+                  
+                  return (
+                    <div key={item.id} className="border rounded-lg overflow-hidden">
+                      <div className="flex items-start justify-between p-3 bg-muted/20">
+                        <div className="flex-1 flex items-start gap-2">
+                          {item.is_locked && <Lock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                          <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              {item.is_locked && <Lock className="h-4 w-4 text-muted-foreground" />}
-                              {item.description}
-                              {item.from_quote && <Badge variant="secondary" className="ml-2">From Quote</Badge>}
+                              <p className="font-medium">{item.description}</p>
+                              {item.from_quote && <Badge variant="secondary">From Quote</Badge>}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(Number(item.unit_price))}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(Number(item.cost_price))}</TableCell>
-                          <TableCell className="text-right">{item.margin_percentage}%</TableCell>
-                          <TableCell className="text-right font-semibold">{formatCurrency(Number(item.line_total))}</TableCell>
-                        </TableRow>
-                        {children.map((child) => (
-                          <TableRow key={child.id} className="text-sm">
-                            <TableCell className="pl-8">
-                              <div className="flex items-center gap-2">
-                                {child.is_locked && <Lock className="h-4 w-4 text-muted-foreground" />}
-                                {child.description}
+                            <div className="text-sm text-muted-foreground mt-1">
+                              Qty: {item.quantity}
+                              {!hasSubItems && (
+                                <>
+                                  {" • "}Cost: {formatCurrency(item.cost_price)}
+                                  {" • "}Margin: {item.margin_percentage.toFixed(2)}%
+                                  {" • "}Sell: {formatCurrency(item.sell_price || item.unit_price)}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right font-medium">
+                          {formatCurrency(item.line_total)}
+                        </div>
+                      </div>
+                      
+                      {hasSubItems && (
+                        <div className="border-t">
+                          {subItems.map((subItem) => (
+                            <div key={subItem.id} className="flex items-start justify-between p-3 pl-8 border-b last:border-b-0 bg-background/50">
+                              <div className="flex-1 flex items-start gap-2">
+                                {subItem.is_locked && <Lock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                                <div className="flex-1">
+                                  <p className="text-sm">{subItem.description}</p>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Qty: {subItem.quantity}
+                                    {" • "}Cost: {formatCurrency(subItem.cost_price)}
+                                    {" • "}Margin: {subItem.margin_percentage.toFixed(2)}%
+                                    {" • "}Sell: {formatCurrency(subItem.sell_price || subItem.unit_price)}
+                                  </div>
+                                </div>
                               </div>
-                            </TableCell>
-                            <TableCell className="text-right">{child.quantity}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(Number(child.unit_price))}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(Number(child.cost_price))}</TableCell>
-                            <TableCell className="text-right">{child.margin_percentage}%</TableCell>
-                            <TableCell className="text-right">{formatCurrency(Number(child.line_total))}</TableCell>
-                          </TableRow>
-                        ))}
-                      </>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                              <div className="text-right text-sm font-medium">
+                                {formatCurrency(subItem.line_total)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!isEditing && (
+              <div className="bg-muted p-4 rounded-lg space-y-2 mt-6">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-medium">{formatCurrency(totalRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Cost:</span>
+                  <span className="font-medium">{formatCurrency(totalCost)}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <span>Total Margin:</span>
+                  <span>{formatCurrency(totalMargin)}</span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
