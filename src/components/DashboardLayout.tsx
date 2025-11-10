@@ -90,7 +90,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           
           {/* Render children when folder is expanded */}
           {item.is_folder && isExpanded && children.length > 0 && (!sidebarCollapsed || isMobile) && (
-            <div className="ml-6 mt-1 space-y-1 border-l-2 border-sidebar-border pl-2">
+            <div 
+              className="ml-6 mt-1 space-y-1 border-l-2 pl-2" 
+              style={item.color && item.color.trim() ? { borderColor: item.color } : { borderColor: 'hsl(var(--sidebar-border))' }}
+            >
               {children.map((child) => {
                 const childIsActive = child.path && location.pathname === child.path;
                 const ChildIcon = child.iconComponent;
