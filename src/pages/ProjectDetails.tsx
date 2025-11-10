@@ -8,10 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Calendar, DollarSign, TrendingUp, ClipboardList, Users } from "lucide-react";
+import { ArrowLeft, Edit, Calendar, DollarSign, TrendingUp, ClipboardList, Users, FileText, Folder, UserPlus, GitCompare } from "lucide-react";
 import ProjectDialog from "@/components/projects/ProjectDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
+import ProjectGanttChart from "@/components/projects/ProjectGanttChart";
+import ProjectRosterTab from "@/components/projects/ProjectRosterTab";
+import ProjectFilesTab from "@/components/projects/ProjectFilesTab";
+import ProjectContractsTab from "@/components/projects/ProjectContractsTab";
+import ProjectChangeOrdersTab from "@/components/projects/ProjectAttachmentsTab";
+import AuditDrawer from "@/components/audit/AuditDrawer";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
@@ -146,8 +152,23 @@ export default function ProjectDetails() {
   const completedServiceOrders = serviceOrders?.filter(so => so.status === 'completed').length || 0;
   const budgetVariance = project.budget ? ((project.actual_cost / project.budget) * 100) - 100 : 0;
 
+  // Prepare tasks for Gantt chart (service orders as tasks)
+  const ganttTasks = serviceOrders?.map(so => ({
+    id: so.id,
+    name: so.title,
+    start_date: so.preferred_date || so.created_at,
+    end_date: so.date_range_end || so.preferred_date || so.created_at,
+    status: so.status,
+    progress: 0,
+  })) || [];
+
   return (
     <DashboardLayout>
+      <AuditDrawer
+        tableName="projects"
+        recordId={id!}
+        recordTitle={project.name}
+      />
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
@@ -230,10 +251,30 @@ export default function ProjectDetails() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="gantt">
+              <Calendar className="h-4 w-4 mr-2" />
+              Gantt Chart
+            </TabsTrigger>
+            <TabsTrigger value="roster">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Roster
+            </TabsTrigger>
             <TabsTrigger value="service-orders">Service Orders ({totalServiceOrders})</TabsTrigger>
             <TabsTrigger value="appointments">Appointments ({appointments?.length || 0})</TabsTrigger>
+            <TabsTrigger value="files">
+              <Folder className="h-4 w-4 mr-2" />
+              Files
+            </TabsTrigger>
+            <TabsTrigger value="contracts">
+              <FileText className="h-4 w-4 mr-2" />
+              Contracts
+            </TabsTrigger>
+            <TabsTrigger value="change-orders">
+              <GitCompare className="h-4 w-4 mr-2" />
+              Change Orders
+            </TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
           </TabsList>
 
@@ -363,6 +404,30 @@ export default function ProjectDetails() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="gantt">
+            <ProjectGanttChart 
+              tasks={ganttTasks}
+              projectStart={project.start_date}
+              projectEnd={project.end_date}
+            />
+          </TabsContent>
+
+          <TabsContent value="roster">
+            <ProjectRosterTab projectId={id!} />
+          </TabsContent>
+
+          <TabsContent value="files">
+            <ProjectFilesTab projectId={id!} />
+          </TabsContent>
+
+          <TabsContent value="contracts">
+            <ProjectContractsTab projectId={id!} />
+          </TabsContent>
+
+          <TabsContent value="change-orders">
+            <ProjectChangeOrdersTab projectId={id!} />
           </TabsContent>
 
           <TabsContent value="tasks">

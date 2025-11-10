@@ -1018,6 +1018,8 @@ export type Database = {
           preferred_days: string[] | null
           preferred_end_time: string | null
           preferred_start_time: string | null
+          projects_enabled: boolean | null
+          service_orders_enabled: boolean | null
           super_fund_name: string | null
           super_fund_number: string | null
           tax_file_number: string | null
@@ -1040,6 +1042,8 @@ export type Database = {
           preferred_days?: string[] | null
           preferred_end_time?: string | null
           preferred_start_time?: string | null
+          projects_enabled?: boolean | null
+          service_orders_enabled?: boolean | null
           super_fund_name?: string | null
           super_fund_number?: string | null
           tax_file_number?: string | null
@@ -1062,6 +1066,8 @@ export type Database = {
           preferred_days?: string[] | null
           preferred_end_time?: string | null
           preferred_start_time?: string | null
+          projects_enabled?: boolean | null
+          service_orders_enabled?: boolean | null
           super_fund_name?: string | null
           super_fund_number?: string | null
           tax_file_number?: string | null
@@ -1085,6 +1091,275 @@ export type Database = {
           },
         ]
       }
+      project_attachments: {
+        Row: {
+          category: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          project_id: string
+          tenant_id: string
+          uploaded_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          category?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          tenant_id: string
+          uploaded_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          category?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          tenant_id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_attachments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_change_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          budget_impact: number
+          change_order_number: string
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          reason: string | null
+          requested_at: string | null
+          requested_by: string
+          schedule_impact_days: number | null
+          status: string | null
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_impact?: number
+          change_order_number: string
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          reason?: string | null
+          requested_at?: string | null
+          requested_by: string
+          schedule_impact_days?: number | null
+          status?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_impact?: number
+          change_order_number?: string
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          reason?: string | null
+          requested_at?: string | null
+          requested_by?: string
+          schedule_impact_days?: number | null
+          status?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_contracts: {
+        Row: {
+          attachment_id: string | null
+          builder_abn: string | null
+          builder_contact: string | null
+          builder_name: string | null
+          contract_number: string | null
+          contract_value: number | null
+          created_at: string | null
+          end_date: string | null
+          extracted_data: Json | null
+          extraction_error: string | null
+          extraction_status: string | null
+          id: string
+          notes: string | null
+          payment_terms: string | null
+          project_id: string
+          retention_percentage: number | null
+          start_date: string | null
+          tenant_id: string
+          updated_at: string | null
+          variations_allowed: boolean | null
+        }
+        Insert: {
+          attachment_id?: string | null
+          builder_abn?: string | null
+          builder_contact?: string | null
+          builder_name?: string | null
+          contract_number?: string | null
+          contract_value?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          extracted_data?: Json | null
+          extraction_error?: string | null
+          extraction_status?: string | null
+          id?: string
+          notes?: string | null
+          payment_terms?: string | null
+          project_id: string
+          retention_percentage?: number | null
+          start_date?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          variations_allowed?: boolean | null
+        }
+        Update: {
+          attachment_id?: string | null
+          builder_abn?: string | null
+          builder_contact?: string | null
+          builder_name?: string | null
+          contract_number?: string | null
+          contract_value?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          extracted_data?: Json | null
+          extraction_error?: string | null
+          extraction_status?: string | null
+          id?: string
+          notes?: string | null
+          payment_terms?: string | null
+          project_id?: string
+          retention_percentage?: number | null
+          start_date?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          variations_allowed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_contracts_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "project_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_workers: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string
+          created_at: string | null
+          hourly_rate: number | null
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          project_id: string
+          role: string
+          tenant_id: string
+          worker_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by: string
+          created_at?: string | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          project_id: string
+          role?: string
+          tenant_id: string
+          worker_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string
+          created_at?: string | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          project_id?: string
+          role?: string
+          tenant_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_workers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_workers_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_workers_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           actual_cost: number | null
@@ -1097,10 +1372,13 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          original_budget: number | null
           progress: number | null
+          revised_budget: number | null
           start_date: string | null
           status: string
           tenant_id: string
+          total_change_orders: number | null
           updated_at: string | null
         }
         Insert: {
@@ -1114,10 +1392,13 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          original_budget?: number | null
           progress?: number | null
+          revised_budget?: number | null
           start_date?: string | null
           status?: string
           tenant_id: string
+          total_change_orders?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -1131,10 +1412,13 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          original_budget?: number | null
           progress?: number | null
+          revised_budget?: number | null
           start_date?: string | null
           status?: string
           tenant_id?: string
+          total_change_orders?: number | null
           updated_at?: string | null
         }
         Relationships: []
