@@ -50,7 +50,7 @@ export default function Dashboard() {
       icon: DollarSign,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
-      onClick: () => toast.info("Invoice module coming soon"),
+      onClick: () => navigate("/invoices"),
     },
     {
       name: "New Task",
