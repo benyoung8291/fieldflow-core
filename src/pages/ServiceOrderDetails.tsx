@@ -81,7 +81,7 @@ export default function ServiceOrderDetails() {
           customers!service_orders_customer_id_fkey(name, email, phone),
           customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
           customer_contacts(first_name, last_name, email, phone),
-          projects(id, project_number, name)
+          projects(id, name)
         `)
         .eq("id", id)
         .single();
@@ -556,9 +556,6 @@ export default function ServiceOrderDetails() {
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-muted-foreground">Project</div>
                       <div className="text-sm font-medium truncate">{(order as any).projects.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        #{(order as any).projects.project_number}
-                      </div>
                     </div>
                   </div>
                 </>
