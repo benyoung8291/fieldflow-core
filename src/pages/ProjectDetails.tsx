@@ -167,6 +167,23 @@ export default function ProjectDetails() {
     },
   });
 
+  const { data: taskDependencies } = useQuery({
+    queryKey: ["task-dependencies", "project", id],
+    queryFn: async () => {
+      if (!tasks?.length) return [];
+      
+      const taskIds = tasks.map((t: any) => t.id);
+      const { data, error } = await supabase
+        .from("task_dependencies")
+        .select("*")
+        .in("task_id", taskIds);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tasks?.length,
+  });
+
   // Prepare tasks for Gantt chart - use actual project tasks
   const ganttTasks = useMemo(() => {
     if (!tasks || tasks.length === 0) {
@@ -439,6 +456,7 @@ export default function ProjectDetails() {
           <TabsContent value="gantt">
             <ProjectGanttChart 
               tasks={ganttTasks}
+              dependencies={taskDependencies || []}
               projectStart={project.start_date}
               projectEnd={project.end_date}
             />

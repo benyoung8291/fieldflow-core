@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, addDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useCriticalPath } from "@/hooks/useCriticalPath";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Zap } from "lucide-react";
 
 interface GanttTask {
   id: string;
@@ -13,13 +16,23 @@ interface GanttTask {
   progress?: number;
 }
 
+interface Dependency {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: string;
+  lag_days: number;
+}
+
 interface ProjectGanttChartProps {
   tasks: GanttTask[];
+  dependencies?: Dependency[];
   projectStart?: string;
   projectEnd?: string;
 }
 
-export default function ProjectGanttChart({ tasks, projectStart, projectEnd }: ProjectGanttChartProps) {
+export default function ProjectGanttChart({ tasks, dependencies = [], projectStart, projectEnd }: ProjectGanttChartProps) {
+  const { criticalTaskIds, taskSlack, criticalPathDuration } = useCriticalPath(tasks, dependencies);
   const { chartStart, chartEnd, dayColumns, taskBars } = useMemo(() => {
     if (!tasks.length) {
       return { chartStart: new Date(), chartEnd: new Date(), dayColumns: [], taskBars: [] };
@@ -76,8 +89,25 @@ export default function ProjectGanttChart({ tasks, projectStart, projectEnd }: P
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Project Timeline</CardTitle>
+        {criticalTaskIds.size > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 text-sm">
+                  <Zap className="h-4 w-4 text-destructive" />
+                  <span className="text-muted-foreground">
+                    Critical Path: <span className="font-semibold text-foreground">{criticalPathDuration} days</span>
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Tasks that cannot be delayed without affecting project completion</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <div className="min-w-[800px]">
@@ -102,36 +132,79 @@ export default function ProjectGanttChart({ tasks, projectStart, projectEnd }: P
 
           {/* Task rows */}
           <div className="space-y-1">
-            {taskBars.map((task) => (
-              <div key={task.id} className="flex items-center border-b hover:bg-muted/30">
-                <div className="w-64 flex-shrink-0 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">{task.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {task.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex-1 relative h-12">
-                  <div
-                    className={cn(
-                      "absolute top-1/2 -translate-y-1/2 h-8 rounded-md flex items-center px-2",
-                      statusColors[task.status] || "bg-gray-500"
-                    )}
-                    style={{
-                      left: `${task.left}%`,
-                      width: `${task.width}%`,
-                    }}
-                  >
-                    {task.progress !== undefined && (
-                      <div className="text-xs text-white font-medium truncate">
-                        {task.progress}%
+            {taskBars.map((task) => {
+              const isCritical = criticalTaskIds.has(task.id);
+              const slack = taskSlack.get(task.id) || 0;
+              
+              return (
+                <TooltipProvider key={task.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={cn(
+                        "flex items-center border-b hover:bg-muted/30 transition-colors",
+                        isCritical && "bg-destructive/5"
+                      )}>
+                        <div className="w-64 flex-shrink-0 px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {isCritical && (
+                              <Zap className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                            )}
+                            <span className={cn(
+                              "text-sm font-medium truncate",
+                              isCritical && "text-destructive"
+                            )}>
+                              {task.name}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {task.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex-1 relative h-12">
+                          <div
+                            className={cn(
+                              "absolute top-1/2 -translate-y-1/2 h-8 rounded-md flex items-center px-2 transition-all",
+                              statusColors[task.status] || "bg-gray-500",
+                              isCritical && "ring-2 ring-destructive ring-offset-1 ring-offset-background shadow-lg"
+                            )}
+                            style={{
+                              left: `${task.left}%`,
+                              width: `${task.width}%`,
+                            }}
+                          >
+                            {task.progress !== undefined && (
+                              <div className="text-xs text-white font-medium truncate">
+                                {task.progress}%
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs">
+                      {isCritical ? (
+                        <div className="space-y-1">
+                          <p className="font-semibold text-destructive flex items-center gap-1">
+                            <Zap className="h-3 w-3" />
+                            Critical Path Task
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            This task cannot be delayed without affecting the project end date
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="font-semibold">Float: {slack} days</p>
+                          <p className="text-xs text-muted-foreground">
+                            This task can be delayed by up to {slack} days without affecting the project
+                          </p>
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })}
           </div>
         </div>
       </CardContent>
