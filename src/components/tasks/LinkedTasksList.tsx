@@ -210,10 +210,26 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
                       {task.assigned.first_name} {task.assigned.last_name}
                     </div>
                   )}
+                  {task.start_date && task.end_date && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(task.start_date), "MMM d")} - {format(new Date(task.end_date), "MMM d, yyyy")}
+                    </div>
+                  )}
+                  {task.estimated_hours && (
+                    <div className="flex items-center gap-1">
+                      <span>{task.estimated_hours}h estimated</span>
+                    </div>
+                  )}
+                  {task.progress_percentage > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span>{task.progress_percentage}% complete</span>
+                    </div>
+                  )}
                   {task.due_date && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {format(new Date(task.due_date), "MMM d, yyyy")}
+                      Due: {format(new Date(task.due_date), "MMM d, yyyy")}
                       {new Date(task.due_date) < new Date() && task.status !== "completed" && (
                         <AlertCircle className="h-3 w-3 text-red-500 ml-1" />
                       )}
@@ -263,6 +279,10 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
             priority: selectedTask.priority,
             assigned_to: selectedTask.assigned_to || undefined,
             due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined,
+            start_date: selectedTask.start_date ? new Date(selectedTask.start_date) : undefined,
+            end_date: selectedTask.end_date ? new Date(selectedTask.end_date) : undefined,
+            estimated_hours: selectedTask.estimated_hours?.toString() || "",
+            progress_percentage: selectedTask.progress_percentage?.toString() || "0",
           }}
           linkedModule={linkedModule}
           linkedRecordId={linkedRecordId}
@@ -278,6 +298,10 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
                 priority: data.priority,
                 assigned_to: data.assigned_to || null,
                 due_date: data.due_date?.toISOString() || null,
+                start_date: data.start_date?.toISOString().split('T')[0] || null,
+                end_date: data.end_date?.toISOString().split('T')[0] || null,
+                estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
+                progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
               })
               .eq("id", selectedTask.id);
 

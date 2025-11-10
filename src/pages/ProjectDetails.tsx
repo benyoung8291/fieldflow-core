@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -152,15 +152,45 @@ export default function ProjectDetails() {
   const completedServiceOrders = serviceOrders?.filter(so => so.status === 'completed').length || 0;
   const budgetVariance = project.budget ? ((project.actual_cost / project.budget) * 100) - 100 : 0;
 
-  // Prepare tasks for Gantt chart (service orders as tasks)
-  const ganttTasks = serviceOrders?.map(so => ({
-    id: so.id,
-    name: so.title,
-    start_date: so.preferred_date || so.created_at,
-    end_date: so.date_range_end || so.preferred_date || so.created_at,
-    status: so.status,
-    progress: 0,
-  })) || [];
+  const { data: tasks } = useQuery({
+    queryKey: ["project-tasks", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks" as any)
+        .select("*")
+        .eq("linked_module", "project")
+        .eq("linked_record_id", id)
+        .order("start_date", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Prepare tasks for Gantt chart - use actual project tasks
+  const ganttTasks = useMemo(() => {
+    if (!tasks || tasks.length === 0) {
+      // Fallback to service orders if no tasks
+      return serviceOrders?.map(so => ({
+        id: so.id,
+        name: so.title,
+        start_date: so.preferred_date || so.created_at,
+        end_date: so.date_range_end || so.preferred_date || so.created_at,
+        status: so.status,
+        progress: 0,
+      })) || [];
+    }
+    
+    // Use project tasks with proper dates
+    return tasks.filter((t: any) => t.start_date && t.end_date).map((task: any) => ({
+      id: task.id,
+      name: task.title,
+      start_date: task.start_date,
+      end_date: task.end_date,
+      status: task.status,
+      progress: task.progress_percentage || 0,
+    }));
+  }, [tasks, serviceOrders]);
 
   return (
     <DashboardLayout>

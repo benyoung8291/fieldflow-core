@@ -2669,6 +2669,51 @@ export type Database = {
         }
         Relationships: []
       }
+      task_dependencies: {
+        Row: {
+          created_at: string | null
+          dependency_type: string
+          depends_on_task_id: string
+          id: string
+          lag_days: number | null
+          task_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_task_id: string
+          id?: string
+          lag_days?: number | null
+          task_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_task_id?: string
+          id?: string
+          lag_days?: number | null
+          task_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_depends_on_task_id_fkey"
+            columns: ["depends_on_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_template_checklist_items: {
         Row: {
           created_at: string
@@ -2745,48 +2790,63 @@ export type Database = {
       }
       tasks: {
         Row: {
+          actual_hours: number | null
           assigned_to: string | null
           completed_at: string | null
           created_at: string | null
           created_by: string
           description: string | null
           due_date: string | null
+          end_date: string | null
+          estimated_hours: number | null
           id: string
           linked_module: string | null
           linked_record_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
+          progress_percentage: number | null
+          start_date: string | null
           status: Database["public"]["Enums"]["task_status"]
           tenant_id: string
           title: string
           updated_at: string | null
         }
         Insert: {
+          actual_hours?: number | null
           assigned_to?: string | null
           completed_at?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
           due_date?: string | null
+          end_date?: string | null
+          estimated_hours?: number | null
           id?: string
           linked_module?: string | null
           linked_record_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
+          progress_percentage?: number | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           tenant_id: string
           title: string
           updated_at?: string | null
         }
         Update: {
+          actual_hours?: number | null
           assigned_to?: string | null
           completed_at?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
           due_date?: string | null
+          end_date?: string | null
+          estimated_hours?: number | null
           id?: string
           linked_module?: string | null
           linked_record_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
+          progress_percentage?: number | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           tenant_id?: string
           title?: string

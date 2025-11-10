@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import TaskComments from "./TaskComments";
 import TaskChecklist from "./TaskChecklist";
+import TaskDependenciesTab from "./TaskDependenciesTab";
 
 interface TaskDialogProps {
   open: boolean;
@@ -35,6 +36,10 @@ export interface TaskFormData {
   priority: string;
   assigned_to: string | undefined;
   due_date: Date | undefined;
+  start_date: Date | undefined;
+  end_date: Date | undefined;
+  estimated_hours: string;
+  progress_percentage: string;
 }
 
 export default function TaskDialog({
@@ -56,6 +61,10 @@ export default function TaskDialog({
     priority: defaultValues?.priority || "medium",
     assigned_to: defaultValues?.assigned_to || undefined,
     due_date: defaultValues?.due_date,
+    start_date: defaultValues?.start_date,
+    end_date: defaultValues?.end_date,
+    estimated_hours: defaultValues?.estimated_hours || "",
+    progress_percentage: defaultValues?.progress_percentage || "0",
   });
 
   // Fetch active task templates
@@ -84,6 +93,10 @@ export default function TaskDialog({
         priority: defaultValues?.priority || "medium",
         assigned_to: defaultValues?.assigned_to || undefined,
         due_date: defaultValues?.due_date,
+        start_date: defaultValues?.start_date,
+        end_date: defaultValues?.end_date,
+        estimated_hours: defaultValues?.estimated_hours || "",
+        progress_percentage: defaultValues?.progress_percentage || "0",
       });
     }
   }, [defaultValues, open]);
@@ -126,8 +139,9 @@ export default function TaskDialog({
         
         {taskId ? (
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Task Details</TabsTrigger>
+              <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
               <TabsTrigger value="checklist">Checklist</TabsTrigger>
               <TabsTrigger value="comments">Comments</TabsTrigger>
             </TabsList>
@@ -193,7 +207,111 @@ export default function TaskDialog({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.start_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.start_date ? format(formData.start_date, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.start_date}
+                      onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label>End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.end_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.end_date ? format(formData.end_date, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.end_date}
+                      onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <Label>Estimated Hours</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  placeholder="0"
+                  value={formData.estimated_hours}
+                  onChange={(e) => setFormData({ ...formData, estimated_hours: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label>Progress (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="0"
+                  value={formData.progress_percentage}
+                  onChange={(e) => setFormData({ ...formData, progress_percentage: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.due_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.due_date ? format(formData.due_date, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.due_date}
+                      onSelect={(date) => setFormData({ ...formData, due_date: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="assigned_to">Assign To</Label>
               <Select
@@ -214,42 +332,6 @@ export default function TaskDialog({
               </Select>
             </div>
 
-            <div>
-              <Label>Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.due_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date ? format(formData.due_date, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date}
-                    onSelect={(date) => setFormData({ ...formData, due_date: date })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-                {linkedModule && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Linked to: <span className="font-medium capitalize">{linkedModule.replace('_', ' ')}</span>
-                      {linkedRecordName && <span className="font-medium"> - {linkedRecordName}</span>}
-                    </p>
-                  </div>
-                )}
-
                 <div className="flex justify-end gap-2 pt-4">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
@@ -259,6 +341,17 @@ export default function TaskDialog({
                   </Button>
                 </div>
               </div>
+            </TabsContent>
+            
+            <TabsContent value="dependencies" className="mt-4">
+              {linkedModule === "project" && linkedRecordId && (
+                <TaskDependenciesTab taskId={taskId} projectId={linkedRecordId} />
+              )}
+              {linkedModule !== "project" && (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Task dependencies are only available for project tasks
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="checklist" className="mt-4">
