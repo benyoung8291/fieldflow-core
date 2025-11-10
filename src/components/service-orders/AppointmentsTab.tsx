@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, MapPin, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, User, MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import TimeLogsTable from "./TimeLogsTable";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppointmentsTabProps {
   serviceOrderId: string;
@@ -18,6 +20,9 @@ const statusColors = {
 };
 
 export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["service-order-appointments", serviceOrderId],
     queryFn: async () => {
@@ -45,6 +50,23 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
       );
       
       return appointmentsWithProfiles;
+    },
+  });
+
+  const updateAppointmentStatusMutation = useMutation({
+    mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: "draft" | "published" | "checked_in" | "completed" | "cancelled" }) => {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status })
+        .eq("id", appointmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-order-appointments", serviceOrderId] });
+      toast({ title: "Appointment status updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating appointment", description: error.message, variant: "destructive" });
     },
   });
 
@@ -101,6 +123,31 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                   {appointment.description && (
                     <p className="text-sm text-muted-foreground">{appointment.description}</p>
                   )}
+                </div>
+                
+                <div className="flex gap-2 ml-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateAppointmentStatusMutation.mutate({
+                      appointmentId: appointment.id,
+                      status: "completed",
+                    })}
+                    title="Complete"
+                  >
+                    <CheckCircle className="h-4 w-4 text-success" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateAppointmentStatusMutation.mutate({
+                      appointmentId: appointment.id,
+                      status: "cancelled",
+                    })}
+                    title="Cancel"
+                  >
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
 

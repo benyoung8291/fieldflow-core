@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
@@ -15,6 +15,27 @@ import AuditTimeline from "@/components/audit/AuditTimeline";
 import AppointmentsTab from "@/components/service-orders/AppointmentsTab";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -40,7 +61,14 @@ const priorityColors = {
 export default function ServiceOrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createAppointmentDialogOpen, setCreateAppointmentDialogOpen] = useState(false);
+  const [appointmentDate, setAppointmentDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [appointmentStartTime, setAppointmentStartTime] = useState("09:00");
+  const [appointmentEndTime, setAppointmentEndTime] = useState("17:00");
+  const [addToInvoiceDialogOpen, setAddToInvoiceDialogOpen] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["service_order", id],
@@ -87,6 +115,136 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  const { data: draftInvoices = [] } = useQuery({
+    queryKey: ["draft_invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, customers(name)")
+        .eq("status", "draft")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async (status: "draft" | "scheduled" | "in_progress" | "completed" | "cancelled") => {
+      const { error } = await supabase
+        .from("service_orders")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+      toast({ title: "Service order status updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating status", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const createAppointmentMutation = useMutation({
+    mutationFn: async () => {
+      const startDateTime = new Date(`${appointmentDate}T${appointmentStartTime}`);
+      const endDateTime = new Date(`${appointmentDate}T${appointmentEndTime}`);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!profile) throw new Error("Profile not found");
+
+      const { error } = await supabase
+        .from("appointments")
+        .insert({
+          title: order?.title || "Appointment",
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          status: "draft" as const,
+          created_by: user.id,
+          tenant_id: profile.tenant_id,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
+      setCreateAppointmentDialogOpen(false);
+      toast({ title: "Appointment created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error creating appointment", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const addToInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!profile) throw new Error("Profile not found");
+
+      const invoiceLineItems = lineItems.map((item: any) => ({
+        invoice_id: invoiceId,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        line_total: item.line_total,
+        source_type: "service_order",
+        source_id: id,
+        line_item_id: item.id,
+        item_order: item.item_order,
+        tenant_id: profile.tenant_id,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("invoice_line_items")
+        .insert(invoiceLineItems);
+      
+      if (insertError) throw insertError;
+
+      const { data: invoice } = await supabase
+        .from("invoices")
+        .select("subtotal, tax_rate")
+        .eq("id", invoiceId)
+        .single();
+
+      const newSubtotal = (invoice?.subtotal || 0) + lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
+      const taxAmount = newSubtotal * ((invoice?.tax_rate || 0) / 100);
+      const totalAmount = newSubtotal + taxAmount;
+
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          subtotal: newSubtotal,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+        })
+        .eq("id", invoiceId);
+      
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      setAddToInvoiceDialogOpen(false);
+      toast({ title: "Service order added to invoice" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error adding to invoice", description: error.message, variant: "destructive" });
+    },
+  });
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -130,10 +288,41 @@ export default function ServiceOrderDetails() {
             <Badge variant="outline" className={priorityColors[order.priority as keyof typeof priorityColors]}>
               {order.priority}
             </Badge>
-            <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-2">
-              <Edit className="h-4 w-4" />
-              Edit
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Order
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("completed")}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete Order
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => updateOrderStatusMutation.mutate("cancelled")}>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel Order
+                </DropdownMenuItem>
+                {order.status === "completed" && order.billing_status !== "billed" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/invoices/create", { state: { serviceOrderId: id } })}>
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Run Billing
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAddToInvoiceDialogOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Add to Draft Invoice
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -314,8 +503,12 @@ export default function ServiceOrderDetails() {
 
           <TabsContent value="appointments">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Appointments & Time Logs</CardTitle>
+                <Button size="sm" onClick={() => setCreateAppointmentDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Appointment
+                </Button>
               </CardHeader>
               <CardContent>
                 <AppointmentsTab serviceOrderId={id!} />
@@ -394,6 +587,85 @@ export default function ServiceOrderDetails() {
         onOpenChange={setDialogOpen}
         orderId={id}
       />
+
+      {/* Create Appointment Dialog */}
+      <AlertDialog open={createAppointmentDialogOpen} onOpenChange={setCreateAppointmentDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Appointment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Create a new appointment for {order?.title}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Time</Label>
+                <Input
+                  type="time"
+                  value={appointmentStartTime}
+                  onChange={(e) => setAppointmentStartTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Time</Label>
+                <Input
+                  type="time"
+                  value={appointmentEndTime}
+                  onChange={(e) => setAppointmentEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => createAppointmentMutation.mutate()}>
+              Create Appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add to Invoice Dialog */}
+      <AlertDialog open={addToInvoiceDialogOpen} onOpenChange={setAddToInvoiceDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add to Existing Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a draft invoice to add this service order's line items to
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Select 
+              onValueChange={(invoiceId) => {
+                addToInvoiceMutation.mutate(invoiceId);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select draft invoice" />
+              </SelectTrigger>
+              <SelectContent>
+                {draftInvoices.map((invoice: any) => (
+                  <SelectItem key={invoice.id} value={invoice.id}>
+                    {invoice.invoice_number} - {invoice.customers?.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
