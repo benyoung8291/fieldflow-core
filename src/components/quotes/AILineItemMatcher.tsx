@@ -38,7 +38,7 @@ export default function AILineItemMatcher({
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('match-quote-items', {
-        body: { lineItemsText, tenantId }
+        body: { lineItemsText }
       });
 
       if (error) throw error;

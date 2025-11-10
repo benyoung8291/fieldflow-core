@@ -1,15 +1,6 @@
 project_id = "puffpjmmuoaecxygrkcm"
 
-[functions.match-quote-items]
-verify_jwt = false
-
 [functions.send-quote-email]
-verify_jwt = false
-
-[functions.send-contract-renewal-notifications]
-verify_jwt = false
-
-[functions.generate-contract-service-orders]
 verify_jwt = false
 
 [functions.suggest-workers]
