@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ const statusColors = {
 export default function TimeLogsTable({ appointmentId }: TimeLogsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin, userRoles } = usePermissions();
+  const canEdit = isAdmin || userRoles?.some((r) => r.role === "supervisor");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
 
@@ -149,7 +152,7 @@ export default function TimeLogsTable({ appointmentId }: TimeLogsTableProps) {
             <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Overhead</th>
             <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Total Cost</th>
             <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Status</th>
-            <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-20"></th>
+            {canEdit && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-20"></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/50">
@@ -243,52 +246,54 @@ export default function TimeLogsTable({ appointmentId }: TimeLogsTableProps) {
                     </Badge>
                   )}
                 </td>
-                <td className="py-2 px-2 text-right">
-                  {isEditing ? (
-                    <div className="flex gap-1 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSave(log.id)}
-                        className="h-6 w-6 p-0"
-                        disabled={updateMutation.isPending}
-                      >
-                        <Save className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCancel}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-1 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(log)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm("Delete this time log?")) {
-                            deleteMutation.mutate(log.id);
-                          }
-                        }}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
-                  )}
-                </td>
+                {canEdit && (
+                  <td className="py-2 px-2 text-right">
+                    {isEditing ? (
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSave(log.id)}
+                          className="h-6 w-6 p-0"
+                          disabled={updateMutation.isPending}
+                        >
+                          <Save className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancel}
+                          className="h-6 w-6 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(log)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm("Delete this time log?")) {
+                              deleteMutation.mutate(log.id);
+                            }
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}

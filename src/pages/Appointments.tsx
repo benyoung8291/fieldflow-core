@@ -274,7 +274,7 @@ export default function Appointments() {
                     <TableRow
                       key={appointment.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/scheduler`)}
+                      onClick={() => navigate(`/appointments/${appointment.id}`)}
                     >
                       <TableCell className="font-medium">{appointment.title}</TableCell>
                       <TableCell>

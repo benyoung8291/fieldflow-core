@@ -59,6 +59,51 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_attachments: {
+        Row: {
+          appointment_id: string
+          category: string | null
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          tenant_id: string
+          uploaded_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          appointment_id: string
+          category?: string | null
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          tenant_id: string
+          uploaded_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          appointment_id?: string
+          category?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          tenant_id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       appointment_templates: {
         Row: {
           created_at: string | null
