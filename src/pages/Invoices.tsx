@@ -111,6 +111,8 @@ export default function Invoices() {
       
       if (ordersError) throw ordersError;
 
+      console.log("Service orders fetched:", ordersData);
+
       // Fetch line items for each service order
       const ordersWithLineItems = await Promise.all(
         (ordersData || []).map(async (order) => {
@@ -120,11 +122,17 @@ export default function Invoices() {
             .eq("service_order_id", order.id)
             .order("item_order");
           
-          if (lineItemsError) throw lineItemsError;
+          if (lineItemsError) {
+            console.error("Error fetching line items for order", order.id, lineItemsError);
+            throw lineItemsError;
+          }
+          
+          console.log(`Line items for ${order.order_number}:`, lineItems);
           return { ...order, service_order_line_items: lineItems };
         })
       );
 
+      console.log("Orders with line items:", ordersWithLineItems);
       return ordersWithLineItems;
     },
     enabled: !!selectedCustomerId,
@@ -370,30 +378,32 @@ export default function Invoices() {
                       </div>
                     ))}
 
-                    {filteredServiceOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className={`p-4 border rounded-lg transition-colors ${
-                          selectedItems.has(`service_order-${order.id}`)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div 
-                            className="flex-1 cursor-pointer"
-                            onClick={() => toggleItemSelection(`service_order-${order.id}`)}
-                          >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
-                                <span className="font-medium text-foreground">{order.title}</span>
-                              </div>
-                              <div className="text-sm text-muted-foreground mt-1">
-                                {order.service_order_line_items?.length || 0} line items
+                    {filteredServiceOrders.map((order) => {
+                      console.log("Rendering service order:", order.order_number, "Line items:", order.service_order_line_items);
+                      return (
+                        <div
+                          key={order.id}
+                          className={`p-4 border rounded-lg transition-colors ${
+                            selectedItems.has(`service_order-${order.id}`)
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div 
+                              className="flex-1 cursor-pointer"
+                              onClick={() => toggleItemSelection(`service_order-${order.id}`)}
+                            >
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
+                                  <span className="font-medium text-foreground">{order.title}</span>
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {order.service_order_line_items?.length || 0} line items
+                                </div>
                               </div>
                             </div>
-                          </div>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -407,7 +417,8 @@ export default function Invoices() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </>
               )}
