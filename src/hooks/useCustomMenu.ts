@@ -39,8 +39,8 @@ const defaultNavigation = [
     color: "#8b5cf6", 
     isFolder: true,
     children: [
-      { name: "Invoices", href: "/invoices", icon: "Receipt", color: "#8b5cf6" },
-      { name: "Recurring Invoices", href: "/recurring-invoices", icon: "RefreshCw", color: "#8b5cf6" },
+      { name: "Invoices", href: "/invoices", icon: "Receipt", color: "#8b5cf6", isFolder: false },
+      { name: "Recurring Invoices", href: "/recurring-invoices", icon: "RefreshCw", color: "#8b5cf6", isFolder: false },
     ]
   },
   { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899", isFolder: false },
@@ -74,7 +74,7 @@ export function useCustomMenu() {
           path: item.href,
           parent_id: null,
           item_order: index,
-          is_folder: item.isFolder || false,
+          is_folder: item.isFolder,
           is_visible: true,
           is_system: true,
           color: item.color,
@@ -82,15 +82,15 @@ export function useCustomMenu() {
         };
 
         // Add children if it's a folder
-        if (item.isFolder && item.children) {
-          menuItem.children = item.children.map((child: any, childIndex: number) => ({
+        if (item.isFolder && (item as any).children) {
+          menuItem.children = (item as any).children.map((child: any, childIndex: number) => ({
             id: child.href,
             label: child.name,
             icon: child.icon,
             path: child.href,
             parent_id: menuItem.id,
             item_order: childIndex,
-            is_folder: false,
+            is_folder: child.isFolder || false,
             is_visible: true,
             is_system: true,
             color: child.color,
