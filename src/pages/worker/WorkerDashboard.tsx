@@ -4,18 +4,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function WorkerDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showInstallBanner, setShowInstallBanner] = useState(true);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
+  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
   useEffect(() => {
     loadUserAndAppointments();
@@ -82,6 +86,26 @@ export default function WorkerDashboard() {
     navigate('/auth');
   };
 
+  const handleInstallClick = async () => {
+    const installed = await promptInstall();
+    if (installed) {
+      toast.success('App installed successfully!');
+      setShowInstallBanner(false);
+    }
+  };
+
+  const dismissInstallBanner = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem('pwa-install-dismissed', 'true');
+  };
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    if (dismissed) {
+      setShowInstallBanner(false);
+    }
+  }, []);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -137,6 +161,55 @@ export default function WorkerDashboard() {
       </header>
 
       <div className="max-w-screen-lg mx-auto p-4 space-y-4">
+        {/* Install App Banner */}
+        {isInstallable && showInstallBanner && !isInstalled && (
+          <Alert className="bg-primary/10 border-primary">
+            <Download className="h-5 w-5 text-primary" />
+            <AlertDescription className="flex items-center justify-between gap-3 ml-2">
+              <div className="flex-1">
+                <p className="font-medium text-primary mb-1">Install Service Pulse</p>
+                <p className="text-sm text-muted-foreground">
+                  Install the app for quick access and offline capabilities
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleInstallClick}
+                  size="sm"
+                  className="whitespace-nowrap"
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Install
+                </Button>
+                <Button
+                  onClick={dismissInstallBanner}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Already Installed Badge */}
+        {isInstalled && (
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle2 className="h-5 w-5" />
+                <div>
+                  <p className="font-medium">App Installed</p>
+                  <p className="text-sm text-green-700">
+                    You're using the installed version of Service Pulse
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Sync Status */}
         {!isOnline && (
           <Card className="bg-yellow-50 border-yellow-200">
