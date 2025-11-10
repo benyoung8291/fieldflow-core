@@ -298,6 +298,18 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  if (isLoading || !order) {
+    return (
+      <DocumentDetailLayout
+        title="Loading..."
+        backPath="/service-orders"
+        tabs={[]}
+        isLoading={isLoading}
+        notFoundMessage={!isLoading && !order ? "Order not found" : undefined}
+      />
+    );
+  }
+
   // Status badges configuration
   const statusBadges: StatusBadge[] = [
     {
