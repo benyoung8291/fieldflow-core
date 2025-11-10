@@ -32,6 +32,7 @@ import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 import Skills from "./pages/Skills";
 import TrainingMatrix from "./pages/TrainingMatrix";
+import Invoices from "./pages/Invoices";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
           <Route path="/pipeline" element={<ProtectedRoute><QuotePipeline /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
