@@ -551,120 +551,139 @@ export default function InvoiceDetails() {
                     </Button>
                   )}
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Work Order</TableHead>
-                      <TableHead>PO</TableHead>
-                      <TableHead>Project Date</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      {invoice.status === "draft" && <TableHead className="w-[100px]"></TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lineItems?.lineItems?.reduce((acc: JSX.Element[], item: any) => {
-                      const sourceKey = `${item.source_type}-${item.source_id}`;
-                      const sourceDoc = lineItems.sourceDocuments?.get(sourceKey);
+                <div className="space-y-4">
+                  {lineItems?.lineItems?.reduce((acc: { groups: Map<string, any[]>, elements: JSX.Element[] }, item: any) => {
+                    const sourceKey = item.source_id ? `${item.source_type}-${item.source_id}` : 'manual';
+                    
+                    if (!acc.groups.has(sourceKey)) {
+                      acc.groups.set(sourceKey, []);
+                    }
+                    acc.groups.get(sourceKey)!.push(item);
+                    
+                    return acc;
+                  }, { groups: new Map(), elements: [] }).groups.size > 0 && (
+                    <>
+                      {Array.from(
+                        lineItems?.lineItems?.reduce((acc: Map<string, any[]>, item: any) => {
+                          const sourceKey = item.source_id ? `${item.source_type}-${item.source_id}` : 'manual';
+                          if (!acc.has(sourceKey)) {
+                            acc.set(sourceKey, []);
+                          }
+                          acc.get(sourceKey)!.push(item);
+                          return acc;
+                        }, new Map()) || new Map()
+                      ).map(([sourceKey, items]) => {
+                        const firstItem = items[0];
+                        const sourceDoc = firstItem.source_id 
+                          ? lineItems.sourceDocuments?.get(sourceKey)
+                          : null;
 
-                      // Add header row if this is the first item from this source
-                      const isFirstFromSource = !acc.some(
-                        (row: any) => row.key?.startsWith(`${sourceKey}-header`)
-                      );
-
-                      if (isFirstFromSource && sourceDoc) {
-                        acc.push(
-                          <TableRow key={`${sourceKey}-header`} className="bg-muted/30 hover:bg-muted/40">
-                            <TableCell 
-                              colSpan={invoice.status === "draft" ? 8 : 7} 
-                              className="font-medium text-sm"
-                            >
-                              <button
-                                onClick={() => {
-                                  setSelectedSourceId(sourceDoc.id);
-                                  if (sourceDoc.type === "project") {
-                                    setProjectDialogOpen(true);
-                                  } else {
-                                    setServiceOrderDialogOpen(true);
-                                  }
-                                }}
-                                className="flex items-center gap-2 hover:text-primary transition-colors group"
-                              >
-                                {sourceDoc.type === "project" ? (
-                                  <>
-                                    <span>Project: {sourceDoc.name}</span>
-                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>{sourceDoc.order_number} - {sourceDoc.title}</span>
-                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </>
-                                )}
-                              </button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }
-
-                      // Add the line item row
-                      acc.push(
-                        <TableRow key={item.id}>
-                          <TableCell>{item.description}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {sourceDoc?.type === "service_order" && sourceDoc.work_order_number
-                              ? sourceDoc.work_order_number
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {sourceDoc?.type === "service_order" && sourceDoc.purchase_order_number
-                              ? sourceDoc.purchase_order_number
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {sourceDoc?.type === "project" && sourceDoc.start_date
-                              ? format(new Date(sourceDoc.start_date), "dd MMM yyyy")
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            ${item.line_total.toFixed(2)}
-                          </TableCell>
-                          {invoice.status === "draft" && (
-                            <TableCell>
-                              <div className="flex items-center gap-1 justify-end">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingItem({ ...item, source_type: item.source_type, source_id: item.source_id })}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                        return (
+                          <div key={sourceKey} className="border rounded-lg p-4 bg-card">
+                            {sourceDoc && (
+                              <div className="mb-3 pb-2 border-b">
+                                <button
                                   onClick={() => {
-                                    setItemToDelete(item.id);
-                                    setDeleteDialogOpen(true);
+                                    setSelectedSourceId(sourceDoc.id);
+                                    if (sourceDoc.type === "project") {
+                                      setProjectDialogOpen(true);
+                                    } else {
+                                      setServiceOrderDialogOpen(true);
+                                    }
                                   }}
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  className="flex items-center gap-2 font-medium text-sm hover:text-primary transition-colors group"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                  {sourceDoc.type === "project" ? (
+                                    <>
+                                      <span>Project: {sourceDoc.name}</span>
+                                      <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>{sourceDoc.order_number} - {sourceDoc.title}</span>
+                                      <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </>
+                                  )}
+                                </button>
                               </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-
-                      return acc;
-                    }, [])}
-                  </TableBody>
-                </Table>
+                            )}
+                            {!sourceDoc && (
+                              <div className="mb-3 pb-2 border-b">
+                                <div className="font-medium text-sm text-muted-foreground">Manual Line Items</div>
+                              </div>
+                            )}
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Description</TableHead>
+                                  <TableHead>Work Order</TableHead>
+                                  <TableHead>PO</TableHead>
+                                  <TableHead>Project Date</TableHead>
+                                  <TableHead className="text-right">Qty</TableHead>
+                                  <TableHead className="text-right">Unit Price</TableHead>
+                                  <TableHead className="text-right">Total</TableHead>
+                                  {invoice.status === "draft" && <TableHead className="w-[100px]"></TableHead>}
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {items.map((item: any) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell>{item.description}</TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {sourceDoc?.type === "service_order" && sourceDoc.work_order_number
+                                        ? sourceDoc.work_order_number
+                                        : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {sourceDoc?.type === "service_order" && sourceDoc.purchase_order_number
+                                        ? sourceDoc.purchase_order_number
+                                        : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {sourceDoc?.type === "project" && sourceDoc.start_date
+                                        ? format(new Date(sourceDoc.start_date), "dd MMM yyyy")
+                                        : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right">{item.quantity}</TableCell>
+                                    <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right font-medium">
+                                      ${item.line_total.toFixed(2)}
+                                    </TableCell>
+                                    {invoice.status === "draft" && (
+                                      <TableCell>
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setEditingItem({ ...item, source_type: item.source_type, source_id: item.source_id })}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                              setItemToDelete(item.id);
+                                              setDeleteDialogOpen(true);
+                                            }}
+                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    )}
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
               </div>
 
               <Separator />
