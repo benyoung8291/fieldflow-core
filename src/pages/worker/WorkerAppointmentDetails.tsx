@@ -323,9 +323,14 @@ export default function WorkerAppointmentDetails() {
         throw updateError;
       }
 
+      // Update local state immediately for instant UI feedback
+      setTimeLog(insertedLog[0]);
+      if (appointment) {
+        setAppointment({ ...appointment, status: 'checked_in' });
+      }
+
       console.log('[Clock In] Clock-in completed successfully!');
       toast.success(`Clocked in successfully at your location!`);
-      loadAppointmentData();
     } catch (error: any) {
       console.error('[Clock In] Error caught:', error);
       
