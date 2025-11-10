@@ -11,8 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, FileText, ExternalLink } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useNavigate } from "react-router-dom";
 
 export default function Invoices() {
+  const navigate = useNavigate();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [viewType, setViewType] = useState<"all" | "projects" | "service_orders">("all");
   const [invoiceDate, setInvoiceDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -209,9 +211,11 @@ export default function Invoices() {
     onSuccess: () => {
       toast.success("Invoice created successfully");
       queryClient.invalidateQueries({ queryKey: ["next-invoice-number"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
       setSelectedItems(new Set());
       setInvoiceNotes("");
       setSelectedCustomerId("");
+      navigate("/invoices");
     },
     onError: (error) => {
       toast.error("Failed to create invoice");

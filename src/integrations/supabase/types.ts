@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_integrations: {
+        Row: {
+          acumatica_company_name: string | null
+          acumatica_instance_url: string | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean
+          last_sync_at: string | null
+          provider: string
+          sync_error: string | null
+          sync_status: string | null
+          tenant_id: string
+          updated_at: string | null
+          xero_tenant_id: string | null
+        }
+        Insert: {
+          acumatica_company_name?: string | null
+          acumatica_instance_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_sync_at?: string | null
+          provider: string
+          sync_error?: string | null
+          sync_status?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          xero_tenant_id?: string | null
+        }
+        Update: {
+          acumatica_company_name?: string | null
+          acumatica_instance_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_sync_at?: string | null
+          provider?: string
+          sync_error?: string | null
+          sync_status?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          xero_tenant_id?: string | null
+        }
+        Relationships: []
+      }
       appointment_templates: {
         Row: {
           created_at: string | null
@@ -663,6 +708,66 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_sync_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          external_reference: string | null
+          id: string
+          integration_id: string
+          invoice_id: string | null
+          request_data: Json | null
+          response_data: Json | null
+          status: string
+          sync_type: string
+          synced_at: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          external_reference?: string | null
+          id?: string
+          integration_id: string
+          invoice_id?: string | null
+          request_data?: Json | null
+          response_data?: Json | null
+          status: string
+          sync_type: string
+          synced_at?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          external_reference?: string | null
+          id?: string
+          integration_id?: string
+          invoice_id?: string | null
+          request_data?: Json | null
+          response_data?: Json | null
+          status?: string
+          sync_type?: string
+          synced_at?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_sync_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_sync_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]

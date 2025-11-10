@@ -23,7 +23,7 @@ import { ChangeLogTab } from "@/components/settings/ChangeLogTab";
 import { TemplatesTab } from "@/components/settings/TemplatesTab";
 import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
 import NumberingTab from "@/components/settings/NumberingTab";
-
+import IntegrationsTab from "@/components/settings/IntegrationsTab";
 import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
 
 interface PayRateCategory {
@@ -170,19 +170,20 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="numbering">Numbering</TabsTrigger>
-            <TabsTrigger value="integrations">Integrations</TabsTrigger>
-            <TabsTrigger value="menu">Menu</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
-            <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-            <TabsTrigger value="changelog">Change Log</TabsTrigger>
-          </TabsList>
+            <TabsList>
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="numbering">Numbering</TabsTrigger>
+              <TabsTrigger value="integrations">Integrations</TabsTrigger>
+              <TabsTrigger value="accounting">Accounting</TabsTrigger>
+              <TabsTrigger value="menu">Menu</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="permissions">Permissions</TabsTrigger>
+              <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
+              <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
+              <TabsTrigger value="changelog">Change Log</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="general">
             <Card>
@@ -202,6 +203,14 @@ export default function Settings() {
 
           <TabsContent value="integrations">
             <ProjectIntegrationTab />
+          </TabsContent>
+
+          <TabsContent value="accounting">
+            <Card>
+              <CardContent className="pt-6">
+                <IntegrationsTab />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="menu">
