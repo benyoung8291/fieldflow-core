@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, ExternalLink } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export default function Invoices() {
@@ -70,7 +70,7 @@ export default function Invoices() {
       if (!selectedCustomerId) return [];
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("*")
+        .select("id, name, original_budget, revised_budget, created_at, customer_id")
         .eq("customer_id", selectedCustomerId)
         .order("created_at", { ascending: false });
       
@@ -83,6 +83,7 @@ export default function Invoices() {
             .from("project_line_items")
             .select("*")
             .eq("project_id", project.id)
+            .is("parent_line_item_id", null)
             .order("item_order");
           
           if (lineItemsError) throw lineItemsError;
@@ -102,7 +103,7 @@ export default function Invoices() {
       if (!selectedCustomerId) return [];
       const { data, error } = await supabase
         .from("service_orders")
-        .select("*")
+        .select("id, order_number, title, created_at, customer_id")
         .eq("customer_id", selectedCustomerId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -296,15 +297,17 @@ export default function Invoices() {
                     {filteredProjects.map((project) => (
                       <div
                         key={project.id}
-                        onClick={() => toggleItemSelection(`project-${project.id}`)}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        className={`p-4 border rounded-lg transition-colors ${
                           selectedItems.has(`project-${project.id}`)
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => toggleItemSelection(`project-${project.id}`)}
+                          >
                             <div className="font-medium text-foreground">{project.name}</div>
                             <div className="text-sm text-muted-foreground mt-1">
                               {project.project_line_items?.length || 0} line items
@@ -313,7 +316,17 @@ export default function Invoices() {
                               ${project.revised_budget || project.original_budget || 0}
                             </div>
                           </div>
-                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/projects/${project.id}`, '_blank');
+                            }}
+                            className="shrink-0"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -321,19 +334,33 @@ export default function Invoices() {
                     {filteredServiceOrders.map((order) => (
                       <div
                         key={order.id}
-                        onClick={() => toggleItemSelection(`service_order-${order.id}`)}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        className={`p-4 border rounded-lg transition-colors ${
                           selectedItems.has(`service_order-${order.id}`)
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="font-medium text-foreground">{order.order_number}</div>
-                            <div className="text-sm text-muted-foreground mt-1">{order.title}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => toggleItemSelection(`service_order-${order.id}`)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
+                              <span className="font-medium text-foreground">{order.title}</span>
+                            </div>
                           </div>
-                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/service-orders/${order.id}`, '_blank');
+                            }}
+                            className="shrink-0"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -390,18 +417,37 @@ export default function Invoices() {
                     No items selected. Choose projects or service orders from the left panel.
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
                     {Array.from(selectedItems).map((itemId) => {
                       const [type, id] = itemId.split("-");
-                      const item = type === "project" 
-                        ? projects?.find(p => p.id === id)
-                        : serviceOrders?.find(so => so.id === id);
                       
-                      return (
-                        <div key={itemId} className="text-sm text-foreground">
-                          • {type === "project" ? (item as any)?.name : (item as any)?.order_number}
-                        </div>
-                      );
+                      if (type === "project") {
+                        const project = projects?.find(p => p.id === id);
+                        return (
+                          <div key={itemId} className="border-l-2 border-primary pl-3 py-1">
+                            <div className="text-xs text-muted-foreground">
+                              Project: {project?.name}
+                            </div>
+                            {project?.project_line_items?.map((lineItem: any) => (
+                              <div key={lineItem.id} className="text-sm text-foreground mt-1">
+                                • {lineItem.description}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      } else {
+                        const order = serviceOrders?.find(so => so.id === id);
+                        return (
+                          <div key={itemId} className="border-l-2 border-primary pl-3 py-1">
+                            <div className="text-xs text-muted-foreground">
+                              {order?.order_number} - {order?.title}
+                            </div>
+                            <div className="text-sm text-foreground mt-1">
+                              • Service order (line items to be configured)
+                            </div>
+                          </div>
+                        );
+                      }
                     })}
                   </div>
                 )}
