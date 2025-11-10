@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,8 @@ import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -36,6 +38,7 @@ import {
   ListChecks,
   TrendingUp,
   History,
+  Save,
 } from "lucide-react";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
@@ -65,6 +68,16 @@ export default function QuoteDetails() {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Inline edit state
+  const [editedFields, setEditedFields] = useState({
+    title: "",
+    description: "",
+    notes: "",
+    terms_conditions: "",
+    internal_notes: "",
+  });
 
   const { data: quote, isLoading } = useQuery({
     queryKey: ["quote", id],
@@ -92,6 +105,19 @@ export default function QuoteDetails() {
       return { ...quoteData, customer, creator };
     },
   });
+
+  // Initialize edited fields when quote loads
+  useEffect(() => {
+    if (quote) {
+      setEditedFields({
+        title: quote.title || "",
+        description: quote.description || "",
+        notes: quote.notes || "",
+        terms_conditions: quote.terms_conditions || "",
+        internal_notes: quote.internal_notes || "",
+      });
+    }
+  }, [quote]);
 
   const { data: lineItems } = useQuery({
     queryKey: ["quote-line-items", id],
@@ -229,6 +255,30 @@ export default function QuoteDetails() {
     }
   };
 
+  const handleSaveInlineEdits = async () => {
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from("quotes")
+        .update(editedFields)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: "Quote saved successfully" });
+      queryClient.invalidateQueries({ queryKey: ["quote", id] });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+    } catch (error: any) {
+      toast({
+        title: "Error saving quote",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     try {
       const { error } = await supabase.from("quotes").delete().eq("id", id);
@@ -262,6 +312,18 @@ export default function QuoteDetails() {
       variant: statusColors[quote?.status || "draft"],
     },
   ];
+
+  const isDraft = quote?.status === "draft";
+
+  // Primary actions - Save button for draft quotes
+  const primaryActions: DocumentAction[] = isDraft ? [
+    {
+      label: isSaving ? "Saving..." : "Save",
+      icon: <Save className="h-4 w-4" />,
+      onClick: handleSaveInlineEdits,
+      variant: "default",
+    },
+  ] : [];
 
   // File menu actions
   const fileMenuActions: FileMenuAction[] = [
@@ -350,12 +412,34 @@ export default function QuoteDetails() {
             <CardTitle>Quote Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {quote.description && (
-              <div>
-                <Label className="text-sm font-medium">Description</Label>
+            <div>
+              <Label className="text-sm font-medium">Title</Label>
+              {isDraft ? (
+                <Input
+                  value={editedFields.title}
+                  onChange={(e) => setEditedFields(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter quote title"
+                  className="mt-1"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">{quote.title}</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">Description</Label>
+              {isDraft ? (
+                <Textarea
+                  value={editedFields.description}
+                  onChange={(e) => setEditedFields(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter quote description"
+                  className="mt-1"
+                  rows={3}
+                />
+              ) : quote.description ? (
                 <p className="text-sm text-muted-foreground mt-1">{quote.description}</p>
-              </div>
-            )}
+              ) : null}
+            </div>
 
             <div>
               <Label className="text-sm font-medium mb-3 block">Line Items & Takeoffs</Label>
@@ -426,23 +510,39 @@ export default function QuoteDetails() {
               </div>
             </div>
 
-            {quote.notes && (
-              <div>
-                <Label className="text-sm font-medium">Notes</Label>
+            <div>
+              <Label className="text-sm font-medium">Notes</Label>
+              {isDraft ? (
+                <Textarea
+                  value={editedFields.notes}
+                  onChange={(e) => setEditedFields(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Enter notes"
+                  className="mt-1"
+                  rows={3}
+                />
+              ) : quote.notes ? (
                 <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                   {quote.notes}
                 </p>
-              </div>
-            )}
+              ) : null}
+            </div>
 
-            {quote.terms_conditions && (
-              <div>
-                <Label className="text-sm font-medium">Terms & Conditions</Label>
+            <div>
+              <Label className="text-sm font-medium">Terms & Conditions</Label>
+              {isDraft ? (
+                <Textarea
+                  value={editedFields.terms_conditions}
+                  onChange={(e) => setEditedFields(prev => ({ ...prev, terms_conditions: e.target.value }))}
+                  placeholder="Enter terms and conditions"
+                  className="mt-1"
+                  rows={3}
+                />
+              ) : quote.terms_conditions ? (
                 <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                   {quote.terms_conditions}
                 </p>
-              </div>
-            )}
+              ) : null}
+            </div>
           </CardContent>
         </Card>
       ),
@@ -587,14 +687,22 @@ export default function QuoteDetails() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
-            {quote.internal_notes && (
-              <div>
-                <Label className="text-sm font-medium">Internal Notes</Label>
+            <div>
+              <Label className="text-sm font-medium">Internal Notes</Label>
+              {isDraft ? (
+                <Textarea
+                  value={editedFields.internal_notes}
+                  onChange={(e) => setEditedFields(prev => ({ ...prev, internal_notes: e.target.value }))}
+                  placeholder="Enter internal notes"
+                  className="mt-1"
+                  rows={3}
+                />
+              ) : quote.internal_notes ? (
                 <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                   {quote.internal_notes}
                 </p>
-              </div>
-            )}
+              ) : null}
+            </div>
 
             {attachments && attachments.length > 0 && (
               <div>
@@ -651,6 +759,7 @@ export default function QuoteDetails() {
         subtitle={`${quote?.quote_number} • ${quote?.customer?.name}`}
         backPath="/quotes"
         statusBadges={statusBadges}
+        primaryActions={primaryActions}
         fileMenuActions={fileMenuActions}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
