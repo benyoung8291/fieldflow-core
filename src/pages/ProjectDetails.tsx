@@ -117,6 +117,64 @@ export default function ProjectDetails() {
     },
   });
 
+  const { data: tasks } = useQuery({
+    queryKey: ["project-tasks", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks" as any)
+        .select("*")
+        .eq("linked_module", "project")
+        .eq("linked_record_id", id)
+        .order("start_date", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!project,
+  });
+
+  const { data: taskDependencies } = useQuery({
+    queryKey: ["task-dependencies", "project", id],
+    queryFn: async () => {
+      if (!tasks?.length) return [];
+      
+      const taskIds = tasks.map((t: any) => t.id);
+      const { data, error } = await supabase
+        .from("task_dependencies")
+        .select("*")
+        .in("task_id", taskIds);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tasks?.length && !!project,
+  });
+
+  // Prepare tasks for Gantt chart - use actual project tasks
+  const ganttTasks = useMemo(() => {
+    if (!tasks || tasks.length === 0) {
+      // Fallback to service orders if no tasks
+      return serviceOrders?.map(so => ({
+        id: so.id,
+        name: so.title,
+        start_date: so.preferred_date || so.created_at,
+        end_date: so.date_range_end || so.preferred_date || so.created_at,
+        status: so.status,
+        progress: 0,
+      })) || [];
+    }
+    
+    // Use project tasks with proper dates
+    return tasks.filter((t: any) => t.start_date && t.end_date).map((task: any) => ({
+      id: task.id,
+      name: task.title,
+      start_date: task.start_date,
+      end_date: task.end_date,
+      status: task.status,
+      progress: task.progress_percentage || 0,
+    }));
+  }, [tasks, serviceOrders]);
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -151,63 +209,6 @@ export default function ProjectDetails() {
   const totalServiceOrders = serviceOrders?.length || 0;
   const completedServiceOrders = serviceOrders?.filter(so => so.status === 'completed').length || 0;
   const budgetVariance = project.budget ? ((project.actual_cost / project.budget) * 100) - 100 : 0;
-
-  const { data: tasks } = useQuery({
-    queryKey: ["project-tasks", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks" as any)
-        .select("*")
-        .eq("linked_module", "project")
-        .eq("linked_record_id", id)
-        .order("start_date", { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: taskDependencies } = useQuery({
-    queryKey: ["task-dependencies", "project", id],
-    queryFn: async () => {
-      if (!tasks?.length) return [];
-      
-      const taskIds = tasks.map((t: any) => t.id);
-      const { data, error } = await supabase
-        .from("task_dependencies")
-        .select("*")
-        .in("task_id", taskIds);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!tasks?.length,
-  });
-
-  // Prepare tasks for Gantt chart - use actual project tasks
-  const ganttTasks = useMemo(() => {
-    if (!tasks || tasks.length === 0) {
-      // Fallback to service orders if no tasks
-      return serviceOrders?.map(so => ({
-        id: so.id,
-        name: so.title,
-        start_date: so.preferred_date || so.created_at,
-        end_date: so.date_range_end || so.preferred_date || so.created_at,
-        status: so.status,
-        progress: 0,
-      })) || [];
-    }
-    
-    // Use project tasks with proper dates
-    return tasks.filter((t: any) => t.start_date && t.end_date).map((task: any) => ({
-      id: task.id,
-      name: task.title,
-      start_date: task.start_date,
-      end_date: task.end_date,
-      status: task.status,
-      progress: task.progress_percentage || 0,
-    }));
-  }, [tasks, serviceOrders]);
 
   return (
     <DashboardLayout>
