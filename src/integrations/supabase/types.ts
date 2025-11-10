@@ -964,6 +964,7 @@ export type Database = {
           invoice_number: string
           is_progress_invoice: boolean | null
           notes: string | null
+          recurring_invoice_id: string | null
           status: string
           subtotal: number
           tax_amount: number
@@ -982,6 +983,7 @@ export type Database = {
           invoice_number: string
           is_progress_invoice?: boolean | null
           notes?: string | null
+          recurring_invoice_id?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -1000,6 +1002,7 @@ export type Database = {
           invoice_number?: string
           is_progress_invoice?: boolean | null
           notes?: string | null
+          recurring_invoice_id?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -1014,6 +1017,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_recurring_invoice_id_fkey"
+            columns: ["recurring_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -2622,6 +2632,116 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recurring_invoice_line_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          item_order: number
+          line_total: number
+          quantity: number
+          recurring_invoice_id: string
+          tenant_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          item_order?: number
+          line_total?: number
+          quantity?: number
+          recurring_invoice_id: string
+          tenant_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          item_order?: number
+          line_total?: number
+          quantity?: number
+          recurring_invoice_id?: string
+          tenant_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_invoice_line_items_recurring_invoice_id_fkey"
+            columns: ["recurring_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_invoices: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          end_date: string | null
+          frequency: string
+          id: string
+          interval_count: number
+          invoice_number_prefix: string
+          is_active: boolean
+          next_invoice_date: string
+          notes: string | null
+          payment_terms: number | null
+          start_date: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          end_date?: string | null
+          frequency: string
+          id?: string
+          interval_count?: number
+          invoice_number_prefix: string
+          is_active?: boolean
+          next_invoice_date: string
+          notes?: string | null
+          payment_terms?: number | null
+          start_date: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          interval_count?: number
+          invoice_number_prefix?: string
+          is_active?: boolean
+          next_invoice_date?: string
+          notes?: string | null
+          payment_terms?: number | null
+          start_date?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       role_permissions: {
         Row: {

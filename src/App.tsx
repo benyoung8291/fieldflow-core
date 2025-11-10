@@ -37,6 +37,8 @@ import TrainingMatrix from "./pages/TrainingMatrix";
 import Invoices from "./pages/Invoices";
 import InvoicesList from "./pages/InvoicesList";
 import InvoiceDetails from "./pages/InvoiceDetails";
+import RecurringInvoices from "./pages/RecurringInvoices";
+import RecurringInvoiceDetails from "./pages/RecurringInvoiceDetails";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +102,8 @@ const App = () => (
           <Route path="/invoices" element={<ProtectedRoute><InvoicesList /></ProtectedRoute>} />
           <Route path="/invoices/create" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
           <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetails /></ProtectedRoute>} />
+          <Route path="/recurring-invoices" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
+          <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
