@@ -3096,7 +3096,7 @@ export type Database = {
             foreignKeyName: "service_orders_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "customers"
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
