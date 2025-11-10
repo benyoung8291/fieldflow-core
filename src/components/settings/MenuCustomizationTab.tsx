@@ -22,6 +22,7 @@ const defaultMenuItems = [
   { label: "Projects", icon: "FolderKanban", path: "/projects" },
   { label: "Service Orders", icon: "Wrench", path: "/service-orders" },
   { label: "Service Contracts", icon: "FileSignature", path: "/service-contracts" },
+  { label: "Appointments", icon: "CalendarClock", path: "/appointments" },
   { label: "Scheduler", icon: "Calendar", path: "/scheduler" },
   { label: "Customers", icon: "Users", path: "/customers" },
   { label: "Leads", icon: "Target", path: "/leads" },
@@ -127,7 +128,7 @@ export default function MenuCustomizationTab() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [selectedColor, setSelectedColor] = useState("#3b82f6");
+  const [selectedColor, setSelectedColor] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -280,7 +281,7 @@ export default function MenuCustomizationTab() {
 
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
-    setSelectedColor(item.color || "#3b82f6");
+    setSelectedColor(item.color || "");
     setIsDialogOpen(true);
   };
 
@@ -351,7 +352,7 @@ export default function MenuCustomizationTab() {
                   onClick={() => {
                     setEditingItem(null);
                     setIsCreatingFolder(false);
-                    setSelectedColor("#3b82f6");
+                    setSelectedColor("");
                     setIsDialogOpen(true);
                   }}
                   variant="outline"
@@ -363,7 +364,7 @@ export default function MenuCustomizationTab() {
                   onClick={() => {
                     setEditingItem(null);
                     setIsCreatingFolder(true);
-                    setSelectedColor("#3b82f6");
+                    setSelectedColor("");
                     setIsDialogOpen(true);
                   }}
                   variant="outline"
@@ -421,8 +422,8 @@ export default function MenuCustomizationTab() {
             </div>
 
             <div>
-              <Label htmlFor="icon">Icon *</Label>
-              <Select name="icon" defaultValue={editingItem?.icon || "Circle"} required>
+              <Label htmlFor="icon">Icon</Label>
+              <Select name="icon" defaultValue={editingItem?.icon || "Circle"}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

@@ -23,7 +23,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return saved === 'true';
   });
   const { menuItems } = useCustomMenu();
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('expandedMenuFolders');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  useEffect(() => {
+    localStorage.setItem('expandedMenuFolders', JSON.stringify(Array.from(expandedFolders)));
+  }, [expandedFolders]);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
@@ -76,7 +83,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
                 </div>
               )}
-              <Icon className="h-5 w-5" style={item.color ? { color: item.color } : undefined} />
+              <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
               {!sidebarCollapsed && item.label}
             </button>
           </div>
@@ -98,7 +105,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
                   >
-                    <ChildIcon className="h-4 w-4" style={child.color ? { color: child.color } : undefined} />
+                    <ChildIcon className="h-4 w-4" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
                     {child.label}
                   </button>
                 );
