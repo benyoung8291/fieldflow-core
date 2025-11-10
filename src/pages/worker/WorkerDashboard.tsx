@@ -49,22 +49,42 @@ export default function WorkerDashboard() {
       // Try to load from network first
       if (isOnline) {
         const today = format(new Date(), 'yyyy-MM-dd');
-        const { data: appointments } = await supabase
-          .from('appointments')
+        
+        // Get worker ID from user ID
+        const { data: workerData } = await supabase
+          .from('workers')
+          .select('id')
+          .eq('id', authUser.id)
+          .single();
+
+        if (!workerData) {
+          console.error('Worker not found');
+          return;
+        }
+
+        // Get appointments through junction table
+        const { data: appointmentWorkers } = await supabase
+          .from('appointment_workers')
           .select(`
-            *,
-            service_order:service_orders(
-              id,
-              work_order_number,
-              customer:customers(name, phone)
+            appointment:appointments(
+              *,
+              service_order:service_orders(
+                id,
+                work_order_number,
+                customer:customers(name, phone)
+              )
             )
           `)
-          .contains('assigned_workers', [authUser.id])
-          .gte('start_time', today)
-          .lt('start_time', `${today}T23:59:59`)
-          .order('start_time');
+          .eq('worker_id', workerData.id)
+          .gte('appointment.start_time', today)
+          .lt('appointment.start_time', `${today}T23:59:59`);
 
-        if (appointments) {
+        if (appointmentWorkers) {
+          const appointments = appointmentWorkers
+            .map((aw: any) => aw.appointment)
+            .filter((apt: any) => apt !== null)
+            .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+          
           setTodayAppointments(appointments);
           await cacheAppointments(appointments);
         }
