@@ -8,32 +8,32 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Enterprise ERP Color System */
+    /* Premrest Brand Color System */
     --background: 0 0% 100%;
-    --foreground: 220 26% 14%;
+    --foreground: 215 25% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 26% 14%;
+    --card-foreground: 215 25% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 26% 14%;
+    --popover-foreground: 215 25% 20%;
 
-    /* Jobber-inspired Green Primary */
-    --primary: 162 73% 46%;
+    /* Premrest Primary Blue */
+    --primary: 215 85% 35%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 162 73% 40%;
+    --primary-hover: 215 85% 30%;
     
-    /* Secondary Accent */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 26% 14%;
-    --secondary-hover: 220 14% 90%;
+    /* Premrest Accent Orange */
+    --secondary: 25 90% 55%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 25 90% 50%;
 
     /* Neutral Grays */
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 215 15% 95%;
+    --muted-foreground: 215 10% 45%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 26% 14%;
+    --accent: 25 90% 55%;
+    --accent-foreground: 0 0% 100%;
 
     /* Status Colors */
     --destructive: 0 84% 60%;
@@ -49,37 +49,37 @@ All colors MUST be HSL.
     --info-foreground: 0 0% 100%;
 
     /* Borders & Inputs */
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 162 73% 46%;
+    --border: 215 15% 88%;
+    --input: 215 15% 88%;
+    --ring: 215 85% 35%;
 
     --radius: 0.75rem;
 
     /* Sidebar */
-    --sidebar-background: 220 26% 14%;
+    --sidebar-background: 215 25% 15%;
     --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 162 73% 46%;
+    --sidebar-primary: 25 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 20%;
+    --sidebar-accent: 215 25% 22%;
     --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 162 73% 46%;
+    --sidebar-border: 215 25% 22%;
+    --sidebar-ring: 25 90% 55%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(162 73% 46%), hsl(162 73% 56%));
-    --gradient-accent: linear-gradient(135deg, hsl(220 14% 96%), hsl(220 14% 90%));
+    --gradient-primary: linear-gradient(135deg, hsl(215 85% 35%), hsl(215 85% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(25 90% 55%), hsl(25 90% 65%));
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(220 26% 14% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(220 26% 14% / 0.08);
-    --shadow-lg: 0 10px 15px -3px hsl(220 26% 14% / 0.1);
+    --shadow-sm: 0 1px 2px 0 hsl(215 25% 20% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 20% / 0.08);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 20% / 0.1);
     
     /* Transitions */
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 215 28% 10%;
+    --background: 215 30% 10%;
     --foreground: 210 20% 98%;
 
     --card: 215 25% 14%;
@@ -88,35 +88,35 @@ All colors MUST be HSL.
     --popover: 215 25% 14%;
     --popover-foreground: 210 20% 98%;
 
-    --primary: 162 73% 52%;
+    --primary: 215 85% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 162 73% 56%;
+    --primary-hover: 215 85% 55%;
 
-    --secondary: 220 14% 20%;
-    --secondary-foreground: 220 14% 96%;
-    --secondary-hover: 220 14% 25%;
+    --secondary: 25 90% 60%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 25 90% 65%;
 
     --muted: 215 20% 20%;
     --muted-foreground: 215 16% 65%;
 
-    --accent: 215 20% 20%;
-    --accent-foreground: 210 20% 98%;
+    --accent: 25 90% 60%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 215 20% 25%;
     --input: 215 20% 25%;
-    --ring: 162 73% 52%;
+    --ring: 215 85% 50%;
 
-    --sidebar-background: 220 28% 8%;
+    --sidebar-background: 215 30% 8%;
     --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 162 73% 52%;
+    --sidebar-primary: 25 90% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 15%;
+    --sidebar-accent: 215 25% 15%;
     --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 220 20% 15%;
-    --sidebar-ring: 162 73% 52%;
+    --sidebar-border: 215 25% 15%;
+    --sidebar-ring: 25 90% 60%;
   }
 }
 

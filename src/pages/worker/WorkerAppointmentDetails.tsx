@@ -55,7 +55,46 @@ export default function WorkerAppointmentDetails() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load appointment
+      // Try to load from cache first if offline
+      if (!isOnline) {
+        console.log('[Offline] Loading from cache...');
+        const { getCachedAppointments } = await import('@/lib/offlineSync');
+        const cached = await getCachedAppointments();
+        const cachedApt = cached.find((apt: any) => apt.id === id);
+        
+        if (cachedApt) {
+          setAppointment(cachedApt);
+          
+          // Load cached time log from IndexedDB
+          const { getDB } = await import('@/lib/offlineSync');
+          const db = await getDB();
+          const timeLogs = await db.getAll('timeEntries');
+          const activeLog = timeLogs.find(
+            (log: any) => 
+              log.appointmentId === id && 
+              log.workerId === user.id && 
+              log.action === 'clock_in'
+          );
+          
+          if (activeLog) {
+            setTimeLog({
+              id: activeLog.timeLogId || activeLog.id,
+              clock_in: activeLog.timestamp,
+              notes: activeLog.notes,
+              worker_id: activeLog.workerId,
+            });
+          }
+          
+          setLoading(false);
+          return;
+        } else {
+          toast.error('Appointment not available offline. Please connect to internet.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Load appointment from network
       const { data: aptData } = await supabase
         .from('appointments')
         .select(`
@@ -71,6 +110,12 @@ export default function WorkerAppointmentDetails() {
         .single();
 
       setAppointment(aptData);
+      
+      // Cache appointment for offline access
+      if (aptData) {
+        const { cacheAppointments } = await import('@/lib/offlineSync');
+        await cacheAppointments([aptData]);
+      }
 
       // Get worker data (worker ID is same as user ID)
       const { data: worker } = await supabase
