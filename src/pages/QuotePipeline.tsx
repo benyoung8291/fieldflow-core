@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { DollarSign, User, Calendar, ExternalLink, Settings } from 'lucide-react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -31,12 +32,20 @@ interface CRMStatus {
   probability_percentage: number;
   color: string;
   display_order: number;
+  pipeline_id: string;
+}
+
+interface Pipeline {
+  id: string;
+  name: string;
+  description: string | null;
 }
 
 export default function QuotePipeline() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeQuote, setActiveQuote] = useState<Quote | null>(null);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -47,19 +56,44 @@ export default function QuotePipeline() {
     })
   );
 
-  // Fetch CRM statuses
-  const { data: crmStatuses = [] } = useQuery<CRMStatus[]>({
-    queryKey: ['crm-statuses'],
+  // Fetch pipelines
+  const { data: pipelines = [] } = useQuery<Pipeline[]>({
+    queryKey: ['crm-pipelines'],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_pipelines')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data as unknown as Pipeline[];
+    },
+  });
+
+  // Set default pipeline when pipelines load
+  if (pipelines.length > 0 && !selectedPipelineId) {
+    const defaultPipeline = pipelines.find(p => p.name === 'Sales Team') || pipelines[0];
+    setSelectedPipelineId(defaultPipeline.id);
+  }
+
+  // Fetch CRM statuses filtered by pipeline
+  const { data: crmStatuses = [] } = useQuery<CRMStatus[]>({
+    queryKey: ['crm-statuses', selectedPipelineId],
+    queryFn: async () => {
+      if (!selectedPipelineId) return [];
+      
       const { data, error } = await supabase
         .from('crm_status_settings' as any)
         .select('*')
         .eq('is_active', true)
+        .eq('pipeline_id', selectedPipelineId)
         .order('display_order');
       
       if (error) throw error;
       return data as unknown as CRMStatus[];
     },
+    enabled: !!selectedPipelineId,
   });
 
   // Fetch quotes
@@ -270,10 +304,24 @@ export default function QuotePipeline() {
             <h1 className="text-3xl font-bold">Quote Pipeline</h1>
             <p className="text-muted-foreground">Drag quotes between stages to update their status</p>
           </div>
-          <Button variant="outline" onClick={() => window.location.href = '/settings'}>
-            <Settings className="mr-2 h-4 w-4" />
-            Configure Stages
-          </Button>
+          <div className="flex items-center gap-3">
+            <Select value={selectedPipelineId || ''} onValueChange={setSelectedPipelineId}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Select pipeline" />
+              </SelectTrigger>
+              <SelectContent>
+                {pipelines.map(pipeline => (
+                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={() => window.location.href = '/settings'}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configure Stages
+            </Button>
+          </div>
         </div>
 
         <DndContext 
