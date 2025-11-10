@@ -108,9 +108,12 @@ export default function TaskDialog({
     if (template) {
       setFormData(prev => ({
         ...prev,
+        title: template.title || prev.title,
+        description: template.description || prev.description,
         priority: template.default_priority,
         status: template.default_status,
-        description: template.description || prev.description,
+        estimated_hours: template.estimated_hours?.toString() || prev.estimated_hours,
+        assigned_to: template.default_assigned_to || prev.assigned_to,
       }));
     }
   };

@@ -3576,6 +3576,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          default_assigned_to: string | null
           default_priority: string
           default_status: string
           description: string | null
@@ -3584,11 +3585,13 @@ export type Database = {
           is_active: boolean
           name: string
           tenant_id: string
+          title: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          default_assigned_to?: string | null
           default_priority?: string
           default_status?: string
           description?: string | null
@@ -3597,11 +3600,13 @@ export type Database = {
           is_active?: boolean
           name: string
           tenant_id: string
+          title?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          default_assigned_to?: string | null
           default_priority?: string
           default_status?: string
           description?: string | null
@@ -3610,9 +3615,25 @@ export type Database = {
           is_active?: boolean
           name?: string
           tenant_id?: string
+          title?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "task_templates_default_assigned_to_fkey"
+            columns: ["default_assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_templates_default_assigned_to_fkey"
+            columns: ["default_assigned_to"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {

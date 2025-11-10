@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 interface TaskTemplateDialogProps {
   open: boolean;
@@ -29,12 +29,28 @@ export default function TaskTemplateDialog({
 }: TaskTemplateDialogProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  
+  // Fetch workers for assignment
+  const { data: workers = [] } = useQuery({
+    queryKey: ["workers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .eq("is_active", true)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
   const [formData, setFormData] = useState({
     name: "",
+    title: "",
     description: "",
     default_priority: "medium",
     default_status: "pending",
     estimated_hours: "",
+    default_assigned_to: "",
     is_active: true,
   });
   const [checklistItems, setChecklistItems] = useState<string[]>([""]);
@@ -43,10 +59,12 @@ export default function TaskTemplateDialog({
     if (template) {
       setFormData({
         name: template.name || "",
+        title: template.title || "",
         description: template.description || "",
         default_priority: template.default_priority || "medium",
         default_status: template.default_status || "pending",
         estimated_hours: template.estimated_hours?.toString() || "",
+        default_assigned_to: template.default_assigned_to || "",
         is_active: template.is_active ?? true,
       });
       setChecklistItems(
@@ -57,10 +75,12 @@ export default function TaskTemplateDialog({
     } else {
       setFormData({
         name: "",
+        title: "",
         description: "",
         default_priority: "medium",
         default_status: "pending",
         estimated_hours: "",
+        default_assigned_to: "",
         is_active: true,
       });
       setChecklistItems([""]);
@@ -86,10 +106,12 @@ export default function TaskTemplateDialog({
       const templateData = {
         tenant_id: profile.tenant_id,
         name: formData.name,
+        title: formData.title || null,
         description: formData.description || null,
         default_priority: formData.default_priority,
         default_status: formData.default_status,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
+        default_assigned_to: formData.default_assigned_to || null,
         is_active: formData.is_active,
         created_by: user.id,
       };
@@ -187,6 +209,16 @@ export default function TaskTemplateDialog({
           </div>
 
           <div>
+            <Label htmlFor="title">Default Task Title</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="e.g., Complete customer onboarding"
+            />
+          </div>
+
+          <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -244,6 +276,26 @@ export default function TaskTemplateDialog({
                 placeholder="0"
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="default_assigned_to">Default Assigned To</Label>
+            <Select
+              value={formData.default_assigned_to || "unassigned"}
+              onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value === "unassigned" ? "" : value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {workers.map((worker: any) => (
+                  <SelectItem key={worker.id} value={worker.id}>
+                    {worker.first_name} {worker.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center gap-2">
