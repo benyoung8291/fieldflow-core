@@ -194,7 +194,7 @@ export default function Tasks() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      const { error } = await supabase.from("tasks" as any).insert({
+      const { data: newTask, error } = await supabase.from("tasks" as any).insert({
         tenant_id: profile.tenant_id,
         title: taskData.title,
         description: taskData.description,
@@ -202,10 +202,34 @@ export default function Tasks() {
         priority: taskData.priority,
         assigned_to: taskData.assigned_to || null,
         due_date: taskData.due_date?.toISOString() || null,
+        start_date: taskData.start_date?.toISOString().split('T')[0] || null,
+        end_date: taskData.end_date?.toISOString().split('T')[0] || null,
+        estimated_hours: taskData.estimated_hours ? parseFloat(taskData.estimated_hours) : null,
+        progress_percentage: taskData.progress_percentage ? parseInt(taskData.progress_percentage) : 0,
         created_by: user.id,
-      });
+      }).select().single();
 
       if (error) throw error;
+      
+      // Apply template checklist if template was selected
+      const templateId = (taskData as any)._templateId;
+      if (templateId && newTask) {
+        const { data: templateItems } = await supabase
+          .from("task_template_checklist_items" as any)
+          .select("*")
+          .eq("template_id", templateId)
+          .order("item_order");
+        
+        if (templateItems && templateItems.length > 0) {
+          const checklistData = templateItems.map((item: any) => ({
+            task_id: (newTask as any).id,
+            title: item.title,
+            item_order: item.item_order,
+          }));
+          
+          await supabase.from("task_checklist_items" as any).insert(checklistData);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
