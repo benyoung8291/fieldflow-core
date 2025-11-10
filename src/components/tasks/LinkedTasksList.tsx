@@ -28,6 +28,9 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
       project: `/projects/${id}`,
       quote: `/quotes/${id}`,
       service_order: `/service-orders/${id}`,
+      appointment: `/appointments/${id}`,
+      invoice: `/invoices/${id}`,
+      contract: `/service-contracts/${id}`,
     };
     return routes[module] || '#';
   };
@@ -49,25 +52,59 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
         if (!task.linked_module || !task.linked_record_id) return task;
         
         let linkedRecordName = null;
+        let documentType = task.linked_module;
         try {
+          let tableName = task.linked_module;
+          let nameField = 'name';
+          
+          // Map module to table and field names
+          if (task.linked_module === 'service_order') {
+            tableName = 'service_orders';
+            nameField = 'title';
+          } else if (task.linked_module === 'quote') {
+            tableName = 'quotes';
+            nameField = 'title';
+          } else if (task.linked_module === 'project') {
+            tableName = 'projects';
+            nameField = 'name';
+          } else if (task.linked_module === 'customer') {
+            tableName = 'customers';
+            nameField = 'name';
+          } else if (task.linked_module === 'lead') {
+            tableName = 'leads';
+            nameField = 'name';
+          } else if (task.linked_module === 'appointment') {
+            tableName = 'appointments';
+            nameField = 'title';
+          } else if (task.linked_module === 'invoice') {
+            tableName = 'invoices';
+            nameField = 'invoice_number';
+          } else if (task.linked_module === 'contract') {
+            tableName = 'service_contracts';
+            nameField = 'name';
+          }
+
           const { data: linkedData } = await supabase
-            .from(task.linked_module === 'customer' ? 'customers' : 
-                  task.linked_module === 'lead' ? 'leads' :
-                  task.linked_module === 'project' ? 'projects' :
-                  task.linked_module === 'quote' ? 'quotes' : 
-                  task.linked_module)
-            .select('name, title')
+            .from(tableName)
+            .select(nameField)
             .eq('id', task.linked_record_id)
             .maybeSingle();
           
           if (linkedData) {
-            linkedRecordName = (linkedData as any)?.name || (linkedData as any)?.title || null;
+            linkedRecordName = (linkedData as any)[nameField] || null;
           }
+
+          // Format document type for display
+          documentType = task.linked_module
+            .replace('_', ' ')
+            .split(' ')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
         } catch (e) {
           console.error('Error fetching linked record:', e);
         }
         
-        return { ...task, linked_record_name: linkedRecordName };
+        return { ...task, linked_record_name: linkedRecordName, document_type: documentType };
       }));
       
       return tasksWithLinks;
@@ -244,7 +281,8 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
                       }}
                     >
                       <ExternalLink className="h-3 w-3" />
-                      Linked to: {task.linked_module.charAt(0).toUpperCase() + task.linked_module.slice(1).replace('_', ' ')} - {task.linked_record_name}
+                      <span className="font-medium">{task.document_type || (task.linked_module.charAt(0).toUpperCase() + task.linked_module.slice(1).replace('_', ' '))}:</span>
+                      <span>{task.linked_record_name}</span>
                     </div>
                   )}
                 </div>

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Mail, Phone, Building2, MapPin, UserPlus, TrendingUp } from "lucide-react";
 import LeadDialog from "@/components/leads/LeadDialog";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -365,6 +367,23 @@ export default function LeadDetails() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Tasks</CardTitle>
+              <CreateTaskButton
+                linkedModule="lead"
+                linkedRecordId={id!}
+                variant="default"
+                size="sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <LinkedTasksList linkedModule="lead" linkedRecordId={id!} />
           </CardContent>
         </Card>
       </div>

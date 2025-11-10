@@ -16,6 +16,8 @@ import AuditTimeline from "@/components/audit/AuditTimeline";
 import AppointmentsTab from "@/components/service-orders/AppointmentsTab";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -563,6 +565,7 @@ export default function ServiceOrderDetails() {
             <TabsTrigger value="items">Line Items ({lineItems.length})</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
@@ -763,6 +766,25 @@ export default function ServiceOrderDetails() {
 
           <TabsContent value="invoices">
             <RelatedInvoicesCard sourceType="service_order" sourceId={id!} />
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Tasks</CardTitle>
+                  <CreateTaskButton
+                    linkedModule="service_order"
+                    linkedRecordId={id!}
+                    variant="default"
+                    size="sm"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <LinkedTasksList linkedModule="service_order" linkedRecordId={id!} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="history">

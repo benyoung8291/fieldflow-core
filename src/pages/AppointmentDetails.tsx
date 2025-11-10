@@ -15,6 +15,8 @@ import { ArrowLeft, Upload, Download, Trash2, Calendar, Clock, MapPin, Users, Fi
 import { format } from "date-fns";
 import { toast } from "sonner";
 import TimeLogsTable from "@/components/service-orders/TimeLogsTable";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { usePermissions } from "@/hooks/usePermissions";
 
 const statusColors = {
@@ -602,6 +604,24 @@ export default function AppointmentDetails() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Tasks */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Tasks</CardTitle>
+                  <CreateTaskButton
+                    linkedModule="appointment"
+                    linkedRecordId={id!}
+                    variant="default"
+                    size="sm"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <LinkedTasksList linkedModule="appointment" linkedRecordId={id!} />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

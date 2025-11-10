@@ -16,6 +16,8 @@ import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ProjectDialog from "@/components/projects/ProjectDialog";
 import AuditTimeline from "@/components/audit/AuditTimeline";
+import CreateTaskButton from "@/components/tasks/CreateTaskButton";
+import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function InvoiceDetails() {
@@ -793,6 +795,23 @@ export default function InvoiceDetails() {
               </CardHeader>
               <CardContent>
                 <AuditTimeline tableName="invoices" recordId={id!} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Tasks</CardTitle>
+                  <CreateTaskButton
+                    linkedModule="invoice"
+                    linkedRecordId={id!}
+                    variant="default"
+                    size="sm"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <LinkedTasksList linkedModule="invoice" linkedRecordId={id!} />
               </CardContent>
             </Card>
           </div>
