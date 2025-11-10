@@ -42,7 +42,7 @@ export default function CRMStatusesTab() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<CRMStatus | null>(null);
-  const [selectedPipeline, setSelectedPipeline] = useState<string>('');
+  const [selectedPipeline, setSelectedPipeline] = useState<string>('all');
   const [formData, setFormData] = useState({
     status: '',
     display_name: '',
@@ -76,7 +76,7 @@ export default function CRMStatusesTab() {
         .select('*, crm_pipelines(name)')
         .order('display_order');
       
-      if (selectedPipeline) {
+      if (selectedPipeline && selectedPipeline !== 'all') {
         query = query.eq('pipeline_id', selectedPipeline);
       }
       
@@ -237,7 +237,7 @@ export default function CRMStatusesTab() {
               <SelectValue placeholder="All Pipelines" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Pipelines</SelectItem>
+              <SelectItem value="all">All Pipelines</SelectItem>
               {pipelines.map((pipeline: any) => (
                 <SelectItem key={pipeline.id} value={pipeline.id}>
                   {pipeline.name}
