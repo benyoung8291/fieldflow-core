@@ -1536,6 +1536,7 @@ export type Database = {
           actual_hours: number | null
           assigned_to: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           end_date: string | null
           estimated_hours: number | null
@@ -1552,6 +1553,7 @@ export type Database = {
           actual_hours?: number | null
           assigned_to?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           end_date?: string | null
           estimated_hours?: number | null
@@ -1568,6 +1570,7 @@ export type Database = {
           actual_hours?: number | null
           assigned_to?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           end_date?: string | null
           estimated_hours?: number | null
