@@ -48,6 +48,7 @@ import SupervisorDashboard from "./pages/worker/supervisor/SupervisorDashboard";
 import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashboard";
 import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
 import SupervisorServiceOrders from "./pages/worker/supervisor/SupervisorServiceOrders";
+import { usePWAUpdate } from "./hooks/usePWAUpdate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +83,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
+  // Initialize PWA update functionality
+  usePWAUpdate();
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
