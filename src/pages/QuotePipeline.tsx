@@ -121,19 +121,49 @@ export default function QuotePipeline() {
     queryFn: async () => {
       if (!selectedPipelineId) return [];
       
-      const { data, error } = await supabase
+      const { data: quotesData, error } = await supabase
         .from('quotes')
-        .select(`
-          *,
-          customer:customers(name),
-          lead:leads(name),
-          quote_owner:profiles!quote_owner(first_name, last_name)
-        `)
+        .select('*')
         .eq('pipeline_id', selectedPipelineId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as unknown as Quote[];
+      if (!quotesData || quotesData.length === 0) return [];
+
+      // Fetch related data separately
+      const customerIds = quotesData.filter(q => q.customer_id).map(q => q.customer_id);
+      const leadIds = quotesData.filter(q => q.lead_id).map(q => q.lead_id);
+      const ownerIds = quotesData.filter(q => q.created_by).map(q => q.created_by);
+
+      const [customersRes, leadsRes, ownersRes] = await Promise.all([
+        customerIds.length > 0 
+          ? supabase.from('customers').select('id, name').in('id', customerIds)
+          : Promise.resolve({ data: [], error: null }),
+        leadIds.length > 0
+          ? supabase.from('leads').select('id, name').in('id', leadIds)
+          : Promise.resolve({ data: [], error: null }),
+        ownerIds.length > 0
+          ? supabase.from('profiles').select('id, first_name, last_name').in('id', ownerIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      // Map customers, leads, and owners to quotes
+      const customersMap = new Map(
+        (customersRes.data || []).map(c => [c.id, c] as [string, any])
+      );
+      const leadsMap = new Map(
+        (leadsRes.data || []).map(l => [l.id, l] as [string, any])
+      );
+      const ownersMap = new Map(
+        (ownersRes.data || []).map(o => [o.id, o] as [string, any])
+      );
+
+      return quotesData.map(quote => ({
+        ...quote,
+        customer: quote.customer_id ? customersMap.get(quote.customer_id) : null,
+        lead: quote.lead_id ? leadsMap.get(quote.lead_id) : null,
+        quote_owner: quote.created_by ? ownersMap.get(quote.created_by) : null,
+      })) as unknown as Quote[];
     },
     enabled: !!selectedPipelineId,
   });
