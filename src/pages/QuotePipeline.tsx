@@ -8,9 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { DollarSign, User, Calendar, ExternalLink, Settings } from 'lucide-react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DollarSign, User, Calendar, ExternalLink, Settings, Eye } from 'lucide-react';
+import { 
+  DndContext, 
+  DragEndEvent, 
+  DragOverlay, 
+  DragStartEvent, 
+  PointerSensor, 
+  TouchSensor,
+  useSensor, 
+  useSensors 
+} from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
+import QuoteQuickViewDialog from '@/components/quotes/QuoteQuickViewDialog';
 
 interface Quote {
   id: string;
@@ -47,12 +57,20 @@ export default function QuotePipeline() {
   const queryClient = useQueryClient();
   const [activeQuote, setActiveQuote] = useState<Quote | null>(null);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+  const [quickViewQuoteId, setQuickViewQuoteId] = useState<string | null>(null);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
-  // Drag and drop sensors
+  // Drag and drop sensors with mobile support
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -179,6 +197,11 @@ export default function QuotePipeline() {
     setActiveQuote(null);
   };
 
+  const handleQuickView = (quoteId: string) => {
+    setQuickViewQuoteId(quoteId);
+    setQuickViewOpen(true);
+  };
+
   const QuoteCard = ({ quote, isDragging = false }: { quote: Quote; isDragging?: boolean }) => {
     const customerName = quote.customer?.name || quote.lead?.name || 'Unknown';
     const ownerName = quote.quote_owner 
@@ -189,7 +212,7 @@ export default function QuotePipeline() {
       <Card 
         className={cn(
           "mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
-          isDragging && "opacity-50"
+          isDragging && "opacity-50 rotate-3 shadow-lg"
         )}
       >
         <CardContent className="p-4 space-y-2">
@@ -226,15 +249,26 @@ export default function QuotePipeline() {
             </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full"
-            onClick={() => window.open(`/quotes/${quote.id}`, '_blank')}
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            View Details
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={() => handleQuickView(quote.id)}
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Quick View
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={() => window.open(`/quotes/${quote.id}`, '_blank')}
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Full Details
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -339,11 +373,21 @@ export default function QuotePipeline() {
             ))}
           </div>
 
-          <DragOverlay>
-            {activeQuote && <QuoteCard quote={activeQuote} isDragging />}
+          <DragOverlay dropAnimation={null}>
+            {activeQuote && (
+              <div className="animate-fade-in" style={{ cursor: 'grabbing' }}>
+                <QuoteCard quote={activeQuote} isDragging />
+              </div>
+            )}
           </DragOverlay>
         </DndContext>
       </div>
+
+      <QuoteQuickViewDialog
+        quoteId={quickViewQuoteId}
+        open={quickViewOpen}
+        onOpenChange={setQuickViewOpen}
+      />
     </DashboardLayout>
   );
 }
