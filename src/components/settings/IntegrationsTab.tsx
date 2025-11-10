@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Key, CheckCircle2 } from "lucide-react";
 
 export default function IntegrationsTab() {
   const queryClient = useQueryClient();
@@ -15,9 +16,11 @@ export default function IntegrationsTab() {
   const [acumaticaEnabled, setAcumaticaEnabled] = useState(false);
   const [acumaticaUrl, setAcumaticaUrl] = useState("");
   const [acumaticaCompany, setAcumaticaCompany] = useState("");
+  const [acumaticaCredentialsSet, setAcumaticaCredentialsSet] = useState(false);
   
   const [xeroEnabled, setXeroEnabled] = useState(false);
   const [xeroTenantId, setXeroTenantId] = useState("");
+  const [xeroCredentialsSet, setXeroCredentialsSet] = useState(false);
 
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["accounting-integrations"],
@@ -42,9 +45,48 @@ export default function IntegrationsTab() {
         setXeroTenantId(xero.xero_tenant_id || "");
       }
 
+      // Check if credentials are set (we'll check for non-empty secrets)
+      checkCredentialsStatus();
+
       return data;
     },
   });
+
+  const checkCredentialsStatus = async () => {
+    try {
+      // Test if Acumatica credentials exist by checking edge function
+      const acumaticaTest = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-acumatica-credentials`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+        }
+      );
+      if (acumaticaTest.ok) {
+        const result = await acumaticaTest.json();
+        setAcumaticaCredentialsSet(result.configured || false);
+      }
+
+      // Test if Xero credentials exist
+      const xeroTest = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-xero-credentials`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+        }
+      );
+      if (xeroTest.ok) {
+        const result = await xeroTest.json();
+        setXeroCredentialsSet(result.configured || false);
+      }
+    } catch (error) {
+      console.error("Error checking credentials status:", error);
+    }
+  };
 
   const saveAcumaticaMutation = useMutation({
     mutationFn: async () => {
@@ -174,18 +216,29 @@ export default function IntegrationsTab() {
               disabled={!acumaticaEnabled}
             />
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              API credentials (Username and Password) are stored securely and configured separately.
-            </p>
+          <div className="space-y-3">
+            <Alert>
+              <Key className="h-4 w-4" />
+              <AlertDescription>
+                API credentials (Username and Password) are stored securely in encrypted storage.
+                {acumaticaCredentialsSet && (
+                  <span className="flex items-center gap-2 mt-2 text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Credentials configured
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
           </div>
-          <Button
-            onClick={() => saveAcumaticaMutation.mutate()}
-            disabled={saveAcumaticaMutation.isPending || !acumaticaEnabled}
-          >
-            {saveAcumaticaMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save MYOB Acumatica Settings
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => saveAcumaticaMutation.mutate()}
+              disabled={saveAcumaticaMutation.isPending || !acumaticaEnabled}
+            >
+              {saveAcumaticaMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -219,18 +272,29 @@ export default function IntegrationsTab() {
               Your Xero organization tenant ID
             </p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              OAuth credentials (Client ID and Client Secret) are stored securely and configured separately.
-            </p>
+          <div className="space-y-3">
+            <Alert>
+              <Key className="h-4 w-4" />
+              <AlertDescription>
+                OAuth credentials (Client ID, Client Secret, Refresh Token) are stored securely in encrypted storage.
+                {xeroCredentialsSet && (
+                  <span className="flex items-center gap-2 mt-2 text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Credentials configured
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
           </div>
-          <Button
-            onClick={() => saveXeroMutation.mutate()}
-            disabled={saveXeroMutation.isPending || !xeroEnabled}
-          >
-            {saveXeroMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Xero Settings
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => saveXeroMutation.mutate()}
+              disabled={saveXeroMutation.isPending || !xeroEnabled}
+            >
+              {saveXeroMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
