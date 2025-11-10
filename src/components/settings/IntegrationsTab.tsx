@@ -16,10 +16,15 @@ export default function IntegrationsTab() {
   const [acumaticaEnabled, setAcumaticaEnabled] = useState(false);
   const [acumaticaUrl, setAcumaticaUrl] = useState("");
   const [acumaticaCompany, setAcumaticaCompany] = useState("");
+  const [acumaticaUsername, setAcumaticaUsername] = useState("");
+  const [acumaticaPassword, setAcumaticaPassword] = useState("");
   const [acumaticaCredentialsSet, setAcumaticaCredentialsSet] = useState(false);
   
   const [xeroEnabled, setXeroEnabled] = useState(false);
   const [xeroTenantId, setXeroTenantId] = useState("");
+  const [xeroClientId, setXeroClientId] = useState("");
+  const [xeroClientSecret, setXeroClientSecret] = useState("");
+  const [xeroRefreshToken, setXeroRefreshToken] = useState("");
   const [xeroCredentialsSet, setXeroCredentialsSet] = useState(false);
 
   const { data: integrations, isLoading } = useQuery({
@@ -101,6 +106,7 @@ export default function IntegrationsTab() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
+      // Save settings to database
       const { error } = await supabase
         .from("accounting_integrations")
         .upsert({
@@ -114,6 +120,33 @@ export default function IntegrationsTab() {
         });
 
       if (error) throw error;
+
+      // Save credentials if provided
+      if (acumaticaUsername && acumaticaPassword) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const credentialsResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-acumatica-credentials`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: acumaticaUsername,
+              password: acumaticaPassword,
+            }),
+          }
+        );
+
+        if (!credentialsResponse.ok) {
+          throw new Error("Failed to save credentials");
+        }
+
+        setAcumaticaUsername("");
+        setAcumaticaPassword("");
+        setAcumaticaCredentialsSet(true);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
@@ -137,6 +170,7 @@ export default function IntegrationsTab() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
+      // Save settings to database
       const { error } = await supabase
         .from("accounting_integrations")
         .upsert({
@@ -149,6 +183,35 @@ export default function IntegrationsTab() {
         });
 
       if (error) throw error;
+
+      // Save credentials if provided
+      if (xeroClientId && xeroClientSecret && xeroRefreshToken) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const credentialsResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-xero-credentials`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              clientId: xeroClientId,
+              clientSecret: xeroClientSecret,
+              refreshToken: xeroRefreshToken,
+            }),
+          }
+        );
+
+        if (!credentialsResponse.ok) {
+          throw new Error("Failed to save credentials");
+        }
+
+        setXeroClientId("");
+        setXeroClientSecret("");
+        setXeroRefreshToken("");
+        setXeroCredentialsSet(true);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
@@ -217,10 +280,32 @@ export default function IntegrationsTab() {
             />
           </div>
           <div className="space-y-3">
+            <div>
+              <Label htmlFor="acumatica-username">API Username</Label>
+              <Input
+                id="acumatica-username"
+                type="text"
+                value={acumaticaUsername}
+                onChange={(e) => setAcumaticaUsername(e.target.value)}
+                placeholder="Enter API username"
+                disabled={!acumaticaEnabled}
+              />
+            </div>
+            <div>
+              <Label htmlFor="acumatica-password">API Password</Label>
+              <Input
+                id="acumatica-password"
+                type="password"
+                value={acumaticaPassword}
+                onChange={(e) => setAcumaticaPassword(e.target.value)}
+                placeholder="Enter API password"
+                disabled={!acumaticaEnabled}
+              />
+            </div>
             <Alert>
               <Key className="h-4 w-4" />
               <AlertDescription>
-                API credentials (Username and Password) are stored securely in encrypted storage.
+                API credentials are stored securely in encrypted storage and never exposed.
                 {acumaticaCredentialsSet && (
                   <span className="flex items-center gap-2 mt-2 text-green-600">
                     <CheckCircle2 className="h-4 w-4" />
@@ -273,10 +358,43 @@ export default function IntegrationsTab() {
             </p>
           </div>
           <div className="space-y-3">
+            <div>
+              <Label htmlFor="xero-client-id">Client ID</Label>
+              <Input
+                id="xero-client-id"
+                type="text"
+                value={xeroClientId}
+                onChange={(e) => setXeroClientId(e.target.value)}
+                placeholder="Enter OAuth client ID"
+                disabled={!xeroEnabled}
+              />
+            </div>
+            <div>
+              <Label htmlFor="xero-client-secret">Client Secret</Label>
+              <Input
+                id="xero-client-secret"
+                type="password"
+                value={xeroClientSecret}
+                onChange={(e) => setXeroClientSecret(e.target.value)}
+                placeholder="Enter OAuth client secret"
+                disabled={!xeroEnabled}
+              />
+            </div>
+            <div>
+              <Label htmlFor="xero-refresh-token">Refresh Token</Label>
+              <Input
+                id="xero-refresh-token"
+                type="password"
+                value={xeroRefreshToken}
+                onChange={(e) => setXeroRefreshToken(e.target.value)}
+                placeholder="Enter OAuth refresh token"
+                disabled={!xeroEnabled}
+              />
+            </div>
             <Alert>
               <Key className="h-4 w-4" />
               <AlertDescription>
-                OAuth credentials (Client ID, Client Secret, Refresh Token) are stored securely in encrypted storage.
+                OAuth credentials are stored securely in encrypted storage and never exposed.
                 {xeroCredentialsSet && (
                   <span className="flex items-center gap-2 mt-2 text-green-600">
                     <CheckCircle2 className="h-4 w-4" />
