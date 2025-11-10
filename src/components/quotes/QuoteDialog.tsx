@@ -603,14 +603,28 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       }
 
       // Get user's tenant_id
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("tenant_id")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+        toast({ 
+          title: "Error fetching profile", 
+          description: profileError.message,
+          variant: "destructive" 
+        });
+        return;
+      }
 
       if (!profile?.tenant_id) {
-        toast({ title: "No tenant found", variant: "destructive" });
+        toast({ 
+          title: "No tenant found", 
+          description: "Your account is not associated with a tenant",
+          variant: "destructive" 
+        });
         return;
       }
 
