@@ -20,7 +20,7 @@ import ProjectFinanceTab from "@/components/projects/ProjectFinanceTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
-import { CardDescription } from "@/components/ui/card";
+import ProjectTasksGrid from "@/components/projects/ProjectTasksGrid";
 import { format } from "date-fns";
 
 export default function ProjectDetails() {
@@ -383,52 +383,7 @@ export default function ProjectDetails() {
           </TabsContent>
 
           <TabsContent value="tasks">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Project Tasks</CardTitle>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Task
-                  </Button>
-                </div>
-                <CardDescription>
-                  Tasks specific to this project that appear on the Gantt chart
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {tasks && tasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {tasks.map((task: any) => (
-                      <Card key={task.id}>
-                        <CardContent className="py-4">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{task.title}</p>
-                                <Badge variant="outline">{task.status}</Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(task.start_date), "MMM d, yyyy")} - {format(new Date(task.end_date), "MMM d, yyyy")}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm text-muted-foreground">
-                                Progress: {task.progress_percentage}%
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center text-muted-foreground">
-                    No tasks yet. Add tasks to appear on the Gantt chart.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ProjectTasksGrid projectId={id!} />
           </TabsContent>
 
           <TabsContent value="gantt">
