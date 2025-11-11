@@ -15,11 +15,13 @@ serve(async (req) => {
       throw new Error("Microsoft credentials not configured");
     }
 
-    // Microsoft Graph API OAuth scopes
+    // Microsoft Graph API OAuth scopes - includes shared mailbox access
     const scopes = [
       "https://graph.microsoft.com/Mail.Read",
       "https://graph.microsoft.com/Mail.ReadWrite",
+      "https://graph.microsoft.com/Mail.ReadWrite.Shared",
       "https://graph.microsoft.com/Mail.Send",
+      "https://graph.microsoft.com/Mail.Send.Shared",
       "https://graph.microsoft.com/User.Read",
       "offline_access"
     ].join(" ");

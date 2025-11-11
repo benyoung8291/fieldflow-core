@@ -34,12 +34,62 @@ serve(async (req) => {
 
     console.log("📬 Fetching emails for:", emailAccount.email_address);
 
+    // Check if token needs refresh
+    let accessToken = emailAccount.microsoft_access_token;
+    const tokenExpiresAt = new Date(emailAccount.microsoft_token_expires_at);
+    const now = new Date();
+
+    if (tokenExpiresAt <= now) {
+      console.log("🔄 Access token expired, refreshing...");
+      
+      // Refresh the token
+      const tokenResponse = await fetch(
+        `https://login.microsoftonline.com/${Deno.env.get("MICROSOFT_TENANT_ID")}/oauth2/v2.0/token`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            client_id: Deno.env.get("MICROSOFT_CLIENT_ID")!,
+            client_secret: Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
+            grant_type: "refresh_token",
+            refresh_token: emailAccount.microsoft_refresh_token,
+            scope: "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.ReadWrite https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/User.Read offline_access",
+          }),
+        }
+      );
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error("Failed to refresh token:", errorText);
+        throw new Error("Failed to refresh access token");
+      }
+
+      const tokenData = await tokenResponse.json();
+      accessToken = tokenData.access_token;
+
+      // Update the token in the database
+      await supabase
+        .from("helpdesk_email_accounts")
+        .update({
+          microsoft_access_token: tokenData.access_token,
+          microsoft_refresh_token: tokenData.refresh_token,
+          microsoft_token_expires_at: new Date(
+            Date.now() + tokenData.expires_in * 1000
+          ).toISOString(),
+        })
+        .eq("id", emailAccountId);
+
+      console.log("✅ Token refreshed successfully");
+    }
+
     // Fetch emails from Microsoft Graph API
     const messagesResponse = await fetch(
       `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,bodyPreview,body,isRead,conversationId`,
       {
         headers: {
-          Authorization: `Bearer ${emailAccount.microsoft_access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       }
     );
@@ -47,6 +97,16 @@ serve(async (req) => {
     if (!messagesResponse.ok) {
       const errorText = await messagesResponse.text();
       console.error("Failed to fetch messages:", errorText);
+      
+      // Update sync error
+      await supabase
+        .from("helpdesk_email_accounts")
+        .update({
+          sync_status: "error",
+          sync_error: `Failed to fetch emails: ${errorText}`,
+        })
+        .eq("id", emailAccountId);
+      
       throw new Error("Failed to fetch emails from Microsoft");
     }
 
