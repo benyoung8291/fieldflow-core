@@ -147,10 +147,20 @@ export function HelpDeskEmailAccountDialog({
     }
   };
 
-  // Handle OAuth callback message
+  // Handle OAuth callback message - set up BEFORE opening the dialog
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      if (event.data.accessToken && event.data.refreshToken) {
+      console.log("Message received:", event.data);
+      
+      // Check if this is our OAuth callback message
+      if (event.data && event.data.accessToken && event.data.refreshToken && event.data.email) {
+        console.log("OAuth callback data received:", {
+          email: event.data.email,
+          hasAccessToken: !!event.data.accessToken,
+          hasRefreshToken: !!event.data.refreshToken,
+          expiresIn: event.data.expiresIn,
+        });
+        
         const oauthInfo = {
           accessToken: event.data.accessToken,
           refreshToken: event.data.refreshToken,
@@ -167,16 +177,26 @@ export function HelpDeskEmailAccountDialog({
         });
 
         // Fetch user profile and available mailboxes
-        await fetchMailboxes(
-          event.data.accessToken,
-          event.data.email,
-          event.data.email
-        );
+        try {
+          await fetchMailboxes(
+            event.data.accessToken,
+            event.data.email,
+            event.data.email
+          );
+        } catch (error) {
+          console.error("Error fetching mailboxes:", error);
+        }
       }
     };
 
+    // Add listener as soon as component mounts
+    console.log("Setting up message listener");
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    
+    return () => {
+      console.log("Removing message listener");
+      window.removeEventListener("message", handleMessage);
+    };
   }, [toast]);
 
   // Populate form when account is provided
@@ -203,9 +223,17 @@ export function HelpDeskEmailAccountDialog({
   const handleMicrosoftAuth = async () => {
     try {
       setIsAuthenticating(true);
+      
+      console.log("Starting Microsoft OAuth...");
+      
       const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error from oauth-authorize:", error);
+        throw error;
+      }
+      
+      console.log("Got auth URL, opening popup...");
       
       // Open OAuth popup
       const width = 500;
@@ -213,15 +241,22 @@ export function HelpDeskEmailAccountDialog({
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
       
-      window.open(
+      const popup = window.open(
         data.authUrl,
         "Microsoft Sign In",
         `width=${width},height=${height},left=${left},top=${top}`
       );
+      
+      if (!popup) {
+        throw new Error("Popup was blocked. Please allow popups for this site.");
+      }
+      
+      console.log("Popup opened successfully");
     } catch (error) {
       console.error("Error starting Microsoft auth:", error);
       toast({
         title: "Failed to start Microsoft authentication",
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
       setIsAuthenticating(false);
