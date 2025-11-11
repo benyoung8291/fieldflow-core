@@ -21,6 +21,8 @@ import { Calendar, Clock, DollarSign, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -41,7 +43,7 @@ export default function Appointments() {
   const [sortField, setSortField] = useState<SortField>("start_time");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-  const { data: appointments = [], isLoading } = useQuery({
+  const { data: appointments = [], isLoading, refetch } = useQuery({
     queryKey: ["all-appointments"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -121,6 +123,12 @@ export default function Appointments() {
     },
   });
 
+  const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+    },
+  });
+
   // Filter appointments
   const filteredAppointments = appointments.filter((apt: any) => {
     const matchesSearch = 
@@ -176,7 +184,14 @@ export default function Appointments() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div ref={containerRef} className="relative h-full overflow-y-auto">
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          pullDistance={pullDistance}
+          threshold={threshold}
+        />
+        <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Appointments</h1>
           <p className="text-muted-foreground">View and manage all appointments</p>
@@ -360,6 +375,7 @@ export default function Appointments() {
             </CardContent>
           </Card>
         )}
+      </div>
       </div>
     </DashboardLayout>
   );

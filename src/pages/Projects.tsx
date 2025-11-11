@@ -13,6 +13,8 @@ import ProjectDialog from "@/components/projects/ProjectDialog";
 import { format } from "date-fns";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ export default function Projects() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
 
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -52,6 +54,12 @@ export default function Projects() {
     },
   });
 
+  const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+    },
+  });
+
   const filteredProjects = projects?.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.customer?.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -72,7 +80,14 @@ export default function Projects() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div ref={containerRef} className="relative h-full overflow-y-auto">
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          pullDistance={pullDistance}
+          threshold={threshold}
+        />
+        <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
@@ -195,6 +210,7 @@ export default function Projects() {
             ))}
           </div>
         )}
+      </div>
       </div>
 
       <ProjectDialog

@@ -13,6 +13,8 @@ import { format } from "date-fns";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 
 export default function InvoicesList() {
   const navigate = useNavigate();
@@ -20,7 +22,7 @@ export default function InvoicesList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoices, isLoading, refetch } = useQuery({
     queryKey: ["invoices", statusFilter],
     queryFn: async () => {
       let query = supabase
@@ -41,6 +43,12 @@ export default function InvoicesList() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
     },
   });
 
@@ -65,7 +73,14 @@ export default function InvoicesList() {
 
   return (
     <DashboardLayout>
-      <div className="p-8">
+      <div ref={containerRef} className="relative h-full overflow-y-auto">
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          pullDistance={pullDistance}
+          threshold={threshold}
+        />
+        <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Invoices</h1>
@@ -174,6 +189,7 @@ export default function InvoicesList() {
             </Table>
           </div>
         )}
+      </div>
       </div>
     </DashboardLayout>
   );
