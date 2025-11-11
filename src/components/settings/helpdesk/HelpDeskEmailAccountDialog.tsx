@@ -88,28 +88,42 @@ export function HelpDeskEmailAccountDialog({
   const fetchMailboxes = useCallback(async (accessToken: string, userEmail: string, userName: string) => {
     setIsFetchingMailboxes(true);
     try {
-      // Just use the authenticated user's mailbox (don't fetch settings which requires extra permissions)
-      const mailboxes: Array<{ email: string; displayName: string; type: string }> = [
+      console.log("📬 Fetching available mailboxes including shared mailboxes...");
+      
+      // Call the edge function to get mailboxes (including shared)
+      const { data, error } = await supabase.functions.invoke("microsoft-list-mailboxes", {
+        body: { accessToken }
+      });
+
+      if (error) {
+        console.error("Error fetching mailboxes:", error);
+        throw error;
+      }
+
+      const mailboxes = data?.mailboxes || [
         { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
       ];
 
+      console.log(`✅ Found ${mailboxes.length} mailboxes:`, mailboxes);
       setAvailableMailboxes(mailboxes);
       
       // Auto-select the first mailbox
-      setFormData(prev => ({
-        ...prev,
-        email_address: userEmail,
-        name: userName,
-      }));
+      if (mailboxes.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          email_address: mailboxes[0].email,
+          name: mailboxes[0].displayName,
+        }));
+      }
     } catch (error) {
-      console.error("Error setting up mailbox:", error);
+      console.error("Error fetching mailboxes:", error);
       toast({
-        title: "Could not set up mailbox",
-        description: "Using authenticated account as default",
+        title: "Could not fetch mailboxes",
+        description: "Using authenticated account as default. Shared mailboxes may not be available.",
         variant: "destructive",
       });
       
-      // Fallback to user email
+      // Fallback to user email only
       setAvailableMailboxes([
         { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
       ]);

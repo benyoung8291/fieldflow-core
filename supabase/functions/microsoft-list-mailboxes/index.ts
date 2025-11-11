@@ -37,11 +37,22 @@ serve(async (req) => {
       },
     ];
 
-    // Try to fetch shared mailboxes the user has access to
+    console.log(`Fetching shared mailboxes for user: ${userEmail}`);
+
+    // Try multiple approaches to fetch shared mailboxes
     try {
-      // Query for mailboxes the user has permissions to access
+      // Approach 1: Get shared mailboxes from inbox rules (delegated access)
+      const rulesResponse = await fetch(
+        "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messageRules",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      // Approach 2: Query users with specific criteria for shared mailboxes
+      // Shared mailboxes typically have no licenses assigned
       const sharedMailboxesResponse = await fetch(
-        "https://graph.microsoft.com/v1.0/users?$filter=userType eq 'Member' and assignedLicenses/$count eq 0&$select=mail,displayName,userPrincipalName",
+        "https://graph.microsoft.com/v1.0/users?$filter=accountEnabled eq true&$select=mail,displayName,userPrincipalName,userType&$top=999",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -49,16 +60,33 @@ serve(async (req) => {
 
       if (sharedMailboxesResponse.ok) {
         const sharedData = await sharedMailboxesResponse.json();
+        console.log(`Found ${sharedData.value?.length || 0} potential mailboxes`);
         
-        // Filter for shared mailboxes (mailboxes without licenses are typically shared)
         if (sharedData.value) {
+          // Check each mailbox to see if the user has access
           for (const mailbox of sharedData.value) {
             if (mailbox.mail && mailbox.mail !== userEmail) {
-              mailboxes.push({
-                email: mailbox.mail,
-                displayName: `${mailbox.displayName || mailbox.mail} (Shared)`,
-                type: "shared",
-              });
+              try {
+                // Try to access the mailbox to verify permissions
+                const testAccessResponse = await fetch(
+                  `https://graph.microsoft.com/v1.0/users/${mailbox.mail}/mailFolders/inbox`,
+                  {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                  }
+                );
+
+                if (testAccessResponse.ok) {
+                  console.log(`✅ User has access to shared mailbox: ${mailbox.mail}`);
+                  mailboxes.push({
+                    email: mailbox.mail,
+                    displayName: `${mailbox.displayName || mailbox.mail} (Shared)`,
+                    type: "shared",
+                  });
+                }
+              } catch (accessError) {
+                console.log(`❌ No access to mailbox: ${mailbox.mail}`);
+                // User doesn't have access to this mailbox, skip it
+              }
             }
           }
         }
@@ -68,7 +96,7 @@ serve(async (req) => {
       // Continue with just the personal mailbox
     }
 
-    console.log(`Found ${mailboxes.length} mailboxes for user:`, userEmail);
+    console.log(`✅ Returning ${mailboxes.length} total mailboxes`);
 
     return new Response(
       JSON.stringify({ mailboxes }),
