@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import {
   Sheet,
   SheetContent,
@@ -37,7 +37,7 @@ const moreNavItems: NavItem[] = [
 export const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
+  const { isMobile } = useViewMode();
 
   // Only show on mobile devices
   if (!isMobile) return null;

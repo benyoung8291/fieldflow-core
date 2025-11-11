@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { MobileHeader } from "@/components/layout/MobileHeader";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const { isMobile } = useViewMode();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved === 'true';

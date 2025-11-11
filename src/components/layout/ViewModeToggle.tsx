@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useViewMode, ViewMode } from "@/hooks/useViewMode";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 export const ViewModeToggle = () => {
   const { viewMode, setViewMode } = useViewMode();
@@ -22,12 +22,6 @@ export const ViewModeToggle = () => {
     }
   };
 
-  const handleModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    // Force a re-render by triggering a resize event
-    window.dispatchEvent(new Event('resize'));
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -37,15 +31,15 @@ export const ViewModeToggle = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="z-50 bg-popover backdrop-blur-sm">
-        <DropdownMenuItem onClick={() => handleModeChange('auto')}>
+        <DropdownMenuItem onClick={() => setViewMode('auto')}>
           <Laptop className="mr-2 h-4 w-4" />
           <span>Auto (Responsive)</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleModeChange('desktop')}>
+        <DropdownMenuItem onClick={() => setViewMode('desktop')}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>Desktop View</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleModeChange('mobile')}>
+        <DropdownMenuItem onClick={() => setViewMode('mobile')}>
           <Smartphone className="mr-2 h-4 w-4" />
           <span>Mobile View</span>
         </DropdownMenuItem>

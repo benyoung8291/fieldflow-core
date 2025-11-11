@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ViewModeProvider } from "@/contexts/ViewModeContext";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
@@ -129,21 +130,24 @@ const App = () => {
   if (isAuthenticated === null) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <div className="flex items-center justify-center min-h-screen">Loading...</div>
-        </ThemeProvider>
+        <ViewModeProvider>
+          <ThemeProvider>
+            <div className="flex items-center justify-center min-h-screen">Loading...</div>
+          </ThemeProvider>
+        </ViewModeProvider>
       </QueryClientProvider>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-          <Routes>
+      <ViewModeProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/auth" replace />} />
@@ -194,6 +198,7 @@ const App = () => {
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
+      </ViewModeProvider>
     </QueryClientProvider>
   );
 };
