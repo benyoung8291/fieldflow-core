@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Mail, AlertCircle, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { HelpDeskEmailAccountDialog } from "./HelpDeskEmailAccountDialog";
-import { useMicrosoftOAuth } from "@/hooks/useMicrosoftOAuth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,26 +25,40 @@ export function HelpDeskEmailAccountsSettings() {
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<any>(null);
-  
-  // Store OAuth data from popup
-  const oauthDataRef = useRef<any>(null);
+  const [oauthData, setOauthData] = useState<any>(null);
 
-  // Global OAuth listener - always active
-  useMicrosoftOAuth((data) => {
-    console.log("🎉 OAuth callback received in settings component!");
-    oauthDataRef.current = data;
-    
-    // Open dialog if not already open
-    if (!dialogOpen) {
-      console.log("📂 Opening dialog with OAuth data");
+  // Listen for OAuth success event from App level
+  useEffect(() => {
+    const handleOAuthEvent = (event: CustomEvent) => {
+      console.log("📥 Settings: Received OAuth event", event.detail);
+      setOauthData(event.detail);
       setDialogOpen(true);
+      setEditingAccount(null);
+      // Clear the session storage
+      sessionStorage.removeItem('ms_oauth_data');
+      
+      toast({
+        title: "Microsoft account connected!",
+        description: `Authenticated as ${event.detail.email}`,
+      });
+    };
+
+    window.addEventListener('ms_oauth_success' as any, handleOAuthEvent);
+
+    // Check for OAuth data in sessionStorage on mount
+    const storedData = sessionStorage.getItem('ms_oauth_data');
+    if (storedData) {
+      console.log("📦 Found stored OAuth data");
+      const data = JSON.parse(storedData);
+      setOauthData(data);
+      setDialogOpen(true);
+      sessionStorage.removeItem('ms_oauth_data');
     }
-    
-    toast({
-      title: "Microsoft account connected!",
-      description: `Authenticated as ${data.email}`,
-    });
-  });
+
+    return () => {
+      window.removeEventListener('ms_oauth_success' as any, handleOAuthEvent);
+    };
+  }, [toast]);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["helpdesk-email-accounts-settings"],
@@ -128,6 +141,7 @@ export function HelpDeskEmailAccountsSettings() {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setEditingAccount(null);
+    setOauthData(null);
   };
 
   const getProviderIcon = (provider: string) => {
@@ -251,7 +265,7 @@ export function HelpDeskEmailAccountsSettings() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         account={editingAccount}
-        oauthData={oauthDataRef.current}
+        oauthData={oauthData}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
