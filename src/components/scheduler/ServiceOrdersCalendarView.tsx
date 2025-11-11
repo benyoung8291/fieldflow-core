@@ -54,21 +54,29 @@ export default function ServiceOrdersCalendarView({
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   // Group appointments by service order and calculate summaries
-  const appointmentsByServiceOrder = serviceOrders.map(order => {
-    const lineItems = order.service_order_line_items || [];
-    const lineItemsSummary = lineItems.length > 0
-      ? lineItems
-          .slice(0, 3)
-          .map((item: any) => `${item.quantity}x ${item.description}`)
-          .join(", ") + (lineItems.length > 3 ? "..." : "")
-      : "";
+  const appointmentsByServiceOrder = serviceOrders
+    .map(order => {
+      const lineItems = order.service_order_line_items || [];
+      const lineItemsSummary = lineItems.length > 0
+        ? lineItems
+            .slice(0, 3)
+            .map((item: any) => `${item.quantity}x ${item.description}`)
+            .join(", ") + (lineItems.length > 3 ? "..." : "")
+        : "";
 
-    return {
-      ...order,
-      appointments: appointments.filter(apt => apt.service_order_id === order.id),
-      lineItemsSummary,
-    };
-  });
+      return {
+        ...order,
+        appointments: appointments.filter(apt => apt.service_order_id === order.id),
+        lineItemsSummary,
+      };
+    })
+    .sort((a, b) => {
+      // Sort by preferred_date, with orders without a date at the bottom
+      if (!a.preferred_date && !b.preferred_date) return 0;
+      if (!a.preferred_date) return 1;
+      if (!b.preferred_date) return -1;
+      return new Date(a.preferred_date).getTime() - new Date(b.preferred_date).getTime();
+    });
 
   const getAppointmentsForDay = (serviceOrderId: string, day: Date) => {
     return appointments.filter(apt => 
