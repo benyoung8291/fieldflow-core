@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { z } from "zod";
 import { Building2 } from "lucide-react";
-import premrestLogo from "@/assets/premrest-ref.jpg";
+import premrestLogo from "@/assets/premrest-logo.svg";
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
