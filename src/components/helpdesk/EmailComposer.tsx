@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,12 @@ interface EmailComposerProps {
   isSending?: boolean;
 }
 
-export function EmailComposer({ onSend, defaultTo = "", defaultSubject = "", isSending = false }: EmailComposerProps) {
+export interface EmailComposerRef {
+  reset: () => void;
+}
+
+export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
+  ({ onSend, defaultTo = "", defaultSubject = "", isSending = false }, ref) => {
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
@@ -40,6 +45,18 @@ export function EmailComposer({ onSend, defaultTo = "", defaultSubject = "", isS
   useEffect(() => {
     setTo(defaultTo);
   }, [defaultTo]);
+
+  // Expose reset method via ref
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      setBody("");
+      setCc("");
+      setBcc("");
+      setShowCc(false);
+      setShowBcc(false);
+      setIsExpanded(false);
+    }
+  }));
 
   const handleSend = () => {
     const toEmails = to.split(",").map(e => e.trim()).filter(Boolean);
@@ -246,4 +263,4 @@ export function EmailComposer({ onSend, defaultTo = "", defaultSubject = "", isS
       )}
     </div>
   );
-}
+});

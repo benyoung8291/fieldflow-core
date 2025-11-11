@@ -8,7 +8,8 @@ import { TicketActionsMenu } from "./TicketActionsMenu";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { EmailComposer } from "./EmailComposer";
+import { EmailComposer, EmailComposerRef } from "./EmailComposer";
+import { useRef } from "react";
 
 interface TicketTimelineProps {
   ticketId: string;
@@ -18,6 +19,7 @@ interface TicketTimelineProps {
 export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const composerRef = useRef<EmailComposerRef>(null);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["helpdesk-messages", ticketId],
@@ -71,6 +73,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
       toast({ title: "Reply sent successfully" });
+      composerRef.current?.reset();
     },
     onError: (error: any) => {
       toast({
@@ -238,6 +241,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       {/* Email Composer */}
       <EmailComposer
+        ref={composerRef}
         onSend={(emailData) => sendReplyMutation.mutate(emailData)}
         defaultTo={ticket?.sender_email || ticket?.external_email || ""}
         defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
