@@ -823,7 +823,7 @@ export default function Invoices() {
                             }
                             
                             return acc;
-                          }, [] as React.JSX.Element[])}
+                          }, [] as JSX.Element[])}
                         </tbody>
                       </table>
                     </div>
