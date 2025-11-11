@@ -50,6 +50,7 @@ import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
+import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -838,6 +839,12 @@ export default function QuoteDetails() {
       label: "Help Desk",
       icon: <Mail className="h-4 w-4" />,
       content: <LinkedHelpdeskTicketsTab documentType="quote" documentId={id!} />,
+    },
+    {
+      value: "linked-documents",
+      label: "Linked Documents",
+      icon: <FileText className="h-4 w-4" />,
+      content: <LinkedDocumentsTimeline documentType="quote" documentId={id!} />,
     },
     {
       value: "history",

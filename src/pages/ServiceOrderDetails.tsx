@@ -12,6 +12,7 @@ import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAtt
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import AppointmentsTab from "@/components/service-orders/AppointmentsTab";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
+import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
@@ -788,6 +789,12 @@ export default function ServiceOrderDetails() {
       label: "Help Desk",
       icon: <Mail className="h-4 w-4" />,
       content: <LinkedHelpdeskTicketsTab documentType="service_order" documentId={id!} />,
+    },
+    {
+      value: "linked-documents",
+      label: "Linked Documents",
+      icon: <FileText className="h-4 w-4" />,
+      content: <LinkedDocumentsTimeline documentType="service_order" documentId={id!} />,
     },
     {
       value: "history",

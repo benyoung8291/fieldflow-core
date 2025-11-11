@@ -19,6 +19,7 @@ import ProjectTasksGrid from "@/components/projects/ProjectTasksGrid";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
+import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -333,6 +334,12 @@ export default function ProjectDetails() {
       label: "Help Desk",
       icon: <Mail className="h-4 w-4" />,
       content: <LinkedHelpdeskTicketsTab documentType="project" documentId={id!} />,
+    },
+    {
+      value: "linked-documents",
+      label: "Linked Documents",
+      icon: <FileText className="h-4 w-4" />,
+      content: <LinkedDocumentsTimeline documentType="project" documentId={id!} />,
     },
     {
       value: "history",
