@@ -144,17 +144,32 @@ export default function Scheduler() {
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
+      // Get all user_roles with worker role
+      const { data: workerRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "worker");
+
+      if (rolesError) throw rolesError;
+      
+      const workerUserIds = workerRoles?.map(r => r.user_id) || [];
+      
+      if (workerUserIds.length === 0) return [];
+
+      // Fetch profiles for those users with skills
       const { data, error } = await supabase
         .from("profiles")
         .select(`
           id, 
           first_name, 
           last_name,
+          is_active,
           worker_skills(
             skill_id,
             skills(name)
           )
         `)
+        .in("id", workerUserIds)
         .eq("is_active", true)
         .order("first_name", { ascending: true });
 
