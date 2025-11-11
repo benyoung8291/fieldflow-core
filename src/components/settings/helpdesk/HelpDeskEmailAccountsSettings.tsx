@@ -95,6 +95,35 @@ export function HelpDeskEmailAccountsSettings() {
     }
   };
 
+  const syncEmails = async (accountId: string) => {
+    try {
+      toast({ title: "Syncing emails...", description: "Fetching new messages from your mailbox" });
+      
+      const { data, error } = await supabase.functions.invoke(
+        "microsoft-sync-emails",
+        {
+          body: { emailAccountId: accountId },
+        }
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Email sync complete",
+        description: `Synced ${data.syncedCount} new tickets from ${data.totalMessages} messages`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-email-accounts-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+    } catch (error: any) {
+      toast({
+        title: "Failed to sync emails",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleEdit = (account: any) => {
     setEditingAccount(account);
     setDialogOpen(true);
@@ -198,6 +227,13 @@ export function HelpDeskEmailAccountsSettings() {
                   onClick={() => handleEdit(account)}
                 >
                   <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => syncEmails(account.id)}
+                >
+                  Sync
                 </Button>
                 <Button
                   variant="ghost"
