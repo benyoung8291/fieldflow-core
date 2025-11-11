@@ -118,17 +118,25 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b h-[100px]",
+                  "w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b h-[100px] overflow-hidden",
                   selectedTicketId === ticket.id && "bg-accent",
                   !ticket.is_read && "bg-muted/30"
                 )}
               >
                 {/* Header Row */}
-                <div className="flex items-center justify-between gap-2 w-full">
-                  <span className="text-xs font-mono text-muted-foreground">
-                    {ticket.ticket_number}
-                  </span>
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between gap-2 w-full min-h-[20px]">
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                    {ticket.pipeline && (
+                      <>
+                        <div 
+                          className="h-1.5 w-1.5 rounded-full shrink-0" 
+                          style={{ backgroundColor: ticket.pipeline.color }}
+                        />
+                        <span className="text-xs text-muted-foreground truncate">{ticket.pipeline.name}</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
                     <Badge variant="outline" className={cn("text-xs h-4 px-1", getPriorityColor(ticket.priority))}>
                       {ticket.priority}
                     </Badge>
@@ -139,10 +147,10 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 </div>
 
                 {/* Subject */}
-                <p className="font-medium text-xs line-clamp-2 w-full">{ticket.subject}</p>
+                <p className="font-medium text-xs line-clamp-2 w-full overflow-hidden">{ticket.subject}</p>
 
                 {/* Sender Info */}
-                <div className="text-xs text-muted-foreground w-full">
+                <div className="text-xs text-muted-foreground w-full min-h-[16px]">
                   {ticket.customer ? (
                     <p className="truncate">{ticket.customer.name}</p>
                   ) : ticket.contact ? (
@@ -153,34 +161,28 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 </div>
 
                 {/* Footer Row */}
-                <div className="flex items-center justify-between gap-2 w-full">
-                  {ticket.pipeline && (
-                    <div className="flex items-center gap-1">
-                      <div 
-                        className="h-1.5 w-1.5 rounded-full" 
-                        style={{ backgroundColor: ticket.pipeline.color }}
-                      />
-                      <span className="text-xs text-muted-foreground truncate">{ticket.pipeline.name}</span>
+                <div className="flex items-center justify-between gap-2 w-full mt-auto">
+                  {ticket.tags && ticket.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                      {ticket.tags.slice(0, 2).map((tag: string) => (
+                        <Badge key={tag} variant="secondary" className="text-xs h-4 px-1">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {ticket.tags.length > 2 && (
+                        <Badge variant="secondary" className="text-xs h-4 px-1">
+                          +{ticket.tags.length - 2}
+                        </Badge>
+                      )}
                     </div>
                   )}
                   
                   {ticket.last_message_at && (
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                    <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                       {formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true })}
                     </p>
                   )}
                 </div>
-
-                {/* Tags */}
-                {ticket.tags && ticket.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {ticket.tags.map((tag: string) => (
-                      <Badge key={tag} variant="secondary" className="text-xs h-4 px-1">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
               </button>
             ))}
           </div>
