@@ -16,7 +16,7 @@ interface TimeGridWeekViewProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
-const PIXELS_PER_HOUR = 90; // 90px per hour (50% increase from 60px)
+const PIXELS_PER_HOUR = 50; // 50px per hour for compact view
 
 export default function TimeGridWeekView({
   currentDate,
