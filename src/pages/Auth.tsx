@@ -80,12 +80,6 @@ export default function Auth() {
             <Building2 className="h-5 w-5 text-primary" />
             <span className="text-sm font-medium text-muted-foreground">Office Login</span>
           </div>
-          <CardTitle className="text-2xl text-center">
-            Welcome back
-          </CardTitle>
-          <CardDescription className="text-center">
-            Sign in to access your office dashboard
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
