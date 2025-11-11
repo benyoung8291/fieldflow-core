@@ -13,11 +13,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface MobileHeaderProps {
-  onMenuClick: () => void;
-}
-
-export const MobileHeader = ({ onMenuClick }: MobileHeaderProps) => {
+export const MobileHeader = () => {
   const navigate = useNavigate();
 
   return (

@@ -1,11 +1,9 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Menu, User, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, User, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
-import { ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -22,7 +20,6 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isMobile } = useViewMode();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -52,12 +49,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setExpandedFolders(newExpanded);
   };
 
-  const handleNavigate = (path: string, isMobile = false) => {
+  const handleNavigate = (path: string) => {
     navigate(path);
-    if (isMobile) setSidebarOpen(false);
   };
 
-  const renderMenuContent = (isMobile = false) => {
+  const renderMenuContent = () => {
     const renderMenuItem = (item: any) => {
       const isActive = item.path && location.pathname === item.path;
       const children = item.children || [];
@@ -72,7 +68,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 if (item.is_folder) {
                   toggleFolder(item.id);
                 } else if (item.path) {
-                  handleNavigate(item.path, isMobile);
+                  handleNavigate(item.path);
                 }
               }}
               className={cn(
@@ -80,9 +76,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                sidebarCollapsed && !isMobile ? "justify-center px-2" : ""
+                sidebarCollapsed ? "justify-center px-2" : ""
               )}
-              title={sidebarCollapsed && !isMobile ? item.label : undefined}
+              title={sidebarCollapsed ? item.label : undefined}
             >
               {item.is_folder && !sidebarCollapsed && (
                 <div className="mr-1">
@@ -95,7 +91,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           
           {/* Render children when folder is expanded */}
-          {item.is_folder && isExpanded && children.length > 0 && (!sidebarCollapsed || isMobile) && (
+          {item.is_folder && isExpanded && children.length > 0 && !sidebarCollapsed && (
             <div 
               className="ml-6 mt-1 space-y-1 border-l-2 pl-2" 
               style={item.color && item.color.trim() ? { borderColor: item.color } : { borderColor: 'hsl(var(--sidebar-border))' }}
@@ -106,7 +102,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 return (
                   <button
                     key={child.id}
-                    onClick={() => child.path && handleNavigate(child.path, isMobile)}
+                    onClick={() => child.path && handleNavigate(child.path)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left",
                       childIsActive
@@ -227,37 +223,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Top Header Bar */}
       {isMobile ? (
-        <MobileHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <MobileHeader />
       ) : (
         <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-end px-4 py-3 gap-2">
             <ViewModeToggle />
             <ThemeToggle />
           </div>
-        </div>
-      )}
-
-      {/* Mobile Sidebar Overlay - Only show when explicitly opened */}
-      {sidebarOpen && isMobile && (
-        <div
-          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        >
-          <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border overflow-y-auto">
-            <div className="flex flex-col h-full px-6 py-8">
-              <div className="flex-shrink-0 flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-lg">SP</span>
-                  </div>
-                  <h1 className="text-xl font-bold text-sidebar-foreground">Service Pulse</h1>
-                </div>
-              </div>
-              <nav className="flex-1 flex flex-col gap-2 overflow-y-auto">
-                {renderMenuContent(true)}
-              </nav>
-            </div>
-          </aside>
         </div>
       )}
 
