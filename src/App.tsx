@@ -74,14 +74,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem('oauth_in_progress');
       localStorage.removeItem('oauth_session_key');
     }
-    
-    // Set a timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (mounted && isAuthenticated === null) {
-        console.error("Authentication check timed out");
-        setIsAuthenticated(false);
-      }
-    }, 10000); // 10 second timeout
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
@@ -134,7 +126,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       mounted = false;
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
