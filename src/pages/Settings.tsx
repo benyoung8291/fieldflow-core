@@ -230,9 +230,9 @@ export default function Settings() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-full">
-        {/* Settings Navigation Sidebar */}
-        <aside className="w-64 border-r bg-background hidden lg:block">
+      <div className="flex flex-col lg:flex-row h-full">
+        {/* Settings Navigation Sidebar - Desktop */}
+        <aside className="w-full lg:w-64 border-r lg:border-b-0 border-b bg-background hidden lg:block">
           <div className="p-4 border-b">
             <h2 className="font-semibold text-lg">Settings</h2>
             <p className="text-sm text-muted-foreground">Manage your business</p>
@@ -269,12 +269,12 @@ export default function Settings() {
         </aside>
 
         {/* Mobile Settings Dropdown */}
-        <div className="lg:hidden w-full border-b p-4">
-          <Label className="text-sm text-muted-foreground">Current Section</Label>
+        <div className="lg:hidden w-full border-b p-4 bg-background sticky top-0 z-10">
+          <Label className="text-sm font-semibold mb-2 block">Settings</Label>
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-            className="w-full mt-1 p-2 border rounded-md"
+            className="w-full p-2 border rounded-md bg-background"
           >
             {settingsNavigation.map((group) => (
               <optgroup key={group.group} label={group.group}>
@@ -289,8 +289,8 @@ export default function Settings() {
         </div>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+        <main className="flex-1 overflow-auto w-full">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
             {activeTab === "general" && (
               <Card>
                 <CardContent className="pt-6">
