@@ -183,24 +183,41 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [account, open, pipelines]);
 
-  // Microsoft OAuth handler - simplified to prevent page refresh issues
+  // Microsoft OAuth handler
   const handleMicrosoftAuth = async () => {
+    console.log("🎯 BUTTON CLICKED - Starting Microsoft OAuth");
+    
     try {
+      console.log("Setting authenticating state...");
       setIsAuthenticating(true);
       
+      console.log("Calling microsoft-oauth-authorize function...");
       const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
       
-      if (error) throw error;
-      if (!data?.authUrl) throw new Error("No authorization URL received");
+      console.log("Function response:", { data, error });
+      
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
+      
+      if (!data?.authUrl) {
+        console.error("No authUrl in response:", data);
+        throw new Error("No authorization URL received");
+      }
+      
+      console.log("Auth URL received:", data.authUrl);
       
       // Store state that we're in OAuth flow
       sessionStorage.setItem("microsoft_oauth_in_progress", "true");
+      console.log("Set session storage flag");
       
       // Redirect to Microsoft
+      console.log("🚀 Redirecting to Microsoft...");
       window.location.href = data.authUrl;
       
     } catch (error) {
-      console.error("Microsoft auth error:", error);
+      console.error("❌ Microsoft auth error:", error);
       toast({
         title: "Failed to start Microsoft authentication",
         description: error instanceof Error ? error.message : "Unknown error",
@@ -330,8 +347,12 @@ export function HelpDeskEmailAccountDialog({
                     Sign in with your Microsoft account to get started
                   </p>
                   <Button
-                    onClick={handleMicrosoftAuth}
+                    onClick={(e) => {
+                      console.log("🖱️ Button onClick event fired", e);
+                      handleMicrosoftAuth();
+                    }}
                     size="lg"
+                    type="button"
                   >
                     Sign in with Microsoft
                   </Button>
