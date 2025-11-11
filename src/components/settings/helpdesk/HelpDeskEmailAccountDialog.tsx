@@ -220,7 +220,13 @@ export function HelpDeskEmailAccountDialog({
   }, [account, open, pipelines]);
 
   // Microsoft OAuth handler
-  const handleMicrosoftAuth = async () => {
+  const handleMicrosoftAuth = async (e?: React.MouseEvent) => {
+    // Prevent any default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     try {
       setIsAuthenticating(true);
       
@@ -382,7 +388,11 @@ export function HelpDeskEmailAccountDialog({
                   </p>
                   <Button
                     type="button"
-                    onClick={handleMicrosoftAuth}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleMicrosoftAuth(e);
+                    }}
                     size="lg"
                   >
                     Sign in with Microsoft
@@ -488,11 +498,12 @@ export function HelpDeskEmailAccountDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           {(account || oauthData) && (
             <Button
+              type="button"
               onClick={() => saveMutation.mutate()}
               disabled={!formData.email_address || !formData.display_name || !formData.pipeline_id || saveMutation.isPending}
             >
