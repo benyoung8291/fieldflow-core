@@ -1,14 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Send, Paperclip, MessageSquare, Mail, FileText, CheckSquare } from "lucide-react";
-import { useState } from "react";
+import { MessageSquare, Mail, FileText, CheckSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { EmailComposer } from "./EmailComposer";
 
 interface TicketTimelineProps {
   ticketId: string;
@@ -16,7 +14,6 @@ interface TicketTimelineProps {
 }
 
 export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
-  const [replyText, setReplyText] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,13 +35,18 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   });
 
   const sendReplyMutation = useMutation({
-    mutationFn: async (body: string) => {
+    mutationFn: async (emailData: any) => {
       const { data, error } = await supabase.functions.invoke(
         "helpdesk-send-email",
         {
           body: {
             ticket_id: ticketId,
-            body_plain: body,
+            to_emails: emailData.to,
+            cc_emails: emailData.cc,
+            bcc_emails: emailData.bcc,
+            subject: emailData.subject,
+            body_plain: emailData.body,
+            body_html: emailData.bodyHtml,
           },
         }
       );
@@ -55,7 +57,6 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
-      setReplyText("");
       toast({ title: "Reply sent successfully" });
     },
     onError: (error: any) => {
@@ -91,10 +92,10 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b bg-background">
-        <h2 className="text-lg font-semibold mb-1">{ticket?.subject || "Loading..."}</h2>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      {/* Header - Compact */}
+      <div className="px-3 py-2 border-b bg-background">
+        <h2 className="text-sm font-semibold mb-0.5 line-clamp-1">{ticket?.subject || "Loading..."}</h2>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-mono">{ticket?.ticket_number}</span>
           {ticket?.customer && (
             <>
@@ -105,21 +106,21 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         </div>
       </div>
 
-      {/* Timeline */}
-      <ScrollArea className="flex-1 p-4">
+      {/* Timeline - Compact */}
+      <ScrollArea className="flex-1 p-2">
         {isLoading ? (
-          <div className="text-center text-muted-foreground">Loading messages...</div>
+          <div className="text-center text-muted-foreground text-sm py-4">Loading messages...</div>
         ) : messages && messages.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {messages.map((message, index) => (
               <div key={message.id} className="relative">
                 {index !== messages.length - 1 && (
-                  <div className="absolute left-5 top-12 bottom-0 w-px bg-border" />
+                  <div className="absolute left-4 top-8 bottom-0 w-px bg-border" />
                 )}
                 
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <div className={cn(
-                    "h-10 w-10 rounded-full flex items-center justify-center shrink-0 border-2 border-background",
+                    "h-7 w-7 rounded-full flex items-center justify-center shrink-0 border border-background",
                     message.direction === "inbound" ? "bg-blue-500/10" : 
                     message.direction === "outbound" ? "bg-green-500/10" : "bg-purple-500/10"
                   )}>
@@ -129,40 +130,43 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="bg-card border rounded-lg p-4">
-                      <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="bg-card border rounded-md p-2">
+                      <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm">
-                              {message.from_name || message.created_user?.first_name + " " + message.created_user?.last_name || "Unknown"}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium text-xs">
+                              {message.sender_name || message.from_name || message.created_user?.first_name + " " + message.created_user?.last_name || "Unknown"}
                             </span>
-                            {message.from_email && (
-                              <span className="text-xs text-muted-foreground">{message.from_email}</span>
+                            {(message.sender_email || message.from_email) && (
+                              <span className="text-xs text-muted-foreground">&lt;{message.sender_email || message.from_email}&gt;</span>
                             )}
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs h-4 px-1">
                               {message.message_type.replace("_", " ")}
                             </Badge>
                           </div>
-                          {message.to_emails && message.to_emails.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              To: {message.to_emails.join(", ")}
+                          {message.to_email && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              To: {message.to_email}
                             </p>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
                         </span>
                       </div>
 
                       {message.subject && message.message_type === "email" && (
-                        <p className="font-medium text-sm mb-2">{message.subject}</p>
+                        <p className="font-medium text-xs mb-1">{message.subject}</p>
                       )}
 
-                      <div className="text-sm whitespace-pre-wrap">
+                      <div className="text-xs whitespace-pre-wrap max-w-full overflow-hidden">
                         {message.body_html ? (
-                          <div dangerouslySetInnerHTML={{ __html: message.body_html }} />
+                          <div 
+                            className="prose prose-xs max-w-none dark:prose-invert"
+                            dangerouslySetInnerHTML={{ __html: message.body_html }} 
+                          />
                         ) : (
-                          message.body_plain
+                          message.body_text || message.body
                         )}
                       </div>
                     </div>
@@ -172,44 +176,16 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center text-muted-foreground">No messages yet</div>
+          <div className="text-center text-muted-foreground text-sm py-4">No messages yet</div>
         )}
       </ScrollArea>
 
-      {/* Compose Area */}
-      <div className="p-4 border-t bg-background space-y-3">
-        <Textarea
-          placeholder="Type your reply..."
-          value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
-          className="min-h-[100px] resize-none"
-        />
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm">
-            <Paperclip className="h-4 w-4 mr-2" />
-            Attach
-          </Button>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                // TODO: Add internal note functionality
-              }}
-            >
-              Internal Note
-            </Button>
-            <Button 
-              size="sm"
-              onClick={() => sendReplyMutation.mutate(replyText)}
-              disabled={!replyText.trim() || sendReplyMutation.isPending}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send Reply
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Email Composer */}
+      <EmailComposer
+        onSend={(emailData) => sendReplyMutation.mutate(emailData)}
+        defaultTo={ticket?.sender_email || ticket?.external_email || ""}
+        isSending={sendReplyMutation.isPending}
+      />
     </div>
   );
 }

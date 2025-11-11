@@ -136,11 +136,11 @@ export default function HelpDesk() {
     <DashboardLayout>
       <div className="flex flex-col h-[calc(100vh-4rem)]">
         {/* Header with Pipeline Selector and Sync */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-background">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold">Help Desk</h1>
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold">Help Desk</h1>
             <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[180px] h-7 text-xs">
                 <SelectValue placeholder="All Pipelines" />
               </SelectTrigger>
               <SelectContent>
@@ -148,7 +148,7 @@ export default function HelpDesk() {
                 {pipelines?.map((pipeline) => (
                   <SelectItem key={pipeline.id} value={pipeline.id}>
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: pipeline.color }} />
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: pipeline.color }} />
                       {pipeline.name}
                     </div>
                   </SelectItem>
@@ -156,9 +156,9 @@ export default function HelpDesk() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleSyncEmails} disabled={isSyncing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync Emails"}
+          <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-7 text-xs">
+            <RefreshCw className={`h-3 w-3 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "Syncing..." : "Sync"}
           </Button>
         </div>
 
