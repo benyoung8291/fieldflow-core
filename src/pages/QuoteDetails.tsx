@@ -39,7 +39,10 @@ import {
   TrendingUp,
   History,
   Save,
+  Info,
+  Folder,
 } from "lucide-react";
+import InlineQuoteLineItems from "@/components/quotes/InlineQuoteLineItems";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
 import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
@@ -79,6 +82,9 @@ export default function QuoteDetails() {
     internal_notes: "",
   });
 
+  // Line items state
+  const [editedLineItems, setEditedLineItems] = useState<any[]>([]);
+
   const { data: quote, isLoading } = useQuery({
     queryKey: ["quote", id],
     queryFn: async () => {
@@ -94,32 +100,19 @@ export default function QuoteDetails() {
         .from("customers")
         .select("id, name, email, phone")
         .eq("id", quoteData.customer_id)
-        .single();
+        .maybeSingle();
 
       const { data: creator } = await supabase
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", quoteData.created_by)
-        .single();
+        .maybeSingle();
 
       return { ...quoteData, customer, creator };
     },
   });
 
-  // Initialize edited fields when quote loads
-  useEffect(() => {
-    if (quote) {
-      setEditedFields({
-        title: quote.title || "",
-        description: quote.description || "",
-        notes: quote.notes || "",
-        terms_conditions: quote.terms_conditions || "",
-        internal_notes: quote.internal_notes || "",
-      });
-    }
-  }, [quote]);
-
-  const { data: lineItems } = useQuery({
+  const { data: lineItems, isLoading: lineItemsLoading } = useQuery({
     queryKey: ["quote-line-items", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -146,6 +139,53 @@ export default function QuoteDetails() {
       return data;
     },
   });
+
+  // Initialize edited fields when quote loads
+  useEffect(() => {
+    if (quote) {
+      setEditedFields({
+        title: quote.title || "",
+        description: quote.description || "",
+        notes: quote.notes || "",
+        terms_conditions: quote.terms_conditions || "",
+        internal_notes: quote.internal_notes || "",
+      });
+    }
+  }, [quote]);
+
+  // Initialize line items for editing
+  useEffect(() => {
+    if (lineItems && lineItems.length > 0) {
+      // Organize line items into parent-child structure
+      const parents = lineItems.filter((item: any) => !item.parent_line_item_id);
+      const organized = parents.map((parent: any) => {
+        const subItems = lineItems
+          .filter((item: any) => item.parent_line_item_id === parent.id)
+          .map((sub: any) => ({
+            id: sub.id,
+            description: sub.description,
+            quantity: sub.quantity.toString(),
+            cost_price: sub.cost_price.toString(),
+            margin_percentage: sub.margin_percentage.toString(),
+            sell_price: sub.sell_price.toString(),
+            line_total: sub.line_total,
+          }));
+
+        return {
+          id: parent.id,
+          description: parent.description,
+          quantity: parent.quantity.toString(),
+          cost_price: parent.cost_price.toString(),
+          margin_percentage: parent.margin_percentage.toString(),
+          sell_price: parent.sell_price.toString(),
+          line_total: parent.line_total,
+          subItems,
+          expanded: subItems.length > 0,
+        };
+      });
+      setEditedLineItems(organized);
+    }
+  }, [lineItems]);
 
   // Fetch pipelines
   const { data: pipelines = [] } = useQuery({
@@ -258,16 +298,102 @@ export default function QuoteDetails() {
   const handleSaveInlineEdits = async () => {
     try {
       setIsSaving(true);
-      const { error } = await supabase
+
+      // Get user profile for tenant_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile) throw new Error("Profile not found");
+
+      // Update quote fields
+      const { error: quoteError } = await supabase
         .from("quotes")
         .update(editedFields)
         .eq("id", id);
 
-      if (error) throw error;
+      if (quoteError) throw quoteError;
+
+      // Update line items - delete all and recreate
+      await supabase.from("quote_line_items").delete().eq("quote_id", id);
+
+      const allItems: any[] = [];
+      let itemOrder = 0;
+
+      for (const item of editedLineItems) {
+        const parentItem = {
+          quote_id: id,
+          tenant_id: profile.tenant_id,
+          item_order: itemOrder++,
+          description: item.description,
+          quantity: parseFloat(item.quantity),
+          cost_price: parseFloat(item.cost_price),
+          margin_percentage: parseFloat(item.margin_percentage),
+          sell_price: parseFloat(item.sell_price),
+          line_total: item.line_total,
+          unit_price: parseFloat(item.sell_price),
+        };
+
+        const { data: savedParent, error: parentError } = await supabase
+          .from("quote_line_items")
+          .insert([parentItem])
+          .select()
+          .single();
+
+        if (parentError) throw parentError;
+
+        // Save sub-items
+        if (item.subItems && item.subItems.length > 0) {
+          for (const subItem of item.subItems) {
+            allItems.push({
+              quote_id: id,
+              tenant_id: profile.tenant_id,
+              parent_line_item_id: savedParent.id,
+              item_order: itemOrder++,
+              description: subItem.description,
+              quantity: parseFloat(subItem.quantity),
+              cost_price: parseFloat(subItem.cost_price),
+              margin_percentage: parseFloat(subItem.margin_percentage),
+              sell_price: parseFloat(subItem.sell_price),
+              line_total: subItem.line_total,
+              unit_price: parseFloat(subItem.sell_price),
+            });
+          }
+        }
+      }
+
+      if (allItems.length > 0) {
+        const { error: subItemsError } = await supabase
+          .from("quote_line_items")
+          .insert(allItems);
+
+        if (subItemsError) throw subItemsError;
+      }
+
+      // Recalculate quote totals
+      const subtotal = editedLineItems.reduce((sum, item) => sum + item.line_total, 0);
+      const taxRate = parseFloat(quote?.tax_rate?.toString() || "10");
+      const taxAmount = subtotal * (taxRate / 100);
+      const total = subtotal + taxAmount;
+
+      await supabase
+        .from("quotes")
+        .update({
+          subtotal,
+          tax_amount: taxAmount,
+          total_amount: total,
+        })
+        .eq("id", id);
 
       toast({ title: "Quote saved successfully" });
       queryClient.invalidateQueries({ queryKey: ["quote", id] });
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["quote-line-items", id] });
     } catch (error: any) {
       toast({
         title: "Error saving quote",
@@ -400,12 +526,64 @@ export default function QuoteDetails() {
     </div>
   );
 
+  // Calculate totals
+  const calculateTotals = () => {
+    const subtotal = editedLineItems.reduce((sum, item) => sum + item.line_total, 0);
+    const taxRate = parseFloat(quote?.tax_rate?.toString() || "10");
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount;
+    return { subtotal, taxAmount, total };
+  };
+
+  const { subtotal: calculatedSubtotal, taxAmount: calculatedTax, total: calculatedTotal } = 
+    editedLineItems.length > 0 ? calculateTotals() : { subtotal: 0, taxAmount: 0, total: 0 };
+
   // Tab configurations
   const tabs: TabConfig[] = [
     {
       value: "line-items",
       label: "Line Items",
       icon: <ListChecks className="h-4 w-4" />,
+      content: quote && !lineItemsLoading && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Line Items</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <InlineQuoteLineItems
+              lineItems={editedLineItems}
+              onChange={setEditedLineItems}
+              readOnly={!isDraft}
+            />
+
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span className="font-medium">
+                  ${(isDraft ? calculatedSubtotal : quote.subtotal).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tax ({quote.tax_rate}%):</span>
+                <span className="font-medium">
+                  ${(isDraft ? calculatedTax : quote.tax_amount).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span>Total:</span>
+                <span>
+                  ${(isDraft ? calculatedTotal : quote.total_amount).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "details",
+      label: "Details",
+      icon: <Info className="h-4 w-4" />,
       content: quote && (
         <Card>
           <CardHeader>
@@ -442,75 +620,6 @@ export default function QuoteDetails() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium mb-3 block">Line Items & Takeoffs</Label>
-              <div className="space-y-2">
-                {lineItems?.filter((item: any) => !item.parent_line_item_id).map((item: any) => {
-                  const subItems = lineItems?.filter((sub: any) => sub.parent_line_item_id === item.id) || [];
-                  const hasSubItems = subItems.length > 0;
-                  
-                  return (
-                    <div key={item.id} className="border rounded-lg overflow-hidden">
-                      <div className="flex items-start justify-between p-3 bg-muted/20">
-                        <div className="flex-1">
-                          <p className="font-medium">{item.description}</p>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            Qty: {item.quantity}
-                            {!hasSubItems && (
-                              <>
-                                {" • "}Cost: ${item.cost_price?.toFixed(2) || "0.00"}
-                                {" • "}Margin: {item.margin_percentage?.toFixed(2) || "0"}%
-                                {" • "}Sell: ${item.sell_price?.toFixed(2) || "0.00"}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right font-medium">
-                          ${item.line_total.toFixed(2)}
-                        </div>
-                      </div>
-                      
-                      {hasSubItems && (
-                        <div className="border-t">
-                          {subItems.map((subItem: any) => (
-                            <div key={subItem.id} className="flex items-start justify-between p-3 pl-8 border-b last:border-b-0 bg-background/50">
-                              <div className="flex-1">
-                                <p className="text-sm">{subItem.description}</p>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  Qty: {subItem.quantity}
-                                  {" • "}Cost: ${subItem.cost_price?.toFixed(2) || "0.00"}
-                                  {" • "}Margin: {subItem.margin_percentage?.toFixed(2) || "0"}%
-                                  {" • "}Sell: ${subItem.sell_price?.toFixed(2) || "0.00"}
-                                </div>
-                              </div>
-                              <div className="text-right text-sm font-medium">
-                                ${subItem.line_total.toFixed(2)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span className="font-medium">${quote.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax ({quote.tax_rate}%):</span>
-                <span className="font-medium">${quote.tax_amount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>${quote.total_amount.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div>
               <Label className="text-sm font-medium">Notes</Label>
               {isDraft ? (
                 <Textarea
@@ -543,6 +652,68 @@ export default function QuoteDetails() {
                 </p>
               ) : null}
             </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">CRM Pipeline</Label>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Pipeline</Label>
+                  <Select
+                    value={quote.pipeline_id || ''}
+                    onValueChange={(value) => updatePipelineStage('pipeline_id', value)}
+                    disabled={!isDraft}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select pipeline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pipelines.map((pipeline: any) => (
+                        <SelectItem key={pipeline.id} value={pipeline.id}>
+                          {pipeline.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Stage</Label>
+                  <Select
+                    value={quote.stage_id || ''}
+                    onValueChange={(value) => updatePipelineStage('stage_id', value)}
+                    disabled={!isDraft || !quote.pipeline_id || stages.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages.map((stage: any) => (
+                        <SelectItem key={stage.id} value={stage.id}>
+                          {stage.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">Created</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                {format(new Date(quote.created_at), "MMM d, yyyy")}
+              </p>
+            </div>
+
+            {quote.valid_until && (
+              <div>
+                <Label className="text-sm font-medium">Valid Until</Label>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(quote.valid_until), "MMM d, yyyy")}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       ),
@@ -578,97 +749,43 @@ export default function QuoteDetails() {
       ),
     },
     {
-      value: "crm-pipeline",
-      label: "CRM Pipeline",
-      icon: <TrendingUp className="h-4 w-4" />,
+      value: "files",
+      label: "Files",
+      icon: <Folder className="h-4 w-4" />,
       content: quote && (
         <Card>
           <CardHeader>
-            <CardTitle>CRM Pipeline</CardTitle>
+            <CardTitle>Attachments</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Pipeline</Label>
-              <Select
-                value={quote.pipeline_id || ''}
-                onValueChange={(value) => updatePipelineStage('pipeline_id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select pipeline" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines.map((pipeline: any) => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
-                      {pipeline.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Stage</Label>
-              <Select
-                value={quote.stage_id || ''}
-                onValueChange={(value) => updatePipelineStage('stage_id', value)}
-                disabled={!quote.pipeline_id || stages.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select stage" />
-                </SelectTrigger>
-                <SelectContent>
-                  {stages.map((stage: any) => (
-                    <SelectItem key={stage.id} value={stage.id}>
-                      {stage.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      ),
-    },
-    {
-      value: "timeline",
-      label: "Timeline",
-      icon: <Calendar className="h-4 w-4" />,
-      content: quote && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Timeline</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">Created</Label>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(quote.created_at), "MMM d, yyyy")}
-              </p>
-            </div>
-            {quote.valid_until && (
-              <div>
-                <Label className="text-sm font-medium">Valid Until</Label>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(quote.valid_until), "MMM d, yyyy")}
-                </div>
+          <CardContent>
+            {attachments && attachments.length > 0 ? (
+              <div className="space-y-2">
+                {attachments.map((attachment: any) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between p-2 border rounded hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownloadAttachment(attachment.file_url, attachment.file_name)}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            )}
-            {quote.sent_at && (
-              <div>
-                <Label className="text-sm font-medium">Sent</Label>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(quote.sent_at), "MMM d, yyyy")}
-                </p>
-              </div>
-            )}
-            {quote.approved_at && (
-              <div>
-                <Label className="text-sm font-medium">Approved</Label>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(quote.approved_at), "MMM d, yyyy")}
-                </p>
-              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No attachments</p>
             )}
           </CardContent>
         </Card>
@@ -678,7 +795,7 @@ export default function QuoteDetails() {
       value: "internal",
       label: "Internal Only",
       icon: <Lock className="h-4 w-4" />,
-      content: quote && (quote.internal_notes || (attachments && attachments.length > 0)) && (
+      content: quote && (
         <Card className="border-orange-200 dark:border-orange-900/50">
           <CardHeader className="bg-orange-50 dark:bg-orange-950/20">
             <CardTitle className="text-base flex items-center gap-2">
@@ -686,7 +803,7 @@ export default function QuoteDetails() {
               Internal Only
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-4">
+          <CardContent className="pt-4">
             <div>
               <Label className="text-sm font-medium">Internal Notes</Label>
               {isDraft ? (
@@ -701,39 +818,10 @@ export default function QuoteDetails() {
                 <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                   {quote.internal_notes}
                 </p>
-              ) : null}
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">No internal notes</p>
+              )}
             </div>
-
-            {attachments && attachments.length > 0 && (
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Attachments</Label>
-                <div className="space-y-2">
-                  {attachments.map((attachment: any) => (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between p-2 border rounded hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownloadAttachment(attachment.file_url, attachment.file_name)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       ),
