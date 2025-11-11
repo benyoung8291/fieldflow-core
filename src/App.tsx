@@ -61,13 +61,16 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
+  // Initialize PWA update functionality
+  usePWAUpdate();
 
   useEffect(() => {
     let mounted = true;
     
-    // Check if OAuth flag is stuck (older than 5 minutes)
+    // Check if OAuth flag is stuck
     const oauthFlag = localStorage.getItem('oauth_in_progress');
     if (oauthFlag === 'true') {
       console.warn("⚠️ Found stuck oauth_in_progress flag on mount, clearing it");
@@ -91,37 +94,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const timestamp = new Date().toISOString();
-      console.log(`🔐 [${timestamp}] Auth event received:`, event);
-      console.log(`🔐 [${timestamp}] Session exists:`, !!session);
-      console.log(`🔐 [${timestamp}] Current isAuthenticated:`, isAuthenticated);
+      console.log(`🔐 [${timestamp}] Auth event:`, event, "Session:", !!session);
       
-      // CRITICAL: Ignore ALL auth state changes during OAuth popup flow
+      // Ignore auth changes during OAuth flow
       const oauthInProgress = localStorage.getItem('oauth_in_progress');
       if (oauthInProgress === 'true') {
         console.log(`⏭️ [${timestamp}] BLOCKED - OAuth in progress`);
         return;
       }
       
-      // Handle legitimate session restoration and sign in/out events
-      
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        console.log(`✅ [${timestamp}] ${event} - setting authenticated based on session:`, !!session);
+        console.log(`✅ [${timestamp}] Setting authenticated:`, !!session);
         if (mounted) {
           setIsAuthenticated(!!session);
         }
-        return;
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        console.log(`🚪 [${timestamp}] SIGNED_OUT - setting authenticated to FALSE`);
+      } else if (event === 'SIGNED_OUT') {
+        console.log(`🚪 [${timestamp}] Signed out`);
         if (mounted) {
           setIsAuthenticated(false);
         }
-        return;
       }
-      
-      // For ALL other events (TOKEN_REFRESHED, USER_UPDATED, etc.), do NOTHING
-      console.log(`⏭️ [${timestamp}] IGNORED event "${event}" - no action taken`);
     });
 
     return () => {
@@ -131,15 +123,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   if (isAuthenticated === null) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <div className="flex items-center justify-center min-h-screen">Loading...</div>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
   }
-
-  return isAuthenticated ? <>{children}</> : <Navigate to="/auth" replace />;
-};
-
-const App = () => {
-  // Initialize PWA update functionality
-  usePWAUpdate();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -150,49 +141,49 @@ const App = () => {
           <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-            <Route path="/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
-            <Route path="/quotes/:id" element={<ProtectedRoute><QuoteDetails /></ProtectedRoute>} />
-            <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
-            <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetails /></ProtectedRoute>} />
-            <Route path="/service-orders" element={<ProtectedRoute><ServiceOrders /></ProtectedRoute>} />
-            <Route path="/service-orders/:id" element={<ProtectedRoute><ServiceOrderDetails /></ProtectedRoute>} />
-            <Route path="/service-contracts" element={<ProtectedRoute><ServiceContracts /></ProtectedRoute>} />
-            <Route path="/service-contracts/:id" element={<ProtectedRoute><ServiceContractDetails /></ProtectedRoute>} />
-            <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
-            <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
-            <Route path="/appointments/:id" element={<ProtectedRoute><AppointmentDetails /></ProtectedRoute>} />
-            <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-            <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetails /></ProtectedRoute>} />
-            <Route path="/customer-locations/:id" element={<ProtectedRoute><CustomerLocationDetails /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-            <Route path="/leads/:id" element={<ProtectedRoute><LeadDetails /></ProtectedRoute>} />
-            <Route path="/workers" element={<ProtectedRoute><Workers /></ProtectedRoute>} />
-            <Route path="/workers/:id" element={<ProtectedRoute><WorkerDetails /></ProtectedRoute>} />
-            <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
-            <Route path="/training-matrix" element={<ProtectedRoute><TrainingMatrix /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/pipeline" element={<ProtectedRoute><QuotePipeline /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-            <Route path="/invoices" element={<ProtectedRoute><InvoicesList /></ProtectedRoute>} />
-            <Route path="/invoices/create" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-            <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetails /></ProtectedRoute>} />
-            <Route path="/recurring-invoices" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
-            <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
-            <Route path="/helpdesk" element={<ProtectedRoute><HelpDesk /></ProtectedRoute>} />
+            <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
+            <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/auth" replace />} />
+            <Route path="/users" element={isAuthenticated ? <UserManagement /> : <Navigate to="/auth" replace />} />
+            <Route path="/quotes" element={isAuthenticated ? <Quotes /> : <Navigate to="/auth" replace />} />
+            <Route path="/quotes/:id" element={isAuthenticated ? <QuoteDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/projects" element={isAuthenticated ? <Projects /> : <Navigate to="/auth" replace />} />
+            <Route path="/projects/:id" element={isAuthenticated ? <ProjectDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/service-orders" element={isAuthenticated ? <ServiceOrders /> : <Navigate to="/auth" replace />} />
+            <Route path="/service-orders/:id" element={isAuthenticated ? <ServiceOrderDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/service-contracts" element={isAuthenticated ? <ServiceContracts /> : <Navigate to="/auth" replace />} />
+            <Route path="/service-contracts/:id" element={isAuthenticated ? <ServiceContractDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/scheduler" element={isAuthenticated ? <Scheduler /> : <Navigate to="/auth" replace />} />
+            <Route path="/appointments" element={isAuthenticated ? <Appointments /> : <Navigate to="/auth" replace />} />
+            <Route path="/appointments/:id" element={isAuthenticated ? <AppointmentDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/customers" element={isAuthenticated ? <Customers /> : <Navigate to="/auth" replace />} />
+            <Route path="/customers/:id" element={isAuthenticated ? <CustomerDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/customer-locations/:id" element={isAuthenticated ? <CustomerLocationDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/leads" element={isAuthenticated ? <Leads /> : <Navigate to="/auth" replace />} />
+            <Route path="/leads/:id" element={isAuthenticated ? <LeadDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/workers" element={isAuthenticated ? <Workers /> : <Navigate to="/auth" replace />} />
+            <Route path="/workers/:id" element={isAuthenticated ? <WorkerDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/skills" element={isAuthenticated ? <Skills /> : <Navigate to="/auth" replace />} />
+            <Route path="/training-matrix" element={isAuthenticated ? <TrainingMatrix /> : <Navigate to="/auth" replace />} />
+            <Route path="/analytics" element={isAuthenticated ? <Analytics /> : <Navigate to="/auth" replace />} />
+            <Route path="/pipeline" element={isAuthenticated ? <QuotePipeline /> : <Navigate to="/auth" replace />} />
+            <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/auth" replace />} />
+            <Route path="/tasks" element={isAuthenticated ? <Tasks /> : <Navigate to="/auth" replace />} />
+            <Route path="/invoices" element={isAuthenticated ? <InvoicesList /> : <Navigate to="/auth" replace />} />
+            <Route path="/invoices/create" element={isAuthenticated ? <Invoices /> : <Navigate to="/auth" replace />} />
+            <Route path="/invoices/:id" element={isAuthenticated ? <InvoiceDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/recurring-invoices" element={isAuthenticated ? <RecurringInvoices /> : <Navigate to="/auth" replace />} />
+            <Route path="/recurring-invoices/:id" element={isAuthenticated ? <RecurringInvoiceDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
-            <Route path="/worker/auth" element={<WorkerAuth />} />
-            <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
-            <Route path="/worker/supervisor/dashboard" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
-            <Route path="/worker/supervisor/map" element={<ProtectedRoute><SupervisorMapDashboard /></ProtectedRoute>} />
-            <Route path="/worker/supervisor/appointments" element={<ProtectedRoute><SupervisorAppointments /></ProtectedRoute>} />
-            <Route path="/worker/supervisor/service-orders" element={<ProtectedRoute><SupervisorServiceOrders /></ProtectedRoute>} />
-            <Route path="/worker/appointments" element={<ProtectedRoute><WorkerAppointments /></ProtectedRoute>} />
-            <Route path="/worker/appointments/:id" element={<ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute>} />
-            <Route path="/worker/schedule" element={<ProtectedRoute><WorkerSchedule /></ProtectedRoute>} />
+            <Route path="/worker/auth" element={isAuthenticated ? <Navigate to="/worker/dashboard" replace /> : <WorkerAuth />} />
+            <Route path="/worker/dashboard" element={isAuthenticated ? <WorkerDashboard /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/supervisor/dashboard" element={isAuthenticated ? <SupervisorDashboard /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/supervisor/map" element={isAuthenticated ? <SupervisorMapDashboard /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/supervisor/appointments" element={isAuthenticated ? <SupervisorAppointments /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/supervisor/service-orders" element={isAuthenticated ? <SupervisorServiceOrders /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/appointments" element={isAuthenticated ? <WorkerAppointments /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/appointments/:id" element={isAuthenticated ? <WorkerAppointmentDetails /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/schedule" element={isAuthenticated ? <WorkerSchedule /> : <Navigate to="/worker/auth" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
