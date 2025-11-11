@@ -95,7 +95,12 @@ export default function ServiceOrdersCalendarView({
     }
     
     const rangeEnd = new Date(order.date_range_end);
-    return isWithinInterval(day, { start: preferredDate, end: rangeEnd });
+    const isInRange = isWithinInterval(day, { start: preferredDate, end: rangeEnd });
+    
+    // Debug logging
+    console.log(`Order ${order.order_number}: preferred=${order.preferred_date}, range_end=${order.date_range_end}, checking day=${format(day, 'yyyy-MM-dd')}, isInRange=${isInRange}`);
+    
+    return isInRange;
   };
 
   const isPreferredDate = (order: any, day: Date) => {
