@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -57,6 +57,10 @@ export function HelpDeskEmailAccountDialog({
     type: string;
   }>>([]);
 
+  // Store popup reference
+  const popupRef = useRef<Window | null>(null);
+  const checkIntervalRef = useRef<number | null>(null);
+
   const { data: pipelines } = useQuery({
     queryKey: ["helpdesk-pipelines-for-accounts"],
     queryFn: async () => {
@@ -73,7 +77,7 @@ export function HelpDeskEmailAccountDialog({
   });
 
   // Fetch available mailboxes after OAuth
-  const fetchMailboxes = async (accessToken: string, userEmail: string, userName: string) => {
+  const fetchMailboxes = useCallback(async (accessToken: string, userEmail: string, userName: string) => {
     setIsFetchingMailboxes(true);
     try {
       // Get user's mailbox settings
@@ -145,27 +149,35 @@ export function HelpDeskEmailAccountDialog({
     } finally {
       setIsFetchingMailboxes(false);
     }
-  };
+  }, [toast]);
 
-  // Handle OAuth callback message - set up BEFORE opening the dialog
+  // Handle OAuth callback message - ALWAYS ACTIVE
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      console.log("=== Message Event Received ===");
-      console.log("Event origin:", event.origin);
-      console.log("Event data:", event.data);
-      console.log("Event source:", event.source);
+      console.log("=== OAUTH MESSAGE RECEIVED ===", {
+        origin: event.origin,
+        data: event.data,
+        hasData: !!event.data,
+        dataType: typeof event.data,
+      });
       
       // Check if this is our OAuth callback message
       if (event.data && typeof event.data === 'object') {
         const { email, accessToken, refreshToken, expiresIn, accountId } = event.data;
         
         if (accessToken && refreshToken && email) {
-          console.log("✅ Valid OAuth callback data received!");
-          console.log("Email:", email);
-          console.log("Has access token:", !!accessToken);
-          console.log("Has refresh token:", !!refreshToken);
-          console.log("Expires in:", expiresIn);
-          console.log("Account ID:", accountId);
+          console.log("✅ VALID OAUTH DATA - Processing...");
+          
+          // Close popup if still open
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          
+          // Clear interval
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
+          }
           
           const oauthInfo = {
             accessToken,
@@ -204,22 +216,24 @@ export function HelpDeskEmailAccountDialog({
             }));
           }
         } else {
-          console.log("❌ Message received but missing required OAuth fields");
+          console.log("❌ Message missing required fields");
         }
-      } else {
-        console.log("ℹ️ Message received but not OAuth data:", typeof event.data);
       }
     };
 
-    // Add listener as soon as component mounts
-    console.log("🎧 Setting up message listener for OAuth callback");
-    window.addEventListener("message", handleMessage);
+    console.log("🎧 OAuth message listener ACTIVE");
+    window.addEventListener("message", handleMessage, false);
     
     return () => {
-      console.log("🔇 Removing message listener");
-      window.removeEventListener("message", handleMessage);
+      console.log("🔇 Removing OAuth message listener");
+      window.removeEventListener("message", handleMessage, false);
+      
+      // Cleanup interval on unmount
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
     };
-  }, [toast]);
+  }, [toast, fetchMailboxes]);
 
   // Populate form when account is provided
   useEffect(() => {
@@ -246,16 +260,16 @@ export function HelpDeskEmailAccountDialog({
     try {
       setIsAuthenticating(true);
       
-      console.log("Starting Microsoft OAuth...");
+      console.log("🚀 Starting Microsoft OAuth...");
       
       const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
       
       if (error) {
-        console.error("Error from oauth-authorize:", error);
+        console.error("❌ Error from oauth-authorize:", error);
         throw error;
       }
       
-      console.log("Got auth URL, opening popup...");
+      console.log("📝 Got auth URL, opening popup...");
       
       // Open OAuth popup
       const width = 500;
@@ -265,17 +279,40 @@ export function HelpDeskEmailAccountDialog({
       
       const popup = window.open(
         data.authUrl,
-        "Microsoft Sign In",
-        `width=${width},height=${height},left=${left},top=${top}`
+        "MicrosoftOAuth",
+        `width=${width},height=${height},left=${left},top=${top},popup=yes`
       );
       
       if (!popup) {
         throw new Error("Popup was blocked. Please allow popups for this site.");
       }
       
-      console.log("Popup opened successfully");
+      popupRef.current = popup;
+      console.log("✅ Popup opened successfully");
+      
+      // Poll to check if popup is closed
+      checkIntervalRef.current = window.setInterval(() => {
+        if (popup.closed) {
+          console.log("⚠️ Popup was closed by user");
+          clearInterval(checkIntervalRef.current!);
+          checkIntervalRef.current = null;
+          
+          // If still authenticating after popup closes, it means auth failed or was cancelled
+          setTimeout(() => {
+            if (isAuthenticating && !oauthData) {
+              setIsAuthenticating(false);
+              toast({
+                title: "Authentication cancelled",
+                description: "Please try again to connect your Microsoft account",
+                variant: "destructive",
+              });
+            }
+          }, 1000);
+        }
+      }, 500);
+      
     } catch (error) {
-      console.error("Error starting Microsoft auth:", error);
+      console.error("❌ Error starting Microsoft auth:", error);
       toast({
         title: "Failed to start Microsoft authentication",
         description: error instanceof Error ? error.message : "Unknown error",
