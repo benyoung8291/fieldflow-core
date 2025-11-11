@@ -52,18 +52,12 @@ export function HelpDeskEmailAccountDialog({
     is_active: true,
   });
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isFetchingMailboxes, setIsFetchingMailboxes] = useState(false);
   const [oauthData, setOauthData] = useState<{
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
     accountId: string;
   } | null>(null);
-  const [availableMailboxes, setAvailableMailboxes] = useState<Array<{
-    email: string;
-    displayName: string;
-    type: string;
-  }>>([]);
 
   // Store refs (no longer needed but kept for now)
   const popupRef = useRef<Window | null>(null);
@@ -84,86 +78,61 @@ export function HelpDeskEmailAccountDialog({
     enabled: open,
   });
 
-  // Fetch available mailboxes after OAuth
-  const fetchMailboxes = useCallback(async (accessToken: string, userEmail: string, userName: string) => {
-    setIsFetchingMailboxes(true);
+  // Verify access to the specified mailbox after OAuth
+  const verifyMailboxAccess = useCallback(async (accessToken: string, targetEmail: string) => {
     try {
-      console.log("📬 Fetching available mailboxes including shared mailboxes...");
+      console.log(`🔍 Verifying access to mailbox: ${targetEmail}`);
       
-      // Call the edge function to get mailboxes (including shared)
-      const { data, error } = await supabase.functions.invoke("microsoft-list-mailboxes", {
-        body: { accessToken }
-      });
+      // Try to access the mailbox's inbox to verify permissions
+      const testAccessResponse = await fetch(
+        `https://graph.microsoft.com/v1.0/users/${targetEmail}/mailFolders/inbox`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
 
-      if (error) {
-        console.error("Error fetching mailboxes:", error);
-        throw error;
+      if (!testAccessResponse.ok) {
+        throw new Error(`Cannot access mailbox ${targetEmail}. You may not have the required permissions.`);
       }
 
-      const mailboxes = data?.mailboxes || [
-        { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
-      ];
-
-      console.log(`✅ Found ${mailboxes.length} mailboxes:`, mailboxes);
-      setAvailableMailboxes(mailboxes);
-      
-      // Auto-select the first mailbox
-      if (mailboxes.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          email_address: mailboxes[0].email,
-          name: mailboxes[0].displayName,
-        }));
-      }
+      console.log(`✅ Successfully verified access to: ${targetEmail}`);
+      return true;
     } catch (error) {
-      console.error("Error fetching mailboxes:", error);
-      toast({
-        title: "Could not fetch mailboxes",
-        description: "Using authenticated account as default. Shared mailboxes may not be available.",
-        variant: "destructive",
-      });
-      
-      // Fallback to user email only
-      setAvailableMailboxes([
-        { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
-      ]);
-      setFormData(prev => ({
-        ...prev,
-        email_address: userEmail,
-        name: userName,
-      }));
-    } finally {
-      setIsFetchingMailboxes(false);
+      console.error("Error verifying mailbox access:", error);
+      throw error;
     }
-  }, [toast]);
+  }, []);
 
   // Sync prop OAuth data to local state when it changes
   useEffect(() => {
     if (propOauthData && !oauthData) {
-      console.log("📥 Received OAuth data via props, processing...");
-      setOauthData(propOauthData);
-      setIsAuthenticating(false);
+      console.log("📥 Received OAuth data via props, verifying mailbox access...");
       
-      // Fetch mailboxes
-      fetchMailboxes(
-        propOauthData.accessToken,
-        propOauthData.email,
-        propOauthData.email
-      ).catch((error) => {
-        console.error("Error fetching mailboxes:", error);
-        // Set default values even if fetch fails
-        setAvailableMailboxes([
-          { email: propOauthData.email, displayName: `${propOauthData.email} (Personal)`, type: "personal" }
-        ]);
-        setFormData(prev => ({
-          ...prev,
-          email_address: propOauthData.email,
-          name: propOauthData.email,
-        }));
-        setIsFetchingMailboxes(false);
-      });
+      // Verify access to the target mailbox
+      const targetEmail = formData.email_address;
+      if (targetEmail) {
+        verifyMailboxAccess(propOauthData.accessToken, targetEmail)
+          .then(() => {
+            console.log("✅ Mailbox access verified, ready to save");
+            setOauthData(propOauthData);
+            setIsAuthenticating(false);
+            toast({
+              title: "Authentication successful",
+              description: `Connected to ${targetEmail}`,
+            });
+          })
+          .catch((error) => {
+            console.error("❌ Mailbox access verification failed:", error);
+            setIsAuthenticating(false);
+            toast({
+              title: "Cannot access mailbox",
+              description: error.message || "You may not have the required permissions to access this mailbox.",
+              variant: "destructive",
+            });
+          });
+      }
     }
-  }, [propOauthData, oauthData, fetchMailboxes]);
+  }, [propOauthData, oauthData, formData.email_address, verifyMailboxAccess, toast]);
 
   // Populate form when account is provided
   useEffect(() => {
@@ -187,7 +156,17 @@ export function HelpDeskEmailAccountDialog({
 
   // Microsoft OAuth handler - popup approach with polling
   const handleMicrosoftAuth = async () => {
-    console.log("🎯 Starting Microsoft OAuth with popup + polling");
+    // Validate email address is entered
+    if (!formData.email_address) {
+      toast({
+        title: "Email address required",
+        description: "Please enter the email address you want to connect first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("🎯 Starting Microsoft OAuth for mailbox:", formData.email_address);
     console.log("🎯 Current localStorage oauth_in_progress:", localStorage.getItem('oauth_in_progress'));
     
     try {
@@ -305,24 +284,6 @@ export function HelpDeskEmailAccountDialog({
                 expiresIn: tokenData.expires_in,
                 accountId: tokenData.account_id,
               };
-
-              // Fetch mailboxes
-              fetchMailboxes(
-                oauthData.accessToken,
-                oauthData.email,
-                oauthData.email
-              ).catch((error) => {
-                console.error("Error fetching mailboxes:", error);
-                setAvailableMailboxes([
-                  { email: oauthData.email, displayName: `${oauthData.email} (Personal)`, type: "personal" }
-                ]);
-                setFormData(prev => ({
-                  ...prev,
-                  email_address: oauthData.email,
-                  name: oauthData.email,
-                }));
-                setIsFetchingMailboxes(false);
-              });
 
               setOauthData(oauthData);
               setIsAuthenticating(false);
@@ -449,101 +410,92 @@ export function HelpDeskEmailAccountDialog({
 
         <div className="space-y-4 py-4">
           {!account && !oauthData && (
-            <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              {isAuthenticating ? (
-                <>
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <div className="text-center space-y-2">
-                    <p className="font-medium">Waiting for authentication...</p>
-                    <p className="text-sm text-muted-foreground">
-                      Complete the sign-in process to continue
+            <>
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="email_address">Email Address *</Label>
+                <Input
+                  id="email_address"
+                  type="email"
+                  placeholder="support@company.com or shared@company.com"
+                  value={formData.email_address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email_address: e.target.value })
+                  }
+                  disabled={isAuthenticating}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enter your personal email or a shared mailbox email that you have access to
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                {isAuthenticating ? (
+                  <>
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <div className="text-center space-y-2">
+                      <p className="font-medium">Waiting for authentication...</p>
+                      <p className="text-sm text-muted-foreground">
+                        Complete the sign-in process to continue
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsAuthenticating(false);
+                          localStorage.removeItem('oauth_in_progress');
+                          localStorage.removeItem('oauth_session_key');
+                          toast({
+                            title: "Authentication cancelled",
+                            description: "You can try again when ready",
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-center text-muted-foreground">
+                      Sign in with your Microsoft account to authorize access
                     </p>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setIsAuthenticating(false);
-                        localStorage.removeItem('oauth_in_progress');
-                        localStorage.removeItem('oauth_session_key');
-                        toast({
-                          title: "Authentication cancelled",
-                          description: "You can try again when ready",
-                        });
-                      }}
-                      className="mt-2"
+                      onClick={handleMicrosoftAuth}
+                      size="lg"
+                      disabled={!formData.email_address}
                     >
-                      Cancel
+                      Sign in with Microsoft
                     </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-center text-muted-foreground">
-                    Sign in with your Microsoft account to get started
-                  </p>
-                  <Button
-                    onClick={handleMicrosoftAuth}
-                    size="lg"
-                  >
-                    Sign in with Microsoft
-                  </Button>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            </>
           )}
 
           {(account || oauthData) && (
             <>
-              {isFetchingMailboxes ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">Fetching available mailboxes...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="email_select">Select Email Account</Label>
-                    <Select
-                      value={formData.email_address}
-                      onValueChange={(value) => {
-                        const selected = availableMailboxes.find(m => m.email === value);
-                        setFormData({ 
-                          ...formData, 
-                          email_address: value,
-                          name: selected?.displayName || value
-                        });
-                      }}
-                      disabled={account !== undefined}
-                    >
-                      <SelectTrigger id="email_select">
-                        <SelectValue placeholder="Select email account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableMailboxes.map((mailbox) => (
-                          <SelectItem key={mailbox.email} value={mailbox.email}>
-                            {mailbox.displayName} - {mailbox.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-sm text-muted-foreground">
-                      Choose which email account to use for the help desk
-                    </p>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="email_display">Email Address</Label>
+                <Input
+                  id="email_display"
+                  value={formData.email_address}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Display Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Support Team"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                    />
-                  </div>
-                </>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="name">Display Name</Label>
+                <Input
+                  id="name"
+                  placeholder="Support Team"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="pipeline_id">Route to Pipeline *</Label>
