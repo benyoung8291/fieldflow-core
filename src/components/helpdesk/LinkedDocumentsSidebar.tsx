@@ -20,7 +20,7 @@ interface LinkedDocumentsSidebarProps {
 interface DocumentType {
   type: string;
   label: string;
-  icon: JSX.Element;
+  icon: React.JSX.Element;
   route: (id: string) => string;
 }
 
