@@ -32,18 +32,13 @@ export function EmailComposer({ onSend, defaultTo = "", defaultSubject = "", isS
   const [showBcc, setShowBcc] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Update subject when defaultSubject changes (e.g., when ticket loads)
+  // Update fields when switching tickets
   useEffect(() => {
-    if (defaultSubject && !subject) {
-      setSubject(defaultSubject);
-    }
+    setSubject(defaultSubject);
   }, [defaultSubject]);
 
-  // Update to when defaultTo changes
   useEffect(() => {
-    if (defaultTo && !to) {
-      setTo(defaultTo);
-    }
+    setTo(defaultTo);
   }, [defaultTo]);
 
   const handleSend = () => {
