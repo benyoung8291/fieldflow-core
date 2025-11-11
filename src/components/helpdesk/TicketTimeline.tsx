@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign } from "lucide-react";
+import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { TicketActionsMenu } from "./TicketActionsMenu";
@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { EmailComposer, EmailComposerRef } from "./EmailComposer";
 import { AddTimelineItemDialog } from "./AddTimelineItemDialog";
+import { ChecklistRenderer } from "./ChecklistRenderer";
 import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface TicketTimelineProps {
   ticketId: string;
@@ -24,6 +26,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["helpdesk-messages", ticketId],
@@ -438,6 +441,23 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                                 </Button>
                               )}
                             </>
+                          ) : message.message_type === "checklist" && message.metadata?.task_id ? (
+                            <ChecklistRenderer taskId={message.metadata.task_id} ticketNumber={ticket?.ticket_number || ""} />
+                          ) : message.message_type === "task" && message.metadata?.task_id ? (
+                            <div className="space-y-2">
+                              <div className="whitespace-pre-wrap">
+                                {renderMentions(message.body_text || message.body || "")}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate('/tasks')}
+                                className="h-6 text-xs gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View Task
+                              </Button>
+                            </div>
                           ) : (
                             <div className="space-y-2">
                               <div className="whitespace-pre-wrap">

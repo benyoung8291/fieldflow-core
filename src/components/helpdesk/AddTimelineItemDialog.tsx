@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, CheckSquare, ListTodo } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MentionTextarea } from "./MentionTextarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface AddTimelineItemDialogProps {
   open: boolean;
@@ -24,9 +26,33 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [taskMentions, setTaskMentions] = useState<string[]>([]);
+  const [taskAssignedTo, setTaskAssignedTo] = useState<string>("");
+  const [checklistTitle, setChecklistTitle] = useState("");
+  const [checklistAssignedTo, setChecklistAssignedTo] = useState<string>("");
   const [checklistItems, setChecklistItems] = useState<{ text: string; checked: boolean }[]>([{ text: "", checked: false }]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch workers/users for assignment
+  const { data: workers = [] } = useQuery({
+    queryKey: ["workers-for-assignment"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user?.id || "")
+        .single();
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .eq("tenant_id", profile?.tenant_id || "")
+        .order("first_name");
+
+      return data || [];
+    },
+  });
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -37,36 +63,106 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
         .eq("id", user?.id || "")
         .single();
 
-      let messageData: any = {
-        ticket_id: ticketId,
-        tenant_id: profile?.tenant_id,
-        created_by: user?.id,
-        sent_at: new Date().toISOString(),
-      };
+      if (!profile?.tenant_id) throw new Error("No tenant found");
 
       if (tab === "note") {
-        messageData.message_type = "note";
-        messageData.body_text = noteContent;
-        messageData.body = noteContent;
+        // Notes don't create system tasks, just helpdesk messages
+        let messageData: any = {
+          ticket_id: ticketId,
+          tenant_id: profile.tenant_id,
+          created_by: user?.id,
+          sent_at: new Date().toISOString(),
+          message_type: "note",
+          body_text: noteContent,
+          body: noteContent,
+        };
+
         if (noteMentions.length > 0) {
           messageData.metadata = { mentions: noteMentions };
         }
-      } else if (tab === "task") {
-        messageData.message_type = "task";
-        messageData.subject = taskTitle;
-        messageData.body_text = taskDescription;
-        messageData.body = taskDescription;
-        if (taskMentions.length > 0) {
-          messageData.metadata = { mentions: taskMentions };
-        }
-      } else if (tab === "checklist") {
-        messageData.message_type = "checklist";
-        messageData.body = JSON.stringify(checklistItems);
-        messageData.body_text = checklistItems.map(i => `${i.checked ? "[x]" : "[ ]"} ${i.text}`).join("\n");
-      }
 
-      const { error } = await supabase.from("helpdesk_messages").insert(messageData);
-      if (error) throw error;
+        const { error } = await supabase.from("helpdesk_messages").insert(messageData);
+        if (error) throw error;
+      } else if (tab === "task") {
+        // Create a system task linked to the ticket
+        const { data: newTask, error: taskError } = await supabase.from("tasks" as any).insert({
+          tenant_id: profile.tenant_id,
+          title: taskTitle,
+          description: taskDescription,
+          status: "pending",
+          priority: "medium",
+          assigned_to: taskAssignedTo || null,
+          created_by: user?.id,
+          linked_module: "helpdesk_ticket",
+          linked_record_id: ticketId,
+        }).select("id").single();
+
+        if (taskError) throw taskError;
+
+        // Also create helpdesk message to track it in timeline
+        const messageData: any = {
+          ticket_id: ticketId,
+          tenant_id: profile.tenant_id,
+          created_by: user?.id,
+          sent_at: new Date().toISOString(),
+          message_type: "task",
+          subject: taskTitle,
+          body_text: taskDescription,
+          body: taskDescription,
+          metadata: { 
+            task_id: (newTask as any).id,
+            mentions: taskMentions.length > 0 ? taskMentions : undefined
+          },
+        };
+
+        const { error: msgError } = await supabase.from("helpdesk_messages").insert(messageData);
+        if (msgError) throw msgError;
+      } else if (tab === "checklist") {
+        // Create a system task with checklist items
+        const { data: newTask, error: taskError } = await supabase.from("tasks" as any).insert({
+          tenant_id: profile.tenant_id,
+          title: checklistTitle,
+          description: "Checklist task from helpdesk ticket",
+          status: "pending",
+          priority: "medium",
+          assigned_to: checklistAssignedTo || null,
+          created_by: user?.id,
+          linked_module: "helpdesk_ticket",
+          linked_record_id: ticketId,
+        }).select("id").single();
+
+        if (taskError) throw taskError;
+
+        // Create checklist items
+        const checklistData = checklistItems
+          .filter(item => item.text.trim())
+          .map((item, index) => ({
+            task_id: (newTask as any).id,
+            title: item.text,
+            is_completed: item.checked,
+            item_order: index,
+          }));
+        
+        if (checklistData.length > 0) {
+          await supabase.from("task_checklist_items" as any).insert(checklistData);
+        }
+
+        // Create helpdesk message to track in timeline
+        const messageData: any = {
+          ticket_id: ticketId,
+          tenant_id: profile.tenant_id,
+          created_by: user?.id,
+          sent_at: new Date().toISOString(),
+          message_type: "checklist",
+          subject: checklistTitle,
+          body: JSON.stringify(checklistItems),
+          body_text: checklistItems.map(i => `${i.checked ? "[x]" : "[ ]"} ${i.text}`).join("\n"),
+          metadata: { task_id: (newTask as any).id },
+        };
+
+        const { error: msgError } = await supabase.from("helpdesk_messages").insert(messageData);
+        if (msgError) throw msgError;
+      }
     },
     onSuccess: () => {
       toast({ title: "Item added successfully" });
@@ -78,6 +174,9 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
       setTaskTitle("");
       setTaskDescription("");
       setTaskMentions([]);
+      setTaskAssignedTo("");
+      setChecklistTitle("");
+      setChecklistAssignedTo("");
       setChecklistItems([{ text: "", checked: false }]);
     },
     onError: (error: any) => {
@@ -153,9 +252,46 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
               }}
               rows={4}
             />
+            <div className="space-y-2">
+              <Label>Assign To</Label>
+              <Select value={taskAssignedTo} onValueChange={setTaskAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a user (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {workers.map((worker) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.first_name} {worker.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </TabsContent>
 
           <TabsContent value="checklist" className="space-y-3">
+            <Input
+              placeholder="Checklist title"
+              value={checklistTitle}
+              onChange={(e) => setChecklistTitle(e.target.value)}
+            />
+            <div className="space-y-2">
+              <Label>Assign To</Label>
+              <Select value={checklistAssignedTo} onValueChange={setChecklistAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a user (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {workers.map((worker) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.first_name} {worker.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               {checklistItems.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">

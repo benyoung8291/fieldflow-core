@@ -121,37 +121,31 @@ export function MentionTextarea({ value, onChange, placeholder, rows }: MentionT
         onChange={handleTextChange}
         placeholder={placeholder}
         rows={rows}
-        className="font-mono"
       />
       
       {showMentions && filteredUsers && filteredUsers.length > 0 && (
-        <div className="absolute z-50 w-72 bg-popover border border-border rounded-md shadow-md mt-1">
-          <Command>
-            <CommandList>
-              <CommandEmpty>No users found.</CommandEmpty>
-              <CommandGroup>
-                {filteredUsers.map((user) => (
-                  <CommandItem
-                    key={user.id}
-                    onSelect={() => handleSelectUser(user)}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {user.first_name?.charAt(0) || user.email?.charAt(0) || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">
-                        {user.first_name || ""} {user.last_name || ""}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{user.email}</span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
+        <div className="absolute z-[100] w-72 bg-popover border border-border rounded-md shadow-lg mt-1 max-h-64 overflow-auto">
+          <div className="p-1">
+            {filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                onClick={() => handleSelectUser(user)}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent cursor-pointer"
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs">
+                    {user.first_name?.charAt(0) || user.email?.charAt(0) || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">
+                    {user.first_name || ""} {user.last_name || ""}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{user.email}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
