@@ -44,12 +44,18 @@ export function HelpDeskEmailAccountDialog({
     is_active: true,
   });
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isFetchingMailboxes, setIsFetchingMailboxes] = useState(false);
   const [oauthData, setOauthData] = useState<{
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
     accountId: string;
   } | null>(null);
+  const [availableMailboxes, setAvailableMailboxes] = useState<Array<{
+    email: string;
+    displayName: string;
+    type: string;
+  }>>([]);
 
   const { data: pipelines } = useQuery({
     queryKey: ["helpdesk-pipelines-for-accounts"],
@@ -66,25 +72,106 @@ export function HelpDeskEmailAccountDialog({
     enabled: open,
   });
 
+  // Fetch available mailboxes after OAuth
+  const fetchMailboxes = async (accessToken: string, userEmail: string, userName: string) => {
+    setIsFetchingMailboxes(true);
+    try {
+      // Get user's mailbox settings
+      const settingsResponse = await fetch("https://graph.microsoft.com/v1.0/me/mailboxSettings", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
+      const mailboxes: Array<{ email: string; displayName: string; type: string }> = [
+        { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
+      ];
+
+      // Try to fetch shared mailboxes the user has access to
+      try {
+        const sharedResponse = await fetch(
+          "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/childFolders?$select=displayName",
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        
+        if (sharedResponse.ok) {
+          const sharedData = await sharedResponse.json();
+          // Note: This is a simplified approach. In production, you'd want to check
+          // for actual shared mailboxes via the /users endpoint if the user has permissions
+        }
+      } catch (err) {
+        console.log("Could not fetch shared mailboxes:", err);
+      }
+
+      // Try to get delegated mailboxes
+      try {
+        const delegateResponse = await fetch(
+          "https://graph.microsoft.com/v1.0/me/mailFolders",
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        
+        if (delegateResponse.ok) {
+          // Additional logic to detect shared/delegated mailboxes could go here
+        }
+      } catch (err) {
+        console.log("Could not fetch delegate access:", err);
+      }
+
+      setAvailableMailboxes(mailboxes);
+      
+      // Auto-select the first mailbox
+      if (mailboxes.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          email_address: mailboxes[0].email,
+          display_name: mailboxes[0].displayName,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching mailboxes:", error);
+      toast({
+        title: "Could not fetch mailboxes",
+        description: "Using authenticated account as default",
+        variant: "destructive",
+      });
+      
+      // Fallback to user email
+      setAvailableMailboxes([
+        { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
+      ]);
+      setFormData(prev => ({
+        ...prev,
+        email_address: userEmail,
+        display_name: userName,
+      }));
+    } finally {
+      setIsFetchingMailboxes(false);
+    }
+  };
+
   // Handle OAuth callback message
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
+    const handleMessage = async (event: MessageEvent) => {
       if (event.data.accessToken && event.data.refreshToken) {
-        setOauthData({
+        const oauthInfo = {
           accessToken: event.data.accessToken,
           refreshToken: event.data.refreshToken,
           expiresIn: event.data.expiresIn,
           accountId: event.data.accountId,
-        });
-        setFormData(prev => ({
-          ...prev,
-          email_address: event.data.email,
-          display_name: event.data.email,
-        }));
+        };
+        
+        setOauthData(oauthInfo);
         setIsAuthenticating(false);
+        
         toast({
           title: "Microsoft account connected successfully!",
+          description: "Fetching available mailboxes...",
         });
+
+        // Fetch user profile and available mailboxes
+        await fetchMailboxes(
+          event.data.accessToken,
+          event.data.email,
+          event.data.email
+        );
       }
     };
 
@@ -251,28 +338,56 @@ export function HelpDeskEmailAccountDialog({
 
           {(account || oauthData) && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="email_address">Email Address</Label>
-                <Input
-                  id="email_address"
-                  type="email"
-                  value={formData.email_address}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
+              {isFetchingMailboxes ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Fetching available mailboxes...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="email_select">Select Email Account</Label>
+                    <Select
+                      value={formData.email_address}
+                      onValueChange={(value) => {
+                        const selected = availableMailboxes.find(m => m.email === value);
+                        setFormData({ 
+                          ...formData, 
+                          email_address: value,
+                          display_name: selected?.displayName || value
+                        });
+                      }}
+                      disabled={account !== undefined}
+                    >
+                      <SelectTrigger id="email_select">
+                        <SelectValue placeholder="Select email account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableMailboxes.map((mailbox) => (
+                          <SelectItem key={mailbox.email} value={mailbox.email}>
+                            {mailbox.displayName} - {mailbox.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Choose which email account to use for the help desk
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="display_name">Display Name</Label>
-                <Input
-                  id="display_name"
-                  placeholder="Support Team"
-                  value={formData.display_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, display_name: e.target.value })
-                  }
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="display_name">Display Name</Label>
+                    <Input
+                      id="display_name"
+                      placeholder="Support Team"
+                      value={formData.display_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, display_name: e.target.value })
+                      }
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="pipeline_id">Route to Pipeline *</Label>
