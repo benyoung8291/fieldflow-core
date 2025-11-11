@@ -62,17 +62,8 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  console.log("🚀 App component rendering");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  console.log("🔑 isAuthenticated state:", isAuthenticated);
-  
-  // Initialize PWA update functionality
-  try {
-    usePWAUpdate();
-    console.log("✅ PWA hook initialized");
-  } catch (error) {
-    console.error("❌ PWA hook error:", error);
-  }
+  usePWAUpdate();
 
   useEffect(() => {
     let mounted = true;
