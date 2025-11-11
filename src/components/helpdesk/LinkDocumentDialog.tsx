@@ -39,6 +39,15 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
     queryFn: async () => {
       if (!documentType) return [];
 
+      const selectMap: Record<string, string> = {
+        service_order: "id, work_order_number, description",
+        quote: "id, quote_number, description",
+        invoice: "id, invoice_number",
+        project: "id, name",
+        task: "id, title, description",
+        appointment: "id, title, description",
+      };
+
       const tableMap: Record<string, string> = {
         service_order: "service_orders",
         quote: "quotes",
@@ -49,11 +58,12 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
       };
 
       const tableName = tableMap[documentType];
-      if (!tableName) return [];
+      const selectColumns = selectMap[documentType];
+      if (!tableName || !selectColumns) return [];
 
       const { data, error } = await supabase
         .from(tableName as any)
-        .select("id, work_order_number, quote_number, invoice_number, name, title, description")
+        .select(selectColumns)
         .limit(20);
       
       if (error) throw error;
@@ -72,6 +82,15 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
         .single();
 
       // Fetch document details to cache number and description
+      const selectMap: Record<string, string> = {
+        service_order: "id, work_order_number, description",
+        quote: "id, quote_number, description",
+        invoice: "id, invoice_number",
+        project: "id, name",
+        task: "id, title, description",
+        appointment: "id, title, description",
+      };
+
       const tableMap: Record<string, string> = {
         service_order: "service_orders",
         quote: "quotes",
@@ -82,9 +101,10 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
       };
 
       const tableName = tableMap[documentType];
+      const selectColumns = selectMap[documentType];
       const { data: docData } = await supabase
         .from(tableName as any)
-        .select("id, work_order_number, quote_number, invoice_number, name, title, description")
+        .select(selectColumns)
         .eq("id", documentId)
         .single();
 
