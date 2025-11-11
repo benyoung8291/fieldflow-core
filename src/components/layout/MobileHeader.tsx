@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Menu, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -23,16 +23,8 @@ export const MobileHeader = ({ onMenuClick }: MobileHeaderProps) => {
   return (
     <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
       <div className="flex items-center justify-between px-4 py-3">
-        {/* Left side - Menu and Logo */}
+        {/* Left side - Logo only */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMenuClick}
-            className="h-9 w-9"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">SP</span>
           </div>
