@@ -27,6 +27,7 @@ import IntegrationsTab from "@/components/settings/IntegrationsTab";
 import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
 import UserProfileTab from "@/components/settings/UserProfileTab";
 import BrandColorsTab from "@/components/settings/BrandColorsTab";
+import { HelpDeskSettingsTab } from "@/components/settings/HelpDeskSettingsTab";
 
 interface PayRateCategory {
   id: string;
@@ -185,6 +186,7 @@ export default function Settings() {
               <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
               <TabsTrigger value="templates">Templates</TabsTrigger>
               <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
+              <TabsTrigger value="helpdesk">Help Desk</TabsTrigger>
               <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
               <TabsTrigger value="changelog">Change Log</TabsTrigger>
             </TabsList>
@@ -335,6 +337,14 @@ export default function Settings() {
             <Card>
               <CardContent className="pt-6">
                 <CRMStatusesTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="helpdesk">
+            <Card>
+              <CardContent className="pt-6">
+                <HelpDeskSettingsTab />
               </CardContent>
             </Card>
           </TabsContent>
