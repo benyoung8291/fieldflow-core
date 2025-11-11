@@ -26,6 +26,7 @@ import NumberingTab from "@/components/settings/NumberingTab";
 import IntegrationsTab from "@/components/settings/IntegrationsTab";
 import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
 import UserProfileTab from "@/components/settings/UserProfileTab";
+import BrandColorsTab from "@/components/settings/BrandColorsTab";
 
 interface PayRateCategory {
   id: string;
@@ -174,6 +175,7 @@ export default function Settings() {
             <TabsList>
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="user-profile">My Profile</TabsTrigger>
+              <TabsTrigger value="brand-colors">Brand Colors</TabsTrigger>
               <TabsTrigger value="numbering">Numbering</TabsTrigger>
               <TabsTrigger value="integrations">Integrations</TabsTrigger>
               <TabsTrigger value="accounting">Accounting</TabsTrigger>
@@ -201,6 +203,10 @@ export default function Settings() {
                 <UserProfileTab />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="brand-colors">
+            <BrandColorsTab />
           </TabsContent>
 
           <TabsContent value="numbering">

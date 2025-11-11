@@ -429,6 +429,33 @@ export type Database = {
           },
         ]
       }
+      brand_colors: {
+        Row: {
+          color_key: string
+          color_value: string
+          created_at: string
+          id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          color_key: string
+          color_value: string
+          created_at?: string
+          id?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          color_key?: string
+          color_value?: string
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       change_order_line_items: {
         Row: {
           change_order_id: string
