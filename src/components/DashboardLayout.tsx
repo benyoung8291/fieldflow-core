@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
+import { MobileHeader } from "@/components/layout/MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardLayoutProps {
@@ -133,9 +134,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar - Desktop */}
+      {/* Sidebar - Desktop only, hidden in mobile view */}
       <aside className={cn(
-        "hidden lg:flex lg:flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0",
+        "flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0",
+        isMobile ? "hidden" : "flex", // Hide completely in mobile view
         sidebarCollapsed ? "w-20" : "w-64"
       )}>
         <div className="flex flex-col h-full">
@@ -222,39 +224,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      {/* Top Header Bar - Always visible with view mode and theme toggles */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          {/* Left side - Menu button on mobile */}
-          <div className="flex items-center gap-2">
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-            )}
-            {!isMobile && (
-              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">SP</span>
-              </div>
-            )}
-          </div>
-
-          {/* Right side - View mode and theme toggles */}
-          <div className="flex items-center gap-2">
+      {/* Top Header Bar */}
+      {isMobile ? (
+        <MobileHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      ) : (
+        <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
+          <div className="flex items-center justify-end px-4 py-3 gap-2">
             <ViewModeToggle />
             <ThemeToggle />
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
+      {/* Mobile Sidebar Overlay - Only show when explicitly opened */}
+      {sidebarOpen && isMobile && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         >
           <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border overflow-y-auto">
@@ -265,34 +250,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <span className="text-primary-foreground font-bold text-lg">SP</span>
                   </div>
                   <h1 className="text-xl font-bold text-sidebar-foreground">Service Pulse</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ThemeToggle />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <User className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem onClick={() => { navigate("/settings"); setSidebarOpen(false); }}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={async () => {
-                          await supabase.auth.signOut();
-                          navigate("/auth");
-                          setSidebarOpen(false);
-                          toast.success("Signed out successfully");
-                        }}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </div>
               <nav className="flex-1 flex flex-col gap-2 overflow-y-auto">
