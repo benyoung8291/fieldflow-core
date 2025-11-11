@@ -389,11 +389,34 @@ export default function Scheduler() {
         if (workerError) throw workerError;
       }
     },
+    onMutate: async ({ appointmentId, startTime, endTime, workerId }) => {
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+
+      queryClient.setQueryData(["appointments"], (old: any) => {
+        return (old || []).map((apt: any) => {
+          if (apt.id === appointmentId) {
+            return {
+              ...apt,
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+              assigned_to: workerId,
+            };
+          }
+          return apt;
+        });
+      });
+
+      return { previousAppointments };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success("Appointment reassigned successfully");
+      toast.success("Appointment updated successfully");
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(["appointments"], context.previousAppointments);
+      }
       toast.error(error.message || "Failed to update appointment");
     },
   });
@@ -742,6 +765,14 @@ export default function Scheduler() {
       const originalStart = new Date(appointment.start_time);
       const originalEnd = new Date(appointment.end_time);
       const durationMs = originalEnd.getTime() - originalStart.getTime();
+      
+      // If hour is not specified (ServiceOrdersCalendarView), keep original time but change date
+      if (hour === undefined) {
+        const newDate = new Date(date);
+        newDate.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+        startTime = newDate;
+      }
+      
       let newEndTime = new Date(startTime.getTime() + durationMs);
 
       // Check for existing appointments and find next available slot

@@ -1,4 +1,4 @@
-import { useDroppable } from "@dnd-kit/core";
+import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, FileText, X } from "lucide-react";
@@ -21,13 +21,28 @@ export default function DroppableAppointmentCard({
   onRemoveWorker,
   onClick,
 }: DroppableAppointmentCardProps) {
-  const { setNodeRef, isOver } = useDroppable({
+  // Make card droppable for workers
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `appointment-drop-${appointment.id}`,
     data: {
       type: "appointment-card",
       appointmentId: appointment.id,
     },
   });
+
+  // Make card draggable for moving between dates
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: `appointment-drag-${appointment.id}`,
+    data: {
+      type: "appointment",
+      appointment: appointment,
+    },
+  });
+
+  const setNodeRef = (node: HTMLElement | null) => {
+    setDropRef(node);
+    setDragRef(node);
+  };
 
   const workers = appointment.appointment_workers || [];
   const totalWorkerHours = workers.length * calculateAppointmentHours(appointment);
@@ -36,9 +51,12 @@ export default function DroppableAppointmentCard({
   return (
     <Card
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       className={cn(
-        "p-2 cursor-pointer hover:shadow-md transition-all group relative",
-        isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5"
+        "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
+        isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
+        isDragging && "opacity-50"
       )}
       onClick={onClick}
     >
