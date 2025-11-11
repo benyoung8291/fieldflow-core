@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import {
   Accordion,
   AccordionContent,
@@ -41,9 +42,18 @@ export const MobileDetailLayout = ({
   defaultOpenSections = [sections[0]?.id],
 }: MobileDetailLayoutProps) => {
   const navigate = useNavigate();
+  const { elementRef, swipeProgress } = useSwipeToClose(() => navigate(-1), true);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div ref={elementRef} className="min-h-screen bg-background pb-20">
+      {/* Swipe indicator */}
+      {swipeProgress > 0 && (
+        <div 
+          className="fixed left-0 top-0 bottom-0 w-1 bg-primary/30 transition-opacity"
+          style={{ opacity: swipeProgress }}
+        />
+      )}
+      
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background border-b">
         <div className="flex items-center gap-3 p-3">

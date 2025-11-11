@@ -12,6 +12,7 @@ import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { useToast } from "@/hooks/use-toast";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   DropdownMenu,
@@ -198,9 +199,19 @@ export default function LeadDetails() {
   };
 
   if (isMobile) {
+    const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/leads"), true);
+    
     return (
       <DashboardLayout>
-        <div className="flex flex-col h-full">
+        <div ref={elementRef} className="flex flex-col h-full">
+          {/* Swipe indicator */}
+          {swipeProgress > 0 && (
+            <div 
+              className="fixed left-0 top-0 bottom-0 w-1 bg-primary/30 transition-opacity z-50"
+              style={{ opacity: swipeProgress }}
+            />
+          )}
+          
           {/* Mobile Header */}
           <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
             <div className="flex items-center justify-between">

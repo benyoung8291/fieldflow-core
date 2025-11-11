@@ -20,6 +20,7 @@ import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import { cn } from "@/lib/utils";
 
 const statusColors = {
@@ -285,9 +286,19 @@ export default function AppointmentDetails() {
 
   // Mobile Layout
   if (isMobile) {
+    const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/appointments"), true);
+    
     return (
       <DashboardLayout>
-        <div className="min-h-screen bg-background pb-20">
+        <div ref={elementRef} className="min-h-screen bg-background pb-20">
+          {/* Swipe indicator */}
+          {swipeProgress > 0 && (
+            <div 
+              className="fixed left-0 top-0 bottom-0 w-1 bg-primary/30 transition-opacity"
+              style={{ opacity: swipeProgress }}
+            />
+          )}
+          
           {/* Mobile Header */}
           <div className="sticky top-0 z-20 bg-background border-b p-3">
             <div className="flex items-center gap-3">
