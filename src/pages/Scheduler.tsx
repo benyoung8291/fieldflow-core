@@ -189,6 +189,28 @@ export default function Scheduler() {
   const uniqueTechnicians = new Set(appointments.map(apt => apt.assigned_to).filter(Boolean));
   const activeWorkers = uniqueTechnicians.size;
 
+  // Calculate visible appointments based on view type
+  const visibleAppointments = useMemo(() => {
+    if (viewType === "day") {
+      return appointments.filter(apt => isSameDay(new Date(apt.start_time), currentDate));
+    } else if (viewType === "week" || viewType === "timegrid") {
+      const start = startOfWeek(currentDate);
+      const end = endOfWeek(currentDate);
+      return appointments.filter(apt => {
+        const aptDate = new Date(apt.start_time);
+        return aptDate >= start && aptDate <= end;
+      });
+    } else if (viewType === "month") {
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
+      return appointments.filter(apt => {
+        const aptDate = new Date(apt.start_time);
+        return aptDate >= start && aptDate <= end;
+      });
+    }
+    return appointments; // kanban view shows all
+  }, [appointments, currentDate, viewType]);
+
   const handlePrevious = () => {
     if (viewType === "day") {
       setCurrentDate(addDays(currentDate, -1));
@@ -1116,6 +1138,9 @@ export default function Scheduler() {
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
                 <h3 className="text-sm font-semibold ml-2">{getDateRangeLabel()}</h3>
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {visibleAppointments.length} of {appointments.length} appointments
+                </Badge>
               </div>
               <div className="flex items-center gap-2">
                 <Button
