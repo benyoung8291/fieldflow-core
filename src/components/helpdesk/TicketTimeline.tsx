@@ -221,9 +221,9 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         <ScrollArea className="h-full p-2">
           {isLoading ? (
             <div className="text-center text-muted-foreground text-sm py-4">Loading messages...</div>
-          ) : timelineItems && timelineItems.length > 0 ? (
+          ) : (
             <div className="space-y-3 pb-2">
-              {timelineItems.map((item, index) => {
+              {timelineItems && timelineItems.length > 0 && timelineItems.map((item, index) => {
                 // Check if this is an audit log
                 const isAuditLog = !item.message_type;
                 
@@ -437,23 +437,42 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                   </div>
                 );
               })}
+              
+              {/* Add Item Button - Inline in timeline */}
+              <div className="relative flex items-center justify-center py-4">
+                {/* Center line */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-px h-full bg-border/30" />
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="relative flex items-center gap-1 bg-background px-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAddItemDialogOpen(true)}
+                    className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="text-xs">Note</span>
+                  </Button>
+                  <div className="h-4 w-px bg-border/50" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAddItemDialogOpen(true)}
+                    className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                    <span className="text-xs">Task</span>
+                  </Button>
+                </div>
+              </div>
+              
               <div ref={scrollRef} />
             </div>
-          ) : (
-            <div className="text-center text-muted-foreground text-sm py-4">No messages yet</div>
           )}
         </ScrollArea>
-        
-        {/* Add Item Button */}
-        <div className="absolute bottom-4 right-4 z-10">
-          <Button
-            size="icon"
-            className="rounded-full h-10 w-10 shadow-lg"
-            onClick={() => setAddItemDialogOpen(true)}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-        </div>
       </div>
 
       {/* Email Composer */}
