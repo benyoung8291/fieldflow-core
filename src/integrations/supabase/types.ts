@@ -1030,6 +1030,7 @@ export type Database = {
           from_name: string | null
           html_body: string | null
           id: string
+          internet_message_id: string | null
           is_from_customer: boolean | null
           is_internal: boolean
           message_type: string
@@ -1056,6 +1057,7 @@ export type Database = {
           from_name?: string | null
           html_body?: string | null
           id?: string
+          internet_message_id?: string | null
           is_from_customer?: boolean | null
           is_internal?: boolean
           message_type: string
@@ -1082,6 +1084,7 @@ export type Database = {
           from_name?: string | null
           html_body?: string | null
           id?: string
+          internet_message_id?: string | null
           is_from_customer?: boolean | null
           is_internal?: boolean
           message_type?: string

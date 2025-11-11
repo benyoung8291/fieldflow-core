@@ -138,6 +138,34 @@ serve(async (req) => {
     }
 
     console.log("Email sent successfully via Microsoft Graph API");
+    
+    // Fetch the sent message to get its actual Message-ID for proper threading
+    // Wait briefly for the message to appear in sent items
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    let sentMessageId = null;
+    let sentInternetMessageId = null;
+    try {
+      const sentItemsResponse = await fetch(
+        `https://graph.microsoft.com/v1.0/users/${account.email_address}/mailFolders/sentitems/messages?$top=1&$orderby=sentDateTime desc&$select=id,internetMessageId`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      
+      if (sentItemsResponse.ok) {
+        const sentData = await sentItemsResponse.json();
+        if (sentData.value && sentData.value.length > 0) {
+          sentMessageId = sentData.value[0].id;
+          sentInternetMessageId = sentData.value[0].internetMessageId;
+          console.log("Retrieved sent message ID:", sentMessageId, "Internet Message ID:", sentInternetMessageId);
+        }
+      }
+    } catch (error) {
+      console.error("Could not retrieve sent message ID:", error);
+    }
 
     // Create message record in database
     const recipientEmail = Array.isArray(to) ? to[0] : to;
@@ -159,6 +187,8 @@ serve(async (req) => {
           body_html: htmlBody,
           body_text: body,
           sent_at: new Date().toISOString(),
+          microsoft_message_id: sentMessageId,
+          internet_message_id: sentInternetMessageId,
         });
 
       if (messageError) {

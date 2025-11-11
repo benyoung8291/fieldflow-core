@@ -84,9 +84,9 @@ serve(async (req) => {
       console.log("✅ Token refreshed successfully");
     }
 
-    // Fetch emails from Microsoft Graph API - include internetMessageHeaders for better threading
+    // Fetch emails from Microsoft Graph API - include all threading fields
     const messagesResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead,conversationId,internetMessageId,hasAttachments&$expand=attachments`,
+      `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead,conversationId,internetMessageId,internetMessageHeaders,hasAttachments&$expand=attachments`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -136,15 +136,73 @@ serve(async (req) => {
         // Check if this is a reply to an existing conversation
         let existingTicket = null;
         
-        // First try: Match by conversationId (most reliable)
-        if (message.conversationId) {
+        // Extract email threading headers (In-Reply-To and References)
+        let inReplyTo = null;
+        let references: string[] = [];
+        
+        if (message.internetMessageHeaders) {
+          for (const header of message.internetMessageHeaders) {
+            if (header.name === "In-Reply-To") {
+              inReplyTo = header.value;
+            } else if (header.name === "References") {
+              // References header contains space-separated Message-IDs
+              references = header.value.split(/\s+/).filter((id: string) => id.length > 0);
+            }
+          }
+        }
+        
+        console.log(`📧 Processing message - In-Reply-To: ${inReplyTo}, References: ${references.length} IDs`);
+        
+        // FIRST TRY: Match by In-Reply-To header (most reliable - standard email threading)
+        if (inReplyTo && !existingTicket) {
+          console.log(`🔍 Looking for ticket with internet_message_id: ${inReplyTo}`);
+          const { data: messages } = await supabase
+            .from("helpdesk_messages")
+            .select("ticket_id, helpdesk_tickets!inner(id, tenant_id, subject)")
+            .eq("internet_message_id", inReplyTo)
+            .eq("helpdesk_tickets.email_account_id", emailAccount.id)
+            .limit(1);
+          
+          if (messages && messages.length > 0) {
+            console.log(`✅ Found ticket by In-Reply-To header: ${messages[0].ticket_id}`);
+            existingTicket = {
+              id: messages[0].ticket_id,
+              tenant_id: (messages[0] as any).helpdesk_tickets.tenant_id,
+              subject: (messages[0] as any).helpdesk_tickets.subject,
+            };
+          }
+        }
+        
+        // SECOND TRY: Match by References header (check all Message-IDs in the chain)
+        if (references.length > 0 && !existingTicket) {
+          console.log(`🔍 Looking for ticket in References chain (${references.length} IDs)`);
+          const { data: messages } = await supabase
+            .from("helpdesk_messages")
+            .select("ticket_id, helpdesk_tickets!inner(id, tenant_id, subject)")
+            .in("internet_message_id", references)
+            .eq("helpdesk_tickets.email_account_id", emailAccount.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          if (messages && messages.length > 0) {
+            console.log(`✅ Found ticket by References header: ${messages[0].ticket_id}`);
+            existingTicket = {
+              id: messages[0].ticket_id,
+              tenant_id: (messages[0] as any).helpdesk_tickets.tenant_id,
+              subject: (messages[0] as any).helpdesk_tickets.subject,
+            };
+          }
+        }
+        
+        // THIRD TRY: Match by Microsoft conversationId
+        if (message.conversationId && !existingTicket) {
           console.log(`🔍 Looking for ticket with conversationId: ${message.conversationId}`);
           const { data: ticket } = await supabase
             .from("helpdesk_tickets")
             .select("id, tenant_id, subject")
             .eq("microsoft_conversation_id", message.conversationId)
             .eq("email_account_id", emailAccount.id)
-            .single();
+            .maybeSingle();
           
           if (ticket) {
             console.log(`✅ Found ticket by conversationId: ${ticket.id}`);
@@ -152,14 +210,14 @@ serve(async (req) => {
           }
         }
         
-        // Second try: Match by subject if it's a reply (RE: or Re:)
+        // FOURTH TRY (FALLBACK): Match by subject if it's a reply (least reliable)
         // Prioritize non-archived tickets to avoid threading replies to archived conversations
         if (!existingTicket && message.subject) {
           const isReply = message.subject.startsWith("RE:") || message.subject.startsWith("Re:");
           if (isReply) {
             // Remove "RE:" or "Re:" prefix and trim
             const cleanSubject = message.subject.replace(/^(RE:|Re:)\s*/i, "").trim();
-            console.log(`🔍 Looking for non-archived ticket with subject: ${cleanSubject}`);
+            console.log(`⚠️ Falling back to subject matching (unreliable): ${cleanSubject}`);
             
             // First try: non-archived tickets only
             const { data: activeTicket } = await supabase
@@ -170,7 +228,7 @@ serve(async (req) => {
               .ilike("subject", cleanSubject)
               .order("created_at", { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle();
             
             if (activeTicket) {
               console.log(`✅ Found active ticket by subject match: ${activeTicket.id}`);
@@ -186,7 +244,7 @@ serve(async (req) => {
                 .ilike("subject", cleanSubject)
                 .order("created_at", { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
               
               if (archivedTicket) {
                 console.log(`✅ Found archived ticket by subject match: ${archivedTicket.id}`);
@@ -227,6 +285,7 @@ serve(async (req) => {
               body_html: message.body?.content || "",
               body_text: message.bodyPreview || "",
               microsoft_message_id: message.id,
+              internet_message_id: message.internetMessageId,
               sent_at: message.receivedDateTime,
               attachments: attachments,
             });
@@ -314,6 +373,7 @@ serve(async (req) => {
               body_html: message.body?.content || "",
               body_text: message.bodyPreview || "",
               microsoft_message_id: message.id,
+              internet_message_id: message.internetMessageId,
               sent_at: message.receivedDateTime,
               attachments: attachments,
             });
