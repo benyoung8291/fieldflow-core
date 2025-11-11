@@ -18,14 +18,15 @@ interface EmailComposerProps {
     bodyHtml?: string;
   }) => void;
   defaultTo?: string;
+  defaultSubject?: string;
   isSending?: boolean;
 }
 
-export function EmailComposer({ onSend, defaultTo = "", isSending = false }: EmailComposerProps) {
+export function EmailComposer({ onSend, defaultTo = "", defaultSubject = "", isSending = false }: EmailComposerProps) {
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState("");
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);

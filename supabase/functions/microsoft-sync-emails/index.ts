@@ -86,7 +86,7 @@ serve(async (req) => {
 
     // Fetch emails from Microsoft Graph API
     const messagesResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,bodyPreview,body,isRead,conversationId`,
+      `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,bodyPreview,body,isRead,conversationId,hasAttachments&$expand=attachments`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -184,6 +184,14 @@ serve(async (req) => {
           continue;
         }
 
+        // Process attachments
+        const attachments = message.attachments?.map((att: any) => ({
+          name: att.name,
+          contentType: att.contentType,
+          size: att.size,
+          id: att.id,
+        })) || [];
+
         // Create the initial message
         const { error: messageError } = await supabase
           .from("helpdesk_messages")
@@ -198,6 +206,7 @@ serve(async (req) => {
             is_from_customer: true,
             microsoft_message_id: message.id,
             sent_at: message.receivedDateTime,
+            attachments: attachments,
           });
 
         if (messageError) {

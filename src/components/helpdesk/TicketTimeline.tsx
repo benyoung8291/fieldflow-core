@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Mail, FileText, CheckSquare } from "lucide-react";
+import { MessageSquare, Mail, FileText, CheckSquare, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -162,13 +163,45 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                       <div className="text-xs whitespace-pre-wrap max-w-full overflow-hidden">
                         {message.body_html ? (
                           <div 
-                            className="prose prose-xs max-w-none dark:prose-invert"
+                            className="prose prose-xs max-w-none dark:prose-invert [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded"
                             dangerouslySetInnerHTML={{ __html: message.body_html }} 
                           />
                         ) : (
                           message.body_text || message.body
                         )}
                       </div>
+
+                      {/* Attachments */}
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-xs font-medium mb-1 text-muted-foreground">Attachments:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {message.attachments.map((attachment: any, idx: number) => (
+                              <Button
+                                key={idx}
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => {
+                                  if (attachment.id) {
+                                    // Download attachment from Microsoft Graph
+                                    const downloadUrl = `https://graph.microsoft.com/v1.0/me/messages/${message.microsoft_message_id}/attachments/${attachment.id}/$value`;
+                                    window.open(downloadUrl, '_blank');
+                                  }
+                                }}
+                              >
+                                <Paperclip className="h-3 w-3 mr-1" />
+                                {attachment.name}
+                                {attachment.size && (
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({Math.round(attachment.size / 1024)}KB)
+                                  </span>
+                                )}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -184,6 +217,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       <EmailComposer
         onSend={(emailData) => sendReplyMutation.mutate(emailData)}
         defaultTo={ticket?.sender_email || ticket?.external_email || ""}
+        defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
         isSending={sendReplyMutation.isPending}
       />
     </div>

@@ -977,8 +977,47 @@ export type Database = {
           },
         ]
       }
+      helpdesk_linked_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: string
+          document_type: string
+          id: string
+          tenant_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          document_type: string
+          id?: string
+          tenant_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          document_type?: string
+          id?: string
+          tenant_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helpdesk_linked_documents_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       helpdesk_messages: {
         Row: {
+          attachments: Json | null
           body: string | null
           body_html: string | null
           body_text: string | null
@@ -1004,6 +1043,7 @@ export type Database = {
           to_email: string | null
         }
         Insert: {
+          attachments?: Json | null
           body?: string | null
           body_html?: string | null
           body_text?: string | null
@@ -1029,6 +1069,7 @@ export type Database = {
           to_email?: string | null
         }
         Update: {
+          attachments?: Json | null
           body?: string | null
           body_html?: string | null
           body_text?: string | null
