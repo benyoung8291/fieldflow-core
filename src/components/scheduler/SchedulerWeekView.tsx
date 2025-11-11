@@ -62,12 +62,13 @@ export default function SchedulerWeekView({
   // Format workers from passed list
   const formattedWorkers = passedWorkers.map(worker => ({
     id: worker.id,
-    name: `${worker.first_name} ${worker.last_name}`
+    name: `${worker.first_name} ${worker.last_name}`,
+    skills: worker.worker_skills || []
   }));
 
   // Add unassigned row
   const workers = [
-    { id: null, name: "Unassigned" },
+    { id: null, name: "Unassigned", skills: [] },
     ...formattedWorkers
   ];
 
@@ -171,8 +172,17 @@ export default function SchedulerWeekView({
           {workers.map(worker => (
             <div key={worker.id || "unassigned"} className="grid grid-cols-[150px_repeat(7,1fr)] gap-2">
               {/* Worker name */}
-              <div className="flex items-center px-3 py-2 bg-muted rounded-lg">
-                <span className="text-sm font-medium truncate">{worker.name}</span>
+              <div className="flex flex-col items-start px-3 py-2 bg-muted rounded-lg gap-1">
+                <span className="text-sm font-medium truncate w-full">{worker.name}</span>
+                {worker.skills && worker.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 w-full">
+                    {worker.skills.map((ws: any) => (
+                      <Badge key={ws.skill_id} variant="outline" className="text-[10px] px-1 py-0">
+                        {ws.skills?.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Day cells */}
@@ -201,7 +211,7 @@ export default function SchedulerWeekView({
                     workerId={worker.id}
                     isAvailable={isAvailable}
                     className={cn(
-                      "min-h-[100px] p-2 border-2 border-dashed rounded-lg space-y-1",
+                      "min-h-[150px] p-2 border-2 border-dashed rounded-lg space-y-1",
                       isSameDay(day, new Date()) 
                         ? "border-primary/30 bg-primary/5" 
                         : "border-border bg-muted/20"
