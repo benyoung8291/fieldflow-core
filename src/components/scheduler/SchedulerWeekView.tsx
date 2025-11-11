@@ -189,7 +189,10 @@ export default function SchedulerWeekView({
               {weekDays.map(day => {
                 const dayAppointments = appointments.filter(apt => {
                   const isUnassigned = !apt.assigned_to && (!apt.appointment_workers || apt.appointment_workers.length === 0);
-                  const matchesWorker = worker.id === null ? isUnassigned : apt.assigned_to === worker.id;
+                  const hasWorkerAssigned = apt.appointment_workers?.some((aw: any) => aw.worker_id === worker.id);
+                  const matchesWorker = worker.id === null 
+                    ? isUnassigned 
+                    : (apt.assigned_to === worker.id || hasWorkerAssigned);
                   return matchesWorker && isSameDay(new Date(apt.start_time), day);
                 });
 
