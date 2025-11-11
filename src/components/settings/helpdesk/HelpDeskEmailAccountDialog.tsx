@@ -233,12 +233,21 @@ export function HelpDeskEmailAccountDialog({
         throw error;
       }
       
-      console.log("📝 Got auth URL, redirecting...");
+      if (!data || !data.authUrl) {
+        console.error("❌ No auth URL returned:", data);
+        throw new Error("No authorization URL received from server");
+      }
+      
+      console.log("📝 Got auth URL, redirecting to:", data.authUrl);
       
       // Store state that we're in the middle of OAuth flow
       sessionStorage.setItem("microsoft_oauth_in_progress", "true");
       
+      // Small delay to ensure state is saved
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Do a full page redirect to Microsoft OAuth
+      console.log("🔄 Redirecting to Microsoft...");
       window.location.href = data.authUrl;
       
     } catch (error) {
@@ -249,6 +258,7 @@ export function HelpDeskEmailAccountDialog({
         variant: "destructive",
       });
       setIsAuthenticating(false);
+      sessionStorage.removeItem("microsoft_oauth_in_progress");
     }
   };
 
@@ -371,6 +381,7 @@ export function HelpDeskEmailAccountDialog({
                     Sign in with your Microsoft account to get started
                   </p>
                   <Button
+                    type="button"
                     onClick={handleMicrosoftAuth}
                     size="lg"
                   >
