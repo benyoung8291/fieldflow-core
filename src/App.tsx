@@ -62,10 +62,17 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  console.log("🚀 App component rendering");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  console.log("🔑 isAuthenticated state:", isAuthenticated);
   
   // Initialize PWA update functionality
-  usePWAUpdate();
+  try {
+    usePWAUpdate();
+    console.log("✅ PWA hook initialized");
+  } catch (error) {
+    console.error("❌ PWA hook error:", error);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -124,17 +131,17 @@ const App = () => {
 
   if (isAuthenticated === null) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
           <div className="flex items-center justify-center min-h-screen">Loading...</div>
-        </ThemeProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     );
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -187,10 +194,10 @@ const App = () => {
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 };
 
