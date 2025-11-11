@@ -153,25 +153,45 @@ serve(async (req) => {
         }
         
         // Second try: Match by subject if it's a reply (RE: or Re:)
+        // Prioritize non-archived tickets to avoid threading replies to archived conversations
         if (!existingTicket && message.subject) {
           const isReply = message.subject.startsWith("RE:") || message.subject.startsWith("Re:");
           if (isReply) {
             // Remove "RE:" or "Re:" prefix and trim
             const cleanSubject = message.subject.replace(/^(RE:|Re:)\s*/i, "").trim();
-            console.log(`🔍 Looking for ticket with subject: ${cleanSubject}`);
+            console.log(`🔍 Looking for non-archived ticket with subject: ${cleanSubject}`);
             
-            const { data: ticket } = await supabase
+            // First try: non-archived tickets only
+            const { data: activeTicket } = await supabase
               .from("helpdesk_tickets")
               .select("id, tenant_id, subject")
               .eq("email_account_id", emailAccount.id)
+              .eq("is_archived", false)
               .ilike("subject", cleanSubject)
               .order("created_at", { ascending: false })
               .limit(1)
               .single();
             
-            if (ticket) {
-              console.log(`✅ Found ticket by subject match: ${ticket.id}`);
-              existingTicket = ticket;
+            if (activeTicket) {
+              console.log(`✅ Found active ticket by subject match: ${activeTicket.id}`);
+              existingTicket = activeTicket;
+            } else {
+              // Fallback: check archived tickets only if no active match found
+              console.log(`🔍 No active ticket found, checking archived tickets`);
+              const { data: archivedTicket } = await supabase
+                .from("helpdesk_tickets")
+                .select("id, tenant_id, subject")
+                .eq("email_account_id", emailAccount.id)
+                .eq("is_archived", true)
+                .ilike("subject", cleanSubject)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+              
+              if (archivedTicket) {
+                console.log(`✅ Found archived ticket by subject match: ${archivedTicket.id}`);
+                existingTicket = archivedTicket;
+              }
             }
           }
         }
