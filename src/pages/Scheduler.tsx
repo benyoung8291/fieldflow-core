@@ -406,18 +406,12 @@ export default function Scheduler() {
       appointmentId: string; 
       workerId: string;
     }) => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id, first_name, last_name")
-        .eq("id", workerId)
-        .single();
-
       const { data: currentUser } = await supabase.auth.getUser();
       const { data: currentProfile } = await supabase
         .from("profiles")
         .select("tenant_id")
         .eq("id", currentUser.user?.id)
-        .single();
+        .maybeSingle();
 
       const { error } = await supabase
         .from("appointment_workers")
@@ -428,29 +422,27 @@ export default function Scheduler() {
         });
 
       if (error) {
-        if (error.code === '23505') { // Unique constraint violation
+        if (error.code === '23505') {
           throw new Error("Worker already assigned to this appointment");
         }
         throw error;
       }
 
-      return { workerId, profile };
-    },
-    onMutate: async ({ appointmentId, workerId }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["appointments"] });
-
-      // Snapshot previous value
-      const previousAppointments = queryClient.getQueryData(["appointments"]);
-
-      // Get worker profile for optimistic update
       const { data: profile } = await supabase
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", workerId)
-        .single();
+        .maybeSingle();
 
-      // Optimistically update appointments
+      return { workerId, profile };
+    },
+    onMutate: async ({ appointmentId, workerId }) => {
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+
+      // Find worker name from existing workers data
+      const worker = workers.find(w => w.id === workerId);
+
       queryClient.setQueryData(["appointments"], (old: any) => {
         return (old || []).map((apt: any) => {
           if (apt.id === appointmentId) {
@@ -461,7 +453,7 @@ export default function Scheduler() {
                 {
                   appointment_id: appointmentId,
                   worker_id: workerId,
-                  profiles: profile,
+                  profiles: worker ? { first_name: worker.first_name, last_name: worker.last_name } : null,
                 }
               ]
             };
@@ -477,7 +469,6 @@ export default function Scheduler() {
       toast.success("Worker added to appointment");
     },
     onError: (error: any, variables, context) => {
-      // Rollback on error
       if (context?.previousAppointments) {
         queryClient.setQueryData(["appointments"], context.previousAppointments);
       }
@@ -501,13 +492,11 @@ export default function Scheduler() {
 
       if (error) throw error;
 
-      // Check if there are any workers left
       const { data: remainingWorkers } = await supabase
         .from("appointment_workers")
         .select("id")
         .eq("appointment_id", appointmentId);
 
-      // If no workers left, set assigned_to to null
       if (!remainingWorkers || remainingWorkers.length === 0) {
         await supabase
           .from("appointments")
@@ -516,13 +505,9 @@ export default function Scheduler() {
       }
     },
     onMutate: async ({ appointmentId, workerId }) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["appointments"] });
-
-      // Snapshot previous value
       const previousAppointments = queryClient.getQueryData(["appointments"]);
 
-      // Optimistically update appointments
       queryClient.setQueryData(["appointments"], (old: any) => {
         return (old || []).map((apt: any) => {
           if (apt.id === appointmentId) {
@@ -546,7 +531,6 @@ export default function Scheduler() {
       toast.success("Worker removed from appointment");
     },
     onError: (error: any, variables, context) => {
-      // Rollback on error
       if (context?.previousAppointments) {
         queryClient.setQueryData(["appointments"], context.previousAppointments);
       }
