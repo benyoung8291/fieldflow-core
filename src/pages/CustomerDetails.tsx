@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Building2, FileText } from "lucide-react";
 import CustomerDialog from "@/components/customers/CustomerDialog";
@@ -14,6 +15,8 @@ import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -34,6 +37,7 @@ const statusLabels: Record<string, string> = {
 export default function CustomerDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
