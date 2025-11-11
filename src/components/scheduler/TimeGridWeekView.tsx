@@ -16,7 +16,7 @@ interface TimeGridWeekViewProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
-const PIXELS_PER_HOUR = 60; // 60px per hour for easy dragging
+const PIXELS_PER_HOUR = 90; // 90px per hour (50% increase from 60px)
 
 export default function TimeGridWeekView({
   currentDate,
@@ -27,26 +27,32 @@ export default function TimeGridWeekView({
   onResizeAppointment,
   onCreateAppointment,
 }: TimeGridWeekViewProps) {
+  console.log('TimeGridWeekView - Total appointments:', appointments.length);
+  console.log('TimeGridWeekView - Appointments:', appointments);
+  
   const weekStart = startOfWeek(currentDate);
   const weekEnd = endOfWeek(currentDate);
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   // Format workers with unassigned row
   const workers = [
-    { id: null, name: "Unassigned" },
+    { id: null, name: "Unassigned", skills: [] },
     ...passedWorkers.map(w => ({
       id: w.id,
-      name: `${w.first_name} ${w.last_name}`
+      name: `${w.first_name} ${w.last_name}`,
+      skills: w.worker_skills || []
     }))
   ];
 
   const getAppointmentsForDayAndWorker = (workerId: string | null, day: Date) => {
-    return appointments.filter(apt => {
+    const filtered = appointments.filter(apt => {
       const aptDate = format(new Date(apt.start_time), "yyyy-MM-dd");
       const dayDate = format(day, "yyyy-MM-dd");
       const aptWorkerId = apt.assigned_to || null;
       return aptDate === dayDate && aptWorkerId === workerId;
     });
+    console.log(`Appointments for worker ${workerId} on ${format(day, "yyyy-MM-dd")}:`, filtered.length);
+    return filtered;
   };
 
   const getTopPosition = (time: Date) => {
@@ -89,8 +95,17 @@ export default function TimeGridWeekView({
             {workers.map((worker) => (
               <div key={worker.id || 'unassigned'} className="grid grid-cols-8 gap-px bg-border mb-px">
                 {/* Worker Info */}
-                <div className="sticky left-0 z-10 bg-background flex items-start p-2">
-                  <span className="text-sm font-medium truncate">{worker.name}</span>
+                <div className="sticky left-0 z-10 bg-background flex flex-col items-start p-2 gap-1">
+                  <span className="text-sm font-medium truncate w-full">{worker.name}</span>
+                  {worker.skills && worker.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1 w-full">
+                      {worker.skills.map((ws: any) => (
+                        <Badge key={ws.skill_id} variant="outline" className="text-[10px] px-1 py-0">
+                          {ws.skills?.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Time grid for each day */}

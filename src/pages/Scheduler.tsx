@@ -140,13 +140,21 @@ export default function Scheduler() {
     },
   });
 
-  // Fetch all active workers/profiles
+  // Fetch all active workers/profiles with skills
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name")
+        .select(`
+          id, 
+          first_name, 
+          last_name,
+          worker_skills(
+            skill_id,
+            skills(name)
+          )
+        `)
         .eq("is_active", true)
         .order("first_name", { ascending: true });
 
