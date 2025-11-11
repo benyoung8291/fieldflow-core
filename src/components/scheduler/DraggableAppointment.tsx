@@ -39,8 +39,18 @@ export default function DraggableAppointment({
     },
   });
 
-  const style = {
+  const baseStyle = {
     transform: CSS.Translate.toString(transform),
+  };
+
+  // Map status color classes to actual border colors
+  const getBorderColor = () => {
+    if (statusColor.includes("muted")) return "hsl(var(--muted))";
+    if (statusColor.includes("info")) return "hsl(var(--info))";
+    if (statusColor.includes("warning")) return "hsl(var(--warning))";
+    if (statusColor.includes("success")) return "hsl(var(--success))";
+    if (statusColor.includes("destructive")) return "hsl(var(--destructive))";
+    return "hsl(var(--border))";
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -58,10 +68,12 @@ export default function DraggableAppointment({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...baseStyle,
+        borderLeftColor: getBorderColor(),
+      }}
       className={cn(
-        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative",
-        statusColor,
+        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4",
         isDragging && "opacity-50 cursor-grabbing"
       )}
     >
