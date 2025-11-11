@@ -45,6 +45,10 @@ export default function Scheduler() {
   const [showSmartScheduling, setShowSmartScheduling] = useState(false);
   const [selectedAppointmentIds, setSelectedAppointmentIds] = useState<Set<string>>(new Set());
   const [viewDetailsAppointmentId, setViewDetailsAppointmentId] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<Array<{
+    type: 'appointment-move' | 'worker-add' | 'worker-remove' | 'bulk-move';
+    data: any;
+  }>>([]);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
@@ -489,9 +493,21 @@ export default function Scheduler() {
 
       return { previousAppointments };
     },
-    onSuccess: () => {
+    onSuccess: (_, { appointmentId, workerId }) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success("Worker added to appointment");
+      
+      // Add to undo stack
+      setUndoStack(prev => [...prev.slice(-4), {
+        type: 'worker-add' as const,
+        data: { appointmentId, workerId }
+      }]);
+      
+      toast.success("Worker added", {
+        action: {
+          label: "Undo",
+          onClick: () => handleUndo()
+        }
+      });
     },
     onError: (error: any, variables, context) => {
       if (context?.previousAppointments) {
@@ -551,9 +567,21 @@ export default function Scheduler() {
 
       return { previousAppointments };
     },
-    onSuccess: () => {
+    onSuccess: (_, { appointmentId, workerId }) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success("Worker removed from appointment");
+      
+      // Add to undo stack
+      setUndoStack(prev => [...prev.slice(-4), {
+        type: 'worker-remove' as const,
+        data: { appointmentId, workerId }
+      }]);
+      
+      toast.success("Worker removed", {
+        action: {
+          label: "Undo",
+          onClick: () => handleUndo()
+        }
+      });
     },
     onError: (error: any, variables, context) => {
       if (context?.previousAppointments) {
@@ -683,6 +711,60 @@ export default function Scheduler() {
 
   const clearSelection = () => {
     setSelectedAppointmentIds(new Set());
+  };
+
+  const handleUndo = async () => {
+    const lastAction = undoStack[undoStack.length - 1];
+    if (!lastAction) return;
+
+    setUndoStack(prev => prev.slice(0, -1));
+
+    try {
+      if (lastAction.type === 'appointment-move') {
+        await Promise.all(
+          lastAction.data.moves.map((move: any) =>
+            supabase
+              .from('appointments')
+              .update({ 
+                start_time: move.previousStart,
+                end_time: move.previousEnd,
+                assigned_to: move.previousAssignedTo
+              })
+              .eq('id', move.id)
+          )
+        );
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        toast.success(lastAction.data.moves.length > 1 ? "Bulk move undone" : "Move undone");
+      } else if (lastAction.type === 'worker-add') {
+        await supabase
+          .from('appointment_workers')
+          .delete()
+          .eq('appointment_id', lastAction.data.appointmentId)
+          .eq('worker_id', lastAction.data.workerId);
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        toast.success("Worker assignment undone");
+      } else if (lastAction.type === 'worker-remove') {
+        const { data: currentUser } = await supabase.auth.getUser();
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", currentUser.user?.id)
+          .maybeSingle();
+
+        await supabase
+          .from('appointment_workers')
+          .insert({
+            tenant_id: currentProfile?.tenant_id,
+            appointment_id: lastAction.data.appointmentId,
+            worker_id: lastAction.data.workerId,
+          });
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        toast.success("Worker removal undone");
+      }
+    } catch (error) {
+      toast.error("Failed to undo action");
+      console.error("Undo error:", error);
+    }
   };
 
   const viewDetailsAppointment = appointments.find(apt => apt.id === viewDetailsAppointmentId);
@@ -859,6 +941,14 @@ export default function Scheduler() {
             workerId,
           });
         } else {
+          // Store previous state for undo
+          const moves = appointmentsToMove.map(a => ({
+            id: a.id,
+            previousStart: a.start_time,
+            previousEnd: a.end_time,
+            previousAssignedTo: a.assigned_to
+          }));
+
           // Move appointment (reassign)
           updateAppointmentMutation.mutate({
             appointmentId: apt.id,
@@ -866,6 +956,22 @@ export default function Scheduler() {
             endTime: aptEndTime,
             workerId: workerId || apt.assigned_to,
           });
+
+          // Add to undo stack after last mutation
+          if (apt.id === appointmentsToMove[appointmentsToMove.length - 1].id) {
+            setUndoStack(prev => [...prev.slice(-4), {
+              type: 'appointment-move' as const,
+              data: { moves }
+            }]);
+            
+            const moveCount = moves.length;
+            toast.success(moveCount > 1 ? `${moveCount} appointments moved` : "Appointment moved", {
+              action: {
+                label: "Undo",
+                onClick: () => handleUndo()
+              }
+            });
+          }
         }
       });
 
