@@ -21,6 +21,8 @@ import {
 } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import QuoteQuickViewDialog from '@/components/quotes/QuoteQuickViewDialog';
+import DraggableQuoteCard from '@/components/quotes/DraggableQuoteCard';
+import DroppableQuoteColumn from '@/components/quotes/DroppableQuoteColumn';
 
 interface Quote {
   id: string;
@@ -232,128 +234,6 @@ export default function QuotePipeline() {
     setQuickViewOpen(true);
   };
 
-  const QuoteCard = ({ quote, isDragging = false }: { quote: Quote; isDragging?: boolean }) => {
-    const customerName = quote.customer?.name || quote.lead?.name || 'Unknown';
-    const ownerName = quote.quote_owner 
-      ? `${quote.quote_owner.first_name || ''} ${quote.quote_owner.last_name || ''}`.trim() 
-      : null;
-
-    return (
-      <Card 
-        className={cn(
-          "mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
-          isDragging && "opacity-50 rotate-3 shadow-lg"
-        )}
-      >
-        <CardContent className="p-4 space-y-2">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">{quote.title}</p>
-              <p className="text-sm text-muted-foreground truncate">{customerName}</p>
-            </div>
-            <Badge variant="outline" className="ml-2 shrink-0">
-              {quote.quote_number}
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-1 text-lg font-bold text-primary">
-            <DollarSign className="h-4 w-4" />
-            {quote.total_amount?.toLocaleString()}
-          </div>
-
-          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-            {ownerName && (
-              <div className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {ownerName}
-              </div>
-            )}
-            {quote.expected_close_date && (
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(quote.expected_close_date), 'MMM d, yyyy')}
-              </div>
-            )}
-            <div className="text-xs text-muted-foreground">
-              Created {format(new Date(quote.created_at), 'MMM d')}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => handleQuickView(quote.id)}
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              Quick View
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => window.open(`/quotes/${quote.id}`, '_blank')}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Full Details
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const KanbanColumn = ({ status }: { status: CRMStatus }) => {
-    const metrics = getColumnMetrics(status);
-    const columnQuotes = quotesByStage[status.id] || [];
-
-    return (
-      <div className="flex flex-col h-full min-w-[300px]">
-        <Card className="flex-shrink-0 mb-4" style={{ borderTopColor: status.color, borderTopWidth: 3 }}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">{status.display_name}</CardTitle>
-              <Badge variant="secondary">{metrics.count}</Badge>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Total:</span>
-                <span className="font-semibold">${metrics.total.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Weighted ({status.probability_percentage}%):</span>
-                <span className="font-bold" style={{ color: status.color }}>
-                  ${metrics.weighted.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <div 
-          className="flex-1 space-y-3 p-3 rounded-lg bg-muted/20 min-h-[400px] overflow-y-auto"
-          id={status.id}
-        >
-          {columnQuotes.map(quote => (
-            <div
-              key={quote.id}
-              draggable
-              onDragStart={() => setActiveQuote(quote)}
-            >
-              <QuoteCard quote={quote} />
-            </div>
-          ))}
-          {columnQuotes.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              No quotes in this stage
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -398,15 +278,45 @@ export default function QuotePipeline() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {crmStatuses.map(status => (
-              <KanbanColumn key={status.id} status={status} />
-            ))}
+            {crmStatuses.map(status => {
+              const metrics = getColumnMetrics(status);
+              const columnQuotes = quotesByStage[status.id] || [];
+              
+              return (
+                <DroppableQuoteColumn
+                  key={status.id}
+                  id={status.id}
+                  title={status.display_name}
+                  color={status.color}
+                  count={metrics.count}
+                  totalAmount={metrics.total}
+                  weightedAmount={metrics.weighted}
+                  probabilityPercentage={status.probability_percentage}
+                >
+                  {columnQuotes.map(quote => (
+                    <DraggableQuoteCard
+                      key={quote.id}
+                      quote={quote}
+                      onQuickView={handleQuickView}
+                    />
+                  ))}
+                  {columnQuotes.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-8">
+                      No quotes in this stage
+                    </div>
+                  )}
+                </DroppableQuoteColumn>
+              );
+            })}
           </div>
 
-          <DragOverlay dropAnimation={null}>
+          <DragOverlay>
             {activeQuote && (
-              <div className="animate-fade-in" style={{ cursor: 'grabbing' }}>
-                <QuoteCard quote={activeQuote} isDragging />
+              <div className="opacity-80">
+                <DraggableQuoteCard 
+                  quote={activeQuote} 
+                  onQuickView={handleQuickView}
+                />
               </div>
             )}
           </DragOverlay>
