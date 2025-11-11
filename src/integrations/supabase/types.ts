@@ -981,7 +981,10 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          description: string | null
+          display_order: number | null
           document_id: string
+          document_number: string | null
           document_type: string
           id: string
           tenant_id: string
@@ -990,7 +993,10 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          display_order?: number | null
           document_id: string
+          document_number?: string | null
           document_type: string
           id?: string
           tenant_id: string
@@ -999,7 +1005,10 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          display_order?: number | null
           document_id?: string
+          document_number?: string | null
           document_type?: string
           id?: string
           tenant_id?: string

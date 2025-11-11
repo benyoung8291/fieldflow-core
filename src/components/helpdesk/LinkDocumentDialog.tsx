@@ -58,12 +58,63 @@ export function LinkDocumentDialog({ ticketId }: LinkDocumentDialogProps) {
         .eq("id", user?.id || "")
         .single();
 
+      // Fetch document details to cache number and description
+      const tableMap: Record<string, string> = {
+        service_order: "service_orders",
+        quote: "quotes",
+        invoice: "invoices",
+        project: "projects",
+        task: "tasks",
+        appointment: "appointments",
+      };
+
+      const tableName = tableMap[documentType];
+      const { data: docData } = await supabase
+        .from(tableName as any)
+        .select("id, work_order_number, quote_number, invoice_number, name, title, description")
+        .eq("id", documentId)
+        .single();
+
+      let documentNumber = "";
+      let documentDesc = "";
+      
+      if (docData) {
+        const doc = docData as any;
+        if (documentType === "service_order") {
+          documentNumber = doc.work_order_number || "";
+          documentDesc = doc.description || "";
+        } else if (documentType === "quote") {
+          documentNumber = doc.quote_number || "";
+          documentDesc = doc.description || "";
+        } else if (documentType === "invoice") {
+          documentNumber = doc.invoice_number || "";
+        } else if (documentType === "project") {
+          documentNumber = doc.name || "";
+        } else if (documentType === "task" || documentType === "appointment") {
+          documentNumber = doc.title || "";
+          documentDesc = doc.description || "";
+        }
+      }
+
+      // Get current max display order
+      const { data: existingLinks } = await supabase
+        .from("helpdesk_linked_documents")
+        .select("display_order")
+        .eq("ticket_id", ticketId)
+        .order("display_order", { ascending: false })
+        .limit(1);
+      
+      const nextOrder = existingLinks && existingLinks.length > 0 ? (existingLinks[0].display_order || 0) + 1 : 0;
+
       const { error } = await supabase
         .from("helpdesk_linked_documents")
         .insert({
           ticket_id: ticketId,
           document_type: documentType,
           document_id: documentId,
+          document_number: documentNumber,
+          description: documentDesc,
+          display_order: nextOrder,
           tenant_id: profile?.tenant_id || "",
           created_by: user?.id,
         });
