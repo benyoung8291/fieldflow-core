@@ -2,6 +2,20 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
 
+async function getTicketIdFromAccount(supabaseClient: any, emailAccountId: string, recipientEmail: string) {
+  // Try to find the most recent ticket for this recipient on this email account
+  const { data: ticket } = await supabaseClient
+    .from("helpdesk_tickets")
+    .select("id")
+    .eq("email_account_id", emailAccountId)
+    .or(`external_email.eq.${recipientEmail},sender_email.eq.${recipientEmail}`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  
+  return ticket?.id || null;
+}
+
 async function getValidAccessToken(supabaseClient: any, emailAccountId: string) {
   const { data: account } = await supabaseClient
     .from("helpdesk_email_accounts")
@@ -47,7 +61,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { emailAccountId, to, subject, body, replyTo, conversationId } = await req.json();
+    const { emailAccountId, ticketId, to, subject, body, replyTo, conversationId } = await req.json();
 
     // Get valid access token
     const accessToken = await getValidAccessToken(supabaseClient, emailAccountId);
@@ -82,9 +96,14 @@ serve(async (req) => {
       saveToSentItems: true,
     };
 
-    // Send via Microsoft Graph API
+    // Send via Microsoft Graph API using the mailbox email address
+    // This ensures the email is sent from the shared mailbox, not the authenticated user
+    const sendEndpoint = `https://graph.microsoft.com/v1.0/users/${account.email_address}/sendMail`;
+    
+    console.log(`Sending email from mailbox: ${account.email_address} to: ${to}`);
+    
     const response = await fetch(
-      "https://graph.microsoft.com/v1.0/me/sendMail",
+      sendEndpoint,
       {
         method: "POST",
         headers: {
@@ -102,6 +121,40 @@ serve(async (req) => {
     }
 
     console.log("Email sent successfully via Microsoft Graph API");
+
+    // Create message record in database
+    const recipientEmail = Array.isArray(to) ? to[0] : to;
+    const finalTicketId = ticketId || await getTicketIdFromAccount(supabaseClient, emailAccountId, recipientEmail);
+    
+    if (finalTicketId) {
+      const { error: messageError } = await supabaseClient
+        .from("helpdesk_messages")
+        .insert({
+          tenant_id: account.tenant_id,
+          ticket_id: finalTicketId,
+          message_type: "email",
+          direction: "outbound",
+          from_email: account.email_address,
+          from_name: account.name,
+          to_email: recipientEmail,
+          subject: subject,
+          body_html: body,
+          body_text: body.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
+          microsoft_message_id: conversationId,
+          microsoft_conversation_id: conversationId,
+          sent_at: new Date().toISOString(),
+        });
+
+      if (messageError) {
+        console.error("Failed to create message record:", messageError);
+      }
+      
+      // Update ticket's last_message_at
+      await supabaseClient
+        .from("helpdesk_tickets")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", finalTicketId);
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: "Email sent successfully" }),

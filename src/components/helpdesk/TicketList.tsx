@@ -30,7 +30,8 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
           customer:customers(name),
           contact:customer_contacts(first_name, last_name),
           pipeline:helpdesk_pipelines(name, color),
-          assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name)
+          assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
+          email_account:helpdesk_email_accounts(id, email_address)
         `)
         .eq("is_archived", filterArchived);
 

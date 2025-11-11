@@ -38,14 +38,24 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   const sendReplyMutation = useMutation({
     mutationFn: async (emailData: any) => {
+      // Get the email account ID from the ticket
+      if (!ticket?.email_account_id) {
+        throw new Error("No email account associated with this ticket");
+      }
+
+      const toEmails = Array.isArray(emailData.to) ? emailData.to : [emailData.to];
+      
       const { data, error } = await supabase.functions.invoke(
-        "helpdesk-send-email",
+        "microsoft-send-email",
         {
           body: {
-            ticket_id: ticketId,
+            emailAccountId: ticket.email_account_id,
+            ticketId: ticketId,
+            to: toEmails,
             subject: emailData.subject,
-            body_text: emailData.body,
-            body_html: emailData.bodyHtml,
+            body: emailData.body,
+            conversationId: ticket.microsoft_conversation_id,
+            replyTo: ticket.microsoft_message_id,
           },
         }
       );
