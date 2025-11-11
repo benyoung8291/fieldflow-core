@@ -873,6 +873,313 @@ export type Database = {
           },
         ]
       }
+      helpdesk_email_accounts: {
+        Row: {
+          created_at: string
+          email_address: string
+          id: string
+          imap_host: string | null
+          imap_password: string | null
+          imap_port: number | null
+          imap_username: string | null
+          is_active: boolean
+          last_sync_at: string | null
+          microsoft_client_id: string | null
+          microsoft_client_secret: string | null
+          microsoft_tenant_id: string | null
+          name: string
+          pipeline_id: string | null
+          provider: string
+          resend_api_key: string | null
+          resend_domain: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_username: string | null
+          sync_error: string | null
+          sync_status: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_address: string
+          id?: string
+          imap_host?: string | null
+          imap_password?: string | null
+          imap_port?: number | null
+          imap_username?: string | null
+          is_active?: boolean
+          last_sync_at?: string | null
+          microsoft_client_id?: string | null
+          microsoft_client_secret?: string | null
+          microsoft_tenant_id?: string | null
+          name: string
+          pipeline_id?: string | null
+          provider: string
+          resend_api_key?: string | null
+          resend_domain?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_username?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_address?: string
+          id?: string
+          imap_host?: string | null
+          imap_password?: string | null
+          imap_port?: number | null
+          imap_username?: string | null
+          is_active?: boolean
+          last_sync_at?: string | null
+          microsoft_client_id?: string | null
+          microsoft_client_secret?: string | null
+          microsoft_tenant_id?: string | null
+          name?: string
+          pipeline_id?: string | null
+          provider?: string
+          resend_api_key?: string | null
+          resend_domain?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_username?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helpdesk_email_accounts_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      helpdesk_messages: {
+        Row: {
+          body: string | null
+          cc_email: string[] | null
+          created_at: string
+          created_by: string | null
+          direction: string | null
+          email_message_id: string | null
+          from_email: string | null
+          from_name: string | null
+          html_body: string | null
+          id: string
+          is_internal: boolean
+          message_type: string
+          subject: string | null
+          tenant_id: string
+          ticket_id: string
+          to_email: string | null
+        }
+        Insert: {
+          body?: string | null
+          cc_email?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string | null
+          email_message_id?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_body?: string | null
+          id?: string
+          is_internal?: boolean
+          message_type: string
+          subject?: string | null
+          tenant_id: string
+          ticket_id: string
+          to_email?: string | null
+        }
+        Update: {
+          body?: string | null
+          cc_email?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string | null
+          email_message_id?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_body?: string | null
+          id?: string
+          is_internal?: boolean
+          message_type?: string
+          subject?: string | null
+          tenant_id?: string
+          ticket_id?: string
+          to_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helpdesk_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      helpdesk_pipelines: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      helpdesk_tickets: {
+        Row: {
+          assigned_to: string | null
+          contact_id: string | null
+          created_at: string
+          customer_id: string | null
+          email_account_id: string | null
+          email_message_id: string | null
+          email_thread_id: string | null
+          id: string
+          last_message_at: string | null
+          pipeline_id: string | null
+          priority: string
+          status: string
+          subject: string
+          tenant_id: string
+          ticket_number: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          email_account_id?: string | null
+          email_message_id?: string | null
+          email_thread_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          pipeline_id?: string | null
+          priority?: string
+          status?: string
+          subject: string
+          tenant_id: string
+          ticket_number: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          email_account_id?: string | null
+          email_message_id?: string | null
+          email_thread_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          pipeline_id?: string | null
+          priority?: string
+          status?: string
+          subject?: string
+          tenant_id?: string
+          ticket_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helpdesk_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_tickets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "customer_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_tickets_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_email_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_tickets_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_sync_logs: {
         Row: {
           created_at: string | null
