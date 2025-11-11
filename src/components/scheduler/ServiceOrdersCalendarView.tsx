@@ -85,20 +85,12 @@ export default function ServiceOrdersCalendarView({
   };
 
   const isDateInPreferredRange = (order: any, day: Date) => {
-    if (!order.preferred_date) return false;
+    if (!order.preferred_date_start || !order.preferred_date_end) return false;
     
-    const preferredDate = new Date(order.preferred_date);
+    const rangeStart = new Date(order.preferred_date_start);
+    const rangeEnd = new Date(order.preferred_date_end);
     
-    // If there's no end date, only the preferred date is highlighted
-    if (!order.date_range_end) {
-      return isSameDay(day, preferredDate);
-    }
-    
-    const rangeEnd = new Date(order.date_range_end);
-    const isInRange = isWithinInterval(day, { start: preferredDate, end: rangeEnd });
-    
-    // Debug logging
-    console.log(`Order ${order.order_number}: preferred=${order.preferred_date}, range_end=${order.date_range_end}, checking day=${format(day, 'yyyy-MM-dd')}, isInRange=${isInRange}`);
+    const isInRange = isWithinInterval(day, { start: rangeStart, end: rangeEnd });
     
     return isInRange;
   };
