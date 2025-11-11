@@ -42,16 +42,16 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
       };
 
       if (tab === "note") {
-        messageData.message_type = "internal_note";
+        messageData.message_type = "note";
         messageData.body_text = noteContent;
         messageData.body = noteContent;
       } else if (tab === "task") {
-        messageData.message_type = "task_card";
+        messageData.message_type = "task";
         messageData.subject = taskTitle;
         messageData.body_text = taskDescription;
         messageData.body = taskDescription;
       } else if (tab === "checklist") {
-        messageData.message_type = "checklist_card";
+        messageData.message_type = "checklist";
         messageData.body = JSON.stringify(checklistItems);
         messageData.body_text = checklistItems.map(i => `${i.checked ? "[x]" : "[ ]"} ${i.text}`).join("\n");
       }

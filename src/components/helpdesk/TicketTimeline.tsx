@@ -156,10 +156,10 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const getMessageIcon = (type: string) => {
     switch (type) {
       case "email": return <Mail className="h-4 w-4" />;
+      case "note": return <MessageSquare className="h-4 w-4" />;
       case "internal_note": return <MessageSquare className="h-4 w-4" />;
-      case "internal_chat": return <MessageSquare className="h-4 w-4" />;
-      case "task_card": return <CheckSquare className="h-4 w-4" />;
-      case "document_card": return <FileText className="h-4 w-4" />;
+      case "task": return <CheckSquare className="h-4 w-4" />;
+      case "checklist": return <CheckSquare className="h-4 w-4" />;
       default: return <Mail className="h-4 w-4" />;
     }
   };
@@ -167,10 +167,10 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const getMessageTypeColor = (type: string) => {
     switch (type) {
       case "email": return "text-blue-600 dark:text-blue-400";
+      case "note": return "text-purple-600 dark:text-purple-400";
       case "internal_note": return "text-purple-600 dark:text-purple-400";
-      case "internal_chat": return "text-green-600 dark:text-green-400";
-      case "task_card": return "text-orange-600 dark:text-orange-400";
-      case "document_card": return "text-pink-600 dark:text-pink-400";
+      case "task": return "text-orange-600 dark:text-orange-400";
+      case "checklist": return "text-green-600 dark:text-green-400";
       default: return "text-gray-600 dark:text-gray-400";
     }
   };
