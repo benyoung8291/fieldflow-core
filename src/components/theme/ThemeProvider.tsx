@@ -11,6 +11,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      storageKey="theme-preference"
+      forcedTheme={undefined}
     >
       <ThemeSyncWrapper>{children}</ThemeSyncWrapper>
     </NextThemesProvider>

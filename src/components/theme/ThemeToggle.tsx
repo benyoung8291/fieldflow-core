@@ -9,7 +9,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-  const { setTheme, theme } = useTheme();
+  const { setTheme, theme, resolvedTheme } = useTheme();
+
+  const handleThemeChange = (newTheme: string) => {
+    // Disable transitions temporarily
+    document.documentElement.classList.add('disable-transitions');
+    
+    setTheme(newTheme);
+    
+    // Re-enable after a brief moment
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.documentElement.classList.remove('disable-transitions');
+      }, 0);
+    });
+  };
 
   return (
     <DropdownMenu>
@@ -21,15 +35,15 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="z-50 bg-popover backdrop-blur-sm">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
           <Sun className="mr-2 h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>

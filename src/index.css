@@ -136,6 +136,17 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    transition: none !important;
+  }
+  
+  /* Disable all transitions during theme changes */
+  html[style*="color-scheme"] * {
+    transition: none !important;
+  }
+  
+  /* Only allow icon transitions */
+  .disable-transitions * {
+    transition: none !important;
   }
 }
 
