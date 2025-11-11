@@ -187,6 +187,18 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [propOauthData, oauthData, fetchMailboxes]);
 
+  // Reset authentication state when dialog is closed
+  useEffect(() => {
+    if (!open) {
+      console.log("🔄 Dialog closed, resetting authentication state");
+      setIsAuthenticating(false);
+      setIsFetchingMailboxes(false);
+      
+      // Clean up OAuth in-progress flag
+      sessionStorage.removeItem("microsoft_oauth_in_progress");
+    }
+  }, [open]);
+
   // Populate form when account is provided
   useEffect(() => {
     if (account) {
@@ -334,11 +346,23 @@ export function HelpDeskEmailAccountDialog({
                   <div className="text-center space-y-2">
                     <p className="font-medium">Waiting for authentication...</p>
                     <p className="text-sm text-muted-foreground">
-                      Please complete the sign-in process in the popup window
+                      Complete the sign-in process to continue
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      If the popup was blocked, please allow popups and try again
-                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsAuthenticating(false);
+                        sessionStorage.removeItem("microsoft_oauth_in_progress");
+                        toast({
+                          title: "Authentication cancelled",
+                          description: "You can try again when ready",
+                        });
+                      }}
+                      className="mt-2"
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </>
               ) : (

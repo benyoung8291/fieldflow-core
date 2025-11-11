@@ -142,6 +142,8 @@ export function HelpDeskEmailAccountsSettings() {
     setDialogOpen(false);
     setEditingAccount(null);
     setOauthData(null);
+    // Clean up OAuth in-progress flag
+    sessionStorage.removeItem("microsoft_oauth_in_progress");
   };
 
   const getProviderIcon = (provider: string) => {
