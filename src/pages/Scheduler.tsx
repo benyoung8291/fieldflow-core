@@ -12,7 +12,7 @@ import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
 import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
-import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
+import TimeGridCalendarView from "@/components/scheduler/TimeGridCalendarView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
 import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
 import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
@@ -1156,18 +1156,15 @@ export default function Scheduler() {
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
             ) : showServiceOrderView ? (
-              <ServiceOrdersCalendarView 
+              <TimeGridCalendarView 
                 currentDate={currentDate}
                 appointments={appointments}
-                viewType={viewType}
                 onAppointmentClick={setViewDetailsAppointmentId}
-                onCreateAppointment={(serviceOrderId, date, startTime, endTime) => {
-                  const [hours, minutes] = startTime.split(':');
-                  const [endHours, endMinutes] = endTime.split(':');
+                onCreateAppointment={(serviceOrderId, date, hour) => {
                   const start = new Date(date);
-                  start.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                  const end = new Date(date);
-                  end.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+                  start.setHours(hour, 0, 0, 0);
+                  const end = new Date(start);
+                  end.setHours(hour + 1, 0, 0, 0);
                   
                   createAppointmentMutation.mutate({
                     serviceOrderId,
@@ -1177,8 +1174,16 @@ export default function Scheduler() {
                   });
                 }}
                 onRemoveWorker={handleRemoveWorker}
-                selectedAppointmentIds={selectedAppointmentIds}
-                onSelectionChange={handleSelectionChange}
+                onResizeAppointment={(appointmentId, newStartTime, newEndTime) => {
+                  const appointment = appointments.find(a => a.id === appointmentId);
+                  updateAppointmentMutation.mutate({
+                    appointmentId,
+                    startTime: newStartTime,
+                    endTime: newEndTime,
+                    workerId: appointment?.assigned_to || null,
+                  });
+                  toast.success("Appointment time updated");
+                }}
               />
             ) : (
               <>
