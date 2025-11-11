@@ -18,11 +18,11 @@ export const MobileHeader = () => {
 
   return (
     <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-3 py-2">
         {/* Left side - Logo only */}
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">SP</span>
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-xs">SP</span>
           </div>
         </div>
 

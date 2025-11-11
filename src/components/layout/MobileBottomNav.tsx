@@ -53,8 +53,8 @@ export const MobileBottomNav = () => {
   const isActivePath = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border shadow-lg">
+      <div className="flex items-center justify-around h-14 px-1">
         {primaryNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(item.path);
@@ -64,14 +64,14 @@ export const MobileBottomNav = () => {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0",
+                "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-md transition-colors flex-1 min-w-0",
                 isActive
                   ? "text-sidebar-primary"
                   : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
               )}
             >
               <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
-              <span className="text-xs font-medium truncate">{item.label}</span>
+              <span className="text-[10px] font-medium truncate">{item.label}</span>
             </button>
           );
         })}
@@ -80,10 +80,10 @@ export const MobileBottomNav = () => {
         <Sheet>
           <SheetTrigger asChild>
             <button
-              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-md transition-colors flex-1 min-w-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
             >
               <MoreHorizontal className="h-5 w-5" />
-              <span className="text-xs font-medium">More</span>
+              <span className="text-[10px] font-medium">More</span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[60vh] bg-sidebar">

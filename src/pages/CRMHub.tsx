@@ -76,11 +76,11 @@ export default function CRMHub() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-3 lg:space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">CRM Hub</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-xl lg:text-3xl font-bold tracking-tight">CRM Hub</h1>
+          <p className="text-muted-foreground text-sm lg:text-base mt-1">
             Manage your customer relationships and sales pipeline
           </p>
         </div>
