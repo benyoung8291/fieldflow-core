@@ -84,9 +84,9 @@ serve(async (req) => {
       console.log("✅ Token refreshed successfully");
     }
 
-    // Fetch emails from Microsoft Graph API
+    // Fetch emails from Microsoft Graph API - include internetMessageHeaders for better threading
     const messagesResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,bodyPreview,body,isRead,conversationId,hasAttachments&$expand=attachments`,
+      `https://graph.microsoft.com/v1.0/users/${emailAccount.email_address}/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead,conversationId,internetMessageId,hasAttachments&$expand=attachments`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -135,15 +135,45 @@ serve(async (req) => {
 
         // Check if this is a reply to an existing conversation
         let existingTicket = null;
+        
+        // First try: Match by conversationId (most reliable)
         if (message.conversationId) {
+          console.log(`🔍 Looking for ticket with conversationId: ${message.conversationId}`);
           const { data: ticket } = await supabase
             .from("helpdesk_tickets")
-            .select("id, tenant_id")
+            .select("id, tenant_id, subject")
             .eq("microsoft_conversation_id", message.conversationId)
             .eq("email_account_id", emailAccount.id)
             .single();
           
-          existingTicket = ticket;
+          if (ticket) {
+            console.log(`✅ Found ticket by conversationId: ${ticket.id}`);
+            existingTicket = ticket;
+          }
+        }
+        
+        // Second try: Match by subject if it's a reply (RE: or Re:)
+        if (!existingTicket && message.subject) {
+          const isReply = message.subject.startsWith("RE:") || message.subject.startsWith("Re:");
+          if (isReply) {
+            // Remove "RE:" or "Re:" prefix and trim
+            const cleanSubject = message.subject.replace(/^(RE:|Re:)\s*/i, "").trim();
+            console.log(`🔍 Looking for ticket with subject: ${cleanSubject}`);
+            
+            const { data: ticket } = await supabase
+              .from("helpdesk_tickets")
+              .select("id, tenant_id, subject")
+              .eq("email_account_id", emailAccount.id)
+              .ilike("subject", cleanSubject)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (ticket) {
+              console.log(`✅ Found ticket by subject match: ${ticket.id}`);
+              existingTicket = ticket;
+            }
+          }
         }
 
         // Extract sender info
