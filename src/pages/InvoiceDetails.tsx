@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, CheckCircle, Download, Plus, Edit, Trash2, Check, ExternalLink, DollarSign, Calendar, FileText, User } from "lucide-react";
+import { Send, CheckCircle, Download, Plus, Edit, Trash2, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
@@ -18,6 +18,7 @@ import ProjectDialog from "@/components/projects/ProjectDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -802,6 +803,12 @@ export default function InvoiceDetails() {
           </CardContent>
         </Card>
       ),
+    },
+    {
+      value: "helpdesk",
+      label: "Help Desk",
+      icon: <Mail className="h-4 w-4" />,
+      content: <LinkedHelpdeskTicketsTab documentType="invoice" documentId={id!} />,
     },
   ];
 

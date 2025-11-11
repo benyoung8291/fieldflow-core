@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, DollarSign, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2 } from "lucide-react";
+import { Calendar, DollarSign, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2, Mail } from "lucide-react";
 import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
@@ -18,6 +18,7 @@ import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
 import ProjectTasksGrid from "@/components/projects/ProjectTasksGrid";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -326,6 +327,12 @@ export default function ProjectDetails() {
       label: "Invoices",
       icon: <DollarSign className="h-4 w-4" />,
       content: <RelatedInvoicesCard sourceType="project" sourceId={id!} />,
+    },
+    {
+      value: "helpdesk",
+      label: "Help Desk",
+      icon: <Mail className="h-4 w-4" />,
+      content: <LinkedHelpdeskTicketsTab documentType="project" documentId={id!} />,
     },
     {
       value: "history",

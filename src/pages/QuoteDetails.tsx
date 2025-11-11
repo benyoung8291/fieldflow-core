@@ -49,6 +49,7 @@ import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import AuditTimeline from "@/components/audit/AuditTimeline";
+import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -831,6 +832,12 @@ export default function QuoteDetails() {
       label: "Tasks",
       icon: <ListChecks className="h-4 w-4" />,
       content: <LinkedTasksList linkedModule="quote" linkedRecordId={id!} />,
+    },
+    {
+      value: "helpdesk",
+      label: "Help Desk",
+      icon: <Mail className="h-4 w-4" />,
+      content: <LinkedHelpdeskTicketsTab documentType="quote" documentId={id!} />,
     },
     {
       value: "history",
