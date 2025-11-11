@@ -1037,7 +1037,7 @@ export default function Scheduler() {
       )}
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
-        <div className={cn("gap-3", showServiceOrderView ? "grid grid-cols-1" : "grid grid-cols-[1fr_300px]")}>
+        <div className="grid grid-cols-[1fr_300px] gap-3">
           <div className="space-y-2">
         {/* Compact Summary Cards */}
         <div className="grid grid-cols-3 gap-2">
