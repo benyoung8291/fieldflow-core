@@ -159,7 +159,7 @@ export function HelpDeskEmailAccountsSettings() {
             Connect email accounts to automatically create tickets from incoming emails
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button type="button" onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Email Account
         </Button>
@@ -228,6 +228,7 @@ export function HelpDeskEmailAccountsSettings() {
 
               <div className="flex items-center gap-2">
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => handleEdit(account)}
@@ -235,6 +236,7 @@ export function HelpDeskEmailAccountsSettings() {
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => testEmailConnection(account.id)}
@@ -242,6 +244,7 @@ export function HelpDeskEmailAccountsSettings() {
                   Test
                 </Button>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDelete(account)}
@@ -256,7 +259,7 @@ export function HelpDeskEmailAccountsSettings() {
         <div className="text-center py-8 border rounded-lg bg-muted/10">
           <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-4">No email accounts configured yet</p>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button type="button" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Connect Your First Email Account
           </Button>

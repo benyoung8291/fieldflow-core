@@ -344,16 +344,21 @@ export function HelpDeskEmailAccountDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {account ? "Edit Email Account" : "Connect Email Account"}
-          </DialogTitle>
-          <DialogDescription>
-            Connect your Microsoft email account for the help desk system
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }}>
+          <DialogHeader>
+            <DialogTitle>
+              {account ? "Edit Email Account" : "Connect Email Account"}
+            </DialogTitle>
+            <DialogDescription>
+              Connect your Microsoft email account for the help desk system
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4">
           {!account && !oauthData && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               {isAuthenticating ? (
@@ -495,22 +500,27 @@ export function HelpDeskEmailAccountDialog({
               </div>
             </>
           )}
-        </div>
+          </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          {(account || oauthData) && (
-            <Button
-              type="button"
-              onClick={() => saveMutation.mutate()}
-              disabled={!formData.email_address || !formData.display_name || !formData.pipeline_id || saveMutation.isPending}
-            >
-              {saveMutation.isPending ? "Saving..." : account ? "Update Account" : "Connect Account"}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
             </Button>
-          )}
-        </DialogFooter>
+            {(account || oauthData) && (
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveMutation.mutate();
+                }}
+                disabled={!formData.email_address || !formData.display_name || !formData.pipeline_id || saveMutation.isPending}
+              >
+                {saveMutation.isPending ? "Saving..." : account ? "Update Account" : "Connect Account"}
+              </Button>
+            )}
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
