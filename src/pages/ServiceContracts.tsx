@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,6 +18,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 
 export default function ServiceContracts() {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [renewingContract, setRenewingContract] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
@@ -159,50 +163,52 @@ export default function ServiceContracts() {
           </Button>
         </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeContracts.length}</div>
-          </CardContent>
-        </Card>
+      {!isMobile && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{activeContracts.length}</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Contract Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalContractValue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Ex-GST</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Contract Value</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${totalContractValue.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Ex-GST</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Generations</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingGenerations.length}</div>
-            <p className="text-xs text-muted-foreground">Next 12 months</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Upcoming Generations</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{upcomingGenerations.length}</div>
+              <p className="text-xs text-muted-foreground">Next 12 months</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Renewal Alerts</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingRenewals.length}</div>
-            <p className="text-xs text-muted-foreground">Within 3 months</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Renewal Alerts</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{upcomingRenewals.length}</div>
+              <p className="text-xs text-muted-foreground">Within 3 months</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="contracts" className="space-y-4">
         <TabsList>
@@ -213,13 +219,31 @@ export default function ServiceContracts() {
         </TabsList>
 
         <TabsContent value="contracts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Contracts</CardTitle>
-              <CardDescription>All currently active service contracts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
+          {isMobile ? (
+            <div className="space-y-3">
+              {activeContracts.map((contract: any) => (
+                <MobileDocumentCard
+                  key={contract.id}
+                  title={contract.contract_number}
+                  subtitle={contract.customers?.name}
+                  status={contract.status}
+                  metadata={[
+                    { label: "Start Date", value: format(parseISO(contract.start_date), "PP") },
+                    { label: "End Date", value: contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing" },
+                    { label: "Value", value: `$${parseFloat(contract.total_contract_value).toFixed(2)}` },
+                  ]}
+                  onClick={() => navigate(`/service-contracts/${contract.id}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Contracts</CardTitle>
+                <CardDescription>All currently active service contracts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Contract Number</TableHead>
@@ -251,6 +275,7 @@ export default function ServiceContracts() {
               </Table>
             </CardContent>
           </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="generations" className="space-y-4">

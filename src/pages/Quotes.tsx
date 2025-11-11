@@ -11,6 +11,9 @@ import { Plus, Search, DollarSign, Calendar, Eye, Copy, Archive, Trash2 } from "
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +36,7 @@ export default function Quotes() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | undefined>();
@@ -261,32 +265,34 @@ export default function Quotes() {
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">Total Quotes</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{stats.draft}</div>
-              <p className="text-xs text-muted-foreground">Drafts</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{stats.approved}</div>
-              <p className="text-xs text-muted-foreground">Approved</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Total Value</p>
-            </CardContent>
-          </Card>
-        </div>
+        {!isMobile && (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <p className="text-xs text-muted-foreground">Total Quotes</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{stats.draft}</div>
+                <p className="text-xs text-muted-foreground">Drafts</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{stats.approved}</div>
+                <p className="text-xs text-muted-foreground">Approved</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">Total Value</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -364,6 +370,23 @@ export default function Quotes() {
               </Button>
             </CardContent>
           </Card>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {filteredQuotes?.map((quote) => (
+              <MobileDocumentCard
+                key={quote.id}
+                title={quote.quote_number}
+                subtitle={quote.title}
+                status={quote.status}
+                badge={quote.customer?.name}
+                metadata={[
+                  { label: "Total", value: `$${quote.total_amount.toLocaleString()}` },
+                  { label: "Valid Until", value: quote.valid_until ? format(new Date(quote.valid_until), "MMM d, yyyy") : "N/A" },
+                ]}
+                onClick={() => navigate(`/quotes/${quote.id}`)}
+              />
+            ))}
+          </div>
         ) : (
           <div className="space-y-3">
             {filteredQuotes?.map((quote) => (

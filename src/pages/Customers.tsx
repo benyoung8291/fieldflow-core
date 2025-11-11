@@ -14,9 +14,13 @@ import RemoteCursors from "@/components/presence/RemoteCursors";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 export default function Customers() {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -145,38 +149,40 @@ export default function Customers() {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-              <Building2 className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{customers.filter(c => c.is_active).length}</div>
-              <p className="text-xs text-muted-foreground">All active accounts</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sub-Accounts</CardTitle>
-              <Users className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalSubAccounts}</div>
-              <p className="text-xs text-muted-foreground">Linked accounts</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-              <FileText className="h-4 w-4 text-info" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalServiceOrders}</div>
-              <p className="text-xs text-muted-foreground">Service orders</p>
-            </CardContent>
-          </Card>
-        </div>
+        {!isMobile && (
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+                <Building2 className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{customers.filter(c => c.is_active).length}</div>
+                <p className="text-xs text-muted-foreground">All active accounts</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Sub-Accounts</CardTitle>
+                <Users className="h-4 w-4 text-success" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalSubAccounts}</div>
+                <p className="text-xs text-muted-foreground">Linked accounts</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                <FileText className="h-4 w-4 text-info" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalServiceOrders}</div>
+                <p className="text-xs text-muted-foreground">Service orders</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Search */}
         <Card className="shadow-md">
@@ -197,20 +203,43 @@ export default function Customers() {
         </Card>
 
         {/* Customers Table */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>All Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredCustomers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredCustomers.length === 0 ? (
+          <Card className="shadow-md">
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
                 {searchQuery ? "No customers found matching your search" : "No customers yet. Click 'New Customer' to add one."}
-              </div>
-            ) : (
+              </p>
+            </CardContent>
+          </Card>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {filteredCustomers.map((customer) => (
+              <MobileDocumentCard
+                key={customer.id}
+                title={customer.name}
+                subtitle={customer.trading_name && customer.trading_name !== customer.name ? `T/A ${customer.trading_name}` : undefined}
+                badge={customer.is_active ? "Active" : "Inactive"}
+                badgeVariant={customer.is_active ? "default" : "secondary"}
+                metadata={[
+                  { label: "ABN", value: customer.abn || "-" },
+                  { label: "Contact", value: customer.email || customer.phone || "-" },
+                  { label: "Location", value: customer.city && customer.state ? `${customer.city}, ${customer.state}` : customer.city || customer.state || "-" },
+                  { label: "Orders", value: serviceOrderCounts[customer.id] || 0 },
+                ]}
+                onClick={() => handleViewDetails(customer.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>All Customers</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="border-b border-border">
@@ -302,9 +331,9 @@ export default function Customers() {
                   </tbody>
                 </table>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <CustomerDialog

@@ -10,9 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 export default function InvoicesList() {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -98,34 +102,49 @@ export default function InvoicesList() {
           </Select>
         </div>
 
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice Number</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Invoice Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+{isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading invoices...</p>
+          </div>
+        ) : filteredInvoices?.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No invoices found</p>
+          </div>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {filteredInvoices?.map((invoice) => (
+              <MobileDocumentCard
+                key={invoice.id}
+                title={invoice.invoice_number}
+                subtitle={invoice.customers?.name}
+                status={invoice.status}
+                badge={getStatusBadge(invoice.status).props.children}
+                badgeVariant={getStatusBadge(invoice.status).props.variant}
+                metadata={[
+                  { label: "Invoice Date", value: format(new Date(invoice.invoice_date), "dd MMM yyyy") },
+                  { label: "Due Date", value: invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "-" },
+                  { label: "Amount", value: `$${invoice.total_amount.toFixed(2)}` },
+                ]}
+                onClick={() => navigate(`/invoices/${invoice.id}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Loading invoices...
-                  </TableCell>
+                  <TableHead>Invoice Number</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Invoice Date</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : filteredInvoices?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No invoices found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredInvoices?.map((invoice) => (
+              </TableHeader>
+              <TableBody>
+                {filteredInvoices?.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium font-mono">{invoice.invoice_number}</TableCell>
                     <TableCell>{invoice.customers?.name}</TableCell>
@@ -150,11 +169,11 @@ export default function InvoicesList() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

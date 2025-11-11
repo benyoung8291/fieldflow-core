@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -32,6 +35,7 @@ type SortOrder = "asc" | "desc";
 
 export default function Appointments() {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("start_time");
@@ -211,13 +215,38 @@ export default function Appointments() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">Loading appointments...</div>
-            ) : sortedAppointments.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No appointments found</div>
-            ) : (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading appointments...</p>
+          </div>
+        ) : sortedAppointments.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">No appointments found</p>
+            </CardContent>
+          </Card>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {sortedAppointments.map((appointment: any) => (
+              <MobileDocumentCard
+                key={appointment.id}
+                title={appointment.title}
+                subtitle={appointment.service_orders?.work_order_number ? `WO: ${appointment.service_orders.work_order_number}` : undefined}
+                status={appointment.status}
+                statusColor={statusColors[appointment.status as keyof typeof statusColors].split(" ")[0]}
+                metadata={[
+                  { label: "Date", value: format(new Date(appointment.start_time), "MMM d, yyyy") },
+                  { label: "Time", value: format(new Date(appointment.start_time), "h:mm a") },
+                  { label: "Est. Hours", value: `${appointment.estimatedHours.toFixed(2)} hrs` },
+                  { label: "Cost", value: `$${appointment.currentCost.toFixed(2)}` },
+                ]}
+                onClick={() => navigate(`/appointments/${appointment.id}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -328,9 +357,9 @@ export default function Appointments() {
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
