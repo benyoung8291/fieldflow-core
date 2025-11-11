@@ -19,7 +19,7 @@ interface NavItem {
 
 const primaryNavItems: NavItem[] = [
   { icon: Home, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "CRM", path: "/leads" },
+  { icon: Users, label: "CRM", path: "/crm-hub" },
   { icon: ClipboardList, label: "Orders", path: "/service-orders" },
   { icon: FileText, label: "Quotes", path: "/quotes" },
 ];
