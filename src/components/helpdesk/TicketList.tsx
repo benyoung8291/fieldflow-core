@@ -97,11 +97,11 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId }: Tic
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors",
+                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors h-[100px] flex items-start",
                   selectedTicketId === ticket.id && "bg-accent"
                 )}
               >
-                <div className="space-y-1">
+                <div className="space-y-1 w-full overflow-hidden">
                   <div className="flex items-start justify-between gap-1">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 mb-0.5">
@@ -112,7 +112,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId }: Tic
                           {ticket.priority}
                         </Badge>
                       </div>
-                      <p className="font-medium text-xs truncate">{ticket.subject}</p>
+                      <p className="font-medium text-xs line-clamp-2">{ticket.subject}</p>
                     </div>
                     <Badge variant="outline" className={cn("text-xs shrink-0 h-4 px-1", getStatusColor(ticket.status))}>
                       {ticket.status}
