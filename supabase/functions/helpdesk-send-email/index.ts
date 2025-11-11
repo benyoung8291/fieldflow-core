@@ -12,7 +12,7 @@ const corsHeaders = {
 interface SendEmailRequest {
   ticket_id: string;
   body_html?: string;
-  body_plain: string;
+  body_text: string;
   subject?: string;
   reply_to_message_id?: string;
 }
@@ -27,7 +27,7 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { ticket_id, body_html, body_plain, subject, reply_to_message_id }: SendEmailRequest = 
+    const { ticket_id, body_html, body_text, subject, reply_to_message_id }: SendEmailRequest = 
       await req.json();
 
     console.log("Sending email for ticket:", ticket_id);
@@ -91,18 +91,16 @@ serve(async (req: Request) => {
 
     // Get previous message if this is a reply
     let inReplyTo = null;
-    let references: string[] = [];
     
     if (reply_to_message_id) {
       const { data: previousMessage } = await supabase
         .from("helpdesk_messages")
-        .select("external_message_id, references")
+        .select("email_message_id")
         .eq("id", reply_to_message_id)
         .single();
 
       if (previousMessage) {
-        inReplyTo = previousMessage.external_message_id;
-        references = previousMessage.references || [];
+        inReplyTo = previousMessage.email_message_id;
       }
     }
 
@@ -116,12 +114,11 @@ serve(async (req: Request) => {
       from: `${senderName} <${emailAccount.email_address}>`,
       to: [recipientEmail],
       subject: emailSubject,
-      html: body_html || `<p>${body_plain.replace(/\n/g, "<br>")}</p>`,
-      text: body_plain,
+      html: body_html || `<p>${body_text.replace(/\n/g, "<br>")}</p>`,
+      text: body_text,
       headers: {
         "Message-ID": messageId,
         ...(inReplyTo && { "In-Reply-To": inReplyTo }),
-        ...(references.length > 0 && { "References": references.join(" ") }),
         "X-Ticket-Number": ticket.ticket_number,
       },
     });
@@ -138,13 +135,11 @@ serve(async (req: Request) => {
         direction: "outbound",
         from_email: emailAccount.email_address,
         from_name: senderName,
-        to_emails: [recipientEmail],
+        to_email: recipientEmail,
         subject: emailSubject,
         body_html: body_html,
-        body_plain: body_plain,
-        external_message_id: messageId,
-        in_reply_to: inReplyTo,
-        references: inReplyTo ? [...references, inReplyTo] : references,
+        body_text: body_text,
+        email_message_id: messageId,
         created_by: user.id,
       });
 

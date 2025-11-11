@@ -43,11 +43,8 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         {
           body: {
             ticket_id: ticketId,
-            to_emails: emailData.to,
-            cc_emails: emailData.cc,
-            bcc_emails: emailData.bcc,
             subject: emailData.subject,
-            body_plain: emailData.body,
+            body_text: emailData.body,
             body_html: emailData.bodyHtml,
           },
         }
