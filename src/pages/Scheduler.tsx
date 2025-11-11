@@ -1309,6 +1309,53 @@ export default function Scheduler() {
         {/* Drag Overlay - shows the item being dragged */}
         <DragOverlay dropAnimation={null}>
           {activeId && (() => {
+            // Appointment being dragged
+            if (activeId.toString().startsWith('appointment-')) {
+              const appointmentId = activeId.toString().replace('appointment-', '');
+              const appointment = appointments.find(a => a.id === appointmentId);
+              if (appointment) {
+                const getStatusColor = (status: string) => {
+                  switch (status) {
+                    case "draft": return "bg-muted text-muted-foreground";
+                    case "scheduled": return "bg-info/10 text-info";
+                    case "in_progress": return "bg-warning/10 text-warning";
+                    case "completed": return "bg-success/10 text-success";
+                    case "cancelled": return "bg-destructive/10 text-destructive";
+                    default: return "bg-muted text-muted-foreground";
+                  }
+                };
+                
+                return (
+                  <Card className="p-2 shadow-2xl ring-2 ring-primary rotate-3 scale-105 w-[280px]">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Badge variant="outline" className={getStatusColor(appointment.status)}>
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-sm truncate">{appointment.title}</h4>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {format(new Date(appointment.start_time), "HH:mm")} - 
+                          {format(new Date(appointment.end_time), "HH:mm")}
+                        </span>
+                      </div>
+                      {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span className="truncate">
+                            {appointment.appointment_workers.map((aw: any) => 
+                              `${aw.profiles?.first_name || ''} ${aw.profiles?.last_name || ''}`
+                            ).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              }
+            }
             // Worker being dragged
             if (activeId.toString().startsWith('worker-')) {
               const workerId = activeId.toString().replace('worker-', '');
