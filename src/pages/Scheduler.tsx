@@ -1281,7 +1281,7 @@ export default function Scheduler() {
           </div>
 
           {/* Right Sidebar - Service Orders or Workers depending on view */}
-          {!showServiceOrderView ? (
+          {showServiceOrderView ? (
             <div>
               <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
             </div>
