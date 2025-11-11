@@ -166,12 +166,12 @@ export default function Settings() {
 
   return (
     <DashboardLayout>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full">
+      <SidebarProvider defaultOpen={true}>
+        <div className="flex w-full min-h-full">
           <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
           
-          <div className="flex-1 flex flex-col">
-            <header className="h-16 border-b bg-background flex items-center px-4 sticky top-0 z-10">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <header className="h-16 border-b bg-background flex items-center px-4 lg:px-6 shrink-0">
               <SidebarTrigger className="mr-4" />
               <div>
                 <h1 className="text-2xl font-bold">Settings</h1>
@@ -182,7 +182,7 @@ export default function Settings() {
             </header>
 
             <main className="flex-1 p-4 sm:p-6 overflow-auto">
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-5xl">
                 {activeTab === "general" && (
                   <Card>
                     <CardContent className="pt-6">
