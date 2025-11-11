@@ -1,8 +1,9 @@
-import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isWithinInterval } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DroppableAppointmentCard from "./DroppableAppointmentCard";
 import CreateAppointmentButton from "./CreateAppointmentButton";
@@ -83,6 +84,25 @@ export default function ServiceOrdersCalendarView({
     return hours.toFixed(1);
   };
 
+  const isDateInPreferredRange = (order: any, day: Date) => {
+    if (!order.preferred_date) return false;
+    
+    const preferredDate = new Date(order.preferred_date);
+    
+    // If there's no end date, only the preferred date is highlighted
+    if (!order.date_range_end) {
+      return isSameDay(day, preferredDate);
+    }
+    
+    const rangeEnd = new Date(order.date_range_end);
+    return isWithinInterval(day, { start: preferredDate, end: rangeEnd });
+  };
+
+  const isPreferredDate = (order: any, day: Date) => {
+    if (!order.preferred_date) return false;
+    return isSameDay(day, new Date(order.preferred_date));
+  };
+
   return (
     <div className="h-full overflow-x-auto">
       <div className="min-w-[800px]">
@@ -124,6 +144,8 @@ export default function ServiceOrdersCalendarView({
               {/* Appointments for each day */}
               {days.map(day => {
                 const dayAppointments = getAppointmentsForDay(order.id, day);
+                const isInRange = isDateInPreferredRange(order, day);
+                const isPreferred = isPreferredDate(order, day);
                 
                 return (
                   <DroppableTimeSlot
@@ -131,7 +153,11 @@ export default function ServiceOrdersCalendarView({
                     id={`so-slot-${order.id}-${day.toISOString()}`}
                     date={day}
                     workerId={null}
-                    className="min-h-[120px] p-2"
+                    className={cn(
+                      "min-h-[120px] p-2",
+                      isInRange && "bg-yellow-50/50 dark:bg-yellow-950/20 border-2 border-yellow-200 dark:border-yellow-800",
+                      isPreferred && "border-2 border-green-500 dark:border-green-600"
+                    )}
                   >
                     <div className="space-y-2 h-full">
                       {dayAppointments.length > 0 ? (
