@@ -5,6 +5,7 @@ import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
 import { LinkedDocumentsSidebar } from "@/components/helpdesk/LinkedDocumentsSidebar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function HelpDesk() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -32,10 +33,8 @@ export default function HelpDesk() {
   });
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="border-b bg-background px-6 py-3">
-        <h1 className="text-2xl font-semibold">Help Desk</h1>
-      </div>
+    <DashboardLayout>
+      <div className="flex flex-col h-[calc(100vh-4rem)]">
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left: Ticket List */}
@@ -75,6 +74,7 @@ export default function HelpDesk() {
           )}
         </ResizablePanel>
       </ResizablePanelGroup>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
