@@ -66,12 +66,23 @@ export default function ResizableAppointmentCard({
       let newStartTime = new Date(startTime);
       let newEndTime = new Date(endTime);
 
+      // Snap to 30-minute intervals
+      const snapToInterval = (date: Date) => {
+        const minutes = date.getMinutes();
+        const roundedMinutes = Math.round(minutes / 30) * 30;
+        const snapped = new Date(date);
+        snapped.setMinutes(roundedMinutes, 0, 0);
+        return snapped;
+      };
+
       if (isResizing === 'bottom' && tempHeight !== null) {
         const newDurationHours = tempHeight / pixelsPerHour;
         newEndTime = new Date(startTime.getTime() + newDurationHours * 60 * 60 * 1000);
+        newEndTime = snapToInterval(newEndTime);
       } else if (isResizing === 'top' && tempHeight !== null && tempTop !== null) {
         const timeDeltaMs = (tempTop - startTop.current) / pixelsPerHour * 60 * 60 * 1000;
         newStartTime = new Date(startTime.getTime() + timeDeltaMs);
+        newStartTime = snapToInterval(newStartTime);
       }
 
       onResize(appointment.id, newStartTime, newEndTime);
