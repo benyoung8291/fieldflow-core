@@ -90,38 +90,41 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("🔐 Auth state change event:", event, "Session exists:", !!session);
-      console.log("🔐 OAuth in progress flag:", sessionStorage.getItem('oauth_in_progress'));
+      console.log("🔐 OAuth in progress flag:", localStorage.getItem('oauth_in_progress'));
       console.log("🔐 Current path:", window.location.pathname);
       
-      // Ignore ALL auth state changes during OAuth popup flow
-      if (sessionStorage.getItem('oauth_in_progress') === 'true') {
+      // CRITICAL: Ignore ALL auth state changes during OAuth popup flow
+      const oauthInProgress = localStorage.getItem('oauth_in_progress');
+      if (oauthInProgress === 'true') {
         console.log("⏭️ BLOCKING auth state change during OAuth flow - event:", event);
         return;
       }
       
-      // Ignore token refresh events - they shouldn't log users out
+      // Ignore token refresh events - they shouldn't affect authentication state
       if (event === 'TOKEN_REFRESHED') {
         console.log("⏭️ Ignoring TOKEN_REFRESHED event");
-        if (mounted && session) {
+        return;
+      }
+      
+      // ONLY react to explicit sign in/out events
+      if (event === 'SIGNED_IN') {
+        console.log("✅ User signed in");
+        if (mounted) {
           setIsAuthenticated(true);
         }
         return;
       }
       
-      // Only log out on explicit SIGNED_OUT events
       if (event === 'SIGNED_OUT') {
-        console.log("🔐 User explicitly signed out");
+        console.log("🚪 User explicitly signed out");
         if (mounted) {
           setIsAuthenticated(false);
         }
         return;
       }
       
-      // For SIGNED_IN and other events, update authentication state
-      if (mounted) {
-        console.log("🔐 Setting authenticated state to:", !!session);
-        setIsAuthenticated(!!session);
-      }
+      // Ignore all other events (USER_UPDATED, etc.)
+      console.log("⏭️ Ignoring auth event:", event);
     });
 
     return () => {
