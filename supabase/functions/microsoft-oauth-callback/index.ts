@@ -91,90 +91,61 @@ serve(async (req) => {
       throw new Error("Failed to store authentication tokens");
     }
 
-    console.log("✅ Tokens stored successfully");
+    console.log("✅ Tokens stored with session ID:", sessionId);
 
-    // Return HTML that posts message to parent window and closes popup
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Authentication Success</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-            }
-            .container {
-              text-align: center;
-              padding: 2rem;
-            }
-            .checkmark {
-              font-size: 64px;
-              margin-bottom: 1rem;
-              animation: scaleIn 0.5s ease-out;
-            }
-            @keyframes scaleIn {
-              from { transform: scale(0); }
-              to { transform: scale(1); }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="checkmark">✓</div>
-            <h1>Authentication Successful!</h1>
-            <p>Closing window...</p>
-          </div>
-          <script>
-            try {
-              const oauthData = {
-                email: "${email}",
-                accessToken: "${tokens.access_token}",
-                refreshToken: "${tokens.refresh_token}",
-                expiresIn: ${tokens.expires_in},
-                accountId: "${profile.id}"
-              };
-              
-              console.log("Posting message to opener:", oauthData);
-              
-              if (window.opener) {
-                window.opener.postMessage({
-                  type: 'MICROSOFT_OAUTH_SUCCESS',
-                  payload: oauthData
-                }, '*');
-                
-                setTimeout(() => {
-                  window.close();
-                }, 1500);
-              } else {
-                console.error("No window.opener found");
-                document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Please close this window and try again.</p></div>';
-              }
-            } catch (error) {
-              console.error("Error posting message:", error);
-              if (window.opener) {
-                window.opener.postMessage({
-                  type: 'MICROSOFT_OAUTH_ERROR',
-                  error: error.message
-                }, '*');
-              }
-              setTimeout(() => window.close(), 2000);
-            }
-          </script>
-        </body>
-      </html>
-    `;
+    // Return HTML that posts session ID to parent window (not the tokens themselves)
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Authentication Success</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container { text-align: center; padding: 2rem; }
+    .checkmark { font-size: 64px; margin-bottom: 1rem; animation: scaleIn 0.5s ease-out; }
+    @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="checkmark">✓</div>
+    <h1>Authentication Successful!</h1>
+    <p>Closing window...</p>
+  </div>
+  <script>
+    (function() {
+      console.log("OAuth popup: Posting session ID to opener");
+      const sessionId = ${JSON.stringify(sessionId)};
+      
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({
+          type: 'MICROSOFT_OAUTH_SUCCESS',
+          sessionId: sessionId
+        }, '*');
+        console.log("OAuth popup: Message posted, closing in 1s");
+        setTimeout(function() { window.close(); }, 1000);
+      } else {
+        console.error("OAuth popup: No opener window found");
+        document.body.innerHTML = '<div class="container"><h1>Error</h1><p>No parent window found. Please close this window.</p></div>';
+      }
+    })();
+  </script>
+</body>
+</html>`;
     
     return new Response(html, {
       status: 200,
       headers: {
-        "Content-Type": "text/html",
+        "Content-Type": "text/html; charset=utf-8",
       },
     });
   } catch (error) {

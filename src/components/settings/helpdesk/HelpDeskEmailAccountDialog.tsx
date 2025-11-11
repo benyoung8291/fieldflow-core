@@ -202,45 +202,77 @@ export function HelpDeskEmailAccountDialog({
       }
       
       // Listen for message from popup
-      const messageHandler = (event: MessageEvent) => {
+      const messageHandler = async (event: MessageEvent) => {
         // Verify origin for security
         if (!event.origin.includes('supabase.co') && !event.origin.includes('lovable')) {
           return;
         }
         
         if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
-          console.log("✅ Received OAuth success from popup", event.data);
+          console.log("✅ Received OAuth session ID from popup:", event.data.sessionId);
           
           // Clean up
           window.removeEventListener('message', messageHandler);
           popup?.close();
           
-          // Process the OAuth data
-          const oauthData = event.data.payload;
-          fetchMailboxes(
-            oauthData.accessToken,
-            oauthData.email,
-            oauthData.email
-          ).catch((error) => {
-            console.error("Error fetching mailboxes:", error);
-            setAvailableMailboxes([
-              { email: oauthData.email, displayName: `${oauthData.email} (Personal)`, type: "personal" }
-            ]);
-            setFormData(prev => ({
-              ...prev,
-              email_address: oauthData.email,
-              display_name: oauthData.email,
-            }));
-            setIsFetchingMailboxes(false);
-          });
-          
-          setOauthData(oauthData);
-          setIsAuthenticating(false);
-          
-          toast({
-            title: "Microsoft account connected!",
-            description: `Authenticated as ${oauthData.email}`,
-          });
+          try {
+            // Fetch tokens from database using session ID
+            const { data: tokenData, error: fetchError } = await supabase
+              .from("oauth_temp_tokens")
+              .select("*")
+              .eq("session_id", event.data.sessionId)
+              .single();
+
+            if (fetchError || !tokenData) {
+              throw new Error("Failed to retrieve OAuth tokens from database");
+            }
+
+            console.log("✅ Tokens retrieved from database");
+
+            // Delete the temp tokens
+            await supabase
+              .from("oauth_temp_tokens")
+              .delete()
+              .eq("session_id", event.data.sessionId);
+
+            const oauthData = {
+              email: tokenData.email,
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              expiresIn: tokenData.expires_in,
+              accountId: tokenData.account_id,
+            };
+
+            // Fetch mailboxes
+            fetchMailboxes(
+              oauthData.accessToken,
+              oauthData.email,
+              oauthData.email
+            ).catch((error) => {
+              console.error("Error fetching mailboxes:", error);
+              setAvailableMailboxes([
+                { email: oauthData.email, displayName: `${oauthData.email} (Personal)`, type: "personal" }
+              ]);
+              setFormData(prev => ({
+                ...prev,
+                email_address: oauthData.email,
+                display_name: oauthData.email,
+              }));
+              setIsFetchingMailboxes(false);
+            });
+
+            setOauthData(oauthData);
+            setIsAuthenticating(false);
+
+            toast({
+              title: "Microsoft account connected!",
+              description: `Authenticated as ${oauthData.email}`,
+            });
+          } catch (error) {
+            console.error("Error processing OAuth data:", error);
+            setIsAuthenticating(false);
+            throw error;
+          }
         } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
           console.error("OAuth error from popup:", event.data.error);
           window.removeEventListener('message', messageHandler);
