@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardLayoutProps {
@@ -221,16 +222,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b border-border px-4 py-4 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-        <ThemeToggle />
+      {/* Top Header Bar - Always visible with view mode and theme toggles */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Left side - Menu button on mobile */}
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                <Menu className="h-6 w-6" />
+              </Button>
+            )}
+            {!isMobile && (
+              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">SP</span>
+              </div>
+            )}
+          </div>
+
+          {/* Right side - View mode and theme toggles */}
+          <div className="flex items-center gap-2">
+            <ViewModeToggle />
+            <ThemeToggle />
+          </div>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -288,8 +306,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
         <div className={cn(
-          "px-4 sm:px-6 lg:px-8 py-8 lg:py-10 pt-20 lg:pt-8 h-full overflow-y-auto",
-          isMobile && "pb-20" // Add padding for bottom nav
+          "px-4 sm:px-6 lg:px-8 py-8 lg:py-10 h-full overflow-y-auto",
+          "pt-20", // Top padding for fixed header
+          isMobile && "pb-20" // Bottom padding for bottom nav
         )}>
           {children}
         </div>
