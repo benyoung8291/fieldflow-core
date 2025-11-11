@@ -134,12 +134,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar - Desktop only, hidden in mobile view */}
-      <aside className={cn(
-        "flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0",
-        isMobile ? "hidden" : "flex", // Hide completely in mobile view
-        sidebarCollapsed ? "w-20" : "w-64"
-      )}>
+      {/* Sidebar - Desktop only, completely hidden in mobile view */}
+      {!isMobile && (
+        <aside className={cn(
+          "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0",
+          sidebarCollapsed ? "w-20" : "w-64"
+        )}>
         <div className="flex flex-col h-full">
           <div className="flex-shrink-0 px-6 py-8">
             <div className={cn(
@@ -222,7 +222,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </Button>
           </div>
         </div>
-      </aside>
+        </aside>
+      )}
 
       {/* Top Header Bar */}
       {isMobile ? (
