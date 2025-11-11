@@ -1624,6 +1624,7 @@ export type Database = {
           id: string
           refresh_token: string
           session_id: string
+          session_key: string | null
         }
         Insert: {
           access_token: string
@@ -1634,6 +1635,7 @@ export type Database = {
           id?: string
           refresh_token: string
           session_id: string
+          session_key?: string | null
         }
         Update: {
           access_token?: string
@@ -1644,6 +1646,7 @@ export type Database = {
           id?: string
           refresh_token?: string
           session_id?: string
+          session_key?: string | null
         }
         Relationships: []
       }
