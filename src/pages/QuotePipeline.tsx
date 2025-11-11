@@ -215,18 +215,42 @@ export default function QuotePipeline() {
     setActiveQuote(quote || null);
   };
 
-  // Handle drag end
+  // Handle drag end with optimistic update
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    setActiveQuote(null);
     
     if (over && active.id !== over.id) {
       const quoteId = active.id as string;
       const newStageId = over.id as string;
       
-      updateStageMutation.mutate({ quoteId, newStageId });
+      // Optimistically update the UI immediately
+      const previousQuotes = queryClient.getQueryData<Quote[]>(['quotes-pipeline', selectedPipelineId]);
+      
+      if (previousQuotes) {
+        const updatedQuotes = previousQuotes.map(quote => 
+          quote.id === quoteId 
+            ? { ...quote, stage_id: newStageId }
+            : quote
+        );
+        
+        queryClient.setQueryData(['quotes-pipeline', selectedPipelineId], updatedQuotes);
+      }
+      
+      // Then sync with backend
+      updateStageMutation.mutate(
+        { quoteId, newStageId },
+        {
+          onError: () => {
+            // Rollback on error
+            if (previousQuotes) {
+              queryClient.setQueryData(['quotes-pipeline', selectedPipelineId], previousQuotes);
+            }
+          }
+        }
+      );
     }
-    
-    setActiveQuote(null);
   };
 
   const handleQuickView = (quoteId: string) => {
