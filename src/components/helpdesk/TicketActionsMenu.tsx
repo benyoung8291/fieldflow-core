@@ -40,11 +40,14 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
   });
 
   const handleArchive = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { error } = await supabase
       .from("helpdesk_tickets")
       .update({ 
         is_archived: !ticket.is_archived,
         archived_at: !ticket.is_archived ? new Date().toISOString() : null,
+        archived_by: !ticket.is_archived ? user?.id : null,
       })
       .eq("id", ticket.id);
 
@@ -55,6 +58,16 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
         variant: "destructive",
       });
       return;
+    }
+
+    // Also archive/unarchive in Microsoft mailbox
+    if (ticket.email_account_id && ticket.microsoft_message_id) {
+      await supabase.functions.invoke("microsoft-archive-email", {
+        body: {
+          ticketId: ticket.id,
+          shouldArchive: !ticket.is_archived,
+        },
+      });
     }
 
     toast({

@@ -6,6 +6,7 @@ import { Plus, ExternalLink, X, FileText, Calendar, DollarSign, ClipboardList, C
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { LinkDocumentDialog } from "./LinkDocumentDialog";
 
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
@@ -114,10 +115,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
 
         <Separator className="my-2" />
 
-        <Button variant="outline" size="sm" className="w-full h-6 text-xs">
-          <Plus className="h-3 w-3 mr-1" />
-          Link Document
-        </Button>
+        <LinkDocumentDialog ticketId={ticketId} />
       </div>
 
       <ScrollArea className="flex-1">

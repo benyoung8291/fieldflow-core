@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { TicketList } from "@/components/helpdesk/TicketList";
 import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
@@ -121,15 +121,29 @@ export default function HelpDesk() {
       let totalSynced = 0;
       
       for (const account of freshAccounts) {
-        const { data, error } = await supabase.functions.invoke(
+        // Sync inbox
+        const { data: inboxData, error: inboxError } = await supabase.functions.invoke(
           "microsoft-sync-emails",
           {
             body: { emailAccountId: account.id },
           }
         );
 
-        if (error) throw error;
-        totalSynced += data.syncedCount || 0;
+        if (inboxError) throw inboxError;
+        totalSynced += inboxData.syncedCount || 0;
+
+        // Sync archive if viewing archived
+        if (filterArchived) {
+          const { data: archiveData, error: archiveError } = await supabase.functions.invoke(
+            "microsoft-sync-archived-emails",
+            {
+              body: { emailAccountId: account.id },
+            }
+          );
+
+          if (archiveError) throw archiveError;
+          totalSynced += archiveData.syncedCount || 0;
+        }
       }
 
       toast({
@@ -148,6 +162,44 @@ export default function HelpDesk() {
       setIsSyncing(false);
     }
   };
+
+  // Set up realtime subscriptions
+  useEffect(() => {
+    const channel = supabase
+      .channel('helpdesk-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'helpdesk_tickets'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+          if (selectedTicketId) {
+            queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", selectedTicketId] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'helpdesk_messages'
+        },
+        () => {
+          if (selectedTicketId) {
+            queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", selectedTicketId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTicketId, queryClient]);
 
   return (
     <DashboardLayout>
