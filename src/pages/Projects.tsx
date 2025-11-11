@@ -11,9 +11,12 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Search, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import ProjectDialog from "@/components/projects/ProjectDialog";
 import { format } from "date-fns";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 
 export default function Projects() {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
@@ -105,6 +108,31 @@ export default function Projects() {
               </Button>
             </CardContent>
           </Card>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {filteredProjects?.map((project) => (
+              <MobileDocumentCard
+                key={project.id}
+                title={project.name}
+                subtitle={project.customer?.name}
+                status={project.status.replace("_", " ")}
+                statusColor={statusColors[project.status]}
+                onClick={() => navigate(`/projects/${project.id}`)}
+                metadata={[
+                  {
+                    label: "Start Date",
+                    value: project.start_date 
+                      ? format(new Date(project.start_date), "MMM d, yyyy")
+                      : "Not set",
+                  },
+                  {
+                    label: "Progress",
+                    value: `${project.progress}%`,
+                  },
+                ]}
+              />
+            ))}
+          </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredProjects?.map((project) => (
