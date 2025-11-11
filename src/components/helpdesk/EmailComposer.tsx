@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,20 @@ export function EmailComposer({ onSend, defaultTo = "", defaultSubject = "", isS
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Update subject when defaultSubject changes (e.g., when ticket loads)
+  useEffect(() => {
+    if (defaultSubject && !subject) {
+      setSubject(defaultSubject);
+    }
+  }, [defaultSubject]);
+
+  // Update to when defaultTo changes
+  useEffect(() => {
+    if (defaultTo && !to) {
+      setTo(defaultTo);
+    }
+  }, [defaultTo]);
 
   const handleSend = () => {
     const toEmails = to.split(",").map(e => e.trim()).filter(Boolean);
