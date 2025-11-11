@@ -17,9 +17,13 @@ import {
 import { Plus, Search, Mail, Phone, Building2, ArrowUpDown } from "lucide-react";
 import LeadDialog from "@/components/leads/LeadDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 export default function Leads() {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | undefined>();
@@ -98,7 +102,7 @@ export default function Leads() {
           </Button>
         </div>
 
-        {stats && (
+        {stats && !isMobile && (
           <div className="grid gap-4 md:grid-cols-5">
             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setStatusFilter("all")}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -165,14 +169,45 @@ export default function Leads() {
           )}
         </div>
 
-        <div className="rounded-lg border bg-card">
+        <div className={cn(isMobile ? "space-y-3" : "rounded-lg border bg-card")}>
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading leads...</div>
           ) : filteredLeads.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               No leads found. Create your first lead to get started.
             </div>
+          ) : isMobile ? (
+            /* Mobile Card View */
+            filteredLeads.map((lead) => (
+              <MobileDocumentCard
+                key={lead.id}
+                title={lead.name}
+                subtitle={lead.company_name}
+                status={lead.status}
+                statusColor={
+                  lead.status === 'new' ? 'bg-blue-500' :
+                  lead.status === 'contacted' ? 'bg-yellow-500' :
+                  lead.status === 'qualified' ? 'bg-green-500' :
+                  lead.status === 'proposal' ? 'bg-purple-500' :
+                  lead.status === 'negotiation' ? 'bg-orange-500' :
+                  'bg-red-500'
+                }
+                badge={lead.rating}
+                badgeVariant={
+                  lead.rating === 'hot' ? 'destructive' :
+                  lead.rating === 'warm' ? 'default' :
+                  'secondary'
+                }
+                metadata={[
+                  ...(lead.email ? [{ label: 'Email', value: lead.email }] : []),
+                  ...(lead.phone ? [{ label: 'Phone', value: lead.phone }] : []),
+                  ...(lead.source ? [{ label: 'Source', value: lead.source }] : []),
+                ]}
+                onClick={() => navigate(`/leads/${lead.id}`)}
+              />
+            ))
           ) : (
+            /* Desktop Table View */
             <Table>
               <TableHeader>
                 <TableRow>

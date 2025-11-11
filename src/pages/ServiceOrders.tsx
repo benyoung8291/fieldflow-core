@@ -31,6 +31,9 @@ import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
+import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -56,6 +59,7 @@ const priorityColors = {
 export default function ServiceOrders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isMobile } = useViewMode();
   const { onlineUsers, updateField } = usePresence({ page: "service-orders" });
   
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -218,8 +222,9 @@ export default function ServiceOrders() {
           </div>
         </div>
 
-        {/* Stats - Compact */}
-        <div className="grid grid-cols-5 gap-2">
+        {/* Stats - Compact - Hide on mobile */}
+        {!isMobile && (
+          <div className="grid grid-cols-5 gap-2">
           <Card className="shadow-sm">
             <CardContent className="pt-3 pb-2 px-3">
               <div className="text-xl font-bold text-foreground">{stats.total}</div>
@@ -251,6 +256,7 @@ export default function ServiceOrders() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Search and Filters - Compact */}
         <Card className="shadow-sm">
@@ -309,8 +315,47 @@ export default function ServiceOrders() {
           </CardContent>
         </Card>
 
-        {/* Orders Table - Very Compact */}
-        <Card className="shadow-sm">
+        {/* Orders List */}
+        {isMobile ? (
+          /* Mobile Card View */
+          <div className="space-y-3">
+            {isLoading ? (
+              <div className="text-center py-6 text-muted-foreground">Loading orders...</div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">No orders found</div>
+            ) : (
+              filteredOrders.map((order: any) => (
+                <MobileDocumentCard
+                  key={order.id}
+                  title={`#${order.order_number}`}
+                  subtitle={order.title}
+                  status={statusLabels[order.status as keyof typeof statusLabels] || order.status}
+                  statusColor={
+                    order.status === 'draft' ? 'bg-muted-foreground' :
+                    order.status === 'scheduled' ? 'bg-info' :
+                    order.status === 'in_progress' ? 'bg-warning' :
+                    'bg-success'
+                  }
+                  badge={order.priority}
+                  badgeVariant={
+                    order.priority === 'urgent' ? 'destructive' :
+                    order.priority === 'high' ? 'default' :
+                    'secondary'
+                  }
+                  metadata={[
+                    { label: 'Customer', value: order.customers?.name || '-' },
+                    { label: 'Location', value: order.customer_locations?.name || '-' },
+                    ...(order.work_order_number ? [{ label: 'WO#', value: order.work_order_number }] : []),
+                    { label: 'Total', value: `$${order.total_amount?.toFixed(2) || '0.00'}` },
+                  ]}
+                  onClick={() => window.location.href = `/service-orders/${order.id}`}
+                />
+              ))
+            )}
+          </div>
+        ) : (
+          /* Desktop Table View */
+          <Card className="shadow-sm">
           <CardHeader className="py-2 px-3">
             <CardTitle className="text-sm">
               All Orders ({filteredOrders.length})
@@ -425,6 +470,7 @@ export default function ServiceOrders() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </DashboardLayout>
   );
