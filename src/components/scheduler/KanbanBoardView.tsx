@@ -63,6 +63,20 @@ export default function KanbanBoardView({
     const appointment = appointments.find(apt => apt.id === appointmentId);
     if (!appointment || appointment.status === newStatus) return;
 
+    // Optimistically update the UI immediately
+    const previousAppointments = queryClient.getQueryData<any[]>(["appointments"]);
+    
+    if (previousAppointments) {
+      const updatedAppointments = previousAppointments.map(apt => 
+        apt.id === appointmentId 
+          ? { ...apt, status: newStatus }
+          : apt
+      );
+      
+      queryClient.setQueryData(["appointments"], updatedAppointments);
+    }
+
+    // Then sync with backend
     try {
       const { error } = await supabase
         .from("appointments")
@@ -70,13 +84,16 @@ export default function KanbanBoardView({
         .eq("id", appointmentId);
 
       if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
       
       toast.success(`Appointment moved to ${STATUSES.find(s => s.id === newStatus)?.label}`, {
         description: appointment.title,
       });
     } catch (error: any) {
+      // Rollback on error
+      if (previousAppointments) {
+        queryClient.setQueryData(["appointments"], previousAppointments);
+      }
+      
       toast.error("Failed to update appointment status", {
         description: error.message,
       });

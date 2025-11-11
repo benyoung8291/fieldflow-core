@@ -408,14 +408,21 @@ export default function Scheduler() {
     }) => {
       const { data: profile } = await supabase
         .from("profiles")
+        .select("tenant_id, first_name, last_name")
+        .eq("id", workerId)
+        .single();
+
+      const { data: currentUser } = await supabase.auth.getUser();
+      const { data: currentProfile } = await supabase
+        .from("profiles")
         .select("tenant_id")
-        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .eq("id", currentUser.user?.id)
         .single();
 
       const { error } = await supabase
         .from("appointment_workers")
         .insert({
-          tenant_id: profile?.tenant_id,
+          tenant_id: currentProfile?.tenant_id,
           appointment_id: appointmentId,
           worker_id: workerId,
         });
@@ -426,12 +433,54 @@ export default function Scheduler() {
         }
         throw error;
       }
+
+      return { workerId, profile };
+    },
+    onMutate: async ({ appointmentId, workerId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+
+      // Snapshot previous value
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+
+      // Get worker profile for optimistic update
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", workerId)
+        .single();
+
+      // Optimistically update appointments
+      queryClient.setQueryData(["appointments"], (old: any) => {
+        return (old || []).map((apt: any) => {
+          if (apt.id === appointmentId) {
+            return {
+              ...apt,
+              appointment_workers: [
+                ...(apt.appointment_workers || []),
+                {
+                  appointment_id: appointmentId,
+                  worker_id: workerId,
+                  profiles: profile,
+                }
+              ]
+            };
+          }
+          return apt;
+        });
+      });
+
+      return { previousAppointments };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Worker added to appointment");
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(["appointments"], context.previousAppointments);
+      }
       toast.error(error.message || "Failed to add worker");
     },
   });
@@ -466,11 +515,41 @@ export default function Scheduler() {
           .eq("id", appointmentId);
       }
     },
+    onMutate: async ({ appointmentId, workerId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+
+      // Snapshot previous value
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+
+      // Optimistically update appointments
+      queryClient.setQueryData(["appointments"], (old: any) => {
+        return (old || []).map((apt: any) => {
+          if (apt.id === appointmentId) {
+            const updatedWorkers = (apt.appointment_workers || []).filter(
+              (w: any) => w.worker_id !== workerId
+            );
+            return {
+              ...apt,
+              appointment_workers: updatedWorkers,
+              assigned_to: updatedWorkers.length === 0 ? null : apt.assigned_to,
+            };
+          }
+          return apt;
+        });
+      });
+
+      return { previousAppointments };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Worker removed from appointment");
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(["appointments"], context.previousAppointments);
+      }
       toast.error(error.message || "Failed to remove worker");
     },
   });
