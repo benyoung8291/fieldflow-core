@@ -176,6 +176,8 @@ export function HelpDeskEmailAccountDialog({
     console.log("🎯 Starting Microsoft OAuth with popup");
     
     try {
+      // Set flag to prevent app from reacting to auth changes during OAuth
+      sessionStorage.setItem('oauth_in_progress', 'true');
       setIsAuthenticating(true);
       
       const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
@@ -271,6 +273,9 @@ export function HelpDeskEmailAccountDialog({
 
             setOauthData(oauthData);
             setIsAuthenticating(false);
+            
+            // Clear OAuth in progress flag
+            sessionStorage.removeItem('oauth_in_progress');
 
             toast({
               title: "Microsoft account connected!",
@@ -285,6 +290,7 @@ export function HelpDeskEmailAccountDialog({
           console.error("OAuth error from popup:", event.data.error);
           window.removeEventListener('message', messageHandler);
           popup?.close();
+          sessionStorage.removeItem('oauth_in_progress');
           throw new Error(event.data.error);
         }
       };
@@ -298,6 +304,7 @@ export function HelpDeskEmailAccountDialog({
           window.removeEventListener('message', messageHandler);
           if (isAuthenticating) {
             console.log("Popup closed by user");
+            sessionStorage.removeItem('oauth_in_progress');
             setIsAuthenticating(false);
             toast({
               title: "Authentication cancelled",
@@ -309,6 +316,7 @@ export function HelpDeskEmailAccountDialog({
       
     } catch (error) {
       console.error("❌ Microsoft auth error:", error);
+      sessionStorage.removeItem('oauth_in_progress');
       toast({
         title: "Failed to start Microsoft authentication",
         description: error instanceof Error ? error.message : "Unknown error",
@@ -419,6 +427,7 @@ export function HelpDeskEmailAccountDialog({
                       size="sm"
                       onClick={() => {
                         setIsAuthenticating(false);
+                        sessionStorage.removeItem('oauth_in_progress');
                         sessionStorage.removeItem("microsoft_oauth_in_progress");
                         toast({
                           title: "Authentication cancelled",
