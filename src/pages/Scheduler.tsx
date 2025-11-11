@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
+import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
 import TimeGridWeekView from "@/components/scheduler/TimeGridWeekView";
 import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
@@ -33,7 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export default function Scheduler() {
-  const [viewType, setViewType] = useState<"day" | "week" | "month" | "kanban">("week");
+  const [viewType, setViewType] = useState<"day" | "week" | "timegrid" | "month" | "kanban">("week");
   const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1145,6 +1146,7 @@ export default function Scheduler() {
                   <TabsList className="h-8">
                     <TabsTrigger value="day" className="text-xs px-2.5">Day</TabsTrigger>
                     <TabsTrigger value="week" className="text-xs px-2.5">Week</TabsTrigger>
+                    <TabsTrigger value="timegrid" className="text-xs px-2.5">Time Grid</TabsTrigger>
                     <TabsTrigger value="month" className="text-xs px-2.5">Month</TabsTrigger>
                     <TabsTrigger value="kanban" className="text-xs px-2.5">Kanban</TabsTrigger>
                   </TabsList>
@@ -1196,6 +1198,21 @@ export default function Scheduler() {
                   />
                 )}
                 {viewType === "week" && (
+                  <SchedulerWeekView 
+                    currentDate={currentDate}
+                    appointments={appointments}
+                    workers={workers}
+                    onAppointmentClick={setViewDetailsAppointmentId}
+                    onEditAppointment={(id) => {
+                      setEditingAppointmentId(id);
+                      setDialogOpen(true);
+                    }}
+                    onRemoveWorker={handleRemoveWorker}
+                    onGPSCheckIn={(apt) => setGpsCheckInAppointment(apt)}
+                    checkAvailability={checkAvailability}
+                  />
+                )}
+                {viewType === "timegrid" && (
                   <TimeGridWeekView 
                     currentDate={currentDate}
                     appointments={appointments}

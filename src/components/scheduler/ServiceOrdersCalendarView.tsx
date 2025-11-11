@@ -10,7 +10,7 @@ import CreateAppointmentButton from "./CreateAppointmentButton";
 interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
   appointments: any[];
-  viewType: "day" | "week" | "month" | "kanban";
+  viewType: "day" | "week" | "timegrid" | "month" | "kanban";
   onAppointmentClick: (id: string) => void;
   onCreateAppointment: (serviceOrderId: string, date: Date, startTime: string, endTime: string) => void;
   onRemoveWorker: (appointmentId: string, workerId: string) => void;
