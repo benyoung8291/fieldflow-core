@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink } from "lucide-react";
+import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { TicketActionsMenu } from "./TicketActionsMenu";
@@ -84,6 +84,49 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       }
       return next;
     });
+  };
+
+
+  const renderMentions = (text: string) => {
+    if (!text) return null;
+    // Convert @[Name](userId) to highlighted mentions
+    const parts = text.split(/(@\[[^\]]+\]\([^)]+\))/g);
+    return parts.map((part, index) => {
+      const match = part.match(/@\[([^\]]+)\]\(([^)]+)\)/);
+      if (match) {
+        return (
+          <span key={index} className="inline-flex items-center gap-1 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs font-medium">
+            <AtSign className="h-3 w-3" />
+            {match[1]}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  const MentionBadge = ({ userId }: { userId: string }) => {
+    const { data: user } = useQuery({
+      queryKey: ["user-profile", userId],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", userId)
+          .single();
+        return data;
+      },
+    });
+
+    if (!user) return null;
+
+    const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+    return (
+      <Badge variant="secondary" className="text-xs gap-1">
+        <AtSign className="h-3 w-3" />
+        {fullName || user.email}
+      </Badge>
+    );
   };
 
   const stripQuotedReply = (html: string) => {
@@ -396,7 +439,18 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                               )}
                             </>
                           ) : (
-                            message.body_text || message.body
+                            <div className="space-y-2">
+                              <div className="whitespace-pre-wrap">
+                                {renderMentions(message.body_text || message.body || "")}
+                              </div>
+                              {message.metadata?.mentions && message.metadata.mentions.length > 0 && (
+                                <div className="flex gap-1.5 flex-wrap pt-1 border-t border-border/50">
+                                  {message.metadata.mentions.map((userId: string) => (
+                                    <MentionBadge key={userId} userId={userId} />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
 

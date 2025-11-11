@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MentionTextarea } from "./MentionTextarea";
 
 interface AddTimelineItemDialogProps {
   open: boolean;
@@ -19,8 +20,10 @@ interface AddTimelineItemDialogProps {
 export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimelineItemDialogProps) {
   const [tab, setTab] = useState<"note" | "task" | "checklist">("note");
   const [noteContent, setNoteContent] = useState("");
+  const [noteMentions, setNoteMentions] = useState<string[]>([]);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
+  const [taskMentions, setTaskMentions] = useState<string[]>([]);
   const [checklistItems, setChecklistItems] = useState<{ text: string; checked: boolean }[]>([{ text: "", checked: false }]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -45,11 +48,17 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
         messageData.message_type = "note";
         messageData.body_text = noteContent;
         messageData.body = noteContent;
+        if (noteMentions.length > 0) {
+          messageData.metadata = { mentions: noteMentions };
+        }
       } else if (tab === "task") {
         messageData.message_type = "task";
         messageData.subject = taskTitle;
         messageData.body_text = taskDescription;
         messageData.body = taskDescription;
+        if (taskMentions.length > 0) {
+          messageData.metadata = { mentions: taskMentions };
+        }
       } else if (tab === "checklist") {
         messageData.message_type = "checklist";
         messageData.body = JSON.stringify(checklistItems);
@@ -65,8 +74,10 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
       queryClient.invalidateQueries({ queryKey: ["helpdesk-audit-logs", ticketId] });
       onOpenChange(false);
       setNoteContent("");
+      setNoteMentions([]);
       setTaskTitle("");
       setTaskDescription("");
+      setTaskMentions([]);
       setChecklistItems([{ text: "", checked: false }]);
     },
     onError: (error: any) => {
@@ -116,10 +127,13 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
           </TabsList>
 
           <TabsContent value="note" className="space-y-3">
-            <Textarea
-              placeholder="Add your note here..."
+            <MentionTextarea
+              placeholder="Add your note here... (Use @ to mention users)"
               value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
+              onChange={(value, mentions) => {
+                setNoteContent(value);
+                setNoteMentions(mentions);
+              }}
               rows={6}
             />
           </TabsContent>
@@ -130,10 +144,13 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
             />
-            <Textarea
-              placeholder="Task description (optional)"
+            <MentionTextarea
+              placeholder="Task description (optional, use @ to mention users)"
               value={taskDescription}
-              onChange={(e) => setTaskDescription(e.target.value)}
+              onChange={(value, mentions) => {
+                setTaskDescription(value);
+                setTaskMentions(mentions);
+              }}
               rows={4}
             />
           </TabsContent>
