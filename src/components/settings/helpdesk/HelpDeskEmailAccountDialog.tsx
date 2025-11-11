@@ -183,48 +183,24 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [account, open, pipelines]);
 
-  // Microsoft OAuth handler
-  const handleMicrosoftAuth = async (e?: React.MouseEvent) => {
-    console.log("🎯 handleMicrosoftAuth called");
-    
-    // Prevent any default behavior
-    if (e) {
-      console.log("🛑 Preventing default behavior");
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  // Microsoft OAuth handler - simplified to prevent page refresh issues
+  const handleMicrosoftAuth = async () => {
     try {
       setIsAuthenticating(true);
       
-      console.log("🚀 Starting Microsoft OAuth...");
-      
       const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
       
-      if (error) {
-        console.error("❌ Error from oauth-authorize:", error);
-        throw error;
-      }
+      if (error) throw error;
+      if (!data?.authUrl) throw new Error("No authorization URL received");
       
-      if (!data || !data.authUrl) {
-        console.error("❌ No auth URL returned:", data);
-        throw new Error("No authorization URL received from server");
-      }
-      
-      console.log("📝 Got auth URL, redirecting to:", data.authUrl);
-      
-      // Store state that we're in the middle of OAuth flow
+      // Store state that we're in OAuth flow
       sessionStorage.setItem("microsoft_oauth_in_progress", "true");
       
-      // Small delay to ensure state is saved
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Do a full page redirect to Microsoft OAuth
-      console.log("🔄 Redirecting to Microsoft...");
+      // Redirect to Microsoft
       window.location.href = data.authUrl;
       
     } catch (error) {
-      console.error("❌ Error starting Microsoft auth:", error);
+      console.error("Microsoft auth error:", error);
       toast({
         title: "Failed to start Microsoft authentication",
         description: error instanceof Error ? error.message : "Unknown error",
@@ -354,13 +330,7 @@ export function HelpDeskEmailAccountDialog({
                     Sign in with your Microsoft account to get started
                   </p>
                   <Button
-                    type="button"
-                    onClick={(e) => {
-                      console.log("🖱️ Button clicked");
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMicrosoftAuth(e);
-                    }}
+                    onClick={handleMicrosoftAuth}
                     size="lg"
                   >
                     Sign in with Microsoft
@@ -466,17 +436,12 @@ export function HelpDeskEmailAccountDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           {(account || oauthData) && (
             <Button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                saveMutation.mutate();
-              }}
+              onClick={() => saveMutation.mutate()}
               disabled={!formData.email_address || !formData.display_name || !formData.pipeline_id || saveMutation.isPending}
             >
               {saveMutation.isPending ? "Saving..." : account ? "Update Account" : "Connect Account"}
