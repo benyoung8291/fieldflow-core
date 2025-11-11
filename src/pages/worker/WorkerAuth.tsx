@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { z } from "zod";
 import { Briefcase } from "lucide-react";
+import premrestLogo from "@/assets/premrest-logo.svg";
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -69,69 +70,73 @@ export default function WorkerAuth() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-16 w-16 rounded-lg bg-primary flex items-center justify-center">
-              <Briefcase className="text-primary-foreground h-8 w-8" />
-            </div>
+            <img 
+              src={premrestLogo} 
+              alt="Premrest Logo" 
+              className="h-8 w-auto object-contain"
+            />
           </div>
-          <CardTitle className="text-3xl text-center font-bold">
-            Field Worker Login
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Briefcase className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground">Field Worker Login</span>
+          </div>
+          <CardTitle className="text-2xl text-center">
+            Welcome back
           </CardTitle>
-          <CardDescription className="text-center text-base">
+          <CardDescription className="text-center">
             Sign in to access your mobile dashboard
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-base">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 text-base"
-                placeholder="your.email@company.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-base">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 text-base"
-                placeholder="Enter your password"
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full h-12 text-base font-semibold" 
+              className="w-full" 
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Loading..." : "Sign In"}
             </Button>
           </form>
           
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+          <div className="mt-6 text-center space-y-3">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Office User?
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Not a field worker?
-              </span>
-            </div>
-          </div>
-          
-          <div className="text-center">
+            
             <Link
               to="/auth"
-              className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+              className="block"
             >
-              Login as office/admin user
+              <Button variant="outline" className="w-full" type="button">
+                Login as Office User
+              </Button>
             </Link>
           </div>
         </CardContent>

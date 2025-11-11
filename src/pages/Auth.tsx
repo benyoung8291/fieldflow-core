@@ -73,7 +73,7 @@ export default function Auth() {
             <img 
               src={premrestLogo} 
               alt="Premrest Logo" 
-              className="h-16 w-auto object-contain"
+              className="h-8 w-auto object-contain"
             />
           </div>
           <div className="flex items-center justify-center gap-2 mb-2">
