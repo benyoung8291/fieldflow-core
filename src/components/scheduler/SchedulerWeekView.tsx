@@ -211,7 +211,7 @@ export default function SchedulerWeekView({
                     workerId={worker.id}
                     isAvailable={isAvailable}
                     className={cn(
-                      "min-h-[150px] p-2 border-2 border-dashed rounded-lg space-y-1",
+                      "min-h-[100px] p-2 border-2 border-dashed rounded-lg space-y-1 flex flex-col",
                       isSameDay(day, new Date()) 
                         ? "border-primary/30 bg-primary/5" 
                         : "border-border bg-muted/20"
