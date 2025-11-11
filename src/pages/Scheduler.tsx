@@ -156,25 +156,38 @@ export default function Scheduler() {
       
       if (workerUserIds.length === 0) return [];
 
-      // Fetch profiles for those users with skills
-      const { data, error } = await supabase
+      // Fetch profiles for those users
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select(`
-          id, 
-          first_name, 
-          last_name,
-          is_active,
-          worker_skills(
-            skill_id,
-            skills(name)
-          )
-        `)
+        .select("id, first_name, last_name, is_active")
         .in("id", workerUserIds)
         .eq("is_active", true)
         .order("first_name", { ascending: true });
 
-      if (error) throw error;
-      return data || [];
+      if (profilesError) throw profilesError;
+
+      // Fetch worker skills separately
+      const { data: workerSkills } = await supabase
+        .from("worker_skills")
+        .select(`
+          worker_id,
+          skill_id,
+          skills(name)
+        `)
+        .in("worker_id", workerUserIds);
+
+      // Combine profiles with their skills
+      const workersWithSkills = (profiles || []).map(profile => ({
+        ...profile,
+        worker_skills: (workerSkills || [])
+          .filter(ws => ws.worker_id === profile.id)
+          .map(ws => ({
+            skill_id: ws.skill_id,
+            skills: ws.skills
+          }))
+      }));
+
+      return workersWithSkills;
     },
   });
 
