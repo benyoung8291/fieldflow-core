@@ -56,9 +56,9 @@ export default function TimeGridWeekView({
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col">
       {/* Header Row - Days */}
-      <div className="grid grid-cols-8 gap-px bg-border flex-shrink-0 sticky top-0 bg-background z-20 pb-px">
+      <div className="grid grid-cols-8 gap-px bg-border flex-shrink-0 bg-background z-20 pb-px border-b">
         <div className="font-semibold text-sm p-2 bg-background">Worker</div>
         {weekDays.map(day => (
           <div key={day.toISOString()} className="text-center font-semibold text-sm p-2 bg-background">

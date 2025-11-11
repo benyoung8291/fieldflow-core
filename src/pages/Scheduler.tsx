@@ -1080,8 +1080,8 @@ export default function Scheduler() {
         </div>
 
         {/* Calendar Controls */}
-        <Card className="shadow-md">
-          <CardHeader className="p-3">
+        <Card className="shadow-md flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
+          <CardHeader className="p-3 flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Button
@@ -1154,7 +1154,7 @@ export default function Scheduler() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-2">
+          <CardContent className="p-2 flex-1 overflow-hidden flex flex-col">
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
             ) : showServiceOrderView ? (

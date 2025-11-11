@@ -283,8 +283,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 lg:py-10 pt-20 lg:pt-8">
+      <main className="flex-1 overflow-hidden">
+        <div className="px-4 sm:px-6 lg:px-8 py-8 lg:py-10 pt-20 lg:pt-8 h-full overflow-y-auto">
           {children}
         </div>
       </main>
