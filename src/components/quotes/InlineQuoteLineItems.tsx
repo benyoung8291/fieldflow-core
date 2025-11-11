@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -160,247 +159,300 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
 
   if (readOnly) {
     return (
-      <div className="space-y-2">
-        {lineItems.map((item, index) => {
-          const subItems = item.subItems || [];
-          const itemHasSubItems = subItems.length > 0;
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-[40px]"></TableHead>
+              <TableHead className="min-w-[300px]">Description</TableHead>
+              <TableHead className="w-[100px] text-right">Quantity</TableHead>
+              <TableHead className="w-[120px] text-right">Cost</TableHead>
+              <TableHead className="w-[100px] text-right">Margin %</TableHead>
+              <TableHead className="w-[120px] text-right">Sell</TableHead>
+              <TableHead className="w-[120px] text-right">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lineItems.map((item, index) => {
+              const subItems = item.subItems || [];
+              const itemHasSubItems = subItems.length > 0;
 
-          return (
-            <div key={index} className="border rounded-lg overflow-hidden">
-              <div className="flex items-start justify-between p-3 bg-muted/20">
-                <div className="flex-1">
-                  <p className="font-medium">{item.description}</p>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    Qty: {item.quantity}
-                    {!itemHasSubItems && (
-                      <>
-                        {" • "}Cost: ${parseFloat(item.cost_price).toFixed(2)}
-                        {" • "}Margin: {parseFloat(item.margin_percentage).toFixed(2)}%
-                        {" • "}Sell: ${parseFloat(item.sell_price).toFixed(2)}
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right font-medium">
-                  ${item.line_total.toFixed(2)}
-                </div>
-              </div>
+              return (
+                <>
+                  <TableRow key={index} className="border-b">
+                    <TableCell>
+                      {itemHasSubItems && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => toggleExpanded(index)}
+                        >
+                          {item.expanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{item.description}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="text-sm">{item.quantity}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {!itemHasSubItems && (
+                        <span className="text-sm">${parseFloat(item.cost_price).toFixed(2)}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {!itemHasSubItems && (
+                        <span className="text-sm">{parseFloat(item.margin_percentage).toFixed(2)}%</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {!itemHasSubItems && (
+                        <span className="text-sm">${parseFloat(item.sell_price).toFixed(2)}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ${item.line_total.toFixed(2)}
+                    </TableCell>
+                  </TableRow>
 
-              {itemHasSubItems && (
-                <div className="border-t">
-                  {subItems.map((subItem, subIndex) => (
-                    <div
-                      key={subIndex}
-                      className="flex items-start justify-between p-3 pl-8 border-b last:border-b-0 bg-background/50"
-                    >
-                      <div className="flex-1">
-                        <p className="text-sm">{subItem.description}</p>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Qty: {subItem.quantity}
-                          {" • "}Cost: ${parseFloat(subItem.cost_price).toFixed(2)}
-                          {" • "}Margin: {parseFloat(subItem.margin_percentage).toFixed(2)}%
-                          {" • "}Sell: ${parseFloat(subItem.sell_price).toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="text-right text-sm font-medium">
+                  {item.expanded && itemHasSubItems && subItems.map((subItem, subIndex) => (
+                    <TableRow key={`${index}-${subIndex}`} className="bg-muted/30">
+                      <TableCell></TableCell>
+                      <TableCell className="pl-12">
+                        <span className="text-sm">{subItem.description}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm">{subItem.quantity}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm">${parseFloat(subItem.cost_price).toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm">{parseFloat(subItem.margin_percentage).toFixed(2)}%</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm">${parseFloat(subItem.sell_price).toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
                         ${subItem.line_total.toFixed(2)}
-                      </div>
-                    </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                </>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[40px]"></TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="w-[100px]">Qty</TableHead>
-            <TableHead className="w-[120px]">Cost</TableHead>
-            <TableHead className="w-[100px]">Margin %</TableHead>
-            <TableHead className="w-[120px]">Sell</TableHead>
-            <TableHead className="w-[120px]">Total</TableHead>
-            <TableHead className="w-[100px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {lineItems.map((item, index) => (
-            <>
-              <TableRow key={index}>
-                <TableCell>
-                  {hasSubItems(item) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toggleExpanded(index)}
-                    >
-                      {item.expanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    value={item.description}
-                    onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                    placeholder="Item description"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
-                    min="0"
-                    step="0.01"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.cost_price}
-                    onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
-                    min="0"
-                    step="0.01"
-                    disabled={hasSubItems(item)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.margin_percentage}
-                    onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
-                    min="0"
-                    step="0.01"
-                    disabled={hasSubItems(item)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={item.sell_price}
-                    onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
-                    min="0"
-                    step="0.01"
-                    disabled={hasSubItems(item)}
-                  />
-                </TableCell>
-                <TableCell className="font-medium">
-                  ${item.line_total.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => addSubItem(index)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeLineItem(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              {item.expanded && item.subItems?.map((subItem, subIndex) => (
-                <TableRow key={`${index}-${subIndex}`} className="bg-muted/30">
-                  <TableCell></TableCell>
-                  <TableCell className="pl-8">
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-[40px]"></TableHead>
+              <TableHead className="min-w-[300px]">Description</TableHead>
+              <TableHead className="w-[100px] text-right">Quantity</TableHead>
+              <TableHead className="w-[120px] text-right">Cost</TableHead>
+              <TableHead className="w-[100px] text-right">Margin %</TableHead>
+              <TableHead className="w-[120px] text-right">Sell</TableHead>
+              <TableHead className="w-[120px] text-right">Total</TableHead>
+              <TableHead className="w-[120px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lineItems.map((item, index) => (
+              <>
+                <TableRow key={index} className="border-b">
+                  <TableCell>
+                    {hasSubItems(item) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => toggleExpanded(index)}
+                      >
+                        {item.expanded ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Input
-                      value={subItem.description}
-                      onChange={(e) =>
-                        updateSubItem(index, subIndex, "description", e.target.value)
-                      }
-                      placeholder="Sub-item description"
+                      value={item.description}
+                      onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                      placeholder="Item description"
+                      className="border-0 focus-visible:ring-0 bg-transparent"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
-                      value={subItem.quantity}
-                      onChange={(e) =>
-                        updateSubItem(index, subIndex, "quantity", e.target.value)
-                      }
-                      min="0"
                       step="0.01"
+                      value={item.quantity}
+                      onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                      className="border-0 focus-visible:ring-0 text-right bg-transparent"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
-                      value={subItem.cost_price}
-                      onChange={(e) =>
-                        updateSubItem(index, subIndex, "cost_price", e.target.value)
-                      }
-                      min="0"
                       step="0.01"
+                      value={item.cost_price}
+                      onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
+                      disabled={hasSubItems(item)}
+                      className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
-                      value={subItem.margin_percentage}
-                      onChange={(e) =>
-                        updateSubItem(index, subIndex, "margin_percentage", e.target.value)
-                      }
-                      min="0"
                       step="0.01"
+                      value={item.margin_percentage}
+                      onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
+                      disabled={hasSubItems(item)}
+                      className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
-                      value={subItem.sell_price}
-                      onChange={(e) =>
-                        updateSubItem(index, subIndex, "sell_price", e.target.value)
-                      }
-                      min="0"
                       step="0.01"
+                      value={item.sell_price}
+                      onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                      disabled={hasSubItems(item)}
+                      className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
                     />
                   </TableCell>
-                  <TableCell className="font-medium">
-                    ${subItem.line_total.toFixed(2)}
+                  <TableCell className="text-right font-medium">
+                    ${item.line_total.toFixed(2)}
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeSubItem(index, subIndex)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1 justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => addSubItem(index)}
+                        title="Add sub-item"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => removeLineItem(index)}
+                        disabled={lineItems.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </>
-          ))}
-        </TableBody>
-      </Table>
+
+                {/* Sub-items */}
+                {item.expanded && item.subItems && item.subItems.length > 0 && (
+                  item.subItems.map((subItem, subIndex) => (
+                    <TableRow key={`${index}-${subIndex}`} className="bg-muted/30">
+                      <TableCell></TableCell>
+                      <TableCell className="pl-12">
+                        <Input
+                          value={subItem.description}
+                          onChange={(e) =>
+                            updateSubItem(index, subIndex, "description", e.target.value)
+                          }
+                          placeholder="Sub-item description"
+                          className="border-0 focus-visible:ring-0 text-sm bg-transparent"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={subItem.quantity}
+                          onChange={(e) =>
+                            updateSubItem(index, subIndex, "quantity", e.target.value)
+                          }
+                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={subItem.cost_price}
+                          onChange={(e) =>
+                            updateSubItem(index, subIndex, "cost_price", e.target.value)
+                          }
+                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={subItem.margin_percentage}
+                          onChange={(e) =>
+                            updateSubItem(index, subIndex, "margin_percentage", e.target.value)
+                          }
+                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={subItem.sell_price}
+                          onChange={(e) =>
+                            updateSubItem(index, subIndex, "sell_price", e.target.value)
+                          }
+                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        ${subItem.line_total.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => removeSubItem(index, subIndex)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <Button type="button" variant="outline" onClick={addLineItem}>
         <Plus className="mr-2 h-4 w-4" />
-        Add Line Item
+        Add Item
       </Button>
     </div>
   );
