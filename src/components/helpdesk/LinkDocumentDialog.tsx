@@ -40,12 +40,12 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
       if (!documentType) return [];
 
       const selectMap: Record<string, string> = {
-        service_order: "id, work_order_number, description",
-        quote: "id, quote_number, description",
-        invoice: "id, invoice_number",
-        project: "id, name",
+        service_order: "id, work_order_number, description, customer:customers(name)",
+        quote: "id, quote_number, description, customer:customers(name)",
+        invoice: "id, invoice_number, customer:customers(name)",
+        project: "id, name, customer:customers(name)",
         task: "id, title, description",
-        appointment: "id, title, description",
+        appointment: "id, title, description, customer:customers(name)",
       };
 
       const tableMap: Record<string, string> = {
@@ -80,6 +80,8 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
         .select("tenant_id")
         .eq("id", user?.id || "")
         .single();
+
+      const tenantId = profile?.tenant_id || "";
 
       // Fetch document details to cache number and description
       const selectMap: Record<string, string> = {
@@ -148,11 +150,56 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
           document_number: documentNumber,
           description: documentDesc,
           display_order: nextOrder,
-          tenant_id: profile?.tenant_id || "",
+          tenant_id: tenantId,
           created_by: user?.id,
         });
 
       if (error) throw error;
+
+      // Auto-link related documents
+      if (documentType === "service_order") {
+        // Link appointments for this service order
+        const { data: appointments } = await supabase
+          .from("appointments")
+          .select("id, title, description")
+          .eq("service_order_id", documentId);
+
+        if (appointments && appointments.length > 0) {
+          const appointmentLinks = appointments.map((apt, idx) => ({
+            ticket_id: ticketId,
+            document_type: "appointment",
+            document_id: apt.id,
+            document_number: apt.title || "",
+            description: apt.description || "",
+            display_order: nextOrder + idx + 1,
+            tenant_id: tenantId,
+            created_by: user?.id,
+          }));
+
+          await supabase.from("helpdesk_linked_documents").insert(appointmentLinks);
+        }
+      } else if (documentType === "quote") {
+        // Link project if quote is converted  
+        const { data: projectsList } = await supabase
+          .from("projects" as any)
+          .select("id, name")
+          .eq("quote_id", documentId)
+          .limit(1);
+
+        if (projectsList && projectsList.length > 0) {
+          const project = projectsList[0] as any;
+          await supabase.from("helpdesk_linked_documents").insert({
+            ticket_id: ticketId,
+            document_type: "project",
+            document_id: project.id,
+            document_number: project.name || "",
+            description: "",
+            display_order: nextOrder + 1,
+            tenant_id: tenantId,
+            created_by: user?.id,
+          });
+        }
+      }
     },
     onSuccess: () => {
       toast({ title: "Document linked successfully" });
@@ -171,12 +218,14 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
   });
 
   const getDocumentLabel = (doc: any) => {
-    if (documentType === "service_order") return `${doc?.work_order_number || ""} - ${doc?.description || ""}`;
-    if (documentType === "quote") return `${doc?.quote_number || ""} - ${doc?.description || ""}`;
-    if (documentType === "invoice") return `${doc?.invoice_number || ""}`;
-    if (documentType === "project") return doc?.name || "";
+    const customerName = doc?.customer?.name ? ` - ${doc.customer.name}` : "";
+    
+    if (documentType === "service_order") return `${doc?.work_order_number || ""}${customerName}`;
+    if (documentType === "quote") return `${doc?.quote_number || ""}${customerName}`;
+    if (documentType === "invoice") return `${doc?.invoice_number || ""}${customerName}`;
+    if (documentType === "project") return `${doc?.name || ""}${customerName}`;
     if (documentType === "task") return doc?.title || "";
-    if (documentType === "appointment") return doc?.title || "";
+    if (documentType === "appointment") return `${doc?.title || ""}${customerName}`;
     return "";
   };
 

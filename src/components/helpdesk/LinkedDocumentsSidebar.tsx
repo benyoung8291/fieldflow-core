@@ -1,14 +1,16 @@
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, Briefcase, Calendar, FileText, Receipt, FolderKanban, CheckSquare, User, MapPin, X, ExternalLink, ClipboardList, DollarSign, Users } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Plus, X, FileText, Calendar, DollarSign, ClipboardList, CheckSquare, Users, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Separator } from "@/components/ui/separator";
 import { LinkDocumentDialog } from "./LinkDocumentDialog";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { LinkedDocumentDetailsDialog } from "./LinkedDocumentDetailsDialog";
 import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
@@ -36,6 +38,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [selectedDocType, setSelectedDocType] = useState<string | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{ type: string; id: string } | null>(null);
 
   const { data: linkedDocs } = useQuery({
     queryKey: ["helpdesk-linked-docs", ticketId],
@@ -72,6 +76,27 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
     acc[doc.document_type].push(doc);
     return acc;
   }, {} as Record<string, any[]>) || {};
+
+  const handleDocumentClick = (docType: string, docId: string) => {
+    setSelectedDocument({ type: docType, id: docId });
+    setDetailsDialogOpen(true);
+  };
+
+  const handleOpenInNewTab = (docType: string, docId: string) => {
+    const routeMap: Record<string, (id: string) => string> = {
+      service_order: (id) => `/service-orders/${id}`,
+      quote: (id) => `/quotes/${id}`,
+      invoice: (id) => `/invoices/${id}`,
+      project: (id) => `/projects/${id}`,
+      task: (id) => `/tasks`,
+      appointment: (id) => `/appointments/${id}`,
+    };
+    
+    const routeFn = routeMap[docType];
+    if (routeFn) {
+      window.open(routeFn(docId), "_blank");
+    }
+  };
 
   return (
     <div className="flex flex-col h-full border-l bg-background">
@@ -169,29 +194,46 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                     {docs.map((doc) => (
                       <div
                         key={doc.id}
-                        className="flex items-center justify-between p-2 rounded bg-muted/50 hover:bg-muted group"
+                        className="group relative p-2 rounded border border-border/50 hover:border-border hover:bg-accent/30 transition-all"
                       >
-                        <button
-                          onClick={() => navigate(docType.route(doc.document_id))}
-                          className="flex-1 text-left"
+                        <div 
+                          className="cursor-pointer"
+                          onClick={() => handleDocumentClick(docType.type, doc.document_id)}
                         >
-                          <p className="text-xs font-medium truncate">
-                            {doc.document_number || doc.document_id}
-                          </p>
+                          <div className="text-sm font-medium truncate">
+                            {doc.document_number || "Untitled"}
+                          </div>
                           {doc.description && (
-                            <p className="text-xs text-muted-foreground truncate">
+                            <div className="text-xs text-muted-foreground truncate mt-0.5">
                               {doc.description}
-                            </p>
+                            </div>
                           )}
-                        </button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => unlinkMutation.mutate(doc.id)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                        </div>
+                        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenInNewTab(docType.type, doc.document_id);
+                            }}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Open
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 ml-auto text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              unlinkMutation.mutate(doc.id);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -212,6 +254,15 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
         onOpenChange={(open) => !open && setSelectedDocType(null)}
         initialDocumentType={selectedDocType || undefined}
       />
+
+      {selectedDocument && (
+        <LinkedDocumentDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          documentType={selectedDocument.type}
+          documentId={selectedDocument.id}
+        />
+      )}
     </div>
   );
 }
