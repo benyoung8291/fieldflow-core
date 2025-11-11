@@ -154,22 +154,27 @@ export function HelpDeskEmailAccountDialog({
   // Handle OAuth callback message - ALWAYS ACTIVE
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      console.log("=== OAUTH MESSAGE RECEIVED ===", {
+      // Log ALL messages for debugging
+      console.log("=== MESSAGE RECEIVED ===", {
         origin: event.origin,
-        data: event.data,
         hasData: !!event.data,
         dataType: typeof event.data,
+        data: event.data,
       });
       
+      // Accept messages from any origin for OAuth (Microsoft callback uses Supabase origin)
       // Check if this is our OAuth callback message
       if (event.data && typeof event.data === 'object') {
         const { email, accessToken, refreshToken, expiresIn, accountId } = event.data;
         
         if (accessToken && refreshToken && email) {
-          console.log("✅ VALID OAUTH DATA - Processing...");
+          console.log("✅ VALID OAUTH DATA RECEIVED!");
+          console.log("Email:", email);
+          console.log("Account ID:", accountId);
           
           // Close popup if still open
           if (popupRef.current && !popupRef.current.closed) {
+            console.log("Closing popup window");
             popupRef.current.close();
           }
           
@@ -214,18 +219,21 @@ export function HelpDeskEmailAccountDialog({
               email_address: email,
               display_name: email,
             }));
+            setIsFetchingMailboxes(false);
           }
         } else {
-          console.log("❌ Message missing required fields");
+          console.log("⚠️ Message missing OAuth fields:", { email, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
         }
+      } else {
+        console.log("ℹ️ Non-OAuth message:", event.data);
       }
     };
 
-    console.log("🎧 OAuth message listener ACTIVE");
+    console.log("🎧 Setting up OAuth message listener (always active)");
     window.addEventListener("message", handleMessage, false);
     
     return () => {
-      console.log("🔇 Removing OAuth message listener");
+      console.log("🔇 Cleaning up OAuth message listener");
       window.removeEventListener("message", handleMessage, false);
       
       // Cleanup interval on unmount
