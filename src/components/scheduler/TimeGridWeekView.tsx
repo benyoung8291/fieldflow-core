@@ -16,7 +16,7 @@ interface TimeGridWeekViewProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
-const PIXELS_PER_HOUR = 50; // 50px per hour for compact view
+const PIXELS_PER_HOUR = 25; // 25px per hour for very compact view
 
 export default function TimeGridWeekView({
   currentDate,
@@ -78,20 +78,20 @@ export default function TimeGridWeekView({
       <div className="flex-1 overflow-auto relative bg-border">
         <div className="relative">
           {/* Time labels column */}
-          <div className="absolute left-0 top-0 w-16 z-10 bg-border">
+          <div className="absolute left-0 top-0 w-12 z-10 bg-border">
             {HOURS.map(hour => (
               <div
                 key={hour}
-                className="text-xs text-muted-foreground text-right pr-2 bg-background mb-px"
-                style={{ height: `${PIXELS_PER_HOUR}px`, lineHeight: `${PIXELS_PER_HOUR}px` }}
+                className="text-[9px] text-muted-foreground text-right pr-1 bg-background mb-px flex items-center justify-end"
+                style={{ height: `${PIXELS_PER_HOUR}px` }}
               >
-                {format(setHours(new Date(), hour), 'h a')}
+                {hour}h
               </div>
             ))}
           </div>
 
           {/* Worker Rows */}
-          <div className="pl-16">
+          <div className="pl-12">
             {workers.map((worker) => (
               <div key={worker.id || 'unassigned'} className="grid grid-cols-8 gap-px bg-border mb-px">
                 {/* Worker Info */}
