@@ -980,6 +980,8 @@ export type Database = {
       helpdesk_messages: {
         Row: {
           body: string | null
+          body_html: string | null
+          body_text: string | null
           cc_email: string[] | null
           created_at: string
           created_by: string | null
@@ -989,8 +991,13 @@ export type Database = {
           from_name: string | null
           html_body: string | null
           id: string
+          is_from_customer: boolean | null
           is_internal: boolean
           message_type: string
+          microsoft_message_id: string | null
+          sender_email: string | null
+          sender_name: string | null
+          sent_at: string | null
           subject: string | null
           tenant_id: string
           ticket_id: string
@@ -998,6 +1005,8 @@ export type Database = {
         }
         Insert: {
           body?: string | null
+          body_html?: string | null
+          body_text?: string | null
           cc_email?: string[] | null
           created_at?: string
           created_by?: string | null
@@ -1007,8 +1016,13 @@ export type Database = {
           from_name?: string | null
           html_body?: string | null
           id?: string
+          is_from_customer?: boolean | null
           is_internal?: boolean
           message_type: string
+          microsoft_message_id?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sent_at?: string | null
           subject?: string | null
           tenant_id: string
           ticket_id: string
@@ -1016,6 +1030,8 @@ export type Database = {
         }
         Update: {
           body?: string | null
+          body_html?: string | null
+          body_text?: string | null
           cc_email?: string[] | null
           created_at?: string
           created_by?: string | null
@@ -1025,8 +1041,13 @@ export type Database = {
           from_name?: string | null
           html_body?: string | null
           id?: string
+          is_from_customer?: boolean | null
           is_internal?: boolean
           message_type?: string
+          microsoft_message_id?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sent_at?: string | null
           subject?: string | null
           tenant_id?: string
           ticket_id?: string
@@ -1101,10 +1122,15 @@ export type Database = {
           email_account_id: string | null
           email_message_id: string | null
           email_thread_id: string | null
+          external_email: string | null
           id: string
           last_message_at: string | null
+          microsoft_conversation_id: string | null
+          microsoft_message_id: string | null
           pipeline_id: string | null
           priority: string
+          sender_email: string | null
+          sender_name: string | null
           status: string
           subject: string
           tenant_id: string
@@ -1119,10 +1145,15 @@ export type Database = {
           email_account_id?: string | null
           email_message_id?: string | null
           email_thread_id?: string | null
+          external_email?: string | null
           id?: string
           last_message_at?: string | null
+          microsoft_conversation_id?: string | null
+          microsoft_message_id?: string | null
           pipeline_id?: string | null
           priority?: string
+          sender_email?: string | null
+          sender_name?: string | null
           status?: string
           subject: string
           tenant_id: string
@@ -1137,10 +1168,15 @@ export type Database = {
           email_account_id?: string | null
           email_message_id?: string | null
           email_thread_id?: string | null
+          external_email?: string | null
           id?: string
           last_message_at?: string | null
+          microsoft_conversation_id?: string | null
+          microsoft_message_id?: string | null
           pipeline_id?: string | null
           priority?: string
+          sender_email?: string | null
+          sender_name?: string | null
           status?: string
           subject?: string
           tenant_id?: string
