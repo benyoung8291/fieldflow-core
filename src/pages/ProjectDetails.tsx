@@ -188,13 +188,13 @@ export default function ProjectDetails() {
   const completedServiceOrders = serviceOrders?.filter(so => so.status === 'completed').length || 0;
   
   // Calculate revenue budget details
-  const originalBudget = project.original_budget || project.budget || 0;
-  const revisedBudget = project.revised_budget || originalBudget;
-  const changeOrdersTotal = project.total_change_orders || 0;
-  const invoicedToDate = project.invoiced_to_date || 0;
-  const wipTotal = project.wip_total || 0;
-  const labourCostTotal = project.labour_cost_total || 0;
-  const budgetVariance = originalBudget > 0 ? ((project.actual_cost / originalBudget) * 100) - 100 : 0;
+  const originalBudget = project?.original_budget || project?.budget || 0;
+  const revisedBudget = project?.revised_budget || originalBudget;
+  const changeOrdersTotal = project?.total_change_orders || 0;
+  const invoicedToDate = project?.invoiced_to_date || 0;
+  const wipTotal = project?.wip_total || 0;
+  const labourCostTotal = project?.labour_cost_total || 0;
+  const budgetVariance = originalBudget > 0 ? ((project?.actual_cost || 0) / originalBudget) * 100 - 100 : 0;
 
   // Status badge configuration
   const statusBadges: StatusBadge[] = [

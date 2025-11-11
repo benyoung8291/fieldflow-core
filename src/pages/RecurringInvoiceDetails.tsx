@@ -5,14 +5,23 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, DollarSign, Pencil } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Pencil, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { RecurringInvoiceDialog } from "@/components/invoices/RecurringInvoiceDialog";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function RecurringInvoiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const { data: recurringInvoice } = useQuery({
@@ -59,6 +68,191 @@ export default function RecurringInvoiceDetails() {
         <div className="flex items-center justify-center h-[50vh]">
           <p className="text-muted-foreground">Loading...</p>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col h-full">
+          {/* Mobile Header */}
+          <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/recurring-invoices")}
+                  className="shrink-0"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex-1 min-w-0">
+                  <h1 className="font-semibold truncate">{recurringInvoice.invoice_number_prefix}</h1>
+                  <p className="text-xs text-muted-foreground truncate">Recurring Invoice</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditDialogOpen(true)}
+                className="shrink-0"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto p-4 space-y-4">
+            <Badge variant={recurringInvoice.is_active ? "default" : "secondary"}>
+              {recurringInvoice.is_active ? "Active" : "Inactive"}
+            </Badge>
+
+            <Accordion type="multiple" defaultValue={["schedule", "customer"]} className="space-y-2">
+              <AccordionItem value="schedule">
+                <AccordionTrigger className="text-base font-semibold">
+                  Schedule Details
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Frequency</span>
+                      <span className="font-medium text-sm">
+                        {recurringInvoice.interval_count > 1 && `Every ${recurringInvoice.interval_count} `}
+                        {recurringInvoice.frequency}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Start Date</span>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(recurringInvoice.start_date), "MMM dd, yyyy")}
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Next Invoice</span>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(recurringInvoice.next_invoice_date), "MMM dd, yyyy")}
+                      </div>
+                    </div>
+                    {recurringInvoice.end_date && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">End Date</span>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(recurringInvoice.end_date), "MMM dd, yyyy")}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="customer">
+                <AccordionTrigger className="text-base font-semibold">
+                  Customer & Amount
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Customer</span>
+                      <span className="font-medium text-sm">
+                        {Array.isArray(recurringInvoice.customers) 
+                          ? (recurringInvoice.customers[0] as any)?.name 
+                          : (recurringInvoice.customers as any)?.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Email</span>
+                      <span className="font-medium text-sm">
+                        {Array.isArray(recurringInvoice.customers) 
+                          ? (recurringInvoice.customers[0] as any)?.email || "N/A"
+                          : (recurringInvoice.customers as any)?.email || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">Subtotal</span>
+                      <span className="font-medium text-sm">${recurringInvoice.subtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Tax ({recurringInvoice.tax_rate}%)</span>
+                      <span className="font-medium text-sm">${recurringInvoice.tax_amount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="font-medium">Total</span>
+                      <span className="text-lg font-bold">${recurringInvoice.total_amount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="items">
+                <AccordionTrigger className="text-base font-semibold">
+                  Line Items
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2 pt-2">
+                    {recurringInvoice.recurring_invoice_line_items?.map((item: any) => (
+                      <div key={item.id} className="p-3 border rounded-lg">
+                        <div className="font-medium text-sm">{item.description}</div>
+                        <div className="flex justify-between mt-2 text-sm text-muted-foreground">
+                          <span>{item.quantity} × ${item.unit_price.toLocaleString()}</span>
+                          <span className="font-medium text-foreground">${item.line_total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="history">
+                <AccordionTrigger className="text-base font-semibold">
+                  Invoice History ({generatedInvoices?.length || 0})
+                </AccordionTrigger>
+                <AccordionContent>
+                  {generatedInvoices?.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4">
+                      No invoices generated yet
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-2">
+                      {generatedInvoices?.map((invoice) => (
+                        <div
+                          key={invoice.id}
+                          className="p-3 border rounded-lg active:bg-muted/50"
+                          onClick={() => navigate(`/invoices/${invoice.id}`)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-sm">{invoice.invoice_number}</div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {format(new Date(invoice.invoice_date), "MMM dd, yyyy")}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium text-sm">${invoice.total_amount.toLocaleString()}</div>
+                              <Badge variant={invoice.status === "paid" ? "default" : "secondary"} className="mt-1 text-xs">
+                                {invoice.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
+
+        <RecurringInvoiceDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          recurringInvoiceId={id}
+        />
       </DashboardLayout>
     );
   }
