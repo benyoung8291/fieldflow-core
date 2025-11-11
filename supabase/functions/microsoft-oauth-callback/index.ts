@@ -91,31 +91,90 @@ serve(async (req) => {
       throw new Error("Failed to store authentication tokens");
     }
 
-    console.log("✅ Tokens stored, redirecting with session ID:", sessionId);
+    console.log("✅ Tokens stored successfully");
 
-    // Get the referer to determine the correct app URL
-    const referer = req.headers.get("referer") || "";
-    console.log("Referer:", referer);
+    // Return HTML that posts message to parent window and closes popup
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authentication Success</title>
+          <style>
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 2rem;
+            }
+            .checkmark {
+              font-size: 64px;
+              margin-bottom: 1rem;
+              animation: scaleIn 0.5s ease-out;
+            }
+            @keyframes scaleIn {
+              from { transform: scale(0); }
+              to { transform: scale(1); }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="checkmark">✓</div>
+            <h1>Authentication Successful!</h1>
+            <p>Closing window...</p>
+          </div>
+          <script>
+            try {
+              const oauthData = {
+                email: "${email}",
+                accessToken: "${tokens.access_token}",
+                refreshToken: "${tokens.refresh_token}",
+                expiresIn: ${tokens.expires_in},
+                accountId: "${profile.id}"
+              };
+              
+              console.log("Posting message to opener:", oauthData);
+              
+              if (window.opener) {
+                window.opener.postMessage({
+                  type: 'MICROSOFT_OAUTH_SUCCESS',
+                  payload: oauthData
+                }, '*');
+                
+                setTimeout(() => {
+                  window.close();
+                }, 1500);
+              } else {
+                console.error("No window.opener found");
+                document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Please close this window and try again.</p></div>';
+              }
+            } catch (error) {
+              console.error("Error posting message:", error);
+              if (window.opener) {
+                window.opener.postMessage({
+                  type: 'MICROSOFT_OAUTH_ERROR',
+                  error: error.message
+                }, '*');
+              }
+              setTimeout(() => window.close(), 2000);
+            }
+          </script>
+        </body>
+      </html>
+    `;
     
-    // Extract the origin from the referer
-    let appUrl = "https://lovable.dev"; // fallback
-    if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        appUrl = refererUrl.origin;
-        console.log("Using app URL from referer:", appUrl);
-      } catch (e) {
-        console.warn("Could not parse referer, using fallback");
-      }
-    }
-    
-    const redirectUrl = `${appUrl}/settings?tab=integrations&microsoft_oauth_session=${sessionId}`;
-    console.log("Redirecting to:", redirectUrl);
-    
-    return new Response(null, {
-      status: 302,
+    return new Response(html, {
+      status: 200,
       headers: {
-        Location: redirectUrl,
+        "Content-Type": "text/html",
       },
     });
   } catch (error) {

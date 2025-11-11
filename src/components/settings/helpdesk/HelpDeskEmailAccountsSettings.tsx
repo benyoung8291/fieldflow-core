@@ -27,39 +27,6 @@ export function HelpDeskEmailAccountsSettings() {
   const [accountToDelete, setAccountToDelete] = useState<any>(null);
   const [oauthData, setOauthData] = useState<any>(null);
 
-  // Listen for OAuth success event from App level
-  useEffect(() => {
-    const handleOAuthEvent = (event: CustomEvent) => {
-      console.log("📥 Settings: Received OAuth event", event.detail);
-      setOauthData(event.detail);
-      setDialogOpen(true);
-      setEditingAccount(null);
-      // Clear the session storage
-      sessionStorage.removeItem('ms_oauth_data');
-      
-      toast({
-        title: "Microsoft account connected!",
-        description: `Authenticated as ${event.detail.email}`,
-      });
-    };
-
-    window.addEventListener('ms_oauth_success' as any, handleOAuthEvent);
-
-    // Check for OAuth data in sessionStorage on mount
-    const storedData = sessionStorage.getItem('ms_oauth_data');
-    if (storedData) {
-      console.log("📦 Found stored OAuth data");
-      const data = JSON.parse(storedData);
-      setOauthData(data);
-      setDialogOpen(true);
-      sessionStorage.removeItem('ms_oauth_data');
-    }
-
-    return () => {
-      window.removeEventListener('ms_oauth_success' as any, handleOAuthEvent);
-    };
-  }, [toast]);
-
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["helpdesk-email-accounts-settings"],
     queryFn: async () => {
@@ -142,8 +109,6 @@ export function HelpDeskEmailAccountsSettings() {
     setDialogOpen(false);
     setEditingAccount(null);
     setOauthData(null);
-    // Clean up OAuth in-progress flag
-    sessionStorage.removeItem("microsoft_oauth_in_progress");
   };
 
   const getProviderIcon = (provider: string) => {

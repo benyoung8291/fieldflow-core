@@ -3,10 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { useMicrosoftOAuth } from "@/hooks/useMicrosoftOAuth";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
@@ -112,17 +111,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   // Initialize PWA update functionality
   usePWAUpdate();
-
-  // Global OAuth listener for Microsoft authentication
-  const handleOAuthSuccess = useCallback((data: any) => {
-    console.log("🎉 App level: OAuth callback received!", data);
-    // Store in sessionStorage for the settings component to pick up
-    sessionStorage.setItem('ms_oauth_data', JSON.stringify(data));
-    // Dispatch custom event
-    window.dispatchEvent(new CustomEvent('ms_oauth_success', { detail: data }));
-  }, []);
-
-  useMicrosoftOAuth(handleOAuthSuccess);
 
   return (
     <QueryClientProvider client={queryClient}>

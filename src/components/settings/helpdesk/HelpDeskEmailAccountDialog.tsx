@@ -151,18 +151,6 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [propOauthData, oauthData, fetchMailboxes]);
 
-  // Reset authentication state when dialog is closed
-  useEffect(() => {
-    if (!open) {
-      console.log("🔄 Dialog closed, resetting authentication state");
-      setIsAuthenticating(false);
-      setIsFetchingMailboxes(false);
-      
-      // Clean up OAuth in-progress flag
-      sessionStorage.removeItem("microsoft_oauth_in_progress");
-    }
-  }, [open]);
-
   // Populate form when account is provided
   useEffect(() => {
     if (account) {
@@ -183,38 +171,101 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [account, open, pipelines]);
 
-  // Microsoft OAuth handler
+  // Microsoft OAuth handler - popup approach
   const handleMicrosoftAuth = async () => {
-    console.log("🎯 BUTTON CLICKED - Starting Microsoft OAuth");
+    console.log("🎯 Starting Microsoft OAuth with popup");
     
     try {
-      console.log("Setting authenticating state...");
       setIsAuthenticating(true);
       
-      console.log("Calling microsoft-oauth-authorize function...");
       const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
       
-      console.log("Function response:", { data, error });
+      if (error) throw error;
+      if (!data?.authUrl) throw new Error("No authorization URL received");
       
-      if (error) {
-        console.error("Edge function error:", error);
-        throw error;
+      console.log("Opening OAuth popup...");
+      
+      // Open popup window
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      const popup = window.open(
+        data.authUrl,
+        "MicrosoftOAuth",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+      );
+      
+      if (!popup) {
+        throw new Error("Popup blocked. Please allow popups for this site.");
       }
       
-      if (!data?.authUrl) {
-        console.error("No authUrl in response:", data);
-        throw new Error("No authorization URL received");
-      }
+      // Listen for message from popup
+      const messageHandler = (event: MessageEvent) => {
+        // Verify origin for security
+        if (!event.origin.includes('supabase.co') && !event.origin.includes('lovable')) {
+          return;
+        }
+        
+        if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
+          console.log("✅ Received OAuth success from popup", event.data);
+          
+          // Clean up
+          window.removeEventListener('message', messageHandler);
+          popup?.close();
+          
+          // Process the OAuth data
+          const oauthData = event.data.payload;
+          fetchMailboxes(
+            oauthData.accessToken,
+            oauthData.email,
+            oauthData.email
+          ).catch((error) => {
+            console.error("Error fetching mailboxes:", error);
+            setAvailableMailboxes([
+              { email: oauthData.email, displayName: `${oauthData.email} (Personal)`, type: "personal" }
+            ]);
+            setFormData(prev => ({
+              ...prev,
+              email_address: oauthData.email,
+              display_name: oauthData.email,
+            }));
+            setIsFetchingMailboxes(false);
+          });
+          
+          setOauthData(oauthData);
+          setIsAuthenticating(false);
+          
+          toast({
+            title: "Microsoft account connected!",
+            description: `Authenticated as ${oauthData.email}`,
+          });
+        } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
+          console.error("OAuth error from popup:", event.data.error);
+          window.removeEventListener('message', messageHandler);
+          popup?.close();
+          throw new Error(event.data.error);
+        }
+      };
       
-      console.log("Auth URL received:", data.authUrl);
+      window.addEventListener('message', messageHandler);
       
-      // Store state that we're in OAuth flow
-      sessionStorage.setItem("microsoft_oauth_in_progress", "true");
-      console.log("Set session storage flag");
-      
-      // Redirect to Microsoft
-      console.log("🚀 Redirecting to Microsoft...");
-      window.location.href = data.authUrl;
+      // Monitor popup closure
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageHandler);
+          if (isAuthenticating) {
+            console.log("Popup closed by user");
+            setIsAuthenticating(false);
+            toast({
+              title: "Authentication cancelled",
+              description: "The sign-in window was closed",
+            });
+          }
+        }
+      }, 500);
       
     } catch (error) {
       console.error("❌ Microsoft auth error:", error);
@@ -224,7 +275,6 @@ export function HelpDeskEmailAccountDialog({
         variant: "destructive",
       });
       setIsAuthenticating(false);
-      sessionStorage.removeItem("microsoft_oauth_in_progress");
     }
   };
 
@@ -347,12 +397,8 @@ export function HelpDeskEmailAccountDialog({
                     Sign in with your Microsoft account to get started
                   </p>
                   <Button
-                    onClick={(e) => {
-                      console.log("🖱️ Button onClick event fired", e);
-                      handleMicrosoftAuth();
-                    }}
+                    onClick={handleMicrosoftAuth}
                     size="lg"
-                    type="button"
                   >
                     Sign in with Microsoft
                   </Button>
