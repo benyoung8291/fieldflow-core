@@ -99,26 +99,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const timestamp = new Date().toISOString();
-      console.log(`🔐 [${timestamp}] Auth state change:`, event, "Session:", !!session);
-      console.log("🔐 OAuth in progress flag:", localStorage.getItem('oauth_in_progress'));
-      console.log("🔐 Current path:", window.location.pathname);
+      console.log(`🔐 [${timestamp}] Auth event received:`, event);
+      console.log(`🔐 [${timestamp}] Session exists:`, !!session);
+      console.log(`🔐 [${timestamp}] Current isAuthenticated:`, isAuthenticated);
       
       // CRITICAL: Ignore ALL auth state changes during OAuth popup flow
       const oauthInProgress = localStorage.getItem('oauth_in_progress');
       if (oauthInProgress === 'true') {
-        console.log(`⏭️ [${timestamp}] BLOCKING auth state change during OAuth flow - event:`, event);
+        console.log(`⏭️ [${timestamp}] BLOCKED - OAuth in progress`);
         return;
       }
       
-      // Ignore token refresh events - they shouldn't affect authentication state
-      if (event === 'TOKEN_REFRESHED') {
-        console.log(`⏭️ [${timestamp}] Ignoring TOKEN_REFRESHED event`);
-        return;
-      }
+      // ULTRA STRICT: Only react to SIGNED_IN and SIGNED_OUT
+      // Ignore EVERYTHING else including TOKEN_REFRESHED, USER_UPDATED, etc.
       
-      // ONLY react to explicit sign in/out events
       if (event === 'SIGNED_IN') {
-        console.log(`✅ [${timestamp}] User signed in`);
+        console.log(`✅ [${timestamp}] SIGNED_IN - setting authenticated to TRUE`);
         if (mounted) {
           setIsAuthenticated(true);
         }
@@ -126,15 +122,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (event === 'SIGNED_OUT') {
-        console.log(`🚪 [${timestamp}] User explicitly signed out`);
+        console.log(`🚪 [${timestamp}] SIGNED_OUT - setting authenticated to FALSE`);
         if (mounted) {
           setIsAuthenticated(false);
         }
         return;
       }
       
-      // Ignore all other events (USER_UPDATED, etc.)
-      console.log(`⏭️ [${timestamp}] Ignoring auth event:`, event);
+      // For ALL other events, do NOTHING - don't change authentication state
+      console.log(`⏭️ [${timestamp}] IGNORED event "${event}" - no action taken`);
     });
 
     return () => {
