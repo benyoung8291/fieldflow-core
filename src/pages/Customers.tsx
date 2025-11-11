@@ -17,6 +17,8 @@ import { Loader2 } from "lucide-react";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -41,6 +43,12 @@ export default function Customers() {
       
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
     },
   });
 
@@ -123,8 +131,15 @@ export default function Customers() {
 
   return (
     <DashboardLayout>
-      <RemoteCursors users={onlineUsers} />
-      <div className="space-y-8">
+      <div ref={containerRef} className="relative h-full overflow-y-auto">
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          pullDistance={pullDistance}
+          threshold={threshold}
+        />
+        <RemoteCursors users={onlineUsers} />
+        <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -347,6 +362,7 @@ export default function Customers() {
         onOpenChange={setIsImportDialogOpen}
         onImportComplete={() => refetch()}
       />
+      </div>
     </DashboardLayout>
   );
 }

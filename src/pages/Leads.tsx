@@ -20,6 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 
 export default function Leads() {
   const navigate = useNavigate();
@@ -29,7 +31,7 @@ export default function Leads() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const { data: leads = [], isLoading } = useQuery({
+  const { data: leads = [], isLoading, refetch } = useQuery({
     queryKey: ["leads", statusFilter],
     queryFn: async () => {
       let query = supabase
@@ -45,6 +47,12 @@ export default function Leads() {
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
     },
   });
 
@@ -90,7 +98,14 @@ export default function Leads() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div ref={containerRef} className="relative h-full overflow-y-auto">
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          pullDistance={pullDistance}
+          threshold={threshold}
+        />
+        <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Leads</h1>
@@ -287,6 +302,7 @@ export default function Leads() {
             </Table>
           )}
         </div>
+      </div>
       </div>
 
       <LeadDialog

@@ -34,6 +34,8 @@ import { usePresence } from "@/hooks/usePresence";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -73,7 +75,7 @@ export default function ServiceOrders() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ["service_orders"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -91,6 +93,12 @@ export default function ServiceOrders() {
         throw error;
       }
       return data;
+    },
+  });
+
+  const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
     },
   });
 
@@ -171,7 +179,14 @@ export default function ServiceOrders() {
 
   return (
     <DashboardLayout>
-      <RemoteCursors users={onlineUsers} />
+      <div ref={containerRef} className="relative h-full overflow-y-auto">
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          pullDistance={pullDistance}
+          threshold={threshold}
+        />
+        <RemoteCursors users={onlineUsers} />
       
       {selectedOrder && (
         <AuditDrawer 
@@ -471,6 +486,7 @@ export default function ServiceOrders() {
           </CardContent>
         </Card>
         )}
+      </div>
       </div>
     </DashboardLayout>
   );
