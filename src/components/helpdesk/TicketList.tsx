@@ -118,7 +118,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b min-h-[100px]",
+                  "w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b h-[100px]",
                   selectedTicketId === ticket.id && "bg-accent",
                   !ticket.is_read && "bg-muted/30"
                 )}
