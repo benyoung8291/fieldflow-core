@@ -65,7 +65,7 @@ export function HelpDeskEmailAccountDialog({
     type: string;
   }>>([]);
 
-  // Store popup reference
+  // Store refs (no longer needed but kept for now)
   const popupRef = useRef<Window | null>(null);
   const checkIntervalRef = useRef<number | null>(null);
 
@@ -159,71 +159,6 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [toast]);
 
-  // Handle OAuth callback message - ALWAYS ACTIVE (kept for backward compatibility)
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      // Log ALL messages for debugging
-      console.log("=== DIALOG MESSAGE RECEIVED (backup listener) ===", {
-        origin: event.origin,
-        hasData: !!event.data,
-        dataType: typeof event.data,
-      });
-      
-      // This is now a backup - the main listener is in the parent component
-      // But we keep it for cases where dialog is opened before auth starts
-      if (event.data && typeof event.data === 'object' && !propOauthData) {
-        const { email, accessToken, refreshToken, expiresIn, accountId } = event.data;
-        
-        if (accessToken && refreshToken && email) {
-          console.log("✅ VALID OAUTH DATA in dialog (backup listener)!");
-          
-          const oauthInfo = {
-            accessToken,
-            refreshToken,
-            expiresIn,
-            accountId,
-          };
-          
-          setOauthData(oauthInfo);
-          setIsAuthenticating(false);
-          
-          toast({
-            title: "Microsoft account connected!",
-            description: "Fetching available mailboxes...",
-          });
-
-          try {
-            await fetchMailboxes(accessToken, email, email);
-          } catch (error) {
-            console.error("Error fetching mailboxes:", error);
-            setAvailableMailboxes([
-              { email, displayName: `${email} (Personal)`, type: "personal" }
-            ]);
-            setFormData(prev => ({
-              ...prev,
-              email_address: email,
-              display_name: email,
-            }));
-            setIsFetchingMailboxes(false);
-          }
-        }
-      }
-    };
-
-    console.log("🎧 Dialog OAuth message listener (backup) ACTIVE");
-    window.addEventListener("message", handleMessage, false);
-    
-    return () => {
-      console.log("🔇 Dialog OAuth message listener (backup) removed");
-      window.removeEventListener("message", handleMessage, false);
-      
-      // Cleanup interval on unmount
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
-      }
-    };
-  }, [toast, fetchMailboxes, propOauthData]);
-
   // Sync prop OAuth data to local state when it changes
   useEffect(() => {
     if (propOauthData && !oauthData) {
@@ -286,47 +221,13 @@ export function HelpDeskEmailAccountDialog({
         throw error;
       }
       
-      console.log("📝 Got auth URL, opening popup...");
+      console.log("📝 Got auth URL, redirecting...");
       
-      // Open OAuth popup
-      const width = 500;
-      const height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
+      // Store state that we're in the middle of OAuth flow
+      sessionStorage.setItem("microsoft_oauth_in_progress", "true");
       
-      const popup = window.open(
-        data.authUrl,
-        "MicrosoftOAuth",
-        `width=${width},height=${height},left=${left},top=${top},popup=yes`
-      );
-      
-      if (!popup) {
-        throw new Error("Popup was blocked. Please allow popups for this site.");
-      }
-      
-      popupRef.current = popup;
-      console.log("✅ Popup opened successfully");
-      
-      // Poll to check if popup is closed
-      checkIntervalRef.current = window.setInterval(() => {
-        if (popup.closed) {
-          console.log("⚠️ Popup was closed by user");
-          clearInterval(checkIntervalRef.current!);
-          checkIntervalRef.current = null;
-          
-          // If still authenticating after popup closes, it means auth failed or was cancelled
-          setTimeout(() => {
-            if (isAuthenticating && !oauthData) {
-              setIsAuthenticating(false);
-              toast({
-                title: "Authentication cancelled",
-                description: "Please try again to connect your Microsoft account",
-                variant: "destructive",
-              });
-            }
-          }, 1000);
-        }
-      }, 500);
+      // Do a full page redirect to Microsoft OAuth
+      window.location.href = data.authUrl;
       
     } catch (error) {
       console.error("❌ Error starting Microsoft auth:", error);

@@ -1614,6 +1614,39 @@ export type Database = {
           },
         ]
       }
+      oauth_temp_tokens: {
+        Row: {
+          access_token: string
+          account_id: string
+          created_at: string | null
+          email: string
+          expires_in: number
+          id: string
+          refresh_token: string
+          session_id: string
+        }
+        Insert: {
+          access_token: string
+          account_id: string
+          created_at?: string | null
+          email: string
+          expires_in: number
+          id?: string
+          refresh_token: string
+          session_id: string
+        }
+        Update: {
+          access_token?: string
+          account_id?: string
+          created_at?: string | null
+          email?: string
+          expires_in?: number
+          id?: string
+          refresh_token?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
       pay_rate_categories: {
         Row: {
           created_at: string | null

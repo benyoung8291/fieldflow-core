@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OAuthCallbackData {
   email: string;
@@ -9,56 +10,72 @@ interface OAuthCallbackData {
 }
 
 /**
- * Global Microsoft OAuth message listener hook
- * This ensures OAuth callbacks are received even if dialogs are closed
+ * Global Microsoft OAuth redirect handler hook
+ * Checks URL for OAuth session ID and fetches tokens from database
  */
 export function useMicrosoftOAuth(
   onSuccess: (data: OAuthCallbackData) => void
 ) {
-  const handleMessage = useCallback(
-    (event: MessageEvent) => {
-      console.log("🎧 Global OAuth listener received message:", {
-        origin: event.origin,
-        hasData: !!event.data,
-        dataType: typeof event.data,
-      });
+  const checkForOAuthCallback = useCallback(async () => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("microsoft_oauth_session");
 
-      // Check if this is our OAuth callback message
-      if (event.data && typeof event.data === "object") {
-        const { email, accessToken, refreshToken, expiresIn, accountId } =
-          event.data;
+    if (sessionId) {
+      console.log("🔍 Found OAuth session ID in URL:", sessionId);
+      
+      try {
+        // Fetch tokens from database
+        const { data, error } = await supabase
+          .from("oauth_temp_tokens")
+          .select("*")
+          .eq("session_id", sessionId)
+          .single();
 
-        if (accessToken && refreshToken && email) {
-          console.log("✅ Valid OAuth data received globally!");
-          console.log("  Email:", email);
-          console.log("  Account ID:", accountId);
-
-          // Call the success callback
-          onSuccess({
-            email,
-            accessToken,
-            refreshToken,
-            expiresIn,
-            accountId,
-          });
-        } else {
-          console.log(
-            "⚠️ Message missing OAuth fields:",
-            { email, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken }
-          );
+        if (error) {
+          console.error("Failed to fetch OAuth tokens:", error);
+          return;
         }
+
+        if (data) {
+          console.log("✅ OAuth tokens retrieved from database");
+          
+          // Clean up URL
+          params.delete("microsoft_oauth_session");
+          const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
+          window.history.replaceState({}, "", newUrl);
+
+          // Delete tokens from database
+          await supabase
+            .from("oauth_temp_tokens")
+            .delete()
+            .eq("session_id", sessionId);
+
+          const oauthData = {
+            email: data.email,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresIn: data.expires_in,
+            accountId: data.account_id,
+          };
+
+          // Store in sessionStorage as backup
+          sessionStorage.setItem('ms_oauth_data', JSON.stringify(oauthData));
+
+          // Dispatch custom event for settings page
+          const event = new CustomEvent('ms_oauth_success', { detail: oauthData });
+          window.dispatchEvent(event);
+
+          // Call success callback
+          onSuccess(oauthData);
+        }
+      } catch (err) {
+        console.error("Error processing OAuth callback:", err);
       }
-    },
-    [onSuccess]
-  );
+    }
+  }, [onSuccess]);
 
   useEffect(() => {
-    console.log("🎧 Setting up GLOBAL Microsoft OAuth listener");
-    window.addEventListener("message", handleMessage, false);
-
-    return () => {
-      console.log("🔇 Removing GLOBAL Microsoft OAuth listener");
-      window.removeEventListener("message", handleMessage, false);
-    };
-  }, [handleMessage]);
+    console.log("🎧 Checking for OAuth redirect callback");
+    checkForOAuthCallback();
+  }, [checkForOAuthCallback]);
 }
