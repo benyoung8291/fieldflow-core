@@ -24,15 +24,26 @@ export function useMicrosoftOAuth(
       console.log("🔍 Found OAuth session ID in URL:", sessionId);
       
       try {
-        // Fetch tokens from database
-        const { data, error } = await supabase
-          .from("oauth_temp_tokens")
-          .select("*")
-          .eq("session_id", sessionId)
-          .single();
+        // Fetch tokens from database with timeout
+        const fetchWithTimeout = Promise.race([
+          supabase
+            .from("oauth_temp_tokens")
+            .select("*")
+            .eq("session_id", sessionId)
+            .single(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("OAuth token fetch timeout")), 5000)
+          )
+        ]);
+
+        const { data, error } = await fetchWithTimeout as any;
 
         if (error) {
           console.error("Failed to fetch OAuth tokens:", error);
+          // Clean up URL even on error
+          params.delete("microsoft_oauth_session");
+          const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
+          window.history.replaceState({}, "", newUrl);
           return;
         }
 
@@ -44,11 +55,16 @@ export function useMicrosoftOAuth(
           const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
           window.history.replaceState({}, "", newUrl);
 
-          // Delete tokens from database
-          await supabase
-            .from("oauth_temp_tokens")
-            .delete()
-            .eq("session_id", sessionId);
+          // Delete tokens from database (fire and forget)
+          try {
+            await supabase
+              .from("oauth_temp_tokens")
+              .delete()
+              .eq("session_id", sessionId);
+            console.log("Temp tokens deleted");
+          } catch (deleteErr) {
+            console.error("Failed to delete temp tokens:", deleteErr);
+          }
 
           const oauthData = {
             email: data.email,
@@ -70,6 +86,10 @@ export function useMicrosoftOAuth(
         }
       } catch (err) {
         console.error("Error processing OAuth callback:", err);
+        // Clean up URL even on error
+        params.delete("microsoft_oauth_session");
+        const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
+        window.history.replaceState({}, "", newUrl);
       }
     }
   }, [onSuccess]);

@@ -88,59 +88,23 @@ export function HelpDeskEmailAccountDialog({
   const fetchMailboxes = useCallback(async (accessToken: string, userEmail: string, userName: string) => {
     setIsFetchingMailboxes(true);
     try {
-      // Get user's mailbox settings
-      const settingsResponse = await fetch("https://graph.microsoft.com/v1.0/me/mailboxSettings", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      
+      // Just use the authenticated user's mailbox (don't fetch settings which requires extra permissions)
       const mailboxes: Array<{ email: string; displayName: string; type: string }> = [
         { email: userEmail, displayName: `${userName} (Personal)`, type: "personal" }
       ];
 
-      // Try to fetch shared mailboxes the user has access to
-      try {
-        const sharedResponse = await fetch(
-          "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/childFolders?$select=displayName",
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        
-        if (sharedResponse.ok) {
-          const sharedData = await sharedResponse.json();
-          // Note: This is a simplified approach. In production, you'd want to check
-          // for actual shared mailboxes via the /users endpoint if the user has permissions
-        }
-      } catch (err) {
-        console.log("Could not fetch shared mailboxes:", err);
-      }
-
-      // Try to get delegated mailboxes
-      try {
-        const delegateResponse = await fetch(
-          "https://graph.microsoft.com/v1.0/me/mailFolders",
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        
-        if (delegateResponse.ok) {
-          // Additional logic to detect shared/delegated mailboxes could go here
-        }
-      } catch (err) {
-        console.log("Could not fetch delegate access:", err);
-      }
-
       setAvailableMailboxes(mailboxes);
       
       // Auto-select the first mailbox
-      if (mailboxes.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          email_address: mailboxes[0].email,
-          display_name: mailboxes[0].displayName,
-        }));
-      }
+      setFormData(prev => ({
+        ...prev,
+        email_address: userEmail,
+        display_name: userName,
+      }));
     } catch (error) {
-      console.error("Error fetching mailboxes:", error);
+      console.error("Error setting up mailbox:", error);
       toast({
-        title: "Could not fetch mailboxes",
+        title: "Could not set up mailbox",
         description: "Using authenticated account as default",
         variant: "destructive",
       });
