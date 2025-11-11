@@ -174,10 +174,12 @@ export function HelpDeskEmailAccountDialog({
   // Microsoft OAuth handler - popup approach with polling
   const handleMicrosoftAuth = async () => {
     console.log("🎯 Starting Microsoft OAuth with popup + polling");
+    console.log("🎯 Current session storage oauth_in_progress:", sessionStorage.getItem('oauth_in_progress'));
     
     try {
       // Set flag to prevent app from reacting to auth changes during OAuth
       sessionStorage.setItem('oauth_in_progress', 'true');
+      console.log("🎯 Set oauth_in_progress flag to true");
       setIsAuthenticating(true);
       
       // Generate a unique session identifier
@@ -299,8 +301,10 @@ export function HelpDeskEmailAccountDialog({
               setIsAuthenticating(false);
               
               // Clear OAuth in progress flag
+              console.log("✅ OAuth complete, clearing flags");
               sessionStorage.removeItem('oauth_in_progress');
               sessionStorage.removeItem('oauth_session_key');
+              console.log("✅ Flags cleared, oauth_in_progress:", sessionStorage.getItem('oauth_in_progress'));
 
               toast({
                 title: "Microsoft account connected!",

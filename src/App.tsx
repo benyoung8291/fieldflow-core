@@ -89,6 +89,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("🔐 Auth state change event:", event, "Session exists:", !!session);
+      console.log("🔐 OAuth in progress flag:", sessionStorage.getItem('oauth_in_progress'));
+      
       // Ignore auth state changes during OAuth popup flow
       if (sessionStorage.getItem('oauth_in_progress') === 'true') {
         console.log("⏭️ Ignoring auth state change during OAuth flow");
@@ -96,6 +99,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (mounted) {
+        console.log("🔐 Setting authenticated state to:", !!session);
         setIsAuthenticated(!!session);
       }
     });
