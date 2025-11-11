@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,8 @@ import SchedulerMonthView from "@/components/scheduler/SchedulerMonthView";
 import KanbanBoardView from "@/components/scheduler/KanbanBoardView";
 import ServiceOrdersCalendarView from "@/components/scheduler/ServiceOrdersCalendarView";
 import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
-import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import AppointmentDetailsDialog from "@/components/scheduler/AppointmentDetailsDialog";
+import TemplatesDialog from "@/components/scheduler/TemplatesDialog";
 import GPSCheckInDialog from "@/components/scheduler/GPSCheckInDialog";
 import SmartSchedulingDialog from "@/components/scheduler/SmartSchedulingDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
@@ -43,6 +43,8 @@ export default function Scheduler() {
   const [gpsCheckInAppointment, setGpsCheckInAppointment] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSmartScheduling, setShowSmartScheduling] = useState(false);
+  const [selectedAppointmentIds, setSelectedAppointmentIds] = useState<Set<string>>(new Set());
+  const [viewDetailsAppointmentId, setViewDetailsAppointmentId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
@@ -667,6 +669,24 @@ export default function Scheduler() {
     }
   };
 
+  const handleSelectionChange = (appointmentId: string, selected: boolean) => {
+    setSelectedAppointmentIds(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(appointmentId);
+      } else {
+        newSet.delete(appointmentId);
+      }
+      return newSet;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedAppointmentIds(new Set());
+  };
+
+  const viewDetailsAppointment = appointments.find(apt => apt.id === viewDetailsAppointmentId);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -675,6 +695,7 @@ export default function Scheduler() {
 
     const draggedItem = active.data.current;
     const dropTarget = over.data.current;
+    const isDraggingSelectedAppointment = draggedItem?.isSelected && selectedAppointmentIds.size > 1;
 
     // Handle dropping worker onto appointment card
     if (draggedItem?.type === "worker" && dropTarget?.type === "appointment-card") {
@@ -760,81 +781,97 @@ export default function Scheduler() {
     // Handle moving an existing appointment
     if (draggedItem?.type === "appointment") {
       const appointment = draggedItem.appointment;
-
-      // Calculate duration
-      const originalStart = new Date(appointment.start_time);
-      const originalEnd = new Date(appointment.end_time);
-      const durationMs = originalEnd.getTime() - originalStart.getTime();
       
-      // If hour is not specified (ServiceOrdersCalendarView), keep original time but change date
-      if (hour === undefined) {
-        const newDate = new Date(date);
-        newDate.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
-        startTime = newDate;
-      }
-      
-      let newEndTime = new Date(startTime.getTime() + durationMs);
+      // Get all appointments to move (selected or just the one)
+      const appointmentsToMove = isDraggingSelectedAppointment
+        ? appointments.filter(apt => selectedAppointmentIds.has(apt.id))
+        : [appointment];
 
-      // Check for existing appointments and find next available slot
-      if (workerId) {
-        // Find all appointments for this worker on this date (excluding current one)
-        const workerAppointmentsOnDate = appointments.filter(apt => 
-          apt.id !== appointment.id &&
-          apt.assigned_to === workerId &&
-          new Date(apt.start_time).toDateString() === date.toDateString()
-        ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+      // Move all appointments
+      appointmentsToMove.forEach(apt => {
+        const originalStart = new Date(apt.start_time);
+        const originalEnd = new Date(apt.end_time);
+        const durationMs = originalEnd.getTime() - originalStart.getTime();
+        
+        let aptStartTime = new Date(date);
+        
+        // If hour is not specified (ServiceOrdersCalendarView), keep original time but change date
+        if (hour === undefined) {
+          const newDate = new Date(date);
+          newDate.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+          aptStartTime = newDate;
+        } else {
+          aptStartTime.setHours(hour, 0, 0, 0);
+        }
+        
+        let aptEndTime = new Date(aptStartTime.getTime() + durationMs);
 
-        // Check if proposed time conflicts with existing appointments
-        let hasConflict = true;
-        let attemptCount = 0;
-        const maxAttempts = 20;
+        // Check for existing appointments and find next available slot
+        if (workerId) {
+          // Find all appointments for this worker on this date (excluding appointments being moved)
+          const workerAppointmentsOnDate = appointments.filter(apt => 
+            !appointmentsToMove.some(movingApt => movingApt.id === apt.id) &&
+            apt.assigned_to === workerId &&
+            new Date(apt.start_time).toDateString() === date.toDateString()
+          ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
-        while (hasConflict && attemptCount < maxAttempts) {
-          hasConflict = false;
-          
-          for (const apt of workerAppointmentsOnDate) {
-            const aptStart = new Date(apt.start_time);
-            const aptEnd = new Date(apt.end_time);
+          // Check if proposed time conflicts with existing appointments
+          let hasConflict = true;
+          let attemptCount = 0;
+          const maxAttempts = 20;
+
+          while (hasConflict && attemptCount < maxAttempts) {
+            hasConflict = false;
             
-            // Check if times overlap
-            if (startTime < aptEnd && newEndTime > aptStart) {
-              hasConflict = true;
-              // Move to immediately after this appointment
-              startTime = new Date(aptEnd);
-              newEndTime = new Date(startTime.getTime() + durationMs);
-              break;
+            for (const existingApt of workerAppointmentsOnDate) {
+              const aptStart = new Date(existingApt.start_time);
+              const aptEnd = new Date(existingApt.end_time);
+              
+              // Check if times overlap
+              if (aptStartTime < aptEnd && aptEndTime > aptStart) {
+                hasConflict = true;
+                // Move to immediately after this appointment
+                aptStartTime = new Date(aptEnd);
+                aptEndTime = new Date(aptStartTime.getTime() + durationMs);
+                break;
+              }
             }
+            attemptCount++;
           }
-          attemptCount++;
+
+          // Final conflict check
+          const conflict = checkConflict(workerId, aptStartTime, aptEndTime, apt.id);
+          if (conflict.hasConflict) {
+            toast.error(conflict.reason);
+            return;
+          }
+
+          const availability = checkAvailability(workerId, aptStartTime, aptEndTime);
+          if (!availability.isAvailable) {
+            toast.warning(availability.reason || "Worker may not be available");
+          }
         }
 
-        // Final conflict check
-        const conflict = checkConflict(workerId, startTime, newEndTime, appointment.id);
-        if (conflict.hasConflict) {
-          toast.error(conflict.reason);
-          return;
+        if (isMultiAssign && workerId) {
+          // Add worker to appointment (multi-assign)
+          addWorkerToAppointmentMutation.mutate({
+            appointmentId: apt.id,
+            workerId,
+          });
+        } else {
+          // Move appointment (reassign)
+          updateAppointmentMutation.mutate({
+            appointmentId: apt.id,
+            startTime: aptStartTime,
+            endTime: aptEndTime,
+            workerId: workerId || apt.assigned_to,
+          });
         }
+      });
 
-        const availability = checkAvailability(workerId, startTime, newEndTime);
-        if (!availability.isAvailable) {
-          toast.warning(availability.reason || "Worker may not be available");
-        }
-      }
-
-      if (isMultiAssign && workerId) {
-        // Add worker to appointment (multi-assign)
-        addWorkerToAppointmentMutation.mutate({
-          appointmentId: appointment.id,
-          workerId,
-        });
-      } else {
-        // Move appointment (reassign)
-        updateAppointmentMutation.mutate({
-          appointmentId: appointment.id,
-          startTime,
-          endTime: newEndTime,
-          workerId,
-        });
+      // Clear selection after bulk move
+      if (isDraggingSelectedAppointment) {
+        clearSelection();
       }
     }
   };
@@ -1016,10 +1053,7 @@ export default function Scheduler() {
                 currentDate={currentDate}
                 appointments={appointments}
                 viewType={viewType}
-                onAppointmentClick={(id) => {
-                  const apt = appointments.find(a => a.id === id);
-                  setDetailsAppointment(apt);
-                }}
+                onAppointmentClick={setViewDetailsAppointmentId}
                 onCreateAppointment={(serviceOrderId, date, startTime, endTime) => {
                   const [hours, minutes] = startTime.split(':');
                   const [endHours, endMinutes] = endTime.split(':');
@@ -1037,6 +1071,8 @@ export default function Scheduler() {
                 }}
                 onRemoveWorker={handleRemoveWorker}
                 workers={workers}
+                selectedAppointmentIds={selectedAppointmentIds}
+                onSelectionChange={handleSelectionChange}
               />
             ) : (
               <>
@@ -1173,6 +1209,21 @@ export default function Scheduler() {
           })()}
         </DragOverlay>
       </DndContext>
+
+      <AppointmentDetailsDialog
+        appointment={viewDetailsAppointment}
+        open={!!viewDetailsAppointmentId}
+        onOpenChange={(open) => {
+          if (!open) setViewDetailsAppointmentId(null);
+        }}
+        onEdit={() => {
+          if (viewDetailsAppointmentId) {
+            setEditingAppointmentId(viewDetailsAppointmentId);
+            setDialogOpen(true);
+            setViewDetailsAppointmentId(null);
+          }
+        }}
+      />
     </DashboardLayout>
   );
 }

@@ -5,6 +5,7 @@ import { Clock, Users, FileText, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface DroppableAppointmentCardProps {
   appointment: any;
@@ -12,6 +13,9 @@ interface DroppableAppointmentCardProps {
   estimatedHours?: number;
   onRemoveWorker: (workerId: string) => void;
   onClick: () => void;
+  isSelected?: boolean;
+  onSelectionChange?: (selected: boolean) => void;
+  selectedCount?: number;
 }
 
 export default function DroppableAppointmentCard({
@@ -20,6 +24,9 @@ export default function DroppableAppointmentCard({
   estimatedHours,
   onRemoveWorker,
   onClick,
+  isSelected = false,
+  onSelectionChange,
+  selectedCount = 0,
 }: DroppableAppointmentCardProps) {
   // Make card droppable for workers
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -36,6 +43,8 @@ export default function DroppableAppointmentCard({
     data: {
       type: "appointment",
       appointment: appointment,
+      isSelected,
+      selectedCount,
     },
   });
 
@@ -48,6 +57,14 @@ export default function DroppableAppointmentCard({
   const totalWorkerHours = workers.length * calculateAppointmentHours(appointment);
   const remainingHours = (estimatedHours || 0) - totalWorkerHours;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger onClick if clicking checkbox or worker remove button
+    if ((e.target as HTMLElement).closest('[data-no-click]')) {
+      return;
+    }
+    onClick();
+  };
+
   return (
     <Card
       ref={setNodeRef}
@@ -56,9 +73,10 @@ export default function DroppableAppointmentCard({
       className={cn(
         "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
         isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
-        isDragging && "opacity-50"
+        isDragging && "opacity-50",
+        isSelected && "ring-2 ring-primary bg-primary/5"
       )}
-      onClick={onClick}
+      onClick={handleCardClick}
     >
       {isOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
@@ -67,7 +85,26 @@ export default function DroppableAppointmentCard({
           </span>
         </div>
       )}
+      
+      {/* Bulk selection indicator */}
+      {isSelected && selectedCount > 1 && (
+        <div className="absolute top-1 right-1 bg-primary text-primary-foreground px-2 py-0.5 rounded-full text-xs font-semibold z-10">
+          {selectedCount} selected
+        </div>
+      )}
+
       <div className="space-y-2">
+        {/* Selection checkbox */}
+        {onSelectionChange && (
+          <div className="flex items-center gap-2" data-no-click>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={onSelectionChange}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <span className="text-xs text-muted-foreground">Select for bulk move</span>
+          </div>
+        )}
         {/* Time */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
@@ -102,6 +139,7 @@ export default function DroppableAppointmentCard({
                     size="sm"
                     variant="ghost"
                     className="h-3 w-3 p-0 ml-1 hover:bg-destructive/20"
+                    data-no-click
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemoveWorker(w.worker_id);
