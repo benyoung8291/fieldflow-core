@@ -150,51 +150,73 @@ export function HelpDeskEmailAccountDialog({
   // Handle OAuth callback message - set up BEFORE opening the dialog
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      console.log("Message received:", event.data);
+      console.log("=== Message Event Received ===");
+      console.log("Event origin:", event.origin);
+      console.log("Event data:", event.data);
+      console.log("Event source:", event.source);
       
       // Check if this is our OAuth callback message
-      if (event.data && event.data.accessToken && event.data.refreshToken && event.data.email) {
-        console.log("OAuth callback data received:", {
-          email: event.data.email,
-          hasAccessToken: !!event.data.accessToken,
-          hasRefreshToken: !!event.data.refreshToken,
-          expiresIn: event.data.expiresIn,
-        });
+      if (event.data && typeof event.data === 'object') {
+        const { email, accessToken, refreshToken, expiresIn, accountId } = event.data;
         
-        const oauthInfo = {
-          accessToken: event.data.accessToken,
-          refreshToken: event.data.refreshToken,
-          expiresIn: event.data.expiresIn,
-          accountId: event.data.accountId,
-        };
-        
-        setOauthData(oauthInfo);
-        setIsAuthenticating(false);
-        
-        toast({
-          title: "Microsoft account connected successfully!",
-          description: "Fetching available mailboxes...",
-        });
+        if (accessToken && refreshToken && email) {
+          console.log("✅ Valid OAuth callback data received!");
+          console.log("Email:", email);
+          console.log("Has access token:", !!accessToken);
+          console.log("Has refresh token:", !!refreshToken);
+          console.log("Expires in:", expiresIn);
+          console.log("Account ID:", accountId);
+          
+          const oauthInfo = {
+            accessToken,
+            refreshToken,
+            expiresIn,
+            accountId,
+          };
+          
+          setOauthData(oauthInfo);
+          setIsAuthenticating(false);
+          
+          toast({
+            title: "Microsoft account connected!",
+            description: "Fetching available mailboxes...",
+          });
 
-        // Fetch user profile and available mailboxes
-        try {
-          await fetchMailboxes(
-            event.data.accessToken,
-            event.data.email,
-            event.data.email
-          );
-        } catch (error) {
-          console.error("Error fetching mailboxes:", error);
+          // Fetch user profile and available mailboxes
+          try {
+            await fetchMailboxes(accessToken, email, email);
+          } catch (error) {
+            console.error("Error fetching mailboxes:", error);
+            toast({
+              title: "Could not fetch mailboxes",
+              description: "Using authenticated account as default",
+              variant: "destructive",
+            });
+            
+            // Set default values even if fetch fails
+            setAvailableMailboxes([
+              { email, displayName: `${email} (Personal)`, type: "personal" }
+            ]);
+            setFormData(prev => ({
+              ...prev,
+              email_address: email,
+              display_name: email,
+            }));
+          }
+        } else {
+          console.log("❌ Message received but missing required OAuth fields");
         }
+      } else {
+        console.log("ℹ️ Message received but not OAuth data:", typeof event.data);
       }
     };
 
     // Add listener as soon as component mounts
-    console.log("Setting up message listener");
+    console.log("🎧 Setting up message listener for OAuth callback");
     window.addEventListener("message", handleMessage);
     
     return () => {
-      console.log("Removing message listener");
+      console.log("🔇 Removing message listener");
       window.removeEventListener("message", handleMessage);
     };
   }, [toast]);
@@ -351,23 +373,32 @@ export function HelpDeskEmailAccountDialog({
         <div className="space-y-4 py-4">
           {!account && !oauthData && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <p className="text-center text-muted-foreground">
-                Sign in with your Microsoft account to get started
-              </p>
-              <Button
-                onClick={handleMicrosoftAuth}
-                disabled={isAuthenticating}
-                size="lg"
-              >
-                {isAuthenticating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Authenticating...
-                  </>
-                ) : (
-                  "Sign in with Microsoft"
-                )}
-              </Button>
+              {isAuthenticating ? (
+                <>
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="text-center space-y-2">
+                    <p className="font-medium">Waiting for authentication...</p>
+                    <p className="text-sm text-muted-foreground">
+                      Please complete the sign-in process in the popup window
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      If the popup was blocked, please allow popups and try again
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-center text-muted-foreground">
+                    Sign in with your Microsoft account to get started
+                  </p>
+                  <Button
+                    onClick={handleMicrosoftAuth}
+                    size="lg"
+                  >
+                    Sign in with Microsoft
+                  </Button>
+                </>
+              )}
             </div>
           )}
 
