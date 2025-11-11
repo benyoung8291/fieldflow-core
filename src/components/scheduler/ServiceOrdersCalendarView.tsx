@@ -89,18 +89,6 @@ export default function ServiceOrdersCalendarView({
 
   return (
     <div className="flex gap-4 h-full">
-      {/* Workers Sidebar */}
-      <Card className="w-64 flex-shrink-0 p-4">
-        <h3 className="font-semibold mb-3">Available Workers</h3>
-        <ScrollArea className="h-[calc(100vh-300px)]">
-          <div className="space-y-2">
-            {workers.map(worker => (
-              <DraggableWorker key={worker.id} worker={worker} />
-            ))}
-          </div>
-        </ScrollArea>
-      </Card>
-
       {/* Calendar View */}
       <div className="flex-1 overflow-x-auto">
         <div className="min-w-[800px]">
@@ -191,6 +179,18 @@ export default function ServiceOrdersCalendarView({
           </div>
         </div>
       </div>
+
+      {/* Workers Sidebar - Moved to Right */}
+      <Card className="w-64 flex-shrink-0 p-4">
+        <h3 className="font-semibold mb-3">Available Workers</h3>
+        <ScrollArea className="h-[calc(100vh-300px)]">
+          <div className="space-y-2">
+            {workers.map(worker => (
+              <DraggableWorker key={worker.id} worker={worker} />
+            ))}
+          </div>
+        </ScrollArea>
+      </Card>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Sparkles } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2 } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -61,6 +61,18 @@ export default function Scheduler() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [updateCursorPosition]);
+
+  // Keyboard shortcut for undo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undoStack]);
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],
@@ -1037,7 +1049,7 @@ export default function Scheduler() {
       )}
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
-        <div className="grid grid-cols-[1fr_300px] gap-3">
+        <div className={cn("gap-3", showServiceOrderView ? "grid grid-cols-1" : "grid grid-cols-[1fr_300px]")}>
           <div className="space-y-2">
         {/* Compact Summary Cards */}
         <div className="grid grid-cols-3 gap-2">
@@ -1113,10 +1125,11 @@ export default function Scheduler() {
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={() => setShowSmartScheduling(true)}
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
                 >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  Smart Schedule
+                  <Undo2 className="h-3.5 w-3.5 mr-1.5" />
+                  Undo
                 </Button>
                 <Button
                   variant="default"
@@ -1254,10 +1267,12 @@ export default function Scheduler() {
         </Card>
           </div>
 
-          {/* Draggable Service Orders Sidebar */}
-          <div>
-            <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
-          </div>
+          {/* Draggable Service Orders Sidebar - Hidden in service order view */}
+          {!showServiceOrderView && (
+            <div>
+              <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
+            </div>
+          )}
         </div>
         
         {/* Drag Overlay - shows the item being dragged */}
