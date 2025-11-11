@@ -172,6 +172,7 @@ export default function Scheduler() {
         .select(`
           worker_id,
           skill_id,
+          proficiency_level,
           skills(name)
         `)
         .in("worker_id", workerUserIds);
@@ -183,6 +184,7 @@ export default function Scheduler() {
           .filter(ws => ws.worker_id === profile.id)
           .map(ws => ({
             skill_id: ws.skill_id,
+            proficiency_level: ws.proficiency_level,
             skills: ws.skills
           }))
       }));
