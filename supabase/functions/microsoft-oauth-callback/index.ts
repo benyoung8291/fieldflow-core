@@ -93,10 +93,24 @@ serve(async (req) => {
 
     console.log("✅ Tokens stored, redirecting with session ID:", sessionId);
 
-    // Redirect back to main app with session ID
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const appUrl = supabaseUrl.replace(/https:\/\/[^.]+\.supabase\.co/, "https://lovable.dev");
+    // Get the referer to determine the correct app URL
+    const referer = req.headers.get("referer") || "";
+    console.log("Referer:", referer);
+    
+    // Extract the origin from the referer
+    let appUrl = "https://lovable.dev"; // fallback
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        appUrl = refererUrl.origin;
+        console.log("Using app URL from referer:", appUrl);
+      } catch (e) {
+        console.warn("Could not parse referer, using fallback");
+      }
+    }
+    
     const redirectUrl = `${appUrl}/settings?tab=integrations&microsoft_oauth_session=${sessionId}`;
+    console.log("Redirecting to:", redirectUrl);
     
     return new Response(null, {
       status: 302,
