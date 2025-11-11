@@ -1,0 +1,157 @@
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, setHours } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import ResizableAppointmentCard from "./ResizableAppointmentCard";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
+interface TimeGridWeekViewProps {
+  currentDate: Date;
+  appointments: any[];
+  workers: any[];
+  onAppointmentClick: (id: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onResizeAppointment: (appointmentId: string, newStartTime: Date, newEndTime: Date) => void;
+  onCreateAppointment: (workerId: string | null, date: Date, hour: number) => void;
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
+const PIXELS_PER_HOUR = 40; // Reduced from 80 to fit more on screen
+
+export default function TimeGridWeekView({
+  currentDate,
+  appointments,
+  workers: passedWorkers,
+  onAppointmentClick,
+  onRemoveWorker,
+  onResizeAppointment,
+  onCreateAppointment,
+}: TimeGridWeekViewProps) {
+  const weekStart = startOfWeek(currentDate);
+  const weekEnd = endOfWeek(currentDate);
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  // Format workers with unassigned row
+  const workers = [
+    { id: null, name: "Unassigned" },
+    ...passedWorkers.map(w => ({
+      id: w.id,
+      name: `${w.first_name} ${w.last_name}`
+    }))
+  ];
+
+  const getAppointmentsForDayAndWorker = (workerId: string | null, day: Date) => {
+    return appointments.filter(apt => {
+      const aptDate = format(new Date(apt.start_time), "yyyy-MM-dd");
+      const dayDate = format(day, "yyyy-MM-dd");
+      const aptWorkerId = apt.assigned_to || null;
+      return aptDate === dayDate && aptWorkerId === workerId;
+    });
+  };
+
+  const getTopPosition = (time: Date) => {
+    const hours = time.getHours();
+    const minutes = time.getMinutes();
+    return (hours + minutes / 60) * PIXELS_PER_HOUR;
+  };
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Header Row - Days */}
+      <div className="grid grid-cols-8 gap-px bg-border flex-shrink-0 sticky top-0 bg-background z-20 pb-px">
+        <div className="font-semibold text-xs p-2 bg-background">Worker</div>
+        {weekDays.map(day => (
+          <div key={day.toISOString()} className="text-center font-semibold text-xs p-2 bg-background">
+            <div>{format(day, "EEE")}</div>
+            <div className="text-[10px] text-muted-foreground">{format(day, "MMM d")}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-auto relative bg-border">
+        <div className="relative">
+          {/* Time labels column */}
+          <div className="absolute left-0 top-0 w-16 z-10 bg-border">
+            {HOURS.map(hour => (
+              <div
+                key={hour}
+                className="text-[10px] text-muted-foreground text-right pr-2 bg-background mb-px"
+                style={{ height: `${PIXELS_PER_HOUR}px`, lineHeight: `${PIXELS_PER_HOUR}px` }}
+              >
+                {format(setHours(new Date(), hour), "HH:mm")}
+              </div>
+            ))}
+          </div>
+
+          {/* Worker Rows */}
+          <div className="pl-16">
+            {workers.map((worker) => (
+              <div key={worker.id || 'unassigned'} className="grid grid-cols-8 gap-px bg-border mb-px">
+                {/* Worker Info */}
+                <div className="sticky left-16 z-10 bg-background flex items-center p-2">
+                  <span className="text-xs font-medium truncate">{worker.name}</span>
+                </div>
+
+                {/* Time grid for each day */}
+                {weekDays.map((day) => {
+                  const dayAppointments = getAppointmentsForDayAndWorker(worker.id, day);
+                  
+                  return (
+                    <div 
+                      key={day.toISOString()} 
+                      className="relative bg-background"
+                      style={{ minHeight: `${HOURS.length * PIXELS_PER_HOUR}px` }}
+                    >
+                      {/* Hour grid lines */}
+                      {HOURS.map(hour => (
+                        <div
+                          key={hour}
+                          className="border-b border-border/30 group relative"
+                          style={{ height: `${PIXELS_PER_HOUR}px` }}
+                        >
+                          {/* Add appointment button on hover */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity h-full flex items-center justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-4 w-4 p-0"
+                              onClick={() => onCreateAppointment(worker.id, day, hour)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Appointments positioned absolutely */}
+                      {dayAppointments.map(apt => {
+                        const top = getTopPosition(new Date(apt.start_time));
+                        
+                        return (
+                          <div
+                            key={apt.id}
+                            className="absolute left-0.5 right-0.5 z-10"
+                            style={{ top: `${top}px` }}
+                          >
+                            <ResizableAppointmentCard
+                              appointment={apt}
+                              onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
+                              onClick={() => onAppointmentClick(apt.id)}
+                              onResize={onResizeAppointment}
+                              pixelsPerHour={PIXELS_PER_HOUR}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
