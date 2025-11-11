@@ -118,14 +118,14 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b h-[100px] overflow-hidden",
+                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1 border-b h-[100px]",
                   selectedTicketId === ticket.id && "bg-accent",
                   !ticket.is_read && "bg-muted/30"
                 )}
               >
-                {/* Header Row */}
-                <div className="flex items-center justify-between gap-2 w-full min-h-[20px]">
-                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                {/* Header Row - Pipeline and Badges */}
+                <div className="flex items-center justify-between gap-2 w-full shrink-0">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {ticket.pipeline && (
                       <>
                         <div 
@@ -137,50 +137,48 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Badge variant="outline" className={cn("text-xs h-4 px-1", getPriorityColor(ticket.priority))}>
+                    <Badge variant="outline" className={cn("text-xs h-4 px-1.5", getPriorityColor(ticket.priority))}>
                       {ticket.priority}
                     </Badge>
-                    <Badge variant="outline" className={cn("text-xs shrink-0 h-4 px-1", getStatusColor(ticket.status))}>
+                    <Badge variant="outline" className={cn("text-xs h-4 px-1.5", getStatusColor(ticket.status))}>
                       {ticket.status}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Subject */}
-                <p className="font-medium text-xs line-clamp-2 w-full overflow-hidden">{ticket.subject}</p>
+                {/* Subject - 2 line clamp */}
+                <h3 className="font-semibold text-sm line-clamp-2 leading-tight">
+                  {ticket.subject}
+                </h3>
 
-                {/* Sender Info */}
-                <div className="text-xs text-muted-foreground w-full min-h-[16px]">
-                  {ticket.customer ? (
-                    <p className="truncate">{ticket.customer.name}</p>
-                  ) : ticket.contact ? (
-                    <p className="truncate">{ticket.contact.first_name} {ticket.contact.last_name}</p>
-                  ) : (
-                    <p className="truncate">{ticket.external_email || "Unknown"}</p>
-                  )}
-                </div>
+                {/* Sender */}
+                <p className="text-xs text-muted-foreground truncate">
+                  {ticket.customer?.name || 
+                   (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
+                   ticket.external_email || "Unknown")}
+                </p>
 
-                {/* Footer Row */}
-                <div className="flex items-center justify-between gap-2 w-full mt-auto">
-                  {ticket.tags && ticket.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                {/* Footer - Tags and Time */}
+                <div className="flex items-center justify-between gap-2 w-full mt-auto shrink-0">
+                  {ticket.tags && ticket.tags.length > 0 ? (
+                    <div className="flex gap-1 flex-1 min-w-0">
                       {ticket.tags.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs h-4 px-1">
+                        <Badge key={tag} variant="secondary" className="text-xs h-4 px-1.5">
                           {tag}
                         </Badge>
                       ))}
                       {ticket.tags.length > 2 && (
-                        <Badge variant="secondary" className="text-xs h-4 px-1">
+                        <Badge variant="secondary" className="text-xs h-4 px-1.5">
                           +{ticket.tags.length - 2}
                         </Badge>
                       )}
                     </div>
-                  )}
+                  ) : <div className="flex-1" />}
                   
                   {ticket.last_message_at && (
-                    <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                       {formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true })}
-                    </p>
+                    </span>
                   )}
                 </div>
               </button>
