@@ -114,8 +114,8 @@ serve(async (req: Request) => {
       from: `${senderName} <${emailAccount.email_address}>`,
       to: [recipientEmail],
       subject: emailSubject,
-      html: body_html || `<p>${body_text.replace(/\n/g, "<br>")}</p>`,
-      text: body_text,
+      html: body_html || (body_text ? `<p>${body_text.replace(/\n/g, "<br>")}</p>` : ''),
+      text: body_text || '',
       headers: {
         "Message-ID": messageId,
         ...(inReplyTo && { "In-Reply-To": inReplyTo }),
