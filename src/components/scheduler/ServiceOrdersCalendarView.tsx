@@ -154,10 +154,9 @@ export default function ServiceOrdersCalendarView({
                     date={day}
                     workerId={null}
                     className={cn(
-                      "min-h-[120px] p-2",
-                      isInRange && "bg-yellow-50/50 dark:bg-yellow-950/20",
-                      isInRange && !isPreferred && "border-2 border-yellow-200 dark:border-yellow-800",
-                      isPreferred && "border-2 border-green-500 dark:border-green-600"
+                      "min-h-[120px] p-2 rounded-lg",
+                      isInRange && "bg-yellow-100/60 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800",
+                      isPreferred && "!border-green-500 dark:!border-green-600 !border-2"
                     )}
                   >
                     <div className="space-y-2 h-full">
