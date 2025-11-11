@@ -121,68 +121,34 @@ serve(async (req) => {
     // Process each email
     for (const message of messages) {
       try {
-        // Check if ticket already exists for this message
-        const { data: existingTicket } = await supabase
-          .from("helpdesk_tickets")
+        // Check if this specific message already exists
+        const { data: existingMessage } = await supabase
+          .from("helpdesk_messages")
           .select("id")
           .eq("microsoft_message_id", message.id)
           .single();
 
-        if (existingTicket) {
-          console.log(`⏭️ Ticket already exists for message: ${message.subject}`);
+        if (existingMessage) {
+          console.log(`⏭️ Message already synced: ${message.subject}`);
           continue;
+        }
+
+        // Check if this is a reply to an existing conversation
+        let existingTicket = null;
+        if (message.conversationId) {
+          const { data: ticket } = await supabase
+            .from("helpdesk_tickets")
+            .select("id, tenant_id")
+            .eq("microsoft_conversation_id", message.conversationId)
+            .eq("email_account_id", emailAccount.id)
+            .single();
+          
+          existingTicket = ticket;
         }
 
         // Extract sender info
         const senderEmail = message.from?.emailAddress?.address;
         const senderName = message.from?.emailAddress?.name;
-
-        // Try to find customer by email
-        let customerId = null;
-        let contactId = null;
-
-        if (senderEmail) {
-          // Look for contact first
-          const { data: contact } = await supabase
-            .from("customer_contacts")
-            .select("id, customer_id")
-            .eq("email", senderEmail)
-            .single();
-
-          if (contact) {
-            contactId = contact.id;
-            customerId = contact.customer_id;
-          }
-        }
-
-        // Create the ticket
-        const { data: ticket, error: ticketError } = await supabase
-          .from("helpdesk_tickets")
-          .insert({
-            tenant_id: emailAccount.tenant_id,
-            pipeline_id: emailAccount.pipeline_id,
-            email_account_id: emailAccount.id,
-            ticket_number: `HD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-            subject: message.subject || "(No Subject)",
-            status: "open",
-            priority: "medium",
-            customer_id: customerId,
-            contact_id: contactId,
-            sender_email: senderEmail,
-            sender_name: senderName,
-            external_email: customerId ? null : senderEmail,
-            microsoft_message_id: message.id,
-            microsoft_conversation_id: message.conversationId,
-            last_message_at: message.receivedDateTime,
-          })
-          .select()
-          .single();
-
-        if (ticketError) {
-          console.error("Error creating ticket:", ticketError);
-          errorCount++;
-          continue;
-        }
 
         // Process attachments
         const attachments = message.attachments?.map((att: any) => ({
@@ -192,29 +158,123 @@ serve(async (req) => {
           id: att.id,
         })) || [];
 
-        // Create the initial message
-        const { error: messageError } = await supabase
-          .from("helpdesk_messages")
-          .insert({
-            tenant_id: emailAccount.tenant_id,
-            ticket_id: ticket.id,
-            message_type: "email",
-            sender_email: senderEmail,
-            sender_name: senderName,
-            body_html: message.body?.content || message.bodyPreview || "",
-            body_text: message.bodyPreview || "",
-            is_from_customer: true,
-            microsoft_message_id: message.id,
-            sent_at: message.receivedDateTime,
-            attachments: attachments,
-          });
+        if (existingTicket) {
+          // This is a reply - add message to existing ticket
+          console.log(`📨 Adding reply to existing ticket: ${message.subject}`);
+          
+          const { error: messageError } = await supabase
+            .from("helpdesk_messages")
+            .insert({
+              tenant_id: existingTicket.tenant_id,
+              ticket_id: existingTicket.id,
+              message_type: "email",
+              direction: "inbound",
+              sender_email: senderEmail,
+              sender_name: senderName,
+              to_email: emailAccount.email_address,
+              subject: message.subject || "(No Subject)",
+              body: message.body?.content || message.bodyPreview || "",
+              body_html: message.body?.content || "",
+              body_text: message.bodyPreview || "",
+              microsoft_message_id: message.id,
+              sent_at: message.receivedDateTime,
+              attachments: attachments,
+            });
 
-        if (messageError) {
-          console.error("Error creating message:", messageError);
-          errorCount++;
+          if (messageError) {
+            console.error("Error creating reply message:", messageError);
+            errorCount++;
+          } else {
+            // Update ticket's last_message_at
+            await supabase
+              .from("helpdesk_tickets")
+              .update({ 
+                last_message_at: message.receivedDateTime,
+                is_read: false 
+              })
+              .eq("id", existingTicket.id);
+            
+            syncedCount++;
+            console.log(`✅ Added reply to conversation: ${message.subject}`);
+          }
         } else {
-          syncedCount++;
-          console.log(`✅ Created ticket: ${message.subject}`);
+          // This is a new conversation - create new ticket
+          console.log(`🆕 Creating new ticket: ${message.subject}`);
+
+          // Try to find customer by email
+          let customerId = null;
+          let contactId = null;
+
+          if (senderEmail) {
+            // Look for contact first
+            const { data: contact } = await supabase
+              .from("customer_contacts")
+              .select("id, customer_id")
+              .eq("email", senderEmail)
+              .single();
+
+            if (contact) {
+              contactId = contact.id;
+              customerId = contact.customer_id;
+            }
+          }
+
+          // Create the ticket
+          const { data: ticket, error: ticketError } = await supabase
+            .from("helpdesk_tickets")
+            .insert({
+              tenant_id: emailAccount.tenant_id,
+              pipeline_id: emailAccount.pipeline_id,
+              email_account_id: emailAccount.id,
+              ticket_number: `HD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+              subject: message.subject || "(No Subject)",
+              status: "open",
+              priority: "medium",
+              customer_id: customerId,
+              contact_id: contactId,
+              sender_email: senderEmail,
+              sender_name: senderName,
+              external_email: customerId ? null : senderEmail,
+              microsoft_message_id: message.id,
+              microsoft_conversation_id: message.conversationId,
+              last_message_at: message.receivedDateTime,
+            })
+            .select()
+            .single();
+
+          if (ticketError) {
+            console.error("Error creating ticket:", ticketError);
+            errorCount++;
+            continue;
+          }
+
+          // Create the initial message
+          const { error: messageError } = await supabase
+            .from("helpdesk_messages")
+            .insert({
+              tenant_id: emailAccount.tenant_id,
+              ticket_id: ticket.id,
+              message_type: "email",
+              direction: "inbound",
+              sender_email: senderEmail,
+              sender_name: senderName,
+              to_email: emailAccount.email_address,
+              subject: message.subject || "(No Subject)",
+              body: message.body?.content || message.bodyPreview || "",
+              body_html: message.body?.content || "",
+              body_text: message.bodyPreview || "",
+              microsoft_message_id: message.id,
+              sent_at: message.receivedDateTime,
+              attachments: attachments,
+            });
+
+          if (messageError) {
+            console.error("Error creating message:", messageError);
+            errorCount++;
+          } else {
+            syncedCount++;
+            console.log(`✅ Created new ticket: ${message.subject}`);
+          }
         }
       } catch (error) {
         console.error(`Error processing message ${message.id}:`, error);
