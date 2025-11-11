@@ -2,9 +2,7 @@ import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Calendar, DollarSign, TrendingUp, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2 } from "lucide-react";
+import { Calendar, DollarSign, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2 } from "lucide-react";
 import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
@@ -19,6 +17,7 @@ import AuditTimeline from "@/components/audit/AuditTimeline";
 import InlineProjectDetails from "@/components/projects/InlineProjectDetails";
 import ProjectTasksGrid from "@/components/projects/ProjectTasksGrid";
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -243,35 +242,12 @@ export default function ProjectDetails() {
 
   // Key information cards
   const keyInfoSection = (
-    <div className="grid gap-4 md:grid-cols-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Progress</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{project?.progress}%</div>
-          <Progress value={project?.progress} className="mt-2" />
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-3">
       <KeyInfoCard
         icon={DollarSign}
         label="Revenue Budget"
         value={`$${revisedBudget.toLocaleString()}`}
         description={`Original: $${originalBudget.toLocaleString()}`}
-      />
-      <KeyInfoCard
-        icon={DollarSign}
-        label="Change Orders"
-        value={`$${Math.abs(changeOrdersTotal).toLocaleString()}`}
-        description={changeOrdersTotal >= 0 ? "Addition" : "Reduction"}
-        iconColor={changeOrdersTotal >= 0 ? "text-green-500" : "text-red-500"}
-      />
-      <KeyInfoCard
-        icon={DollarSign}
-        label="Invoiced"
-        value={`$${invoicedToDate.toLocaleString()}`}
-        description="To date"
       />
       <KeyInfoCard
         icon={DollarSign}
@@ -281,9 +257,9 @@ export default function ProjectDetails() {
       />
       <KeyInfoCard
         icon={DollarSign}
-        label="Labour Cost"
-        value={`$${labourCostTotal.toLocaleString()}`}
-        description="Total labour"
+        label="Billed to Date"
+        value={`$${invoicedToDate.toLocaleString()}`}
+        description="Invoiced amount"
       />
     </div>
   );
