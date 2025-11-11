@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Briefcase } from "lucide-react";
 import premrestLogo from "@/assets/premrest-logo.svg";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -67,6 +68,9 @@ export default function WorkerAuth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 px-4">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">

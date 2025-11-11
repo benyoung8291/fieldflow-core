@@ -17,6 +17,7 @@ import { useLocation } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 type ViewFilter = 'today' | 'week' | 'all' | 'custom';
 
@@ -198,6 +199,7 @@ export default function WorkerDashboard() {
             ) : (
               <WifiOff className="h-5 w-5 text-yellow-300" />
             )}
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"

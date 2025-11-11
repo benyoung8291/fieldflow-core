@@ -1502,6 +1502,7 @@ export type Database = {
           super_fund_number: string | null
           tax_file_number: string | null
           tenant_id: string | null
+          theme_preference: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1528,6 +1529,7 @@ export type Database = {
           super_fund_number?: string | null
           tax_file_number?: string | null
           tenant_id?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1554,6 +1556,7 @@ export type Database = {
           super_fund_number?: string | null
           tax_file_number?: string | null
           tenant_id?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
         }
         Relationships: [
