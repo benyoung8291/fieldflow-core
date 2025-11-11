@@ -12,8 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, DollarSign, Trash2 } from "lucide-react";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
 import MenuCustomizationTab from "@/components/settings/MenuCustomizationTab";
@@ -38,6 +39,7 @@ interface PayRateCategory {
 }
 
 export default function Settings() {
+  const [activeTab, setActiveTab] = useState("general");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PayRateCategory | null>(null);
   const [formData, setFormData] = useState({
@@ -164,207 +166,216 @@ export default function Settings() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Manage your business settings</p>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          
+          <div className="flex-1 flex flex-col">
+            <header className="h-16 border-b bg-background flex items-center px-4 sticky top-0 z-10">
+              <SidebarTrigger className="mr-4" />
+              <div>
+                <h1 className="text-2xl font-bold">Settings</h1>
+                <p className="text-sm text-muted-foreground hidden sm:block">
+                  Manage your business settings
+                </p>
+              </div>
+            </header>
+
+            <main className="flex-1 p-4 sm:p-6 overflow-auto">
+              <div className="max-w-5xl mx-auto">
+                {activeTab === "general" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <GeneralSettingsTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "user-profile" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <UserProfileTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "brand-colors" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <BrandColorsTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "numbering" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <NumberingTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "integrations" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <IntegrationsTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "accounting" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <ProjectIntegrationTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "menu" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <MenuCustomizationTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "users" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <UserManagementTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "permissions" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <RolePermissionsTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "pay-rates" && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Pay Rate Categories</CardTitle>
+                        <Button onClick={() => setIsDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Category
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoading ? (
+                        <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                      ) : categories.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No pay rate categories yet
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Hourly Rate</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {categories.map((category) => (
+                              <TableRow key={category.id}>
+                                <TableCell className="font-medium">{category.name}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                    {category.hourly_rate.toFixed(2)}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {category.description || "—"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={category.is_active ? "default" : "secondary"}>
+                                    {category.is_active ? "Active" : "Inactive"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEdit(category)}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (confirm("Delete this category?")) {
+                                          deleteCategory.mutate(category.id);
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "templates" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <TemplatesTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "crm-statuses" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <CRMStatusesTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "helpdesk" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <HelpDeskSettingsTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "activity-log" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <ActivityLogTab />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === "changelog" && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <ChangeLogTab />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </main>
           </div>
         </div>
-
-        <Tabs defaultValue="general" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="user-profile">My Profile</TabsTrigger>
-              <TabsTrigger value="brand-colors">Brand Colors</TabsTrigger>
-              <TabsTrigger value="numbering">Numbering</TabsTrigger>
-              <TabsTrigger value="integrations">Integrations</TabsTrigger>
-              <TabsTrigger value="accounting">Accounting</TabsTrigger>
-              <TabsTrigger value="menu">Menu</TabsTrigger>
-              <TabsTrigger value="users">Users</TabsTrigger>
-              <TabsTrigger value="permissions">Permissions</TabsTrigger>
-              <TabsTrigger value="pay-rates">Pay Rates</TabsTrigger>
-              <TabsTrigger value="templates">Templates</TabsTrigger>
-              <TabsTrigger value="crm-statuses">CRM Pipeline</TabsTrigger>
-              <TabsTrigger value="helpdesk">Help Desk</TabsTrigger>
-              <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-              <TabsTrigger value="changelog">Change Log</TabsTrigger>
-            </TabsList>
-
-          <TabsContent value="general">
-            <Card>
-              <CardContent className="pt-6">
-                <GeneralSettingsTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="user-profile">
-            <Card>
-              <CardContent className="pt-6">
-                <UserProfileTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="brand-colors">
-            <BrandColorsTab />
-          </TabsContent>
-
-          <TabsContent value="numbering">
-            <Card>
-              <CardContent className="pt-6">
-                <NumberingTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="integrations">
-            <ProjectIntegrationTab />
-          </TabsContent>
-
-          <TabsContent value="accounting">
-            <Card>
-              <CardContent className="pt-6">
-                <IntegrationsTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="menu">
-            <Card>
-              <CardContent className="pt-6">
-                <MenuCustomizationTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="users">
-            <Card>
-              <CardContent className="pt-6">
-                <UserManagementTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="permissions">
-            <RolePermissionsTab />
-          </TabsContent>
-
-          <TabsContent value="pay-rates">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Pay Rate Categories</CardTitle>
-                  <Button onClick={() => setIsDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Category
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Hourly Rate</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          {category.hourly_rate.toFixed(2)}/hr
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {category.description || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={category.is_active ? "default" : "secondary"}>
-                          {category.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(category)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm("Are you sure you want to delete this category?")) {
-                                deleteCategory.mutate(category.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="templates">
-            <Card>
-              <CardContent className="pt-6">
-                <TemplatesTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="crm-statuses">
-            <Card>
-              <CardContent className="pt-6">
-                <CRMStatusesTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="helpdesk">
-            <Card>
-              <CardContent className="pt-6">
-                <HelpDeskSettingsTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity-log">
-            <Card>
-              <CardContent className="pt-6">
-                <ActivityLogTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="changelog">
-            <Card>
-              <CardContent className="pt-6">
-                <ChangeLogTab />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
 
         <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent>
@@ -432,7 +443,7 @@ export default function Settings() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </SidebarProvider>
     </DashboardLayout>
   );
 }
