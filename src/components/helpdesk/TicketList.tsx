@@ -118,13 +118,13 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1 border-b h-[100px]",
+                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col justify-between border-b h-[100px]",
                   selectedTicketId === ticket.id && "bg-accent",
                   !ticket.is_read && "bg-muted/30"
                 )}
               >
                 {/* Header Row - Pipeline and Badges */}
-                <div className="flex items-center justify-between gap-2 w-full shrink-0">
+                <div className="flex items-center justify-between gap-2 w-full">
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {ticket.pipeline && (
                       <>
@@ -146,12 +146,12 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                   </div>
                 </div>
 
-                {/* Subject - 2 line clamp */}
-                <h3 className="font-semibold text-sm line-clamp-2 leading-tight">
+                {/* Subject - Single line */}
+                <h3 className="font-semibold text-sm truncate">
                   {ticket.subject}
                 </h3>
 
-                {/* Sender */}
+                {/* Sender - Single line */}
                 <p className="text-xs text-muted-foreground truncate">
                   {ticket.customer?.name || 
                    (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
@@ -159,16 +159,16 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 </p>
 
                 {/* Footer - Tags and Time */}
-                <div className="flex items-center justify-between gap-2 w-full mt-auto shrink-0">
+                <div className="flex items-center justify-between gap-2 w-full">
                   {ticket.tags && ticket.tags.length > 0 ? (
-                    <div className="flex gap-1 flex-1 min-w-0">
+                    <div className="flex gap-1 flex-1 min-w-0 overflow-hidden">
                       {ticket.tags.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs h-4 px-1.5">
+                        <Badge key={tag} variant="secondary" className="text-xs h-4 px-1.5 shrink-0">
                           {tag}
                         </Badge>
                       ))}
                       {ticket.tags.length > 2 && (
-                        <Badge variant="secondary" className="text-xs h-4 px-1.5">
+                        <Badge variant="secondary" className="text-xs h-4 px-1.5 shrink-0">
                           +{ticket.tags.length - 2}
                         </Badge>
                       )}
