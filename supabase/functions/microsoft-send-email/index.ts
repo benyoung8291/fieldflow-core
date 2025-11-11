@@ -73,13 +73,16 @@ serve(async (req) => {
       .eq("id", emailAccountId)
       .single();
 
+    // Convert line breaks to HTML
+    const htmlBody = body.replace(/\n/g, '<br>');
+
     // Prepare email message
     const message = {
       message: {
         subject: subject,
         body: {
           contentType: "HTML",
-          content: body,
+          content: htmlBody,
         },
         toRecipients: Array.isArray(to) ? to.map((email: string) => ({
           emailAddress: { address: email }
@@ -152,10 +155,9 @@ serve(async (req) => {
           from_name: account.name,
           to_email: recipientEmail,
           subject: subject,
-          body_html: body,
-          body_text: body.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
+          body_html: htmlBody,
+          body_text: body,
           microsoft_message_id: conversationId,
-          microsoft_conversation_id: conversationId,
           sent_at: new Date().toISOString(),
         });
 
