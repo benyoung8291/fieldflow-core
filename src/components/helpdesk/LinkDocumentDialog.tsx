@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -11,14 +11,27 @@ import { Label } from "@/components/ui/label";
 
 interface LinkDocumentDialogProps {
   ticketId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialDocumentType?: string;
 }
 
-export function LinkDocumentDialog({ ticketId }: LinkDocumentDialogProps) {
+export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChange, initialDocumentType }: LinkDocumentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [documentType, setDocumentType] = useState<string>("");
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [documentType, setDocumentType] = useState<string>(initialDocumentType || "");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+
+  // Update document type when initialDocumentType changes
+  useEffect(() => {
+    if (initialDocumentType) {
+      setDocumentType(initialDocumentType);
+    }
+  }, [initialDocumentType]);
 
   // Fetch documents based on selected type
   const { data: documents } = useQuery({
@@ -149,15 +162,17 @@ export function LinkDocumentDialog({ ticketId }: LinkDocumentDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full h-6 text-xs">
-          <Plus className="h-3 w-3 mr-1" />
-          Link Document
-        </Button>
-      </DialogTrigger>
+      {!controlledOpen && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="w-full h-6 text-xs">
+            <Plus className="h-3 w-3 mr-1" />
+            Link Document
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Link Document</DialogTitle>
+          <DialogTitle>Link Document to Ticket</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
