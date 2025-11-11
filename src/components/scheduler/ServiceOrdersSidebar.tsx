@@ -4,16 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import DraggableServiceOrder from "./DraggableServiceOrder";
+import DraggableWorker from "./DraggableWorker";
 import { differenceInHours } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import WorkerSuggestionsDialog from "./WorkerSuggestionsDialog";
+import { Separator } from "@/components/ui/separator";
 
 interface ServiceOrdersSidebarProps {
   onSelectWorkerForOrder?: (workerId: string, serviceOrderId: string, suggestedDate?: string) => void;
+  workers?: any[];
 }
 
-export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: ServiceOrdersSidebarProps) {
+export default function ServiceOrdersSidebar({ onSelectWorkerForOrder, workers = [] }: ServiceOrdersSidebarProps) {
   const [showWorkerSuggestions, setShowWorkerSuggestions] = useState(false);
   const [aiServiceOrderId, setAiServiceOrderId] = useState<string>("");
   const [aiServiceOrderTitle, setAiServiceOrderTitle] = useState<string>("");
@@ -38,7 +41,7 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
       }
 
       // Calculate remaining hours and generate summary for each service order
-      return orders.map(order => {
+      return (orders || []).map((order: any) => {
         const estimatedHours = order.estimated_hours || 0;
         
         // Calculate total scheduled hours from appointments
@@ -74,8 +77,8 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
   });
 
   // Filter to only show service orders that need more appointments
-  const ordersNeedingAppointments = serviceOrdersWithAppointments.filter(
-    order => order.remainingHours > 0
+  const ordersNeedingAppointments = (serviceOrdersWithAppointments || []).filter(
+    (order: any) => order.remainingHours > 0
   );
 
   const handleAISuggest = (order: any) => {
@@ -92,8 +95,8 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
 
   return (
     <>
-      <Card className="h-full">
-        <CardHeader className="p-3">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="p-3 flex-shrink-0">
           <CardTitle className="text-sm">
             Service Orders
           </CardTitle>
@@ -101,36 +104,49 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
             Drag to calendar or use AI
           </p>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-180px)] px-2 pb-2">
-            <div className="space-y-1.5">
-              {ordersNeedingAppointments.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground text-xs">
-                  All service orders scheduled
-                </div>
-              ) : (
-                ordersNeedingAppointments.map((order) => (
-                  <div key={order.id} className="group relative">
-                    <DraggableServiceOrder
-                      serviceOrder={order}
-                      remainingHours={order.remainingHours}
-                      lineItemsSummary={order.lineItemsSummary}
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAISuggest(order);
-                      }}
-                      title="AI Worker Suggestions"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                    </Button>
+        <CardContent className="p-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="px-2 pb-2 space-y-3">
+              {/* Service Orders Section */}
+              <div className="space-y-1.5">
+                {ordersNeedingAppointments.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground text-xs">
+                    All service orders scheduled
                   </div>
-                ))
-              )}
+                ) : (
+                  ordersNeedingAppointments.map((order) => (
+                    <div key={order.id} className="group relative">
+                      <DraggableServiceOrder
+                        serviceOrder={order}
+                        remainingHours={order.remainingHours}
+                        lineItemsSummary={order.lineItemsSummary}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAISuggest(order);
+                        }}
+                        title="AI Worker Suggestions"
+                      >
+                        <Sparkles className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Workers Section */}
+              <div className="space-y-1.5">
+                <h3 className="font-semibold text-sm px-1">Available Workers</h3>
+                {workers.map(worker => (
+                  <DraggableWorker key={worker.id} worker={worker} />
+                ))}
+              </div>
             </div>
           </ScrollArea>
         </CardContent>

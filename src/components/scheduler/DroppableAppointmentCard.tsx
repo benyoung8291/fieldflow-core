@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import AppointmentHoverCard from "./AppointmentHoverCard";
 
 interface DroppableAppointmentCardProps {
   appointment: any;
@@ -66,18 +67,19 @@ export default function DroppableAppointmentCard({
   };
 
   return (
-    <Card
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      className={cn(
-        "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
-        isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
-        isDragging && "opacity-50",
-        isSelected && "ring-2 ring-primary bg-primary/5"
-      )}
-      onClick={handleCardClick}
-    >
+    <AppointmentHoverCard appointment={appointment}>
+      <Card
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className={cn(
+          "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
+          isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
+          isDragging && "opacity-50",
+          isSelected && "ring-2 ring-primary bg-primary/5"
+        )}
+        onClick={handleCardClick}
+      >
       {isOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
           <span className="text-xs font-semibold text-primary bg-background px-2 py-1 rounded">
@@ -196,7 +198,8 @@ export default function DroppableAppointmentCard({
           </div>
         )}
       </div>
-    </Card>
+      </Card>
+    </AppointmentHoverCard>
   );
 }
 

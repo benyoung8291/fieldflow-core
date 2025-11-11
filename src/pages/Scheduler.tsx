@@ -1245,7 +1245,10 @@ export default function Scheduler() {
           {/* Draggable Service Orders Sidebar - Hidden in service order view */}
           {!showServiceOrderView && (
             <div>
-              <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
+              <ServiceOrdersSidebar 
+                onSelectWorkerForOrder={handleSelectWorkerForOrder}
+                workers={workers}
+              />
             </div>
           )}
         </div>
