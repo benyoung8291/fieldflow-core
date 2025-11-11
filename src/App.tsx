@@ -110,13 +110,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // ULTRA STRICT: Only react to SIGNED_IN and SIGNED_OUT
-      // Ignore EVERYTHING else including TOKEN_REFRESHED, USER_UPDATED, etc.
+      // Handle legitimate session restoration and sign in/out events
       
-      if (event === 'SIGNED_IN') {
-        console.log(`✅ [${timestamp}] SIGNED_IN - setting authenticated to TRUE`);
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        console.log(`✅ [${timestamp}] ${event} - setting authenticated based on session:`, !!session);
         if (mounted) {
-          setIsAuthenticated(true);
+          setIsAuthenticated(!!session);
         }
         return;
       }
@@ -129,7 +128,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // For ALL other events, do NOTHING - don't change authentication state
+      // For ALL other events (TOKEN_REFRESHED, USER_UPDATED, etc.), do NOTHING
       console.log(`⏭️ [${timestamp}] IGNORED event "${event}" - no action taken`);
     });
 
