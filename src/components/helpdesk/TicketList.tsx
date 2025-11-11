@@ -12,9 +12,10 @@ import { useState } from "react";
 interface TicketListProps {
   selectedTicketId: string | null;
   onSelectTicket: (ticketId: string) => void;
+  pipelineId?: string | null;
 }
 
-export function TicketList({ selectedTicketId, onSelectTicket }: TicketListProps) {
+export function TicketList({ selectedTicketId, onSelectTicket, pipelineId }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: tickets, isLoading } = useQuery({
@@ -36,11 +37,16 @@ export function TicketList({ selectedTicketId, onSelectTicket }: TicketListProps
     },
   });
 
-  const filteredTickets = tickets?.filter(ticket =>
-    ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.ticket_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.external_email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTickets = tickets?.filter(ticket => {
+    const matchesSearch = 
+      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.ticket_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.external_email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesPipeline = !pipelineId || ticket.pipeline_id === pipelineId;
+    
+    return matchesSearch && matchesPipeline;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
