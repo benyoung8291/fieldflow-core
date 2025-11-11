@@ -39,6 +39,7 @@ import InvoicesList from "./pages/InvoicesList";
 import InvoiceDetails from "./pages/InvoiceDetails";
 import RecurringInvoices from "./pages/RecurringInvoices";
 import RecurringInvoiceDetails from "./pages/RecurringInvoiceDetails";
+import HelpDesk from "./pages/HelpDesk";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
@@ -127,6 +128,7 @@ const App = () => {
             <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetails /></ProtectedRoute>} />
             <Route path="/recurring-invoices" element={<ProtectedRoute><RecurringInvoices /></ProtectedRoute>} />
             <Route path="/recurring-invoices/:id" element={<ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute>} />
+            <Route path="/helpdesk" element={<ProtectedRoute><HelpDesk /></ProtectedRoute>} />
             {/* Worker Mobile Routes */}
             <Route path="/worker/auth" element={<WorkerAuth />} />
             <Route path="/worker/dashboard" element={<ProtectedRoute><WorkerDashboard /></ProtectedRoute>} />
