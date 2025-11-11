@@ -2,10 +2,17 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 serve(async (req) => {
+  console.log("🔔 CALLBACK FUNCTION HIT!", req.url);
+  console.log("Method:", req.method);
+  console.log("Headers:", Object.fromEntries(req.headers.entries()));
+  
   try {
     const url = new URL(req.url);
+    console.log("Full URL:", url.toString());
     const code = url.searchParams.get("code");
     const error = url.searchParams.get("error");
+    console.log("Code:", code ? "present" : "missing");
+    console.log("Error:", error);
 
     if (error) {
       console.error("OAuth error:", error);
@@ -65,6 +72,9 @@ serve(async (req) => {
       accountId: profile.id,
     };
 
+    console.log("✅ Token exchange successful, sending HTML response");
+    console.log("Email:", email);
+    
     // Return HTML that posts message to parent and waits before closing
     const htmlContent = `<!DOCTYPE html>
 <html>
@@ -144,10 +154,13 @@ serve(async (req) => {
   </body>
 </html>`;
 
+    console.log("📤 Sending HTML response with postMessage script");
+    
     return new Response(htmlContent, {
       headers: { 
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff"
       },
       status: 200
     });
