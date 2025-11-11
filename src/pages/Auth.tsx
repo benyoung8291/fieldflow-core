@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Building2 } from "lucide-react";
+import premrestLogo from "@/assets/premrest-ref.jpg";
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -68,15 +70,21 @@ export default function Auth() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">FF</span>
-            </div>
+            <img 
+              src={premrestLogo} 
+              alt="Premrest Logo" 
+              className="h-16 w-auto object-contain"
+            />
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground">Office Login</span>
           </div>
           <CardTitle className="text-2xl text-center">
             Welcome back
           </CardTitle>
           <CardDescription className="text-center">
-            Sign in to access your dashboard
+            Sign in to access your office dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,23 +113,25 @@ export default function Auth() {
               {isLoading ? "Loading..." : "Sign In"}
             </Button>
           </form>
-          <div className="mt-4 text-center space-y-3">
+          <div className="mt-6 text-center space-y-3">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  or
+                  Field Worker?
                 </span>
               </div>
             </div>
             
             <Link
               to="/worker/auth"
-              className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+              className="block"
             >
-              Login as field worker
+              <Button variant="outline" className="w-full" type="button">
+                Login as Field Worker
+              </Button>
             </Link>
           </div>
         </CardContent>
