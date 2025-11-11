@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className={cn(
           "px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto",
           "pt-14 lg:pt-20", // Top padding for fixed header
-          isMobile && "pb-16" // Bottom padding for bottom nav
+          isMobile && "pb-20" // Bottom padding for bottom nav with safe area
         )}>
           {children}
         </div>
