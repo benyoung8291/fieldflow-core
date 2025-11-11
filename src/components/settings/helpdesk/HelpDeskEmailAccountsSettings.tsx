@@ -66,6 +66,34 @@ export function HelpDeskEmailAccountsSettings() {
     },
   });
 
+  const testEmailConnection = async (accountId: string) => {
+    try {
+      toast({ title: "Sending test email..." });
+      
+      const { data, error } = await supabase.functions.invoke(
+        "helpdesk-test-email-connection",
+        {
+          body: { email_account_id: accountId },
+        }
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Test email sent successfully",
+        description: `Check your inbox at ${data.sent_to}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-email-accounts-settings"] });
+    } catch (error: any) {
+      toast({
+        title: "Failed to send test email",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleEdit = (account: any) => {
     setEditingAccount(account);
     setDialogOpen(true);
@@ -168,6 +196,13 @@ export function HelpDeskEmailAccountsSettings() {
                   onClick={() => handleEdit(account)}
                 >
                   <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => testEmailConnection(account.id)}
+                >
+                  Test
                 </Button>
                 <Button
                   variant="ghost"

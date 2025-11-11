@@ -40,22 +40,9 @@ export function HelpDeskEmailAccountDialog({
   const [formData, setFormData] = useState({
     email_address: "",
     display_name: "",
-    provider: "microsoft",
+    provider: "resend",
     pipeline_id: "",
     is_active: true,
-    // IMAP/SMTP credentials
-    imap_host: "",
-    imap_port: "993",
-    imap_username: "",
-    imap_password: "",
-    smtp_host: "",
-    smtp_port: "587",
-    smtp_username: "",
-    smtp_password: "",
-    // Microsoft OAuth
-    microsoft_client_id: "",
-    microsoft_client_secret: "",
-    microsoft_tenant_id: "",
   });
 
   const { data: pipelines } = useQuery({
@@ -78,39 +65,17 @@ export function HelpDeskEmailAccountDialog({
       setFormData({
         email_address: account.email_address || "",
         display_name: account.display_name || "",
-        provider: account.provider || "microsoft",
+        provider: account.provider || "resend",
         pipeline_id: account.pipeline_id || "",
         is_active: account.is_active ?? true,
-        imap_host: "",
-        imap_port: "993",
-        imap_username: "",
-        imap_password: "",
-        smtp_host: "",
-        smtp_port: "587",
-        smtp_username: "",
-        smtp_password: "",
-        microsoft_client_id: "",
-        microsoft_client_secret: "",
-        microsoft_tenant_id: "",
       });
     } else {
       setFormData({
         email_address: "",
         display_name: "",
-        provider: "microsoft",
+        provider: "resend",
         pipeline_id: pipelines?.[0]?.id || "",
         is_active: true,
-        imap_host: "",
-        imap_port: "993",
-        imap_username: "",
-        imap_password: "",
-        smtp_host: "",
-        smtp_port: "587",
-        smtp_username: "",
-        smtp_password: "",
-        microsoft_client_id: "",
-        microsoft_client_secret: "",
-        microsoft_tenant_id: "",
       });
     }
   }, [account, open, pipelines]);
@@ -128,28 +93,6 @@ export function HelpDeskEmailAccountDialog({
 
       if (!profile) throw new Error("Profile not found");
 
-      // Store credentials encrypted in the database
-      const credentials = formData.provider === "microsoft" 
-        ? {
-            client_id: formData.microsoft_client_id,
-            client_secret: formData.microsoft_client_secret,
-            tenant_id: formData.microsoft_tenant_id,
-          }
-        : {
-            imap: {
-              host: formData.imap_host,
-              port: parseInt(formData.imap_port),
-              username: formData.imap_username,
-              password: formData.imap_password,
-            },
-            smtp: {
-              host: formData.smtp_host,
-              port: parseInt(formData.smtp_port),
-              username: formData.smtp_username,
-              password: formData.smtp_password,
-            },
-          };
-
       const accountData = {
         email_address: formData.email_address,
         display_name: formData.display_name,
@@ -157,9 +100,6 @@ export function HelpDeskEmailAccountDialog({
         pipeline_id: formData.pipeline_id,
         is_active: formData.is_active,
         tenant_id: profile.tenant_id,
-        // Store credentials as encrypted JSON
-        // In production, use proper encryption
-        sync_error: JSON.stringify(credentials),
       };
 
       if (account) {
@@ -183,7 +123,7 @@ export function HelpDeskEmailAccountDialog({
         title: account
           ? "Email account updated successfully"
           : "Email account connected successfully",
-        description: "Email sync will begin shortly",
+        description: "Email sync is now configured",
       });
       onOpenChange(false);
     },
@@ -233,203 +173,89 @@ export function HelpDeskEmailAccountDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="provider">Email Provider *</Label>
-              <Select
-                value={formData.provider}
-                onValueChange={(value) => setFormData({ ...formData, provider: value })}
-              >
-                <SelectTrigger id="provider">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="microsoft">Microsoft 365 / Outlook</SelectItem>
-                  <SelectItem value="imap">IMAP/SMTP (Generic)</SelectItem>
-                  <SelectItem value="gmail">Gmail</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="pipeline_id">Route to Pipeline *</Label>
-              <Select
-                value={formData.pipeline_id}
-                onValueChange={(value) => setFormData({ ...formData, pipeline_id: value })}
-              >
-                <SelectTrigger id="pipeline_id">
-                  <SelectValue placeholder="Select pipeline..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines?.map((pipeline) => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
-                      {pipeline.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="pipeline_id">Route to Pipeline *</Label>
+            <Select
+              value={formData.pipeline_id}
+              onValueChange={(value) => setFormData({ ...formData, pipeline_id: value })}
+            >
+              <SelectTrigger id="pipeline_id">
+                <SelectValue placeholder="Select pipeline..." />
+              </SelectTrigger>
+              <SelectContent>
+                {pipelines?.map((pipeline) => (
+                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <Tabs defaultValue="credentials" className="w-full">
+          <Tabs defaultValue="setup" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="credentials">Credentials</TabsTrigger>
+              <TabsTrigger value="setup">Setup Instructions</TabsTrigger>
               <TabsTrigger value="advanced">Advanced</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="credentials" className="space-y-4 mt-4">
-              {formData.provider === "microsoft" ? (
-                <>
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      To connect Microsoft 365, you need to register an app in Azure AD and
-                      obtain OAuth credentials with Mail.Read and Mail.Send permissions.
-                    </AlertDescription>
-                  </Alert>
-
+            <TabsContent value="setup" className="space-y-4 mt-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm space-y-2">
                   <div>
-                    <Label htmlFor="microsoft_client_id">Client ID *</Label>
-                    <Input
-                      id="microsoft_client_id"
-                      value={formData.microsoft_client_id}
-                      onChange={(e) =>
-                        setFormData({ ...formData, microsoft_client_id: e.target.value })
-                      }
-                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    />
+                    <strong>Email Integration via Resend</strong>
                   </div>
+                  <div>This help desk uses Resend for both sending and receiving emails.</div>
+                </AlertDescription>
+              </Alert>
 
-                  <div>
-                    <Label htmlFor="microsoft_client_secret">Client Secret *</Label>
-                    <Input
-                      id="microsoft_client_secret"
-                      type="password"
-                      value={formData.microsoft_client_secret}
-                      onChange={(e) =>
-                        setFormData({ ...formData, microsoft_client_secret: e.target.value })
-                      }
-                      placeholder="Your client secret"
-                    />
-                  </div>
+              <div className="p-3 bg-muted rounded-md space-y-2">
+                <Label className="text-xs font-medium">Webhook URL (Copy this)</Label>
+                <code className="block text-xs p-2 bg-background rounded border break-all select-all">
+                  https://puffpjmmuoaecxygrkcm.supabase.co/functions/v1/helpdesk-receive-email
+                </code>
+              </div>
 
-                  <div>
-                    <Label htmlFor="microsoft_tenant_id">Tenant ID *</Label>
-                    <Input
-                      id="microsoft_tenant_id"
-                      value={formData.microsoft_tenant_id}
-                      onChange={(e) =>
-                        setFormData({ ...formData, microsoft_tenant_id: e.target.value })
-                      }
-                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">IMAP Settings (Incoming)</h4>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="col-span-2">
-                        <Label htmlFor="imap_host">IMAP Host *</Label>
-                        <Input
-                          id="imap_host"
-                          value={formData.imap_host}
-                          onChange={(e) =>
-                            setFormData({ ...formData, imap_host: e.target.value })
-                          }
-                          placeholder="imap.gmail.com"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="imap_port">Port *</Label>
-                        <Input
-                          id="imap_port"
-                          value={formData.imap_port}
-                          onChange={(e) =>
-                            setFormData({ ...formData, imap_port: e.target.value })
-                          }
-                          placeholder="993"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="imap_username">Username *</Label>
-                      <Input
-                        id="imap_username"
-                        value={formData.imap_username}
-                        onChange={(e) =>
-                          setFormData({ ...formData, imap_username: e.target.value })
-                        }
-                        placeholder="your-email@domain.com"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="imap_password">Password *</Label>
-                      <Input
-                        id="imap_password"
-                        type="password"
-                        value={formData.imap_password}
-                        onChange={(e) =>
-                          setFormData({ ...formData, imap_password: e.target.value })
-                        }
-                        placeholder="Your password or app-specific password"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-3">
+                <div>
+                  <strong className="text-sm">Step 1: Create Resend Account</strong>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Sign up at{" "}
+                    <a
+                      href="https://resend.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      resend.com
+                    </a>
+                  </p>
+                </div>
 
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">SMTP Settings (Outgoing)</h4>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="col-span-2">
-                        <Label htmlFor="smtp_host">SMTP Host *</Label>
-                        <Input
-                          id="smtp_host"
-                          value={formData.smtp_host}
-                          onChange={(e) =>
-                            setFormData({ ...formData, smtp_host: e.target.value })
-                          }
-                          placeholder="smtp.gmail.com"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="smtp_port">Port *</Label>
-                        <Input
-                          id="smtp_port"
-                          value={formData.smtp_port}
-                          onChange={(e) =>
-                            setFormData({ ...formData, smtp_port: e.target.value })
-                          }
-                          placeholder="587"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="smtp_username">Username *</Label>
-                      <Input
-                        id="smtp_username"
-                        value={formData.smtp_username}
-                        onChange={(e) =>
-                          setFormData({ ...formData, smtp_username: e.target.value })
-                        }
-                        placeholder="your-email@domain.com"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="smtp_password">Password *</Label>
-                      <Input
-                        id="smtp_password"
-                        type="password"
-                        value={formData.smtp_password}
-                        onChange={(e) =>
-                          setFormData({ ...formData, smtp_password: e.target.value })
-                        }
-                        placeholder="Your password or app-specific password"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
+                <div>
+                  <strong className="text-sm">Step 2: Verify Your Domain</strong>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    In Resend dashboard, go to Domains → Add Domain → Follow DNS verification steps
+                  </p>
+                </div>
+
+                <div>
+                  <strong className="text-sm">Step 3: Configure Inbound Email</strong>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    • In Resend, go to Domains → Your Domain → Inbound<br />
+                    • Add your email address (e.g., support@yourdomain.com)<br />
+                    • Set Forward To URL to the webhook URL above<br />
+                    • Save the configuration
+                  </p>
+                </div>
+
+                <div>
+                  <strong className="text-sm">Step 4: Test the Connection</strong>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    After saving this account, use the "Test" button to verify email sending works
+                  </p>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="advanced" className="space-y-4 mt-4">

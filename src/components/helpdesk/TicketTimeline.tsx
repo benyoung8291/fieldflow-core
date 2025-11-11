@@ -39,35 +39,18 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   const sendReplyMutation = useMutation({
     mutationFn: async (body: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
-
-      const { error } = await supabase
-        .from("helpdesk_messages" as any)
-        .insert({
-          tenant_id: profile.tenant_id,
-          ticket_id: ticketId,
-          message_type: "email",
-          direction: "outbound",
-          body_plain: body,
-          created_by: user.id,
-        });
+      const { data, error } = await supabase.functions.invoke(
+        "helpdesk-send-email",
+        {
+          body: {
+            ticket_id: ticketId,
+            body_plain: body,
+          },
+        }
+      );
 
       if (error) throw error;
-
-      // Update ticket's last_message_at
-      await supabase
-        .from("helpdesk_tickets" as any)
-        .update({ last_message_at: new Date().toISOString() })
-        .eq("id", ticketId);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
@@ -75,11 +58,11 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       setReplyText("");
       toast({ title: "Reply sent successfully" });
     },
-    onError: (error) => {
-      toast({ 
-        title: "Failed to send reply", 
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send reply",
         description: error.message,
-        variant: "destructive" 
+        variant: "destructive",
       });
     },
   });
