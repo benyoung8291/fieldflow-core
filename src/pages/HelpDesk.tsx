@@ -75,10 +75,35 @@ export default function HelpDesk() {
     }
 
     setIsSyncing(true);
+    
+    // Refetch email accounts first to get latest IDs
+    await queryClient.invalidateQueries({ queryKey: ["helpdesk-email-accounts-active"] });
+    const freshAccounts = await queryClient.fetchQuery({
+      queryKey: ["helpdesk-email-accounts-active"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("helpdesk_email_accounts" as any)
+          .select("*")
+          .eq("is_active", true);
+        if (error) throw error;
+        return data as any[];
+      },
+    });
+    
+    if (!freshAccounts || freshAccounts.length === 0) {
+      toast({
+        title: "No active email accounts",
+        description: "Please check your email account settings",
+        variant: "destructive",
+      });
+      setIsSyncing(false);
+      return;
+    }
+    
     try {
       let totalSynced = 0;
       
-      for (const account of emailAccounts) {
+      for (const account of freshAccounts) {
         const { data, error } = await supabase.functions.invoke(
           "microsoft-sync-emails",
           {
