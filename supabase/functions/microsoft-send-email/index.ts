@@ -154,15 +154,17 @@ serve(async (req) => {
           from_email: account.email_address,
           from_name: account.name,
           to_email: recipientEmail,
-          subject: subject,
+          subject: subject || "",
+          body: htmlBody,
           body_html: htmlBody,
           body_text: body,
-          microsoft_message_id: conversationId,
           sent_at: new Date().toISOString(),
         });
 
       if (messageError) {
         console.error("Failed to create message record:", messageError);
+      } else {
+        console.log("Message record created successfully in helpdesk_messages");
       }
       
       // Update ticket's last_message_at
@@ -170,6 +172,8 @@ serve(async (req) => {
         .from("helpdesk_tickets")
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", finalTicketId);
+    } else {
+      console.error("Could not determine ticket ID for message record");
     }
 
     return new Response(
