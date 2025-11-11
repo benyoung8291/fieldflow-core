@@ -26,9 +26,9 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [taskMentions, setTaskMentions] = useState<string[]>([]);
-  const [taskAssignedTo, setTaskAssignedTo] = useState<string>("");
+  const [taskAssignedTo, setTaskAssignedTo] = useState<string>("unassigned");
   const [checklistTitle, setChecklistTitle] = useState("");
-  const [checklistAssignedTo, setChecklistAssignedTo] = useState<string>("");
+  const [checklistAssignedTo, setChecklistAssignedTo] = useState<string>("unassigned");
   const [checklistItems, setChecklistItems] = useState<{ text: string; checked: boolean }[]>([{ text: "", checked: false }]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -91,7 +91,7 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
           description: taskDescription,
           status: "pending",
           priority: "medium",
-          assigned_to: taskAssignedTo || null,
+          assigned_to: taskAssignedTo && taskAssignedTo !== "unassigned" ? taskAssignedTo : null,
           created_by: user?.id,
           linked_module: "helpdesk_ticket",
           linked_record_id: ticketId,
@@ -125,7 +125,7 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
           description: "Checklist task from helpdesk ticket",
           status: "pending",
           priority: "medium",
-          assigned_to: checklistAssignedTo || null,
+          assigned_to: checklistAssignedTo && checklistAssignedTo !== "unassigned" ? checklistAssignedTo : null,
           created_by: user?.id,
           linked_module: "helpdesk_ticket",
           linked_record_id: ticketId,
@@ -174,9 +174,9 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
       setTaskTitle("");
       setTaskDescription("");
       setTaskMentions([]);
-      setTaskAssignedTo("");
+      setTaskAssignedTo("unassigned");
       setChecklistTitle("");
-      setChecklistAssignedTo("");
+      setChecklistAssignedTo("unassigned");
       setChecklistItems([{ text: "", checked: false }]);
     },
     onError: (error: any) => {
@@ -259,7 +259,7 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
                   <SelectValue placeholder="Select a user (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {workers.map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
@@ -283,7 +283,7 @@ export function AddTimelineItemDialog({ open, onOpenChange, ticketId }: AddTimel
                   <SelectValue placeholder="Select a user (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {workers.map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
