@@ -61,7 +61,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { emailAccountId, ticketId, to, subject, body, replyTo, conversationId } = await req.json();
+    const { emailAccountId, ticketId, to, cc, bcc, subject, body, replyTo, conversationId } = await req.json();
 
     // Get valid access token
     const accessToken = await getValidAccessToken(supabaseClient, emailAccountId);
@@ -86,6 +86,20 @@ serve(async (req) => {
         })) : [{
           emailAddress: { address: to }
         }],
+        ...(cc && cc.length > 0 && {
+          ccRecipients: Array.isArray(cc) ? cc.map((email: string) => ({
+            emailAddress: { address: email }
+          })) : [{
+            emailAddress: { address: cc }
+          }]
+        }),
+        ...(bcc && bcc.length > 0 && {
+          bccRecipients: Array.isArray(bcc) ? bcc.map((email: string) => ({
+            emailAddress: { address: email }
+          })) : [{
+            emailAddress: { address: bcc }
+          }]
+        }),
         ...(replyTo && {
           internetMessageId: replyTo
         }),

@@ -44,6 +44,8 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       }
 
       const toEmails = Array.isArray(emailData.to) ? emailData.to : [emailData.to];
+      const ccEmails = Array.isArray(emailData.cc) ? emailData.cc : emailData.cc ? [emailData.cc] : [];
+      const bccEmails = Array.isArray(emailData.bcc) ? emailData.bcc : emailData.bcc ? [emailData.bcc] : [];
       
       const { data, error } = await supabase.functions.invoke(
         "microsoft-send-email",
@@ -52,6 +54,8 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
             emailAccountId: ticket.email_account_id,
             ticketId: ticketId,
             to: toEmails,
+            cc: ccEmails,
+            bcc: bccEmails,
             subject: emailData.subject,
             body: emailData.body,
             conversationId: ticket.microsoft_conversation_id,

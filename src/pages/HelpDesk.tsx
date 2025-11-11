@@ -204,9 +204,9 @@ export default function HelpDesk() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="flex flex-col h-[calc(100vh-3.5rem)] -m-6">
         {/* Header with Pipeline Selector and Sync */}
-        <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+        <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold">Help Desk</h1>
             <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
