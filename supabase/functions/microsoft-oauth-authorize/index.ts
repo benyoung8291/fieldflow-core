@@ -24,12 +24,19 @@ serve(async (req) => {
       "offline_access"
     ].join(" ");
 
+    const { sessionKey } = await req.json().catch(() => ({}));
+
     const authUrl = new URL(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`);
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("scope", scopes);
     authUrl.searchParams.set("response_mode", "query");
+    
+    // Include session key as state parameter for polling detection
+    if (sessionKey) {
+      authUrl.searchParams.set("state", sessionKey);
+    }
 
     console.log("Generated OAuth URL:", authUrl.toString());
 

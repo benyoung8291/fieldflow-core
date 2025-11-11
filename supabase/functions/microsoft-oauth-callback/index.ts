@@ -6,13 +6,15 @@ serve(async (req) => {
   console.log("Method:", req.method);
   console.log("Headers:", Object.fromEntries(req.headers.entries()));
   
-  try {
-    const url = new URL(req.url);
-    console.log("Full URL:", url.toString());
-    const code = url.searchParams.get("code");
-    const error = url.searchParams.get("error");
-    console.log("Code:", code ? "present" : "missing");
-    console.log("Error:", error);
+    try {
+      const url = new URL(req.url);
+      console.log("Full URL:", url.toString());
+      const code = url.searchParams.get("code");
+      const error = url.searchParams.get("error");
+      const sessionKey = url.searchParams.get("state");
+      console.log("Code:", code ? "present" : "missing");
+      console.log("Error:", error);
+      console.log("Session Key:", sessionKey);
 
     if (error) {
       console.error("OAuth error:", error);
@@ -69,22 +71,29 @@ serve(async (req) => {
     // Generate unique session ID
     const sessionId = crypto.randomUUID();
 
-    // Store tokens in database temporarily
+    // Store tokens in database temporarily with session_key for polling
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const insertData: any = {
+      session_id: sessionId,
+      email,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_in: tokens.expires_in,
+      account_id: profile.id,
+    };
+
+    // Add session_key if provided (for polling detection)
+    if (sessionKey) {
+      insertData.session_key = sessionKey;
+    }
+
     const { error: insertError } = await supabase
       .from("oauth_temp_tokens")
-      .insert({
-        session_id: sessionId,
-        email,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_in: tokens.expires_in,
-        account_id: profile.id,
-      });
+      .insert(insertData);
 
     if (insertError) {
       console.error("Failed to store tokens:", insertError);
@@ -93,7 +102,7 @@ serve(async (req) => {
 
     console.log("✅ Tokens stored with session ID:", sessionId);
 
-    // Return HTML that posts session ID to parent window (not the tokens themselves)
+    // Return simple success HTML - no postMessage needed, parent polls database
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -119,39 +128,8 @@ serve(async (req) => {
   <div class="container">
     <div class="checkmark">✓</div>
     <h1>Authentication Successful!</h1>
-    <p>Closing window...</p>
+    <p>You can close this window.</p>
   </div>
-  <script>
-    (function() {
-      console.log("OAuth popup: Starting postMessage");
-      console.log("OAuth popup: window.opener exists:", !!window.opener);
-      console.log("OAuth popup: window.opener.closed:", window.opener ? window.opener.closed : 'N/A');
-      console.log("OAuth popup: Current origin:", window.location.origin);
-      
-      const sessionId = ${JSON.stringify(sessionId)};
-      console.log("OAuth popup: Session ID:", sessionId);
-      
-      if (window.opener && !window.opener.closed) {
-        try {
-          window.opener.postMessage({
-            type: 'MICROSOFT_OAUTH_SUCCESS',
-            sessionId: sessionId
-          }, '*');
-          console.log("OAuth popup: Message posted successfully");
-          setTimeout(function() { 
-            console.log("OAuth popup: Closing window");
-            window.close(); 
-          }, 1000);
-        } catch (e) {
-          console.error("OAuth popup: Error posting message:", e);
-          document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Failed to send message. Error: ' + e.message + '</p></div>';
-        }
-      } else {
-        console.error("OAuth popup: No opener window found");
-        document.body.innerHTML = '<div class="container"><h1>Error</h1><p>No parent window found. Please close this window.</p></div>';
-      }
-    })();
-  </script>
 </body>
 </html>`;
     

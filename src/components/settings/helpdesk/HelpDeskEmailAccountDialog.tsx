@@ -171,16 +171,22 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [account, open, pipelines]);
 
-  // Microsoft OAuth handler - popup approach
+  // Microsoft OAuth handler - popup approach with polling
   const handleMicrosoftAuth = async () => {
-    console.log("🎯 Starting Microsoft OAuth with popup");
+    console.log("🎯 Starting Microsoft OAuth with popup + polling");
     
     try {
       // Set flag to prevent app from reacting to auth changes during OAuth
       sessionStorage.setItem('oauth_in_progress', 'true');
       setIsAuthenticating(true);
       
-      const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize");
+      // Generate a unique session identifier
+      const sessionKey = `oauth_session_${crypto.randomUUID()}`;
+      sessionStorage.setItem('oauth_session_key', sessionKey);
+      
+      const { data, error } = await supabase.functions.invoke("microsoft-oauth-authorize", {
+        body: { sessionKey }
+      });
       
       if (error) throw error;
       if (!data?.authUrl) throw new Error("No authorization URL received");
@@ -203,120 +209,116 @@ export function HelpDeskEmailAccountDialog({
         throw new Error("Popup blocked. Please allow popups for this site.");
       }
       
-      // Listen for message from popup
-      const messageHandler = async (event: MessageEvent) => {
-        console.log("📬 Message received:", event.data);
-        console.log("📬 Message origin:", event.origin);
-        console.log("📬 Origin check - includes supabase.co:", event.origin.includes('supabase.co'));
-        console.log("📬 Origin check - includes lovable:", event.origin.includes('lovable'));
+      // Poll database for OAuth completion
+      const pollForCompletion = async () => {
+        const maxAttempts = 60; // 2 minutes max (60 * 2 seconds)
+        let attempts = 0;
         
-        // Verify origin for security - allow supabase.co and lovableproject.com
-        if (!event.origin.includes('supabase.co') && 
-            !event.origin.includes('lovable') &&
-            !event.origin.includes('lovableproject.com')) {
-          console.log("📬 Message rejected - invalid origin");
-          return;
-        }
-        
-        if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
-          console.log("✅ Received OAuth session ID from popup:", event.data.sessionId);
+        const checkInterval = setInterval(async () => {
+          attempts++;
           
-          // Clean up
-          window.removeEventListener('message', messageHandler);
-          popup?.close();
-          
-          try {
-            // Fetch tokens from database using session ID
-            const { data: tokenData, error: fetchError } = await supabase
-              .from("oauth_temp_tokens")
-              .select("*")
-              .eq("session_id", event.data.sessionId)
-              .single();
-
-            if (fetchError || !tokenData) {
-              throw new Error("Failed to retrieve OAuth tokens from database");
-            }
-
-            console.log("✅ Tokens retrieved from database");
-
-            // Delete the temp tokens
-            await supabase
-              .from("oauth_temp_tokens")
-              .delete()
-              .eq("session_id", event.data.sessionId);
-
-            const oauthData = {
-              email: tokenData.email,
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token,
-              expiresIn: tokenData.expires_in,
-              accountId: tokenData.account_id,
-            };
-
-            // Fetch mailboxes
-            fetchMailboxes(
-              oauthData.accessToken,
-              oauthData.email,
-              oauthData.email
-            ).catch((error) => {
-              console.error("Error fetching mailboxes:", error);
-              setAvailableMailboxes([
-                { email: oauthData.email, displayName: `${oauthData.email} (Personal)`, type: "personal" }
-              ]);
-              setFormData(prev => ({
-                ...prev,
-                email_address: oauthData.email,
-                display_name: oauthData.email,
-              }));
-              setIsFetchingMailboxes(false);
-            });
-
-            setOauthData(oauthData);
-            setIsAuthenticating(false);
-            
-            // Clear OAuth in progress flag
+          // Check if popup was closed
+          if (popup.closed) {
+            clearInterval(checkInterval);
             sessionStorage.removeItem('oauth_in_progress');
-
-            toast({
-              title: "Microsoft account connected!",
-              description: `Authenticated as ${oauthData.email}`,
-            });
-          } catch (error) {
-            console.error("Error processing OAuth data:", error);
-            setIsAuthenticating(false);
-            throw error;
-          }
-        } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
-          console.error("OAuth error from popup:", event.data.error);
-          window.removeEventListener('message', messageHandler);
-          popup?.close();
-          sessionStorage.removeItem('oauth_in_progress');
-          throw new Error(event.data.error);
-        }
-      };
-      
-      window.addEventListener('message', messageHandler);
-      
-      // Monitor popup closure
-      const checkClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkClosed);
-          window.removeEventListener('message', messageHandler);
-          if (isAuthenticating) {
-            console.log("Popup closed by user");
-            sessionStorage.removeItem('oauth_in_progress');
+            sessionStorage.removeItem('oauth_session_key');
             setIsAuthenticating(false);
             toast({
               title: "Authentication cancelled",
               description: "The sign-in window was closed",
             });
+            return;
           }
-        }
-      }, 500);
+          
+          // Check if max attempts reached
+          if (attempts > maxAttempts) {
+            clearInterval(checkInterval);
+            popup.close();
+            sessionStorage.removeItem('oauth_in_progress');
+            sessionStorage.removeItem('oauth_session_key');
+            setIsAuthenticating(false);
+            toast({
+              title: "Authentication timeout",
+              description: "Please try again",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          try {
+            // Poll database for completion
+            // @ts-ignore - Bypass complex type inference
+            const result = await supabase
+              .from("oauth_temp_tokens")
+              .select("*")
+              .eq("session_key", sessionKey)
+              .maybeSingle();
+            
+            const tokenData = result.data;
+            const fetchError = result.error;
+
+            if (tokenData && !fetchError) {
+              clearInterval(checkInterval);
+              popup.close();
+              
+              console.log("✅ OAuth tokens retrieved from polling");
+
+              // Delete the temp tokens
+              await supabase
+                .from("oauth_temp_tokens")
+                .delete()
+                .eq("session_key", sessionKey);
+
+              const oauthData = {
+                email: tokenData.email,
+                accessToken: tokenData.access_token,
+                refreshToken: tokenData.refresh_token,
+                expiresIn: tokenData.expires_in,
+                accountId: tokenData.account_id,
+              };
+
+              // Fetch mailboxes
+              fetchMailboxes(
+                oauthData.accessToken,
+                oauthData.email,
+                oauthData.email
+              ).catch((error) => {
+                console.error("Error fetching mailboxes:", error);
+                setAvailableMailboxes([
+                  { email: oauthData.email, displayName: `${oauthData.email} (Personal)`, type: "personal" }
+                ]);
+                setFormData(prev => ({
+                  ...prev,
+                  email_address: oauthData.email,
+                  display_name: oauthData.email,
+                }));
+                setIsFetchingMailboxes(false);
+              });
+
+              setOauthData(oauthData);
+              setIsAuthenticating(false);
+              
+              // Clear OAuth in progress flag
+              sessionStorage.removeItem('oauth_in_progress');
+              sessionStorage.removeItem('oauth_session_key');
+
+              toast({
+                title: "Microsoft account connected!",
+                description: `Authenticated as ${oauthData.email}`,
+              });
+            }
+          } catch (error) {
+            console.error("Error polling for OAuth completion:", error);
+          }
+        }, 2000); // Poll every 2 seconds
+      };
+      
+      pollForCompletion();
       
     } catch (error) {
       console.error("❌ Microsoft auth error:", error);
       sessionStorage.removeItem('oauth_in_progress');
+      sessionStorage.removeItem('oauth_session_key');
       toast({
         title: "Failed to start Microsoft authentication",
         description: error instanceof Error ? error.message : "Unknown error",
