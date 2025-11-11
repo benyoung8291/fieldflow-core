@@ -123,16 +123,29 @@ serve(async (req) => {
   </div>
   <script>
     (function() {
-      console.log("OAuth popup: Posting session ID to opener");
+      console.log("OAuth popup: Starting postMessage");
+      console.log("OAuth popup: window.opener exists:", !!window.opener);
+      console.log("OAuth popup: window.opener.closed:", window.opener ? window.opener.closed : 'N/A');
+      console.log("OAuth popup: Current origin:", window.location.origin);
+      
       const sessionId = ${JSON.stringify(sessionId)};
+      console.log("OAuth popup: Session ID:", sessionId);
       
       if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({
-          type: 'MICROSOFT_OAUTH_SUCCESS',
-          sessionId: sessionId
-        }, '*');
-        console.log("OAuth popup: Message posted, closing in 1s");
-        setTimeout(function() { window.close(); }, 1000);
+        try {
+          window.opener.postMessage({
+            type: 'MICROSOFT_OAUTH_SUCCESS',
+            sessionId: sessionId
+          }, '*');
+          console.log("OAuth popup: Message posted successfully");
+          setTimeout(function() { 
+            console.log("OAuth popup: Closing window");
+            window.close(); 
+          }, 1000);
+        } catch (e) {
+          console.error("OAuth popup: Error posting message:", e);
+          document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Failed to send message. Error: ' + e.message + '</p></div>';
+        }
       } else {
         console.error("OAuth popup: No opener window found");
         document.body.innerHTML = '<div class="container"><h1>Error</h1><p>No parent window found. Please close this window.</p></div>';

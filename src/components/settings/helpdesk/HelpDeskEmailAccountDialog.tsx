@@ -203,8 +203,16 @@ export function HelpDeskEmailAccountDialog({
       
       // Listen for message from popup
       const messageHandler = async (event: MessageEvent) => {
-        // Verify origin for security
-        if (!event.origin.includes('supabase.co') && !event.origin.includes('lovable')) {
+        console.log("📬 Message received:", event.data);
+        console.log("📬 Message origin:", event.origin);
+        console.log("📬 Origin check - includes supabase.co:", event.origin.includes('supabase.co'));
+        console.log("📬 Origin check - includes lovable:", event.origin.includes('lovable'));
+        
+        // Verify origin for security - allow supabase.co and lovableproject.com
+        if (!event.origin.includes('supabase.co') && 
+            !event.origin.includes('lovable') &&
+            !event.origin.includes('lovableproject.com')) {
+          console.log("📬 Message rejected - invalid origin");
           return;
         }
         
