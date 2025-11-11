@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import DraggableServiceOrder from "./DraggableServiceOrder";
-import DraggableWorker from "./DraggableWorker";
 import { differenceInHours } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
@@ -80,59 +78,6 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
     (order: any) => order.remainingHours > 0
   );
 
-  // Fetch workers with skills
-  const { data: workers = [] } = useQuery({
-    queryKey: ["workers-with-skills"],
-    queryFn: async () => {
-      // Get all user_roles with worker role
-      const { data: workerRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "worker");
-
-      if (rolesError) throw rolesError;
-      
-      const workerUserIds = workerRoles?.map(r => r.user_id) || [];
-      
-      if (workerUserIds.length === 0) return [];
-
-      // Fetch profiles for those users
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, is_active")
-        .in("id", workerUserIds)
-        .eq("is_active", true)
-        .order("first_name", { ascending: true });
-
-      if (profilesError) throw profilesError;
-
-      // Fetch worker skills separately
-      const { data: workerSkills } = await supabase
-        .from("worker_skills")
-        .select(`
-          worker_id,
-          skill_id,
-          proficiency_level,
-          skills(name)
-        `)
-        .in("worker_id", workerUserIds);
-
-      // Combine profiles with their skills
-      const workersWithSkills = (profiles || []).map(profile => ({
-        ...profile,
-        worker_skills: (workerSkills || [])
-          .filter(ws => ws.worker_id === profile.id)
-          .map(ws => ({
-            skill_id: ws.skill_id,
-            proficiency_level: ws.proficiency_level,
-            skills: ws.skills
-          }))
-      }));
-
-      return workersWithSkills;
-    },
-  });
-
   const handleAISuggest = (order: any) => {
     setAiServiceOrderId(order.id);
     setAiServiceOrderTitle(order.title || order.order_number);
@@ -157,55 +102,35 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
           </p>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-180px)]">
-            <div className="px-2 pb-2 pt-2">
-              <div className="space-y-1.5">
-                {ordersNeedingAppointments.length === 0 ? (
-                  <div className="text-center py-6 text-muted-foreground text-xs">
-                    All service orders scheduled
+          <ScrollArea className="h-[calc(100vh-180px)] px-2 pb-2">
+            <div className="space-y-1.5">
+              {ordersNeedingAppointments.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground text-xs">
+                  All service orders scheduled
+                </div>
+              ) : (
+                ordersNeedingAppointments.map((order) => (
+                  <div key={order.id} className="group relative">
+                    <DraggableServiceOrder
+                      serviceOrder={order}
+                      remainingHours={order.remainingHours}
+                      lineItemsSummary={order.lineItemsSummary}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAISuggest(order);
+                      }}
+                      title="AI Worker Suggestions"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                    </Button>
                   </div>
-                ) : (
-                  ordersNeedingAppointments.map((order) => (
-                    <div key={order.id} className="group relative">
-                      <DraggableServiceOrder
-                        serviceOrder={order}
-                        remainingHours={order.remainingHours}
-                        lineItemsSummary={order.lineItemsSummary}
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAISuggest(order);
-                        }}
-                        title="AI Worker Suggestions"
-                      >
-                        <Sparkles className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold px-1">Available Workers</h3>
-                <p className="text-[10px] text-muted-foreground px-1 mb-2">
-                  Drag to assign to appointments
-                </p>
-                {workers.length === 0 ? (
-                  <div className="text-center py-6 text-muted-foreground text-xs">
-                    No workers available
-                  </div>
-                ) : (
-                  workers.map((worker) => (
-                    <DraggableWorker key={worker.id} worker={worker} />
-                  ))
-                )}
-              </div>
+                ))
+              )}
             </div>
           </ScrollArea>
         </CardContent>
