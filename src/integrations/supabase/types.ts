@@ -884,9 +884,13 @@ export type Database = {
           imap_username: string | null
           is_active: boolean
           last_sync_at: string | null
+          microsoft_access_token: string | null
+          microsoft_account_id: string | null
           microsoft_client_id: string | null
           microsoft_client_secret: string | null
+          microsoft_refresh_token: string | null
           microsoft_tenant_id: string | null
+          microsoft_token_expires_at: string | null
           name: string
           pipeline_id: string | null
           provider: string
@@ -911,9 +915,13 @@ export type Database = {
           imap_username?: string | null
           is_active?: boolean
           last_sync_at?: string | null
+          microsoft_access_token?: string | null
+          microsoft_account_id?: string | null
           microsoft_client_id?: string | null
           microsoft_client_secret?: string | null
+          microsoft_refresh_token?: string | null
           microsoft_tenant_id?: string | null
+          microsoft_token_expires_at?: string | null
           name: string
           pipeline_id?: string | null
           provider: string
@@ -938,9 +946,13 @@ export type Database = {
           imap_username?: string | null
           is_active?: boolean
           last_sync_at?: string | null
+          microsoft_access_token?: string | null
+          microsoft_account_id?: string | null
           microsoft_client_id?: string | null
           microsoft_client_secret?: string | null
+          microsoft_refresh_token?: string | null
           microsoft_tenant_id?: string | null
+          microsoft_token_expires_at?: string | null
           name?: string
           pipeline_id?: string | null
           provider?: string

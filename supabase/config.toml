@@ -8,3 +8,21 @@ verify_jwt = true
 
 [functions.extract-contract-data]
 verify_jwt = true
+
+[functions.microsoft-oauth-authorize]
+verify_jwt = true
+
+[functions.microsoft-oauth-callback]
+verify_jwt = false
+
+[functions.microsoft-refresh-token]
+verify_jwt = false
+
+[functions.microsoft-send-email]
+verify_jwt = false
+
+[functions.microsoft-receive-email]
+verify_jwt = false
+
+[functions.microsoft-test-connection]
+verify_jwt = true
