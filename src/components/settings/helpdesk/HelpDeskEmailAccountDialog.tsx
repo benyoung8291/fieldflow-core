@@ -27,12 +27,20 @@ interface HelpDeskEmailAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account?: any;
+  oauthData?: {
+    email: string;
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    accountId: string;
+  } | null;
 }
 
 export function HelpDeskEmailAccountDialog({
   open,
   onOpenChange,
   account,
+  oauthData: propOauthData,
 }: HelpDeskEmailAccountDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -151,38 +159,23 @@ export function HelpDeskEmailAccountDialog({
     }
   }, [toast]);
 
-  // Handle OAuth callback message - ALWAYS ACTIVE
+  // Handle OAuth callback message - ALWAYS ACTIVE (kept for backward compatibility)
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       // Log ALL messages for debugging
-      console.log("=== MESSAGE RECEIVED ===", {
+      console.log("=== DIALOG MESSAGE RECEIVED (backup listener) ===", {
         origin: event.origin,
         hasData: !!event.data,
         dataType: typeof event.data,
-        data: event.data,
       });
       
-      // Accept messages from any origin for OAuth (Microsoft callback uses Supabase origin)
-      // Check if this is our OAuth callback message
-      if (event.data && typeof event.data === 'object') {
+      // This is now a backup - the main listener is in the parent component
+      // But we keep it for cases where dialog is opened before auth starts
+      if (event.data && typeof event.data === 'object' && !propOauthData) {
         const { email, accessToken, refreshToken, expiresIn, accountId } = event.data;
         
         if (accessToken && refreshToken && email) {
-          console.log("✅ VALID OAUTH DATA RECEIVED!");
-          console.log("Email:", email);
-          console.log("Account ID:", accountId);
-          
-          // Close popup if still open
-          if (popupRef.current && !popupRef.current.closed) {
-            console.log("Closing popup window");
-            popupRef.current.close();
-          }
-          
-          // Clear interval
-          if (checkIntervalRef.current) {
-            clearInterval(checkIntervalRef.current);
-            checkIntervalRef.current = null;
-          }
+          console.log("✅ VALID OAUTH DATA in dialog (backup listener)!");
           
           const oauthInfo = {
             accessToken,
@@ -199,18 +192,10 @@ export function HelpDeskEmailAccountDialog({
             description: "Fetching available mailboxes...",
           });
 
-          // Fetch user profile and available mailboxes
           try {
             await fetchMailboxes(accessToken, email, email);
           } catch (error) {
             console.error("Error fetching mailboxes:", error);
-            toast({
-              title: "Could not fetch mailboxes",
-              description: "Using authenticated account as default",
-              variant: "destructive",
-            });
-            
-            // Set default values even if fetch fails
             setAvailableMailboxes([
               { email, displayName: `${email} (Personal)`, type: "personal" }
             ]);
@@ -221,19 +206,15 @@ export function HelpDeskEmailAccountDialog({
             }));
             setIsFetchingMailboxes(false);
           }
-        } else {
-          console.log("⚠️ Message missing OAuth fields:", { email, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
         }
-      } else {
-        console.log("ℹ️ Non-OAuth message:", event.data);
       }
     };
 
-    console.log("🎧 Setting up OAuth message listener (always active)");
+    console.log("🎧 Dialog OAuth message listener (backup) ACTIVE");
     window.addEventListener("message", handleMessage, false);
     
     return () => {
-      console.log("🔇 Cleaning up OAuth message listener");
+      console.log("🔇 Dialog OAuth message listener (backup) removed");
       window.removeEventListener("message", handleMessage, false);
       
       // Cleanup interval on unmount
@@ -241,7 +222,35 @@ export function HelpDeskEmailAccountDialog({
         clearInterval(checkIntervalRef.current);
       }
     };
-  }, [toast, fetchMailboxes]);
+  }, [toast, fetchMailboxes, propOauthData]);
+
+  // Sync prop OAuth data to local state when it changes
+  useEffect(() => {
+    if (propOauthData && !oauthData) {
+      console.log("📥 Received OAuth data via props, processing...");
+      setOauthData(propOauthData);
+      setIsAuthenticating(false);
+      
+      // Fetch mailboxes
+      fetchMailboxes(
+        propOauthData.accessToken,
+        propOauthData.email,
+        propOauthData.email
+      ).catch((error) => {
+        console.error("Error fetching mailboxes:", error);
+        // Set default values even if fetch fails
+        setAvailableMailboxes([
+          { email: propOauthData.email, displayName: `${propOauthData.email} (Personal)`, type: "personal" }
+        ]);
+        setFormData(prev => ({
+          ...prev,
+          email_address: propOauthData.email,
+          display_name: propOauthData.email,
+        }));
+        setIsFetchingMailboxes(false);
+      });
+    }
+  }, [propOauthData, oauthData, fetchMailboxes]);
 
   // Populate form when account is provided
   useEffect(() => {

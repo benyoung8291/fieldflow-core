@@ -66,82 +66,91 @@ serve(async (req) => {
     };
 
     // Return HTML that posts message to parent and waits before closing
-    return new Response(
-      `<!DOCTYPE html>
-      <html>
-        <head>
-          <title>Authentication Successful</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    const htmlContent = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Successful</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
+      }
+      .success {
+        color: #10b981;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+      h1 { margin: 0 0 0.5rem 0; font-size: 1.5rem; }
+      p { color: #666; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="success">✓</div>
+      <h1>Authentication Successful!</h1>
+      <p>Redirecting you back to the app...</p>
+    </div>
+    <script>
+      (function() {
+        const data = ${JSON.stringify(sessionData)};
+        console.log('🔔 Callback: Ready to send message', data);
+        
+        let attempts = 0;
+        const maxAttempts = 20;
+        
+        const sendMessage = () => {
+          if (window.opener && !window.opener.closed) {
+            console.log('📤 Callback: Attempt ' + (attempts + 1) + ' - Sending to opener');
+            try {
+              window.opener.postMessage(data, '*');
+              console.log('✅ Callback: Message posted successfully');
+            } catch (err) {
+              console.error('❌ Callback: Error posting message', err);
             }
-            .container {
-              background: white;
-              padding: 2rem;
-              border-radius: 8px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              text-align: center;
+            attempts++;
+            
+            if (attempts < maxAttempts) {
+              setTimeout(sendMessage, 200);
+            } else {
+              console.log('⏱️ Callback: All attempts complete, closing in 3 seconds');
+              setTimeout(() => {
+                window.close();
+              }, 3000);
             }
-            .success {
-              color: #10b981;
-              font-size: 3rem;
-              margin-bottom: 1rem;
-            }
-            h1 { margin: 0 0 0.5rem 0; font-size: 1.5rem; }
-            p { color: #666; margin: 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="success">✓</div>
-            <h1>Authentication Successful!</h1>
-            <p>Redirecting you back to the app...</p>
-          </div>
-          <script>
-            (function() {
-              const data = ${JSON.stringify(sessionData)};
-              console.log('Callback: Sending message to opener', data);
-              
-              // Try multiple times to ensure delivery
-              let attempts = 0;
-              const maxAttempts = 10;
-              
-              const sendMessage = () => {
-                if (window.opener && !window.opener.closed) {
-                  console.log('Callback: Attempt', attempts + 1, 'sending to opener');
-                  window.opener.postMessage(data, '*');
-                  attempts++;
-                  
-                  if (attempts < maxAttempts) {
-                    setTimeout(sendMessage, 100);
-                  } else {
-                    console.log('Callback: Message sent, closing window in 2 seconds');
-                    setTimeout(() => {
-                      window.close();
-                    }, 2000);
-                  }
-                } else {
-                  console.error('Callback: No opener window found');
-                  setTimeout(() => {
-                    window.close();
-                  }, 3000);
-                }
-              };
-              
-              // Start sending messages immediately
-              sendMessage();
-            })();
-          </script>
-        </body>
-      </html>`,
-      { headers: { "Content-Type": "text/html" }, status: 200 }
-    );
+          } else {
+            console.error('❌ Callback: No opener window found or it was closed');
+            document.body.innerHTML = '<div class="container"><div class="success" style="color: #ef4444;">✗</div><h1>Error</h1><p>Parent window not found. Please close this window and try again.</p></div>';
+          }
+        };
+        
+        // Start immediately
+        setTimeout(sendMessage, 100);
+      })();
+    </script>
+  </body>
+</html>`;
+
+    return new Response(htmlContent, {
+      headers: { 
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache"
+      },
+      status: 200
+    });
   } catch (error) {
     console.error("Error in microsoft-oauth-callback:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

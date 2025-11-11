@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Mail, AlertCircle, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { HelpDeskEmailAccountDialog } from "./HelpDeskEmailAccountDialog";
+import { useMicrosoftOAuth } from "@/hooks/useMicrosoftOAuth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,26 @@ export function HelpDeskEmailAccountsSettings() {
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<any>(null);
+  
+  // Store OAuth data from popup
+  const oauthDataRef = useRef<any>(null);
+
+  // Global OAuth listener - always active
+  useMicrosoftOAuth((data) => {
+    console.log("🎉 OAuth callback received in settings component!");
+    oauthDataRef.current = data;
+    
+    // Open dialog if not already open
+    if (!dialogOpen) {
+      console.log("📂 Opening dialog with OAuth data");
+      setDialogOpen(true);
+    }
+    
+    toast({
+      title: "Microsoft account connected!",
+      description: `Authenticated as ${data.email}`,
+    });
+  });
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["helpdesk-email-accounts-settings"],
@@ -230,6 +251,7 @@ export function HelpDeskEmailAccountsSettings() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         account={editingAccount}
+        oauthData={oauthDataRef.current}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
