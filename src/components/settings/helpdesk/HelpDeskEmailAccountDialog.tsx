@@ -47,7 +47,7 @@ export function HelpDeskEmailAccountDialog({
   
   const [formData, setFormData] = useState({
     email_address: "",
-    display_name: "",
+    name: "",
     pipeline_id: "",
     is_active: true,
   });
@@ -99,7 +99,7 @@ export function HelpDeskEmailAccountDialog({
       setFormData(prev => ({
         ...prev,
         email_address: userEmail,
-        display_name: userName,
+        name: userName,
       }));
     } catch (error) {
       console.error("Error setting up mailbox:", error);
@@ -116,7 +116,7 @@ export function HelpDeskEmailAccountDialog({
       setFormData(prev => ({
         ...prev,
         email_address: userEmail,
-        display_name: userName,
+        name: userName,
       }));
     } finally {
       setIsFetchingMailboxes(false);
@@ -144,7 +144,7 @@ export function HelpDeskEmailAccountDialog({
         setFormData(prev => ({
           ...prev,
           email_address: propOauthData.email,
-          display_name: propOauthData.email,
+          name: propOauthData.email,
         }));
         setIsFetchingMailboxes(false);
       });
@@ -156,14 +156,14 @@ export function HelpDeskEmailAccountDialog({
     if (account) {
       setFormData({
         email_address: account.email_address || "",
-        display_name: account.display_name || "",
+        name: account.name || "",
         pipeline_id: account.pipeline_id || "",
         is_active: account.is_active ?? true,
       });
     } else {
       setFormData({
         email_address: "",
-        display_name: "",
+        name: "",
         pipeline_id: pipelines?.[0]?.id || "",
         is_active: true,
       });
@@ -292,7 +292,7 @@ export function HelpDeskEmailAccountDialog({
                 setFormData(prev => ({
                   ...prev,
                   email_address: oauthData.email,
-                  display_name: oauthData.email,
+                  name: oauthData.email,
                 }));
                 setIsFetchingMailboxes(false);
               });
@@ -357,7 +357,7 @@ export function HelpDeskEmailAccountDialog({
       const accountData: any = {
         tenant_id: profile.tenant_id,
         email_address: formData.email_address,
-        display_name: formData.display_name,
+        name: formData.name,
         provider: "microsoft",
         pipeline_id: formData.pipeline_id || null,
         is_active: formData.is_active,
@@ -480,7 +480,7 @@ export function HelpDeskEmailAccountDialog({
                         setFormData({ 
                           ...formData, 
                           email_address: value,
-                          display_name: selected?.displayName || value
+                          name: selected?.displayName || value
                         });
                       }}
                       disabled={account !== undefined}
@@ -502,13 +502,13 @@ export function HelpDeskEmailAccountDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="display_name">Display Name</Label>
+                    <Label htmlFor="name">Display Name</Label>
                     <Input
-                      id="display_name"
+                      id="name"
                       placeholder="Support Team"
-                      value={formData.display_name}
+                      value={formData.name}
                       onChange={(e) =>
-                        setFormData({ ...formData, display_name: e.target.value })
+                        setFormData({ ...formData, name: e.target.value })
                       }
                     />
                   </div>
@@ -564,7 +564,7 @@ export function HelpDeskEmailAccountDialog({
           {(account || oauthData) && (
             <Button
               onClick={() => saveMutation.mutate()}
-              disabled={!formData.email_address || !formData.display_name || !formData.pipeline_id || saveMutation.isPending}
+              disabled={!formData.email_address || !formData.name || !formData.pipeline_id || saveMutation.isPending}
             >
               {saveMutation.isPending ? "Saving..." : account ? "Update Account" : "Connect Account"}
             </Button>
