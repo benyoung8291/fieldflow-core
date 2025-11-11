@@ -67,6 +67,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
     
+    // Check if OAuth flag is stuck (older than 5 minutes)
+    const oauthFlag = localStorage.getItem('oauth_in_progress');
+    if (oauthFlag === 'true') {
+      console.warn("⚠️ Found stuck oauth_in_progress flag on mount, clearing it");
+      localStorage.removeItem('oauth_in_progress');
+      localStorage.removeItem('oauth_session_key');
+    }
+    
     // Set a timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (mounted && isAuthenticated === null) {
@@ -77,6 +85,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
+        console.log("📱 Initial session check:", session ? "authenticated" : "not authenticated");
         if (mounted) {
           setIsAuthenticated(!!session);
         }
@@ -89,26 +98,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("🔐 Auth state change event:", event, "Session exists:", !!session);
+      const timestamp = new Date().toISOString();
+      console.log(`🔐 [${timestamp}] Auth state change:`, event, "Session:", !!session);
       console.log("🔐 OAuth in progress flag:", localStorage.getItem('oauth_in_progress'));
       console.log("🔐 Current path:", window.location.pathname);
       
       // CRITICAL: Ignore ALL auth state changes during OAuth popup flow
       const oauthInProgress = localStorage.getItem('oauth_in_progress');
       if (oauthInProgress === 'true') {
-        console.log("⏭️ BLOCKING auth state change during OAuth flow - event:", event);
+        console.log(`⏭️ [${timestamp}] BLOCKING auth state change during OAuth flow - event:`, event);
         return;
       }
       
       // Ignore token refresh events - they shouldn't affect authentication state
       if (event === 'TOKEN_REFRESHED') {
-        console.log("⏭️ Ignoring TOKEN_REFRESHED event");
+        console.log(`⏭️ [${timestamp}] Ignoring TOKEN_REFRESHED event`);
         return;
       }
       
       // ONLY react to explicit sign in/out events
       if (event === 'SIGNED_IN') {
-        console.log("✅ User signed in");
+        console.log(`✅ [${timestamp}] User signed in`);
         if (mounted) {
           setIsAuthenticated(true);
         }
@@ -116,7 +126,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (event === 'SIGNED_OUT') {
-        console.log("🚪 User explicitly signed out");
+        console.log(`🚪 [${timestamp}] User explicitly signed out`);
         if (mounted) {
           setIsAuthenticated(false);
         }
@@ -124,7 +134,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
       
       // Ignore all other events (USER_UPDATED, etc.)
-      console.log("⏭️ Ignoring auth event:", event);
+      console.log(`⏭️ [${timestamp}] Ignoring auth event:`, event);
     });
 
     return () => {

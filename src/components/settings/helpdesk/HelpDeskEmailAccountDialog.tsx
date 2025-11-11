@@ -179,7 +179,16 @@ export function HelpDeskEmailAccountDialog({
     try {
       // Set flag to prevent app from reacting to auth changes during OAuth
       localStorage.setItem('oauth_in_progress', 'true');
-      console.log("🎯 Set oauth_in_progress flag to true in localStorage");
+      const startTime = Date.now();
+      console.log("🎯 Set oauth_in_progress flag to true in localStorage at", new Date().toISOString());
+      
+      // Safety timeout: clear flag after 5 minutes no matter what
+      const safetyTimeout = setTimeout(() => {
+        console.warn("⚠️ OAuth safety timeout reached - clearing flag");
+        localStorage.removeItem('oauth_in_progress');
+        localStorage.removeItem('oauth_session_key');
+      }, 5 * 60 * 1000); // 5 minutes
+      
       setIsAuthenticating(true);
       
       // Generate a unique session identifier
@@ -222,8 +231,10 @@ export function HelpDeskEmailAccountDialog({
           // Check if popup was closed
           if (popup.closed) {
             clearInterval(checkInterval);
+            clearTimeout(safetyTimeout);
             localStorage.removeItem('oauth_in_progress');
             localStorage.removeItem('oauth_session_key');
+            console.log("🚪 Popup closed, flags cleared");
             setIsAuthenticating(false);
             toast({
               title: "Authentication cancelled",
@@ -235,9 +246,11 @@ export function HelpDeskEmailAccountDialog({
           // Check if max attempts reached
           if (attempts > maxAttempts) {
             clearInterval(checkInterval);
+            clearTimeout(safetyTimeout);
             popup.close();
             localStorage.removeItem('oauth_in_progress');
             localStorage.removeItem('oauth_session_key');
+            console.log("⏱️ OAuth timeout, flags cleared");
             setIsAuthenticating(false);
             toast({
               title: "Authentication timeout",
@@ -302,9 +315,11 @@ export function HelpDeskEmailAccountDialog({
               
               // Clear OAuth in progress flag
               console.log("✅ OAuth complete, clearing flags from localStorage");
+              clearTimeout(safetyTimeout);
               localStorage.removeItem('oauth_in_progress');
               localStorage.removeItem('oauth_session_key');
-              console.log("✅ Flags cleared, oauth_in_progress:", localStorage.getItem('oauth_in_progress'));
+              console.log("✅ Flags cleared at", new Date().toISOString(), "oauth_in_progress:", localStorage.getItem('oauth_in_progress'));
+              console.log("✅ Total OAuth duration:", (Date.now() - startTime) / 1000, "seconds");
 
               toast({
                 title: "Microsoft account connected!",
@@ -323,6 +338,7 @@ export function HelpDeskEmailAccountDialog({
       console.error("❌ Microsoft auth error:", error);
       localStorage.removeItem('oauth_in_progress');
       localStorage.removeItem('oauth_session_key');
+      console.log("❌ Error occurred, flags cleared");
       toast({
         title: "Failed to start Microsoft authentication",
         description: error instanceof Error ? error.message : "Unknown error",
