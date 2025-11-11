@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Mail, FileText, CheckSquare, Paperclip } from "lucide-react";
+import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { TicketActionsMenu } from "./TicketActionsMenu";
@@ -106,6 +106,20 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     }
   };
 
+  const isReply = (message: any) => {
+    return message.subject?.startsWith("RE:") || message.subject?.startsWith("Re:");
+  };
+
+  const isForward = (message: any) => {
+    return message.subject?.startsWith("FW:") || message.subject?.startsWith("Fw:");
+  };
+
+  const getThreadingIcon = (message: any) => {
+    if (isForward(message)) return <Forward className="h-3 w-3" />;
+    if (isReply(message)) return <CornerDownRight className="h-3 w-3" />;
+    return null;
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header - Compact */}
@@ -139,38 +153,91 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           <div className="text-center text-muted-foreground text-sm py-4">Loading messages...</div>
         ) : messages && messages.length > 0 ? (
           <div className="space-y-3">
-            {messages.map((message, index) => (
-              <div key={message.id} className="relative">
-                {index !== messages.length - 1 && (
-                  <div className="absolute left-4 top-8 bottom-0 w-px bg-border" />
-                )}
-                
-                <div className="flex gap-2">
-                  <div className={cn(
-                    "h-7 w-7 rounded-full flex items-center justify-center shrink-0 border border-background",
-                    message.direction === "inbound" ? "bg-blue-500/10" : 
-                    message.direction === "outbound" ? "bg-green-500/10" : "bg-purple-500/10"
-                  )}>
-                    <div className={getMessageTypeColor(message.message_type)}>
-                      {getMessageIcon(message.message_type)}
+            {messages.map((message, index) => {
+              const messageIsReply = isReply(message);
+              const messageIsForward = isForward(message);
+              const shouldIndent = messageIsReply || messageIsForward;
+              
+              return (
+                <div key={message.id} className="relative">
+                  {/* Threading line */}
+                  {index !== messages.length - 1 && (
+                    <div className={cn(
+                      "absolute top-8 bottom-0 w-px",
+                      shouldIndent ? "left-8" : "left-4",
+                      message.direction === "inbound" 
+                        ? "bg-blue-500/30" 
+                        : message.direction === "outbound" 
+                        ? "bg-green-500/30" 
+                        : "bg-border"
+                    )} />
+                  )}
+                  
+                  {/* Branch indicator for replies/forwards */}
+                  {shouldIndent && (
+                    <div className={cn(
+                      "absolute left-4 top-4 w-4 h-px",
+                      message.direction === "inbound" 
+                        ? "bg-blue-500/30" 
+                        : message.direction === "outbound" 
+                        ? "bg-green-500/30" 
+                        : "bg-border"
+                    )} />
+                  )}
+                  
+                  <div className={cn("flex gap-2", shouldIndent && "ml-4")}>
+                    <div className={cn(
+                      "h-7 w-7 rounded-full flex items-center justify-center shrink-0 border-2 bg-background relative z-10",
+                      message.direction === "inbound" 
+                        ? "border-blue-500/50" 
+                        : message.direction === "outbound" 
+                        ? "border-green-500/50" 
+                        : "border-purple-500/50"
+                    )}>
+                      <div className={getMessageTypeColor(message.message_type)}>
+                        {getMessageIcon(message.message_type)}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="bg-card border rounded-md p-2">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-medium text-xs">
-                              {message.sender_name || message.from_name || message.created_user?.first_name + " " + message.created_user?.last_name || "Unknown"}
-                            </span>
-                            {(message.sender_email || message.from_email) && (
-                              <span className="text-xs text-muted-foreground">&lt;{message.sender_email || message.from_email}&gt;</span>
-                            )}
-                            <Badge variant="outline" className="text-xs h-4 px-1">
-                              {message.message_type.replace("_", " ")}
-                            </Badge>
-                          </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={cn(
+                        "bg-card border rounded-md p-2",
+                        message.direction === "inbound" && "border-l-2 border-l-blue-500/30",
+                        message.direction === "outbound" && "border-l-2 border-l-green-500/30"
+                      )}>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {getThreadingIcon(message) && (
+                                <span className={cn(
+                                  "flex items-center",
+                                  messageIsForward ? "text-orange-500" : "text-blue-500"
+                                )}>
+                                  {getThreadingIcon(message)}
+                                </span>
+                              )}
+                              <span className="font-medium text-xs">
+                                {message.sender_name || message.from_name || message.created_user?.first_name + " " + message.created_user?.last_name || "Unknown"}
+                              </span>
+                              {(message.sender_email || message.from_email) && (
+                                <span className="text-xs text-muted-foreground">&lt;{message.sender_email || message.from_email}&gt;</span>
+                              )}
+                              <Badge variant="outline" className="text-xs h-4 px-1">
+                                {message.message_type.replace("_", " ")}
+                              </Badge>
+                              {message.direction && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-xs h-4 px-1",
+                                    message.direction === "inbound" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                                    message.direction === "outbound" && "bg-green-500/10 text-green-600 dark:text-green-400"
+                                  )}
+                                >
+                                  {message.direction === "inbound" ? "↓" : "↑"}
+                                </Badge>
+                              )}
+                            </div>
                           {message.to_email && (
                             <p className="text-xs text-muted-foreground mt-0.5">
                               To: {message.to_email}
@@ -228,11 +295,12 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                           </div>
                         </div>
                       )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center text-muted-foreground text-sm py-4">No messages yet</div>
