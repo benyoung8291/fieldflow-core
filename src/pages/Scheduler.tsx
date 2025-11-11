@@ -39,7 +39,6 @@ export default function Scheduler() {
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
   const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
-  const [detailsAppointment, setDetailsAppointment] = useState<any | null>(null);
   const [gpsCheckInAppointment, setGpsCheckInAppointment] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSmartScheduling, setShowSmartScheduling] = useState(false);
@@ -615,7 +614,7 @@ export default function Scheduler() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Appointment deleted");
-      setDetailsAppointment(null);
+      setViewDetailsAppointmentId(null);
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to delete appointment");
@@ -1028,18 +1027,6 @@ export default function Scheduler() {
         onSchedule={handleSmartSchedule}
       />
 
-      <AppointmentDetailsDialog
-        appointment={detailsAppointment}
-        open={!!detailsAppointment}
-        onOpenChange={(open) => !open && setDetailsAppointment(null)}
-        onEdit={() => {
-          setEditingAppointmentId(detailsAppointment?.id);
-          setDialogOpen(true);
-          setDetailsAppointment(null);
-        }}
-        onDelete={detailsAppointment && !detailsAppointment.assigned_to ? () => handleDeleteAppointment(detailsAppointment.id) : undefined}
-      />
-
       {gpsCheckInAppointment && (
         <GPSCheckInDialog
           appointment={gpsCheckInAppointment}
@@ -1199,10 +1186,7 @@ export default function Scheduler() {
                   <SchedulerDayView 
                     currentDate={currentDate} 
                     appointments={appointments}
-                    onAppointmentClick={(id) => {
-                      const apt = appointments.find(a => a.id === id);
-                      setDetailsAppointment(apt);
-                    }}
+                    onAppointmentClick={setViewDetailsAppointmentId}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
@@ -1217,10 +1201,7 @@ export default function Scheduler() {
                     appointments={appointments}
                     workers={workers}
                     checkAvailability={checkAvailability}
-                    onAppointmentClick={(id) => {
-                      const apt = appointments.find(a => a.id === id);
-                      setDetailsAppointment(apt);
-                    }}
+                    onAppointmentClick={setViewDetailsAppointmentId}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
@@ -1233,10 +1214,7 @@ export default function Scheduler() {
                   <SchedulerMonthView 
                     currentDate={currentDate}
                     appointments={appointments}
-                    onAppointmentClick={(id) => {
-                      const apt = appointments.find(a => a.id === id);
-                      setDetailsAppointment(apt);
-                    }}
+                    onAppointmentClick={setViewDetailsAppointmentId}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
@@ -1248,10 +1226,7 @@ export default function Scheduler() {
                 {viewType === "kanban" && (
                   <KanbanBoardView
                     appointments={appointments}
-                    onAppointmentClick={(id) => {
-                      const apt = appointments.find(a => a.id === id);
-                      setDetailsAppointment(apt);
-                    }}
+                    onAppointmentClick={setViewDetailsAppointmentId}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
                       setDialogOpen(true);
