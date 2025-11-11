@@ -122,17 +122,17 @@ const App = () => {
 
   if (isAuthenticated === null) {
     return (
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
           <div className="flex items-center justify-center min-h-screen">Loading...</div>
-        </QueryClientProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     );
   }
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -187,8 +187,8 @@ const App = () => {
           </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 
