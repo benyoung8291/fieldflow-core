@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2 } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import SchedulerDayView from "@/components/scheduler/SchedulerDayView";
 import SchedulerWeekView from "@/components/scheduler/SchedulerWeekView";
@@ -1242,14 +1243,29 @@ export default function Scheduler() {
         </Card>
           </div>
 
-          {/* Draggable Service Orders Sidebar - Hidden in service order view */}
-          {!showServiceOrderView && (
+          {/* Right Sidebar - Service Orders or Workers depending on view */}
+          {!showServiceOrderView ? (
             <div>
-              <ServiceOrdersSidebar 
-                onSelectWorkerForOrder={handleSelectWorkerForOrder}
-                workers={workers}
-              />
+              <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
             </div>
+          ) : (
+            <Card className="h-full">
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">Available Workers</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Drag to appointments
+                </p>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[calc(100vh-180px)] px-2 pb-2">
+                  <div className="space-y-2">
+                    {workers.map(worker => (
+                      <DraggableWorker key={worker.id} worker={worker} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           )}
         </div>
         
