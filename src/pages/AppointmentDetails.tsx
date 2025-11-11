@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ import TimeLogsTable from "@/components/service-orders/TimeLogsTable";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -43,6 +46,7 @@ export default function AppointmentDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, userRoles } = usePermissions();
+  const { isMobile } = useViewMode();
   const isSupervisorOrAdmin = isAdmin || userRoles?.some((r) => r.role === "supervisor");
   const [isDragging, setIsDragging] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -279,6 +283,140 @@ export default function AppointmentDetails() {
     );
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen bg-background pb-20">
+          {/* Mobile Header */}
+          <div className="sticky top-0 z-20 bg-background border-b p-3">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/appointments")}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-semibold truncate">{appointment.title}</h1>
+                <p className="text-xs text-muted-foreground truncate">
+                  {format(new Date(appointment.start_time), "MMM d, yyyy h:mm a")}
+                </p>
+              </div>
+              <Badge
+                variant="outline"
+                className={cn("flex-shrink-0 text-xs", statusColors[appointment.status as keyof typeof statusColors])}
+              >
+                {appointment.status}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Mobile Content */}
+          <div className="p-3">
+            <Accordion type="multiple" defaultValue={["details"]} className="space-y-2">
+              {/* Details Section */}
+              <AccordionItem value="details" className="border rounded-lg bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <span className="font-medium">Details</span>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Start</Label>
+                      <p className="text-sm font-medium mt-1">
+                        {format(new Date(appointment.start_time), "h:mm a")}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">End</Label>
+                      <p className="text-sm font-medium mt-1">
+                        {format(new Date(appointment.end_time), "h:mm a")}
+                      </p>
+                    </div>
+                  </div>
+                  {appointment.description && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Description</Label>
+                      <p className="text-sm mt-1">{appointment.description}</p>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Workers Section */}
+              {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
+                <AccordionItem value="workers" className="border rounded-lg bg-card">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span className="font-medium">Workers ({appointment.appointment_workers.length})</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4 space-y-2">
+                    {appointment.appointment_workers.map((aw: any) => (
+                      <div key={aw.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-medium">
+                            {aw.profiles?.first_name?.[0]}{aw.profiles?.last_name?.[0]}
+                          </span>
+                        </div>
+                        <span className="text-sm">
+                          {aw.profiles?.first_name} {aw.profiles?.last_name}
+                        </span>
+                      </div>
+                    ))}
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              {/* Files & Time Logs */}
+              <AccordionItem value="files" className="border rounded-lg bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium">Files ({attachments.length})</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-2">
+                    {attachments.map((file: any) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 flex-shrink-0" />
+                          <p className="text-sm truncate">{file.file_name}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" asChild>
+                          <a href={file.file_url} download>
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="time-logs" className="border rounded-lg bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-medium">Time Logs</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <TimeLogsTable appointmentId={id!} />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Desktop Layout
   return (
     <DashboardLayout>
       <div className="space-y-6">

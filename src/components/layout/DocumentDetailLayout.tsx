@@ -11,7 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { ArrowLeft, FileText } from "lucide-react";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import { cn } from "@/lib/utils";
 
 export interface DocumentAction {
   label: string;
@@ -86,6 +94,7 @@ export default function DocumentDetailLayout({
   notFoundMessage,
 }: DocumentDetailLayoutProps) {
   const navigate = useNavigate();
+  const { isMobile } = useViewMode();
 
   if (isLoading) {
     return (
@@ -110,6 +119,138 @@ export default function DocumentDetailLayout({
     );
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen bg-background pb-20">
+          {/* Mobile Header */}
+          <div className="sticky top-0 z-20 bg-background border-b">
+            <div className="flex items-center gap-3 p-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(backPath)}
+                className="flex-shrink-0"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-semibold truncate">{title}</h1>
+                {subtitle && (
+                  <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                )}
+              </div>
+              {statusBadges[0] && (
+                <Badge
+                  variant={statusBadges[0].variant || "default"}
+                  className={cn("flex-shrink-0 text-xs", statusBadges[0].className)}
+                >
+                  {statusBadges[0].label}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Action Bar */}
+          <div className="sticky top-[61px] z-10 bg-background border-b p-3 flex items-center gap-2 overflow-x-auto">
+            {primaryActions
+              .filter(action => action.show !== false)
+              .slice(0, 2)
+              .map((action, idx) => (
+                <Button
+                  key={idx}
+                  variant={action.variant || "default"}
+                  size="sm"
+                  onClick={action.onClick}
+                  className="flex-shrink-0"
+                >
+                  {action.icon}
+                  <span className="ml-2">{action.label}</span>
+                </Button>
+              ))}
+            
+            {(fileMenuActions.length > 0 || primaryActions.length > 2) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="ml-auto flex-shrink-0">
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {primaryActions
+                    .filter(action => action.show !== false)
+                    .slice(2)
+                    .map((action, idx) => (
+                      <DropdownMenuItem key={idx} onClick={action.onClick}>
+                        {action.icon && <span className="mr-2">{action.icon}</span>}
+                        {action.label}
+                      </DropdownMenuItem>
+                    ))}
+                  {primaryActions.length > 2 && fileMenuActions.length > 0 && (
+                    <DropdownMenuSeparator />
+                  )}
+                  {fileMenuActions.map((action, idx) => (
+                    <div key={idx}>
+                      {action.separator && idx > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuItem
+                        onClick={action.onClick}
+                        className={action.destructive ? "text-destructive" : ""}
+                      >
+                        {action.icon && <span className="mr-2">{action.icon}</span>}
+                        {action.label}
+                      </DropdownMenuItem>
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* Key Info */}
+          {keyInfoSection && (
+            <div className="p-3">
+              {keyInfoSection}
+            </div>
+          )}
+
+          {/* Sections as Accordion */}
+          <div className="px-3 pb-3">
+            <Accordion
+              type="multiple"
+              defaultValue={[defaultTab || tabs[0]?.value]}
+              className="space-y-2"
+            >
+              {tabs.map((tab) => (
+                <AccordionItem
+                  key={tab.value}
+                  value={tab.value}
+                  className="border rounded-lg bg-card"
+                >
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      {tab.icon}
+                      <span className="font-medium">{tab.label}</span>
+                      {tab.badge !== undefined && (
+                        <Badge variant="secondary" className="ml-1">
+                          {tab.badge}
+                        </Badge>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    {tab.content}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Desktop Layout
   return (
     <DashboardLayout>
       <div className="space-y-6">
