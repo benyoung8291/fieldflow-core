@@ -1156,6 +1156,8 @@ export type Database = {
       }
       helpdesk_tickets: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           contact_id: string | null
           created_at: string
@@ -1165,6 +1167,8 @@ export type Database = {
           email_thread_id: string | null
           external_email: string | null
           id: string
+          is_archived: boolean | null
+          is_read: boolean | null
           last_message_at: string | null
           microsoft_conversation_id: string | null
           microsoft_message_id: string | null
@@ -1174,11 +1178,14 @@ export type Database = {
           sender_name: string | null
           status: string
           subject: string
+          tags: string[] | null
           tenant_id: string
           ticket_number: string
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1188,6 +1195,8 @@ export type Database = {
           email_thread_id?: string | null
           external_email?: string | null
           id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
           last_message_at?: string | null
           microsoft_conversation_id?: string | null
           microsoft_message_id?: string | null
@@ -1197,11 +1206,14 @@ export type Database = {
           sender_name?: string | null
           status?: string
           subject: string
+          tags?: string[] | null
           tenant_id: string
           ticket_number: string
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1211,6 +1223,8 @@ export type Database = {
           email_thread_id?: string | null
           external_email?: string | null
           id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
           last_message_at?: string | null
           microsoft_conversation_id?: string | null
           microsoft_message_id?: string | null
@@ -1220,6 +1234,7 @@ export type Database = {
           sender_name?: string | null
           status?: string
           subject?: string
+          tags?: string[] | null
           tenant_id?: string
           ticket_number?: string
           updated_at?: string

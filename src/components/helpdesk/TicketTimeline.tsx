@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Mail, FileText, CheckSquare, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { TicketActionsMenu } from "./TicketActionsMenu";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -95,15 +96,26 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     <div className="flex flex-col h-full">
       {/* Header - Compact */}
       <div className="px-3 py-2 border-b bg-background">
-        <h2 className="text-sm font-semibold mb-0.5 line-clamp-1">{ticket?.subject || "Loading..."}</h2>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-mono">{ticket?.ticket_number}</span>
-          {ticket?.customer && (
-            <>
-              <span>•</span>
-              <span>{ticket.customer.name}</span>
-            </>
-          )}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold mb-0.5 line-clamp-1">{ticket?.subject || "Loading..."}</h2>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+              <span className="font-mono">{ticket?.ticket_number}</span>
+              {ticket?.customer && (
+                <>
+                  <span>•</span>
+                  <span>{ticket.customer.name}</span>
+                </>
+              )}
+              {ticket?.assigned_user && (
+                <>
+                  <span>•</span>
+                  <span>Assigned to: {ticket.assigned_user.first_name} {ticket.assigned_user.last_name}</span>
+                </>
+              )}
+            </div>
+          </div>
+          {ticket && <TicketActionsMenu ticket={ticket} />}
         </div>
       </div>
 

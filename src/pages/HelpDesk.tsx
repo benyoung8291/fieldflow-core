@@ -8,8 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export default function HelpDesk() {
   const { toast } = useToast();
@@ -17,6 +20,8 @@ export default function HelpDesk() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("all");
+  const [filterArchived, setFilterArchived] = useState<boolean>(false);
 
   const { data: pipelines } = useQuery({
     queryKey: ["helpdesk-pipelines"],
@@ -63,6 +68,18 @@ export default function HelpDesk() {
     },
     enabled: !!selectedTicketId,
   });
+
+  const handleSelectTicket = async (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    
+    // Mark ticket as read when opened
+    await supabase
+      .from("helpdesk_tickets")
+      .update({ is_read: true })
+      .eq("id", ticketId);
+    
+    queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+  };
 
   const handleSyncEmails = async () => {
     if (!emailAccounts || emailAccounts.length === 0) {
@@ -155,6 +172,37 @@ export default function HelpDesk() {
                 ))}
               </SelectContent>
             </Select>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs">
+                  <Filter className="h-3 w-3 mr-1.5" />
+                  Filters
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="start">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Assignment</Label>
+                    <Select value={filterAssignment} onValueChange={(value: any) => setFilterAssignment(value)}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Tickets</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        <SelectItem value="assigned_to_me">Assigned to Me</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Show Archived</Label>
+                    <Switch checked={filterArchived} onCheckedChange={setFilterArchived} />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-7 text-xs">
             <RefreshCw className={`h-3 w-3 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
@@ -167,8 +215,10 @@ export default function HelpDesk() {
         <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
           <TicketList 
             selectedTicketId={selectedTicketId} 
-            onSelectTicket={setSelectedTicketId}
+            onSelectTicket={handleSelectTicket}
             pipelineId={selectedPipelineId}
+            filterAssignment={filterAssignment}
+            filterArchived={filterArchived}
           />
         </ResizablePanel>
 

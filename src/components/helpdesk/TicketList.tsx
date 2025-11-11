@@ -13,27 +13,41 @@ interface TicketListProps {
   selectedTicketId: string | null;
   onSelectTicket: (ticketId: string) => void;
   pipelineId?: string | null;
+  filterAssignment?: "all" | "unassigned" | "assigned_to_me";
+  filterArchived?: boolean;
 }
 
-export function TicketList({ selectedTicketId, onSelectTicket, pipelineId }: TicketListProps) {
+export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filterAssignment = "all", filterArchived = false }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["helpdesk-tickets"],
+    queryKey: ["helpdesk-tickets", filterArchived],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("helpdesk_tickets" as any)
         .select(`
           *,
           customer:customers(name),
           contact:customer_contacts(first_name, last_name),
-          pipeline:helpdesk_pipelines(name, color)
+          pipeline:helpdesk_pipelines(name, color),
+          assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name)
         `)
+        .eq("is_archived", filterArchived);
+
+      const { data, error } = await query
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as any[];
+    },
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser();
+      return data.user;
     },
   });
 
@@ -45,7 +59,13 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId }: Tic
     
     const matchesPipeline = !pipelineId || ticket.pipeline_id === pipelineId;
     
-    return matchesSearch && matchesPipeline;
+    const matchesAssignment = 
+      filterAssignment === "all" ? true :
+      filterAssignment === "unassigned" ? !ticket.assigned_to :
+      filterAssignment === "assigned_to_me" ? ticket.assigned_to === currentUser?.id :
+      true;
+    
+    return matchesSearch && matchesPipeline && matchesAssignment;
   });
 
   const getStatusColor = (status: string) => {
@@ -97,54 +117,69 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId }: Tic
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors h-[100px] flex items-start",
-                  selectedTicketId === ticket.id && "bg-accent"
+                  "w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b",
+                  selectedTicketId === ticket.id && "bg-accent",
+                  !ticket.is_read && "bg-muted/30"
                 )}
               >
-                <div className="space-y-1 w-full overflow-hidden">
-                  <div className="flex items-start justify-between gap-1">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {ticket.ticket_number}
-                        </span>
-                        <Badge variant="outline" className={cn("text-xs h-4 px-1", getPriorityColor(ticket.priority))}>
-                          {ticket.priority}
-                        </Badge>
-                      </div>
-                      <p className="font-medium text-xs line-clamp-2">{ticket.subject}</p>
-                    </div>
+                {/* Header Row */}
+                <div className="flex items-center justify-between gap-2 w-full">
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {ticket.ticket_number}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="outline" className={cn("text-xs h-4 px-1", getPriorityColor(ticket.priority))}>
+                      {ticket.priority}
+                    </Badge>
                     <Badge variant="outline" className={cn("text-xs shrink-0 h-4 px-1", getStatusColor(ticket.status))}>
                       {ticket.status}
                     </Badge>
                   </div>
+                </div>
 
-                  <div className="text-xs text-muted-foreground space-y-0.5">
-                    {ticket.customer ? (
-                      <p className="truncate">{ticket.customer.name}</p>
-                    ) : ticket.contact ? (
-                      <p className="truncate">{ticket.contact.first_name} {ticket.contact.last_name}</p>
-                    ) : (
-                      <p className="truncate">{ticket.external_email || "Unknown"}</p>
-                    )}
-                    
-                    {ticket.last_message_at && (
-                      <p className="text-xs">
-                        {formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true })}
-                      </p>
-                    )}
-                  </div>
+                {/* Subject */}
+                <p className="font-medium text-xs line-clamp-2 w-full">{ticket.subject}</p>
 
+                {/* Sender Info */}
+                <div className="text-xs text-muted-foreground w-full">
+                  {ticket.customer ? (
+                    <p className="truncate">{ticket.customer.name}</p>
+                  ) : ticket.contact ? (
+                    <p className="truncate">{ticket.contact.first_name} {ticket.contact.last_name}</p>
+                  ) : (
+                    <p className="truncate">{ticket.external_email || "Unknown"}</p>
+                  )}
+                </div>
+
+                {/* Footer Row */}
+                <div className="flex items-center justify-between gap-2 w-full">
                   {ticket.pipeline && (
                     <div className="flex items-center gap-1">
                       <div 
                         className="h-1.5 w-1.5 rounded-full" 
                         style={{ backgroundColor: ticket.pipeline.color }}
                       />
-                      <span className="text-xs text-muted-foreground">{ticket.pipeline.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{ticket.pipeline.name}</span>
                     </div>
                   )}
+                  
+                  {ticket.last_message_at && (
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true })}
+                    </p>
+                  )}
                 </div>
+
+                {/* Tags */}
+                {ticket.tags && ticket.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {ticket.tags.map((tag: string) => (
+                      <Badge key={tag} variant="secondary" className="text-xs h-4 px-1">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </button>
             ))}
           </div>
