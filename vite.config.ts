@@ -20,14 +20,14 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "Service Pulse - Worker App",
+        name: "Service Pulse",
         short_name: "Service Pulse",
-        description: "Field service management for workers",
+        description: "Complete field service management platform",
         theme_color: "#10b981",
         background_color: "#ffffff",
         display: "standalone",
-        orientation: "portrait",
-        start_url: "/worker/dashboard",
+        orientation: "any",
+        start_url: "/",
         icons: [
           {
             src: "/icon-192.png",

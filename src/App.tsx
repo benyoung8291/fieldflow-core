@@ -50,6 +50,8 @@ import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashb
 import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
 import SupervisorServiceOrders from "./pages/worker/supervisor/SupervisorServiceOrders";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
+import { useOfflineSync } from "./hooks/useOfflineSync";
+import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,7 +65,11 @@ const queryClient = new QueryClient({
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
+  // Initialize PWA and offline sync for both worker and office apps
   usePWAUpdate();
+  useOfflineSync();
+  useOfflineSyncOffice();
 
   useEffect(() => {
     let mounted = true;
