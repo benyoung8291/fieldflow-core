@@ -8,11 +8,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
+      defaultTheme="light"
+      enableSystem={false}
       storageKey="theme-preference"
-      forcedTheme={undefined}
     >
       <ThemeSyncWrapper>{children}</ThemeSyncWrapper>
     </NextThemesProvider>
@@ -20,12 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ThemeSyncWrapper({ children }: { children: React.ReactNode }) {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-
-  // Debug logging
-  useEffect(() => {
-    console.log('Theme state:', { theme, resolvedTheme, htmlClass: document.documentElement.className });
-  }, [theme, resolvedTheme]);
+  const { theme, setTheme } = useTheme();
 
   // Load user's theme preference from profile
   const { data: profile } = useQuery({
@@ -57,10 +50,9 @@ function ThemeSyncWrapper({ children }: { children: React.ReactNode }) {
     },
   });
 
-  // Apply saved theme on load
+  // Apply saved theme on load (only light/dark, no system)
   useEffect(() => {
-    if (profile?.theme_preference && profile.theme_preference !== theme) {
-      console.log('Applying saved theme preference:', profile.theme_preference);
+    if (profile?.theme_preference && profile.theme_preference !== 'system' && profile.theme_preference !== theme) {
       setTheme(profile.theme_preference);
     }
   }, [profile, theme, setTheme]);

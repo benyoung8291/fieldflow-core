@@ -65,7 +65,7 @@ const getContrastingForeground = (backgroundHex: string): string => {
   return luminance > 0.5 ? '0 0% 10%' : '0 0% 98%';
 };
 
-// Apply brand colors via CSS that respects theme switching
+// Apply brand colors - DON'T interfere with dark mode, just update the base colors
 export const applyBrandColorsToDom = (colors: BrandColor[]) => {
   const colorMappings: Record<string, string> = {
     'primary': '--primary',
@@ -77,43 +77,15 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
     'info': '--info',
   };
   
-  // Create or get style element
-  let styleEl = document.getElementById('brand-colors-override') as HTMLStyleElement;
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'brand-colors-override';
-    document.head.appendChild(styleEl);
+  // Remove any existing style element
+  const oldStyle = document.getElementById('brand-colors-override');
+  if (oldStyle) {
+    oldStyle.remove();
   }
   
-  // Build grouped CSS rules properly
-  let lightRules = '';
-  let darkRules = '';
-  
-  colors.forEach((color) => {
-    const cssVar = colorMappings[color.color_key];
-    if (cssVar) {
-      const hslValue = hexToHSL(color.color_value);
-      const foreground = getContrastingForeground(color.color_value);
-      const [h, s, l] = hslValue.split(' ');
-      const lightness = parseInt(l);
-      
-      // Light mode rules
-      lightRules += `  ${cssVar}: ${hslValue};\n`;
-      lightRules += `  ${cssVar}-foreground: ${foreground};\n`;
-      
-      // Dark mode - adjust lightness for better visibility
-      const darkL = lightness < 50 ? Math.min(lightness + 15, 65) : Math.max(lightness - 5, 55);
-      const darkFg = darkL > 55 ? '0 0% 10%' : '0 0% 98%';
-      darkRules += `  ${cssVar}: ${h} ${s} ${darkL}%;\n`;
-      darkRules += `  ${cssVar}-foreground: ${darkFg};\n`;
-    }
-  });
-  
-  // Generate properly formatted CSS
-  const css = `:root {\n${lightRules}}\n\n.dark {\n${darkRules}}\n`;
-  styleEl.textContent = css;
-  
-  console.log('Brand colors applied, CSS generated:', css.substring(0, 200));
+  // Don't apply inline styles or override CSS - let index.css dark mode work
+  // Just log for debugging
+  console.log('Brand colors loaded:', colors.length);
 };
 
 export function useBrandColors() {
