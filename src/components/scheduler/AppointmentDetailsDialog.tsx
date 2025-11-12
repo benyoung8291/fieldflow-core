@@ -103,27 +103,35 @@ export default function AppointmentDetailsDialog({
   const { data: workerAuditLogs = [] } = useQuery({
     queryKey: ["worker-audit-logs", appointment.id],
     queryFn: async () => {
-      // First get all appointment_workers records for this appointment
-      const { data: appointmentWorkers } = await supabase
-        .from("appointment_workers")
-        .select("id")
-        .eq("appointment_id", appointment.id);
-      
-      if (!appointmentWorkers || appointmentWorkers.length === 0) return [];
-      
-      const workerRecordIds = appointmentWorkers.map(aw => aw.id);
-      
-      // Then fetch audit logs for those records
-      const { data: auditLogs } = await supabase
+      // Query audit logs for appointment_workers table
+      const { data: auditLogs, error } = await supabase
         .from("audit_logs")
         .select("*")
         .eq("table_name", "appointment_workers")
-        .in("record_id", workerRecordIds)
         .order("created_at", { ascending: false });
       
+      if (error) {
+        console.error("Error fetching worker audit logs:", error);
+        return [];
+      }
+
+      if (!auditLogs || auditLogs.length === 0) return [];
+      
+      // Filter logs to only include those related to this appointment
+      const relevantLogs = auditLogs.filter(log => {
+        try {
+          const newValue = log.new_value ? JSON.parse(log.new_value) : null;
+          const oldValue = log.old_value ? JSON.parse(log.old_value) : null;
+          const appointmentId = newValue?.appointment_id || oldValue?.appointment_id;
+          return appointmentId === appointment.id;
+        } catch {
+          return false;
+        }
+      });
+
       // Fetch worker names for the logs
-      if (auditLogs && auditLogs.length > 0) {
-        const workerIds = auditLogs
+      if (relevantLogs.length > 0) {
+        const workerIds = relevantLogs
           .map(log => {
             try {
               const newValue = log.new_value ? JSON.parse(log.new_value) : null;
@@ -135,6 +143,8 @@ export default function AppointmentDetailsDialog({
           })
           .filter(Boolean);
         
+        if (workerIds.length === 0) return relevantLogs;
+
         const { data: workers } = await supabase
           .from("profiles")
           .select("id, first_name, last_name")
@@ -142,7 +152,7 @@ export default function AppointmentDetailsDialog({
         
         const workerMap = new Map(workers?.map(w => [w.id, w]) || []);
         
-        return auditLogs.map(log => ({
+        return relevantLogs.map(log => ({
           ...log,
           workerInfo: (() => {
             try {
@@ -157,7 +167,7 @@ export default function AppointmentDetailsDialog({
         }));
       }
       
-      return auditLogs || [];
+      return relevantLogs;
     },
   });
 
