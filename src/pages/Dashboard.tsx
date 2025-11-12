@@ -57,8 +57,8 @@ export default function Dashboard() {
       name: "New Task",
       description: "Add to-do",
       icon: CheckSquare,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
+      color: "text-secondary",
+      bgColor: "bg-secondary/10",
       onClick: () => navigate("/tasks"),
     },
   ];
@@ -118,7 +118,7 @@ export default function Dashboard() {
           value: (todayAppointments || 0).toString(),
           change: "Today",
           icon: Calendar,
-          color: "text-warning",
+          color: "text-info",
         },
         {
           name: "Revenue (MTD)",
@@ -272,14 +272,14 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {recentOrders.map((order: any) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div key={order.id} className="flex items-center justify-between p-4 bg-card border rounded-lg">
                       <div>
                         <p className="font-medium">{order.order_number}</p>
                         <p className="text-sm text-muted-foreground">
                           {order.customers?.name || "Unknown Customer"}
                         </p>
                       </div>
-                      <span className="px-3 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary capitalize">
+                      <span className="px-3 py-1 text-xs font-medium rounded-full bg-primary text-primary-foreground capitalize">
                         {order.status}
                       </span>
                     </div>
@@ -308,8 +308,8 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {todaySchedule.map((appointment: any) => (
-                    <div key={appointment.id} className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-                      <div className="text-sm font-medium text-primary">
+                    <div key={appointment.id} className="flex items-center gap-4 p-4 bg-card border rounded-lg">
+                      <div className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded">
                         {format(new Date(appointment.start_time), "hh:mm a")}
                       </div>
                       <div className="flex-1">
