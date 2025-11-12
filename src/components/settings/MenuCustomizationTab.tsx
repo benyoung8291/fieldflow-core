@@ -174,6 +174,28 @@ export default function MenuCustomizationTab() {
     },
   });
 
+  const { data: brandColors = [] } = useQuery({
+    queryKey: ["brand-colors"],
+    queryFn: async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", session?.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      const { data, error } = await supabase
+        .from("brand_colors")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!session?.user?.id,
+  });
+
   const initializeDefaultMenu = useMutation({
     mutationFn: async () => {
       if (!profile?.tenant_id) {
@@ -345,6 +367,59 @@ export default function MenuCustomizationTab() {
   const filteredIcons = iconOptions.filter(icon => 
     icon.toLowerCase().includes(iconSearch.toLowerCase())
   );
+
+  // Helper function to convert HSL to Hex
+  const hslToHex = (hsl: string): string => {
+    const values = hsl.match(/\d+\.?\d*/g);
+    if (!values || values.length < 3) return "#000000";
+    
+    const h = parseFloat(values[0]);
+    const s = parseFloat(values[1]) / 100;
+    const l = parseFloat(values[2]) / 100;
+    
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = l - c / 2;
+    
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; b = 0; }
+    else if (h < 120) { r = x; g = c; b = 0; }
+    else if (h < 180) { r = 0; g = c; b = x; }
+    else if (h < 240) { r = 0; g = x; b = c; }
+    else if (h < 300) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+    
+    const toHex = (n: number) => {
+      const hex = Math.round((n + m) * 255).toString(16);
+      return hex.length === 1 ? "0" + hex : hex;
+    };
+    
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+
+  // Build color presets from brand colors
+  const colorPresets = [
+    { 
+      name: "Primary Color", 
+      value: hslToHex(brandColors.find(c => c.color_key === "primary")?.color_value || "21 63% 53%")
+    },
+    { 
+      name: "Secondary Color", 
+      value: hslToHex(brandColors.find(c => c.color_key === "secondary")?.color_value || "69 36% 58%")
+    },
+    { 
+      name: "Accent Color", 
+      value: hslToHex(brandColors.find(c => c.color_key === "accent")?.color_value || "34 90% 77%")
+    },
+    { 
+      name: "Sidebar Primary", 
+      value: hslToHex(brandColors.find(c => c.color_key === "sidebar-primary")?.color_value || "21 63% 53%")
+    },
+    { 
+      name: "Sidebar Accent", 
+      value: hslToHex(brandColors.find(c => c.color_key === "sidebar-accent")?.color_value || "18 16% 32%")
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -525,18 +600,11 @@ export default function MenuCustomizationTab() {
               
               {/* Company Color Presets */}
               <div className="space-y-2 mb-3">
-                <p className="text-xs text-muted-foreground">Company Colors:</p>
+                <p className="text-xs text-muted-foreground">Company Brand Colors:</p>
                 <div className="flex gap-2 flex-wrap">
-                  {[
-                    { name: "Primary Terracotta", value: "#d37746" },
-                    { name: "Secondary Olive", value: "#a8ae7a" },
-                    { name: "Success Green", value: "#16a34a" },
-                    { name: "Warning Orange", value: "#f59e0b" },
-                    { name: "Info Blue", value: "#0ea5e9" },
-                    { name: "Error Red", value: "#dc2626" },
-                  ].map((preset) => (
+                  {colorPresets.map((preset) => (
                     <button
-                      key={preset.value}
+                      key={preset.name}
                       type="button"
                       onClick={() => setSelectedColor(preset.value)}
                       className={`h-10 w-10 rounded-md border-2 transition-all hover:scale-110 ${
