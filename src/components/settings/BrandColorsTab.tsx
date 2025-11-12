@@ -353,6 +353,19 @@ export default function BrandColorsTab() {
                       onChange={(e) => updateSystemColor(key, e.target.value)}
                       className="text-center text-xs font-mono bg-background border rounded px-2 py-1.5 w-full"
                     />
+                    {/* Brand colour swatches */}
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[...colorGroups.primary, ...colorGroups.secondary].map((brandColor, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => updateSystemColor(key, brandColor)}
+                          className="h-6 w-6 rounded border-2 border-border hover:border-primary transition-colors"
+                          style={{ backgroundColor: brandColor }}
+                          title={`Use ${brandColor}`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
