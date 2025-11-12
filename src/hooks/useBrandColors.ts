@@ -88,7 +88,8 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
   }
   
   // Build complete CSS with light and dark mode rules
-  let cssContent = '';
+  let lightModeCss = ':root {\n';
+  let darkModeCss = '.dark {\n';
   
   colors.forEach((color) => {
     const cssVar = colorMappings[color.color_key];
@@ -97,21 +98,30 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
       const foreground = getContrastingForeground(color.color_value);
       const [h, s, l] = hslValue.split(' ');
       const lightness = parseInt(l);
-      const hoverLight = lightness > 50 ? lightness - 5 : lightness + 5;
       
-      // Add rules for light mode (default)
-      cssContent += `
-:root {
-  ${cssVar}: ${hslValue};
-  ${cssVar}-foreground: ${foreground};
-  ${cssVar}-hover: ${h} ${s} ${hoverLight}%;
-}
-`;
+      // Light mode: original colors
+      const lightHover = lightness > 50 ? lightness - 5 : lightness + 5;
+      lightModeCss += `  ${cssVar}: ${hslValue};\n`;
+      lightModeCss += `  ${cssVar}-foreground: ${foreground};\n`;
+      lightModeCss += `  ${cssVar}-hover: ${h} ${s} ${lightHover}%;\n`;
+      
+      // Dark mode: slightly adjusted for better visibility
+      // For dark mode, we slightly brighten dark colors and slightly darken bright colors
+      const darkLightness = lightness < 50 ? Math.min(lightness + 8, 60) : Math.max(lightness - 5, 50);
+      const darkHover = darkLightness > 50 ? darkLightness + 5 : darkLightness - 5;
+      const darkForeground = darkLightness > 50 ? '0 0% 10%' : '0 0% 98%';
+      
+      darkModeCss += `  ${cssVar}: ${h} ${s} ${darkLightness}%;\n`;
+      darkModeCss += `  ${cssVar}-foreground: ${darkForeground};\n`;
+      darkModeCss += `  ${cssVar}-hover: ${h} ${s} ${darkHover}%;\n`;
     }
   });
   
+  lightModeCss += '}\n';
+  darkModeCss += '}\n';
+  
   // Replace entire content to ensure clean state
-  styleEl.textContent = cssContent;
+  styleEl.textContent = lightModeCss + '\n' + darkModeCss;
 };
 
 export function useBrandColors() {
