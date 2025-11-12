@@ -7,6 +7,7 @@ import { useCustomMenu } from "@/hooks/useCustomMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const saved = localStorage.getItem('expandedMenuFolders');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [openPopover, setOpenPopover] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('expandedMenuFolders', JSON.stringify(Array.from(expandedFolders)));
@@ -59,6 +61,58 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       const children = item.children || [];
       const isExpanded = expandedFolders.has(item.id);
       const Icon = item.iconComponent;
+
+      // Render folder with popover when collapsed
+      if (item.is_folder && sidebarCollapsed && children.length > 0) {
+        return (
+          <div key={item.id}>
+            <Popover open={openPopover === item.id} onOpenChange={(open) => setOpenPopover(open ? item.id : null)}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
+                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  title={item.label}
+                >
+                  <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" align="start" className="w-56 p-2">
+                <div className="space-y-1">
+                  <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
+                    {item.label}
+                  </div>
+                  {children.map((child) => {
+                    const childIsActive = child.path && location.pathname === child.path;
+                    const ChildIcon = child.iconComponent;
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => {
+                          if (child.path) {
+                            handleNavigate(child.path);
+                            setOpenPopover(null);
+                          }
+                        }}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-left",
+                          childIsActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                      >
+                        <ChildIcon className="h-4 w-4" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
+                        {child.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        );
+      }
 
       return (
         <div key={item.id}>
