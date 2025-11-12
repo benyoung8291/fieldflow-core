@@ -105,11 +105,13 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
       lightModeCss += `  ${cssVar}-foreground: ${foreground};\n`;
       lightModeCss += `  ${cssVar}-hover: ${h} ${s} ${lightHover}%;\n`;
       
-      // Dark mode: slightly adjusted for better visibility
-      // For dark mode, we slightly brighten dark colors and slightly darken bright colors
-      const darkLightness = lightness < 50 ? Math.min(lightness + 8, 60) : Math.max(lightness - 5, 50);
-      const darkHover = darkLightness > 50 ? darkLightness + 5 : darkLightness - 5;
-      const darkForeground = darkLightness > 50 ? '0 0% 10%' : '0 0% 98%';
+      // Dark mode: adjust colors for better visibility on dark backgrounds
+      // Brighten colors significantly for dark mode so they stand out
+      const darkLightness = lightness < 40 ? Math.min(lightness + 20, 65) : 
+                           lightness < 60 ? Math.min(lightness + 10, 70) : 
+                           Math.max(lightness - 10, 60);
+      const darkHover = darkLightness + 5;
+      const darkForeground = darkLightness > 55 ? '0 0% 10%' : '0 0% 98%';
       
       darkModeCss += `  ${cssVar}: ${h} ${s} ${darkLightness}%;\n`;
       darkModeCss += `  ${cssVar}-foreground: ${darkForeground};\n`;
@@ -159,6 +161,7 @@ export function useBrandColors() {
   // Apply colors to DOM whenever they change
   useEffect(() => {
     if (brandColors.length > 0) {
+      console.log('Applying brand colors:', brandColors.length);
       applyBrandColorsToDom(brandColors);
     }
   }, [brandColors]);
