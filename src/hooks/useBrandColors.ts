@@ -66,8 +66,10 @@ const getContrastingForeground = (backgroundHex: string): string => {
 };
 
 // Apply brand colors to CSS variables with automatic contrast calculation
+// Respects both light and dark mode
 export const applyBrandColorsToDom = (colors: BrandColor[]) => {
   const root = document.documentElement;
+  const isDark = root.classList.contains('dark');
   
   // Map color keys to CSS variable names
   const colorMappings: Record<string, string> = {
@@ -96,30 +98,13 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
       const hoverVar = cssVar + '-hover';
       const [h, s, l] = hslValue.split(' ');
       const lightness = parseInt(l);
-      const adjustedLightness = lightness > 50 ? lightness - 5 : lightness + 5;
+      // In dark mode, adjust brightness more subtly
+      const adjustedLightness = isDark 
+        ? (lightness > 50 ? lightness + 5 : lightness - 5)
+        : (lightness > 50 ? lightness - 5 : lightness + 5);
       root.style.setProperty(hoverVar, `${h} ${s} ${adjustedLightness}%`);
     }
   });
-  
-  // Also ensure muted colors have proper contrast
-  const mutedColor = root.style.getPropertyValue('--muted').trim();
-  if (mutedColor) {
-    // Extract HSL values and calculate luminance from the HSL string
-    const [h, s, l] = mutedColor.split(' ').map(v => v.replace('%', ''));
-    const lightness = parseInt(l);
-    // Use luminance-based calculation for muted foreground
-    const mutedForeground = lightness > 50 ? '0 0% 20%' : '0 0% 90%';
-    root.style.setProperty('--muted-foreground', mutedForeground);
-  }
-  
-  // Ensure accent has proper contrast
-  const accentColor = root.style.getPropertyValue('--accent').trim();
-  if (accentColor) {
-    const [h, s, l] = accentColor.split(' ').map(v => v.replace('%', ''));
-    const lightness = parseInt(l);
-    const accentForeground = lightness > 50 ? '0 0% 15%' : '0 0% 95%';
-    root.style.setProperty('--accent-foreground', accentForeground);
-  }
 };
 
 export function useBrandColors() {
@@ -154,11 +139,27 @@ export function useBrandColors() {
     enabled: !!session?.user?.id,
   });
 
-  // Apply colors to DOM whenever they change
+  // Apply colors to DOM whenever they change or theme changes
   useEffect(() => {
     if (brandColors.length > 0) {
       applyBrandColorsToDom(brandColors);
     }
+    
+    // Re-apply colors when dark mode class changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class' && brandColors.length > 0) {
+          applyBrandColorsToDom(brandColors);
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
   }, [brandColors]);
 
   return {
