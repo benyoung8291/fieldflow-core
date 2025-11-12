@@ -113,10 +113,10 @@ export default function BrandColorsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brand-colors"] });
-      toast.success("Brand colors initialized with defaults");
+      toast.success("Brand colours initialized with defaults");
     },
     onError: (error: any) => {
-      toast.error("Failed to initialize colors: " + error.message);
+      toast.error("Failed to initialize colours: " + error.message);
     },
   });
 
@@ -167,10 +167,10 @@ export default function BrandColorsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brand-colors"] });
-      toast.success("Brand colors saved successfully");
+      toast.success("Brand colours saved successfully");
     },
     onError: (error: any) => {
-      toast.error("Failed to save brand colors: " + error.message);
+      toast.error("Failed to save brand colours: " + error.message);
     },
   });
 
@@ -214,10 +214,10 @@ export default function BrandColorsTab() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Brand Color Management
+                Brand Colour Management
               </CardTitle>
               <CardDescription>
-                Manage all colors used throughout the application. All UI elements reference these colors.
+                Manage all colours used throughout the application. All UI elements reference these colours.
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -230,7 +230,7 @@ export default function BrandColorsTab() {
                 Reset to Defaults
               </Button>
               <Button onClick={() => saveColors.mutate()} disabled={saveColors.isPending}>
-                {saveColors.isPending ? "Saving..." : "Save Colors"}
+                {saveColors.isPending ? "Saving..." : "Save Colours"}
               </Button>
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function BrandColorsTab() {
                 onClick={() => addColor("primary")}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Color
+                Add Colour
               </Button>
             </div>
             <div className="flex gap-4 flex-wrap">
@@ -295,7 +295,7 @@ export default function BrandColorsTab() {
                 onClick={() => addColor("secondary")}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Color
+                Add Colour
               </Button>
             </div>
             <div className="flex gap-4 flex-wrap">
@@ -328,30 +328,30 @@ export default function BrandColorsTab() {
             </div>
           </div>
 
-          {/* System/Functional Colors */}
+          {/* System/Functional Colours */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">System Colors</h3>
+              <h3 className="text-lg font-semibold">System Colours</h3>
               <p className="text-sm text-muted-foreground">
-                These colors are applied to buttons, alerts, and UI components throughout the app
+                These colours are applied to buttons, alerts, and UI components throughout the app
               </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
               {Object.entries(systemColors).map(([key, value]) => (
-                <div key={key} className="flex flex-col gap-2">
+                <div key={key} className="flex flex-col gap-3">
                   <label className="text-sm font-medium capitalize">{key}</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2">
                     <input
                       type="color"
                       value={value}
                       onChange={(e) => updateSystemColor(key, e.target.value)}
-                      className="h-10 w-16 rounded cursor-pointer border-2 border-border"
+                      className="h-20 w-full rounded-lg cursor-pointer border-2 border-border"
                     />
                     <input
                       type="text"
                       value={value}
                       onChange={(e) => updateSystemColor(key, e.target.value)}
-                      className="text-sm font-mono bg-background border rounded px-2 flex-1"
+                      className="text-center text-xs font-mono bg-background border rounded px-2 py-1.5 w-full"
                     />
                   </div>
                 </div>
