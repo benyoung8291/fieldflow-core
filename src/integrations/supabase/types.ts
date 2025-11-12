@@ -431,25 +431,31 @@ export type Database = {
       }
       brand_colors: {
         Row: {
+          color_group: string | null
           color_key: string
           color_value: string
           created_at: string
+          display_order: number | null
           id: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          color_group?: string | null
           color_key: string
           color_value: string
           created_at?: string
+          display_order?: number | null
           id?: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          color_group?: string | null
           color_key?: string
           color_value?: string
           created_at?: string
+          display_order?: number | null
           id?: string
           tenant_id?: string
           updated_at?: string
