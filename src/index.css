@@ -55,15 +55,15 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    /* Sidebar */
-    --sidebar-background: 200 5% 19%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 21 63% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 18 16% 32%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 18 16% 32%;
-    --sidebar-ring: 21 63% 53%;
+    /* Sidebar - references system colours */
+    --sidebar-background: var(--foreground);
+    --sidebar-foreground: var(--background);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--muted-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(21 63% 53%), hsl(21 63% 63%));
@@ -118,14 +118,14 @@ All colors MUST be HSL.
     --input: 200 5% 25%;
     --ring: 21 63% 58%;
 
-    --sidebar-background: 200 5% 10%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 21 63% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 18 16% 28%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 18 16% 28%;
-    --sidebar-ring: 21 63% 58%;
+    --sidebar-background: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
   }
 }
 
