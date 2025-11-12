@@ -129,6 +129,8 @@ export default function MenuCustomizationTab() {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedColor, setSelectedColor] = useState("");
+  const [selectedIcon, setSelectedIcon] = useState("");
+  const [iconSearch, setIconSearch] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -282,6 +284,8 @@ export default function MenuCustomizationTab() {
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setSelectedColor(item.color || "");
+    setSelectedIcon(item.icon || "Circle");
+    setIconSearch("");
     setIsDialogOpen(true);
   };
 
@@ -298,12 +302,12 @@ export default function MenuCustomizationTab() {
 
     saveMenuItem.mutate({
       label: formData.get("label") as string,
-      icon: formData.get("icon") as string,
+      icon: selectedIcon,
       path: isCreatingFolder ? null : (formData.get("path") as string),
       parent_id: parentId === "none" ? null : parentId || null,
       is_folder: isCreatingFolder,
       is_visible: formData.get("is_visible") === "on",
-      color: formData.get("color") as string || null,
+      color: selectedColor || null,
       item_order: editingItem?.item_order || menuItems.length,
     });
   };
@@ -311,16 +315,35 @@ export default function MenuCustomizationTab() {
   const topLevelItems = menuItems.filter((item) => !item.parent_id);
   const getChildren = (parentId: string) => menuItems.filter((item) => item.parent_id === parentId);
 
-  const iconOptions = Object.keys(LucideIcons).filter((key) => 
+  // Use the exact default icons from useCustomMenu
+  const defaultIcons = [
+    "LayoutDashboard", "FileText", "GitBranch", "FolderKanban", "Wrench", 
+    "FileSignature", "Calendar", "CalendarCheck", "CalendarClock", "Users", 
+    "Target", "HardHat", "Receipt", "RefreshCw", "BarChart3", "Settings",
+    "DollarSign", "Circle", "Folder", "Plus", "Edit", "Trash2", "GripVertical",
+    "ChevronDown", "ChevronRight"
+  ];
+
+  const allIconOptions = Object.keys(LucideIcons).filter((key) => 
     key !== "createLucideIcon" && 
     key !== "default" && 
     key !== "icons" && 
     key !== "dynamicIconImports" &&
     typeof (LucideIcons as any)[key] !== "string" &&
-    // Check if it's a valid React component (has $$typeof or is an object with render function)
     (LucideIcons as any)[key] && 
     typeof (LucideIcons as any)[key] === "object"
-  ).sort().slice(0, 150); // Increased to 150 for more icon choices
+  ).sort();
+
+  // Combine default icons (at top) with all other icons
+  const iconOptions = [
+    ...defaultIcons,
+    ...allIconOptions.filter(icon => !defaultIcons.includes(icon))
+  ];
+
+  // Filter icons based on search
+  const filteredIcons = iconOptions.filter(icon => 
+    icon.toLowerCase().includes(iconSearch.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -353,6 +376,8 @@ export default function MenuCustomizationTab() {
                     setEditingItem(null);
                     setIsCreatingFolder(false);
                     setSelectedColor("");
+                    setSelectedIcon("Circle");
+                    setIconSearch("");
                     setIsDialogOpen(true);
                   }}
                   variant="outline"
@@ -365,6 +390,8 @@ export default function MenuCustomizationTab() {
                     setEditingItem(null);
                     setIsCreatingFolder(true);
                     setSelectedColor("");
+                    setSelectedIcon("Folder");
+                    setIconSearch("");
                     setIsDialogOpen(true);
                   }}
                   variant="outline"
@@ -423,24 +450,41 @@ export default function MenuCustomizationTab() {
 
             <div>
               <Label htmlFor="icon">Icon</Label>
-              <Select name="icon" defaultValue={editingItem?.icon || "Circle"}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {iconOptions.map((iconName) => {
-                    const IconComp = (LucideIcons as any)[iconName];
-                    return (
-                      <SelectItem key={iconName} value={iconName}>
+              <div className="space-y-2">
+                <Input
+                  placeholder="Search icons..."
+                  value={iconSearch}
+                  onChange={(e) => setIconSearch(e.target.value)}
+                />
+                <Select value={selectedIcon} onValueChange={setSelectedIcon}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {selectedIcon && (
                         <div className="flex items-center gap-2">
-                          <IconComp className="h-4 w-4" />
-                          <span>{iconName}</span>
+                          {(() => {
+                            const IconComp = (LucideIcons as any)[selectedIcon];
+                            return IconComp ? <IconComp className="h-4 w-4" /> : null;
+                          })()}
+                          <span>{selectedIcon}</span>
                         </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {filteredIcons.slice(0, 100).map((iconName) => {
+                      const IconComp = (LucideIcons as any)[iconName];
+                      return IconComp ? (
+                        <SelectItem key={iconName} value={iconName}>
+                          <div className="flex items-center gap-2">
+                            <IconComp className="h-4 w-4" />
+                            <span>{iconName}</span>
+                          </div>
+                        </SelectItem>
+                      ) : null;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {!isCreatingFolder && (
@@ -477,12 +521,12 @@ export default function MenuCustomizationTab() {
 
             <div>
               <Label htmlFor="color">Icon Color (Optional)</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Input
                   id="color"
                   name="color"
                   type="color"
-                  value={selectedColor}
+                  value={selectedColor || "#000000"}
                   onChange={(e) => setSelectedColor(e.target.value)}
                   className="w-20 h-10"
                 />
@@ -493,6 +537,15 @@ export default function MenuCustomizationTab() {
                   className="flex-1"
                   placeholder="#3b82f6"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedColor("")}
+                  disabled={!selectedColor}
+                >
+                  Clear
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Leave default to use standard icon color
