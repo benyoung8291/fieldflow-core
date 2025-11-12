@@ -187,7 +187,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar - Desktop only, completely hidden in mobile view */}
       {!isMobile && (
         <aside className={cn(
-          "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0",
+          "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0 z-50",
           sidebarCollapsed ? "w-20" : "w-64"
         )}>
         <div className="flex flex-col h-full">
