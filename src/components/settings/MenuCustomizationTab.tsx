@@ -521,31 +521,64 @@ export default function MenuCustomizationTab() {
 
             <div>
               <Label htmlFor="color">Icon Color (Optional)</Label>
-              <div className="flex gap-2 items-center">
-                <Input
-                  id="color"
-                  name="color"
-                  type="color"
-                  value={selectedColor || "#000000"}
-                  onChange={(e) => setSelectedColor(e.target.value)}
-                  className="w-20 h-10"
-                />
-                <Input
-                  type="text"
-                  value={selectedColor}
-                  onChange={(e) => setSelectedColor(e.target.value)}
-                  className="flex-1"
-                  placeholder="#3b82f6"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedColor("")}
-                  disabled={!selectedColor}
-                >
-                  Clear
-                </Button>
+              
+              {/* Company Color Presets */}
+              <div className="space-y-2 mb-3">
+                <p className="text-xs text-muted-foreground">Company Colors:</p>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { name: "Primary Terracotta", value: "#d37746" },
+                    { name: "Secondary Olive", value: "#a8ae7a" },
+                    { name: "Success Green", value: "#16a34a" },
+                    { name: "Warning Orange", value: "#f59e0b" },
+                    { name: "Info Blue", value: "#0ea5e9" },
+                    { name: "Error Red", value: "#dc2626" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => setSelectedColor(preset.value)}
+                      className={`h-10 w-10 rounded-md border-2 transition-all hover:scale-110 ${
+                        selectedColor?.toLowerCase() === preset.value.toLowerCase()
+                          ? "border-foreground ring-2 ring-offset-2"
+                          : "border-border"
+                      }`}
+                      style={{ backgroundColor: preset.value }}
+                      title={preset.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Color Picker */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Custom Color:</p>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="color"
+                    name="color"
+                    type="color"
+                    value={selectedColor || "#000000"}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="w-20 h-10"
+                  />
+                  <Input
+                    type="text"
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="flex-1"
+                    placeholder="#3b82f6"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedColor("")}
+                    disabled={!selectedColor}
+                  >
+                    Clear
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Leave default to use standard icon color
