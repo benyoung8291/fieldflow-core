@@ -369,14 +369,14 @@ export default function MenuCustomizationTab() {
     icon.toLowerCase().includes(iconSearch.toLowerCase())
   );
 
-  // Build color presets from brand colors - now supporting all colors
-  const colorPresets = brandColors.map((color, index) => ({
-    name: color.color_group === "primary" 
-      ? `Primary ${index + 1}` 
-      : `Secondary ${index + 1}`,
-    value: color.color_value,
-    group: color.color_group,
-  }));
+  // Build color presets from brand colors - only show primary and secondary groups
+  const colorPresets = brandColors
+    .filter((color) => color.color_group === "primary" || color.color_group === "secondary")
+    .map((color) => ({
+      name: color.color_key,
+      value: color.color_value,
+      group: color.color_group,
+    }));
 
   return (
     <div className="space-y-6">
