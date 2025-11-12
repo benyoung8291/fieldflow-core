@@ -66,11 +66,8 @@ const getContrastingForeground = (backgroundHex: string): string => {
 };
 
 // Apply brand colors to CSS variables with automatic contrast calculation
-// Respects both light and dark mode
+// Creates CSS rules that work with both light and dark mode
 export const applyBrandColorsToDom = (colors: BrandColor[]) => {
-  const root = document.documentElement;
-  const isDark = root.classList.contains('dark');
-  
   // Map color keys to CSS variable names
   const colorMappings: Record<string, string> = {
     'primary': '--primary',
@@ -82,29 +79,39 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
     'info': '--info',
   };
   
+  // Get or create style element
+  let styleEl = document.getElementById('brand-colors-style') as HTMLStyleElement;
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'brand-colors-style';
+    document.head.appendChild(styleEl);
+  }
+  
+  // Build complete CSS with light and dark mode rules
+  let cssContent = '';
+  
   colors.forEach((color) => {
     const cssVar = colorMappings[color.color_key];
     if (cssVar) {
-      // Convert hex to HSL for CSS variables
       const hslValue = hexToHSL(color.color_value);
-      root.style.setProperty(cssVar, hslValue);
-      
-      // Calculate and set contrasting foreground color
-      const foregroundVar = cssVar + '-foreground';
-      const foregroundValue = getContrastingForeground(color.color_value);
-      root.style.setProperty(foregroundVar, foregroundValue);
-      
-      // Also set hover variants with slightly adjusted lightness
-      const hoverVar = cssVar + '-hover';
+      const foreground = getContrastingForeground(color.color_value);
       const [h, s, l] = hslValue.split(' ');
       const lightness = parseInt(l);
-      // In dark mode, adjust brightness more subtly
-      const adjustedLightness = isDark 
-        ? (lightness > 50 ? lightness + 5 : lightness - 5)
-        : (lightness > 50 ? lightness - 5 : lightness + 5);
-      root.style.setProperty(hoverVar, `${h} ${s} ${adjustedLightness}%`);
+      const hoverLight = lightness > 50 ? lightness - 5 : lightness + 5;
+      
+      // Add rules for light mode (default)
+      cssContent += `
+:root {
+  ${cssVar}: ${hslValue};
+  ${cssVar}-foreground: ${foreground};
+  ${cssVar}-hover: ${h} ${s} ${hoverLight}%;
+}
+`;
     }
   });
+  
+  // Replace entire content to ensure clean state
+  styleEl.textContent = cssContent;
 };
 
 export function useBrandColors() {
@@ -139,27 +146,11 @@ export function useBrandColors() {
     enabled: !!session?.user?.id,
   });
 
-  // Apply colors to DOM whenever they change or theme changes
+  // Apply colors to DOM whenever they change
   useEffect(() => {
     if (brandColors.length > 0) {
       applyBrandColorsToDom(brandColors);
     }
-    
-    // Re-apply colors when dark mode class changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class' && brandColors.length > 0) {
-          applyBrandColorsToDom(brandColors);
-        }
-      });
-    });
-    
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-    
-    return () => observer.disconnect();
   }, [brandColors]);
 
   return {
