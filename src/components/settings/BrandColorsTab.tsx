@@ -354,18 +354,23 @@ export default function BrandColorsTab() {
                       className="text-center text-xs font-mono bg-background border rounded px-2 py-1.5 w-full"
                     />
                     {/* Brand colour swatches */}
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {[...colorGroups.primary, ...colorGroups.secondary].map((brandColor, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => updateSystemColor(key, brandColor)}
-                          className="h-6 w-6 rounded border-2 border-border hover:border-primary transition-colors"
-                          style={{ backgroundColor: brandColor }}
-                          title={`Use ${brandColor}`}
-                        />
-                      ))}
-                    </div>
+                    {(colorGroups.primary.length > 0 || colorGroups.secondary.length > 0) && (
+                      <div className="space-y-1.5 pt-2 border-t">
+                        <span className="text-xs text-muted-foreground">Brand Colours:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[...colorGroups.primary, ...colorGroups.secondary].map((brandColor, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => updateSystemColor(key, brandColor)}
+                              className="h-7 w-7 rounded border-2 border-border hover:border-primary hover:scale-110 transition-all"
+                              style={{ backgroundColor: brandColor }}
+                              title={`Use ${brandColor}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
