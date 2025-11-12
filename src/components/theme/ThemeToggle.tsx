@@ -12,17 +12,7 @@ export function ThemeToggle() {
   const { setTheme, theme, resolvedTheme } = useTheme();
 
   const handleThemeChange = (newTheme: string) => {
-    // Disable transitions temporarily
-    document.documentElement.classList.add('disable-transitions');
-    
     setTheme(newTheme);
-    
-    // Re-enable after a brief moment
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        document.documentElement.classList.remove('disable-transitions');
-      }, 0);
-    });
   };
 
   return (
@@ -35,15 +25,15 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="z-50 bg-popover backdrop-blur-sm">
-        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
+        <DropdownMenuItem onClick={() => setTheme("light")}>
           <Sun className="mr-2 h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>
