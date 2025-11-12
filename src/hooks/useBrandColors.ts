@@ -42,7 +42,30 @@ const hexToHSL = (hex: string): string => {
   return `${h} ${s}% ${l}%`;
 };
 
-// Apply brand colors to CSS variables
+// Calculate relative luminance (WCAG standard)
+const getLuminance = (hex: string): number => {
+  hex = hex.replace(/^#/, '');
+  
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  
+  // Apply gamma correction
+  const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+  const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+  const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+  
+  return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
+};
+
+// Get contrasting foreground color (white or black) based on background luminance
+const getContrastingForeground = (backgroundHex: string): string => {
+  const luminance = getLuminance(backgroundHex);
+  // WCAG recommends 0.5 as threshold, but 0.6 gives better results for most colors
+  return luminance > 0.5 ? '0 0% 10%' : '0 0% 98%';
+};
+
+// Apply brand colors to CSS variables with automatic contrast calculation
 export const applyBrandColorsToDom = (colors: BrandColor[]) => {
   const root = document.documentElement;
   
@@ -63,8 +86,40 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
       // Convert hex to HSL for CSS variables
       const hslValue = hexToHSL(color.color_value);
       root.style.setProperty(cssVar, hslValue);
+      
+      // Calculate and set contrasting foreground color
+      const foregroundVar = cssVar + '-foreground';
+      const foregroundValue = getContrastingForeground(color.color_value);
+      root.style.setProperty(foregroundVar, foregroundValue);
+      
+      // Also set hover variants with slightly adjusted lightness
+      const hoverVar = cssVar + '-hover';
+      const [h, s, l] = hslValue.split(' ');
+      const lightness = parseInt(l);
+      const adjustedLightness = lightness > 50 ? lightness - 5 : lightness + 5;
+      root.style.setProperty(hoverVar, `${h} ${s} ${adjustedLightness}%`);
     }
   });
+  
+  // Also ensure muted colors have proper contrast
+  const mutedColor = root.style.getPropertyValue('--muted').trim();
+  if (mutedColor) {
+    // Extract HSL values and calculate luminance from the HSL string
+    const [h, s, l] = mutedColor.split(' ').map(v => v.replace('%', ''));
+    const lightness = parseInt(l);
+    // Use luminance-based calculation for muted foreground
+    const mutedForeground = lightness > 50 ? '0 0% 20%' : '0 0% 90%';
+    root.style.setProperty('--muted-foreground', mutedForeground);
+  }
+  
+  // Ensure accent has proper contrast
+  const accentColor = root.style.getPropertyValue('--accent').trim();
+  if (accentColor) {
+    const [h, s, l] = accentColor.split(' ').map(v => v.replace('%', ''));
+    const lightness = parseInt(l);
+    const accentForeground = lightness > 50 ? '0 0% 15%' : '0 0% 95%';
+    root.style.setProperty('--accent-foreground', accentForeground);
+  }
 };
 
 export function useBrandColors() {
