@@ -85,7 +85,9 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
     document.head.appendChild(styleEl);
   }
   
-  let css = '';
+  // Build grouped CSS rules properly
+  let lightRules = '';
+  let darkRules = '';
   
   colors.forEach((color) => {
     const cssVar = colorMappings[color.color_key];
@@ -95,17 +97,23 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
       const [h, s, l] = hslValue.split(' ');
       const lightness = parseInt(l);
       
-      // Light mode
-      css += `:root { ${cssVar}: ${hslValue}; ${cssVar}-foreground: ${foreground}; }\n`;
+      // Light mode rules
+      lightRules += `  ${cssVar}: ${hslValue};\n`;
+      lightRules += `  ${cssVar}-foreground: ${foreground};\n`;
       
       // Dark mode - adjust lightness for better visibility
       const darkL = lightness < 50 ? Math.min(lightness + 15, 65) : Math.max(lightness - 5, 55);
       const darkFg = darkL > 55 ? '0 0% 10%' : '0 0% 98%';
-      css += `.dark { ${cssVar}: ${h} ${s} ${darkL}%; ${cssVar}-foreground: ${darkFg}; }\n`;
+      darkRules += `  ${cssVar}: ${h} ${s} ${darkL}%;\n`;
+      darkRules += `  ${cssVar}-foreground: ${darkFg};\n`;
     }
   });
   
+  // Generate properly formatted CSS
+  const css = `:root {\n${lightRules}}\n\n.dark {\n${darkRules}}\n`;
   styleEl.textContent = css;
+  
+  console.log('Brand colors applied, CSS generated:', css.substring(0, 200));
 };
 
 export function useBrandColors() {
