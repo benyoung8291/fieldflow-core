@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ViewModeProvider } from "@/contexts/ViewModeContext";
-import { useBrandColors } from "@/hooks/useBrandColors";
+import { BrandColorsProvider } from "@/components/BrandColorsProvider";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
@@ -68,9 +68,6 @@ const queryClient = new QueryClient({
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  
-  // Initialize brand colors
-  useBrandColors();
   
   // Initialize PWA and offline sync for both worker and office apps
   usePWAUpdate();
@@ -146,15 +143,16 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ViewModeProvider>
-        <ThemeProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-            <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
+      <BrandColorsProvider>
+        <ViewModeProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+              <Routes>
+              <Route path="/" element={<Navigate to="/auth" replace />} />
+              <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/auth" replace />} />
             <Route path="/users" element={isAuthenticated ? <UserManagement /> : <Navigate to="/auth" replace />} />
             <Route path="/quotes" element={isAuthenticated ? <Quotes /> : <Navigate to="/auth" replace />} />
@@ -205,6 +203,7 @@ const App = () => {
         </TooltipProvider>
       </ThemeProvider>
       </ViewModeProvider>
+      </BrandColorsProvider>
     </QueryClientProvider>
   );
 };
