@@ -1,8 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format, differenceInHours, differenceInMinutes } from "date-fns";
-import { Calendar, Clock, MapPin, User, Users, FileText, Repeat, Edit, Trash2, History } from "lucide-react";
+import { format, differenceInHours, differenceInMinutes, formatDistanceToNow, isToday, isYesterday, isThisYear } from "date-fns";
+import { Calendar, Clock, MapPin, User, Users, FileText, Repeat, Edit, Trash2, History, UserPlus, UserMinus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -99,7 +99,82 @@ export default function AppointmentDetailsDialog({
     },
   });
 
-  // Combine audit logs and time logs into a single timeline
+  // Fetch worker assignment audit logs
+  const { data: workerAuditLogs = [] } = useQuery({
+    queryKey: ["worker-audit-logs", appointment.id],
+    queryFn: async () => {
+      // First get all appointment_workers records for this appointment
+      const { data: appointmentWorkers } = await supabase
+        .from("appointment_workers")
+        .select("id")
+        .eq("appointment_id", appointment.id);
+      
+      if (!appointmentWorkers || appointmentWorkers.length === 0) return [];
+      
+      const workerRecordIds = appointmentWorkers.map(aw => aw.id);
+      
+      // Then fetch audit logs for those records
+      const { data: auditLogs } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .eq("table_name", "appointment_workers")
+        .in("record_id", workerRecordIds)
+        .order("created_at", { ascending: false });
+      
+      // Fetch worker names for the logs
+      if (auditLogs && auditLogs.length > 0) {
+        const workerIds = auditLogs
+          .map(log => {
+            try {
+              const newValue = log.new_value ? JSON.parse(log.new_value) : null;
+              const oldValue = log.old_value ? JSON.parse(log.old_value) : null;
+              return newValue?.worker_id || oldValue?.worker_id;
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+        
+        const { data: workers } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", workerIds);
+        
+        const workerMap = new Map(workers?.map(w => [w.id, w]) || []);
+        
+        return auditLogs.map(log => ({
+          ...log,
+          workerInfo: (() => {
+            try {
+              const newValue = log.new_value ? JSON.parse(log.new_value) : null;
+              const oldValue = log.old_value ? JSON.parse(log.old_value) : null;
+              const workerId = newValue?.worker_id || oldValue?.worker_id;
+              return workerMap.get(workerId);
+            } catch {
+              return null;
+            }
+          })(),
+        }));
+      }
+      
+      return auditLogs || [];
+    },
+  });
+
+  // Format timestamp in human-readable format
+  const formatTimestamp = (timestamp: Date) => {
+    if (isToday(timestamp)) {
+      return `Today at ${format(timestamp, "h:mm a")}`;
+    } else if (isYesterday(timestamp)) {
+      return `Yesterday at ${format(timestamp, "h:mm a")}`;
+    } else if (isThisYear(timestamp)) {
+      return format(timestamp, "MMM d 'at' h:mm a");
+    } else {
+      return format(timestamp, "MMM d, yyyy 'at' h:mm a");
+    }
+  };
+
+  // Combine audit logs, time logs, and worker audit logs into a single timeline
   const timelineItems = [
     ...logs.map(log => ({
       type: "audit" as const,
@@ -109,6 +184,11 @@ export default function AppointmentDetailsDialog({
     ...timeLogs.map(log => ({
       type: "time_log" as const,
       timestamp: new Date(log.clock_in),
+      data: log,
+    })),
+    ...workerAuditLogs.map((log: any) => ({
+      type: "worker_audit" as const,
+      timestamp: new Date(log.created_at),
       data: log,
     })),
   ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -287,7 +367,11 @@ export default function AppointmentDetailsDialog({
                     <div key={`${item.type}-${index}`} className="relative pl-10">
                       {/* Timeline dot */}
                       <div className={`absolute left-[9px] top-2 w-3 h-3 rounded-full border-2 ${
-                        item.type === "time_log" ? "bg-success border-success" : "bg-info border-info"
+                        item.type === "time_log" 
+                          ? "bg-success border-success" 
+                          : item.type === "worker_audit"
+                          ? "bg-primary border-primary"
+                          : "bg-info border-info"
                       }`} />
                       
                       <div className="bg-muted/50 rounded-lg p-4">
@@ -305,9 +389,14 @@ export default function AppointmentDetailsDialog({
                                   by {item.data.user_name}
                                 </p>
                               </div>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {format(item.timestamp, "MMM d, h:mm a")}
-                              </span>
+                              <div className="text-right">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap block">
+                                  {formatTimestamp(item.timestamp)}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/70">
+                                  {formatDistanceToNow(item.timestamp, { addSuffix: true })}
+                                </span>
+                              </div>
                             </div>
                             {item.data.old_value && item.data.new_value && (
                               <div className="text-xs space-y-1">
@@ -327,6 +416,40 @@ export default function AppointmentDetailsDialog({
                               </p>
                             )}
                           </>
+                        ) : item.type === "worker_audit" ? (
+                          <>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  {item.data.action === "create" ? (
+                                    <>
+                                      <UserPlus className="h-4 w-4 text-success" />
+                                      Worker Added
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserMinus className="h-4 w-4 text-destructive" />
+                                      Worker Removed
+                                    </>
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {item.data.workerInfo?.first_name} {item.data.workerInfo?.last_name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  by {item.data.user_name}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap block">
+                                  {formatTimestamp(item.timestamp)}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/70">
+                                  {formatDistanceToNow(item.timestamp, { addSuffix: true })}
+                                </span>
+                              </div>
+                            </div>
+                          </>
                         ) : (
                           <>
                             <div className="flex items-start justify-between gap-2 mb-2">
@@ -339,9 +462,14 @@ export default function AppointmentDetailsDialog({
                                   {item.data.worker?.first_name} {item.data.worker?.last_name}
                                 </p>
                               </div>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {format(item.timestamp, "MMM d, h:mm a")}
-                              </span>
+                              <div className="text-right">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap block">
+                                  {formatTimestamp(item.timestamp)}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/70">
+                                  {formatDistanceToNow(item.timestamp, { addSuffix: true })}
+                                </span>
+                              </div>
                             </div>
                             <div className="space-y-1">
                               <div className="flex items-center gap-2 text-xs">
