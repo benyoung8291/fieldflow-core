@@ -173,10 +173,6 @@ function AppointmentCard({
   return (
     <AppointmentContextMenu
       appointment={appointment}
-      onEdit={onEdit || (() => {})}
-      onRemoveWorker={onRemoveWorker || (() => {})}
-      onGPSCheckIn={onGPSCheckIn || (() => {})}
-      onViewDetails={onClick || (() => {})}
       onDelete={onDelete}
     >
       <Card 

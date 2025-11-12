@@ -139,11 +139,7 @@ export default function SchedulerMonthView({
                   <AppointmentContextMenu
                     key={apt.id}
                     appointment={apt}
-                    onEdit={() => onEditAppointment(apt.id)}
-                    onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
                     onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
-                    onGPSCheckIn={() => onGPSCheckIn(apt)}
-                    onViewDetails={() => onAppointmentClick(apt.id)}
                   >
                     <div
                       className={cn(

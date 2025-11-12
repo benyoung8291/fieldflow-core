@@ -2,9 +2,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
-import { Calendar, Clock, MapPin, User, Users, FileText, Repeat, Edit, Trash2 } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Users, FileText, Repeat, Edit, Trash2, History } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuditLog } from "@/hooks/useAuditLog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AppointmentDetailsDialogProps {
   appointment: any;
@@ -46,10 +50,72 @@ export default function AppointmentDetailsDialog({
   };
 
   const workers = appointment.appointment_workers || [];
+  
+  type TimeLogWithWorker = {
+    id: string;
+    clock_in: string;
+    clock_out: string | null;
+    total_hours: number | null;
+    notes: string | null;
+    worker_id: string;
+    appointment_id: string;
+    worker?: {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+    } | null;
+  };
+  
+  const { logs } = useAuditLog("appointments", appointment.id);
+
+  // Fetch time logs for this appointment
+  const { data: timeLogs = [] } = useQuery<TimeLogWithWorker[]>({
+    queryKey: ["time-logs", appointment.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("time_logs")
+        .select("*")
+        .eq("appointment_id", appointment.id)
+        .order("clock_in", { ascending: false });
+      
+      if (error) throw error;
+      
+      // Fetch worker names separately
+      if (data && data.length > 0) {
+        const workerIds = [...new Set(data.map(log => log.worker_id))];
+        const { data: workers } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", workerIds);
+        
+        const workerMap = new Map(workers?.map(w => [w.id, w]) || []);
+        return data.map(log => ({
+          ...log,
+          worker: workerMap.get(log.worker_id) || null,
+        }));
+      }
+      
+      return data || [];
+    },
+  });
+
+  // Combine audit logs and time logs into a single timeline
+  const timelineItems = [
+    ...logs.map(log => ({
+      type: "audit" as const,
+      timestamp: new Date(log.created_at),
+      data: log,
+    })),
+    ...timeLogs.map(log => ({
+      type: "time_log" as const,
+      timestamp: new Date(log.clock_in),
+      data: log,
+    })),
+  ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -75,7 +141,16 @@ export default function AppointmentDetailsDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
+        <Tabs defaultValue="details" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-1" />
+              History
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details" className="flex-1 overflow-y-auto mt-4 space-y-6">
           {/* Date & Time */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
@@ -195,7 +270,115 @@ export default function AppointmentDetailsDialog({
               </div>
             </>
           )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="history" className="flex-1 overflow-y-auto mt-4">
+            <div className="space-y-4">
+              {timelineItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No history available
+                </p>
+              ) : (
+                <div className="relative space-y-4">
+                  {/* Timeline line */}
+                  <div className="absolute left-[15px] top-0 bottom-0 w-px bg-border" />
+                  
+                  {timelineItems.map((item, index) => (
+                    <div key={`${item.type}-${index}`} className="relative pl-10">
+                      {/* Timeline dot */}
+                      <div className={`absolute left-[9px] top-2 w-3 h-3 rounded-full border-2 ${
+                        item.type === "time_log" ? "bg-success border-success" : "bg-info border-info"
+                      }`} />
+                      
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        {item.type === "audit" ? (
+                          <>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {item.data.action === "create" && "Created"}
+                                  {item.data.action === "update" && item.data.field_name && `Updated ${item.data.field_name.replace(/_/g, " ")}`}
+                                  {item.data.action === "delete" && "Deleted"}
+                                  {item.data.action === "revert" && "Reverted change"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  by {item.data.user_name}
+                                </p>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {format(item.timestamp, "MMM d, h:mm a")}
+                              </span>
+                            </div>
+                            {item.data.old_value && item.data.new_value && (
+                              <div className="text-xs space-y-1">
+                                <div className="flex gap-2">
+                                  <span className="text-muted-foreground">From:</span>
+                                  <span className="text-destructive line-through">{item.data.old_value}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span className="text-muted-foreground">To:</span>
+                                  <span className="text-success">{item.data.new_value}</span>
+                                </div>
+                              </div>
+                            )}
+                            {item.data.note && (
+                              <p className="text-xs text-muted-foreground mt-2 italic">
+                                {item.data.note}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  Time Log
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.data.worker?.first_name} {item.data.worker?.last_name}
+                                </p>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {format(item.timestamp, "MMM d, h:mm a")}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">Clock In:</span>
+                                <span>{format(new Date(item.data.clock_in), "h:mm a")}</span>
+                              </div>
+                              {item.data.clock_out && (
+                                <>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Clock Out:</span>
+                                    <span>{format(new Date(item.data.clock_out), "h:mm a")}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs font-medium">
+                                    <span className="text-muted-foreground">Total Hours:</span>
+                                    <span>{item.data.total_hours?.toFixed(2)}h</span>
+                                  </div>
+                                </>
+                              )}
+                              {!item.data.clock_out && (
+                                <Badge variant="outline" className="text-xs mt-1">Active</Badge>
+                              )}
+                            </div>
+                            {item.data.notes && (
+                              <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
+                                {item.data.notes}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
