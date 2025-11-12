@@ -15,8 +15,6 @@ import {
 interface DraggableAppointmentProps {
   appointment: any;
   statusColor: string;
-  onEdit: () => void;
-  onGPSCheckIn: () => void;
   onViewHistory: () => void;
   onDelete?: () => void;
   showFullDetails?: boolean;
@@ -25,8 +23,6 @@ interface DraggableAppointmentProps {
 export default function DraggableAppointment({
   appointment,
   statusColor,
-  onEdit,
-  onGPSCheckIn,
   onViewHistory,
   onDelete,
   showFullDetails = false,
@@ -157,33 +153,15 @@ export default function DraggableAppointment({
         style={{ zIndex: 0 }}
       />
 
-      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-              <MoreVertical className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onGPSCheckIn();
-            }}>
-              {appointment.check_in_time ? "Check Out" : "GPS Check In"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onViewHistory();
-            }}>
-              View History
-            </DropdownMenuItem>
-            {onDelete && (
+      {onDelete && (
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                <MoreVertical className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
               <DropdownMenuItem 
                 onClick={(e) => { 
                   e.stopPropagation(); 
@@ -193,10 +171,10 @@ export default function DraggableAppointment({
               >
                 Delete
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
   );
 }

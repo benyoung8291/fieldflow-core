@@ -229,8 +229,6 @@ export default function SchedulerWeekView({
                         <DraggableAppointment
                           appointment={apt}
                           statusColor={statusColors[apt.status as keyof typeof statusColors]}
-                          onEdit={() => onEditAppointment(apt.id)}
-                          onGPSCheckIn={() => onGPSCheckIn(apt)}
                           onViewHistory={() => onAppointmentClick(apt.id)}
                           onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
                         />

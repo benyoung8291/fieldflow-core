@@ -165,8 +165,6 @@ export default function SchedulerDayView({
                       key={apt.id}
                       appointment={apt}
                       statusColor={statusColors[apt.status as keyof typeof statusColors]}
-                      onEdit={() => onEditAppointment(apt.id)}
-                      onGPSCheckIn={() => handleGPSCheckIn(apt)}
                       onViewHistory={() => onAppointmentClick(apt.id)}
                       onDelete={() => handleDeleteClick(apt)}
                       showFullDetails
