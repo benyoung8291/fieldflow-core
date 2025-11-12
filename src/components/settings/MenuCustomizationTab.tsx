@@ -286,6 +286,7 @@ export default function MenuCustomizationTab() {
     setSelectedColor(item.color || "");
     setSelectedIcon(item.icon || "Circle");
     setIconSearch("");
+    setIsCreatingFolder(item.is_folder);
     setIsDialogOpen(true);
   };
 
