@@ -20,7 +20,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ThemeSyncWrapper({ children }: { children: React.ReactNode }) {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Theme state:', { theme, resolvedTheme, htmlClass: document.documentElement.className });
+  }, [theme, resolvedTheme]);
 
   // Load user's theme preference from profile
   const { data: profile } = useQuery({
@@ -55,6 +60,7 @@ function ThemeSyncWrapper({ children }: { children: React.ReactNode }) {
   // Apply saved theme on load
   useEffect(() => {
     if (profile?.theme_preference && profile.theme_preference !== theme) {
+      console.log('Applying saved theme preference:', profile.theme_preference);
       setTheme(profile.theme_preference);
     }
   }, [profile, theme, setTheme]);

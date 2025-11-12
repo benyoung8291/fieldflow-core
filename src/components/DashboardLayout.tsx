@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="right" align="start" className="w-56 p-2">
+              <PopoverContent side="right" align="start" className="w-56 p-2 z-[9999]">
                 <div className="space-y-1">
                   <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
                     {item.label}
@@ -223,7 +223,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       Account
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-56 z-[9999]">
                     <DropdownMenuItem onClick={() => navigate("/settings")}>
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
@@ -279,7 +279,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {isMobile ? (
         <MobileHeader />
       ) : (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-30 bg-background border-b border-border">
           <div className="flex items-center justify-end px-4 py-3 gap-2">
             <ViewModeToggle />
             <ThemeToggle />
