@@ -68,7 +68,6 @@ const getContrastingForeground = (backgroundHex: string): string => {
 // Apply brand colors to CSS variables with automatic contrast calculation
 // Creates CSS rules that work with both light and dark mode
 export const applyBrandColorsToDom = (colors: BrandColor[]) => {
-  // Map color keys to CSS variable names
   const colorMappings: Record<string, string> = {
     'primary': '--primary',
     'secondary': '--secondary',
@@ -79,17 +78,19 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
     'info': '--info',
   };
   
-  // Get or create style element
-  let styleEl = document.getElementById('brand-colors-style') as HTMLStyleElement;
+  // Get or create style element at END of head for proper cascade
+  let styleEl = document.getElementById('brand-colors-dynamic') as HTMLStyleElement;
   if (!styleEl) {
     styleEl = document.createElement('style');
-    styleEl.id = 'brand-colors-style';
+    styleEl.id = 'brand-colors-dynamic';
+    styleEl.setAttribute('data-theme', 'brand-colors');
+    // Append to end of head to ensure it overrides base styles
     document.head.appendChild(styleEl);
   }
   
-  // Build complete CSS with light and dark mode rules
-  let lightModeCss = ':root {\n';
-  let darkModeCss = '.dark {\n';
+  // Build CSS with grouped rules for better performance
+  let lightModeRules = '';
+  let darkModeRules = '';
   
   colors.forEach((color) => {
     const cssVar = colorMappings[color.color_key];
@@ -99,31 +100,27 @@ export const applyBrandColorsToDom = (colors: BrandColor[]) => {
       const [h, s, l] = hslValue.split(' ');
       const lightness = parseInt(l);
       
-      // Light mode: original colors
+      // Light mode rules
       const lightHover = lightness > 50 ? lightness - 5 : lightness + 5;
-      lightModeCss += `  ${cssVar}: ${hslValue};\n`;
-      lightModeCss += `  ${cssVar}-foreground: ${foreground};\n`;
-      lightModeCss += `  ${cssVar}-hover: ${h} ${s} ${lightHover}%;\n`;
+      lightModeRules += `  ${cssVar}: ${hslValue};\n`;
+      lightModeRules += `  ${cssVar}-foreground: ${foreground};\n`;
+      lightModeRules += `  ${cssVar}-hover: ${h} ${s} ${lightHover}%;\n`;
       
-      // Dark mode: adjust colors for better visibility on dark backgrounds
-      // Brighten colors significantly for dark mode so they stand out
-      const darkLightness = lightness < 40 ? Math.min(lightness + 20, 65) : 
-                           lightness < 60 ? Math.min(lightness + 10, 70) : 
-                           Math.max(lightness - 10, 60);
-      const darkHover = darkLightness + 5;
-      const darkForeground = darkLightness > 55 ? '0 0% 10%' : '0 0% 98%';
+      // Dark mode rules - significantly adjust for visibility
+      const darkLightness = lightness < 40 ? Math.min(lightness + 25, 70) : 
+                           lightness < 60 ? Math.min(lightness + 15, 75) : 
+                           Math.max(lightness - 5, 65);
+      const darkHover = Math.min(darkLightness + 5, 80);
+      const darkForeground = darkLightness > 55 ? '0 0% 10%' : '0 0% 100%';
       
-      darkModeCss += `  ${cssVar}: ${h} ${s} ${darkLightness}%;\n`;
-      darkModeCss += `  ${cssVar}-foreground: ${darkForeground};\n`;
-      darkModeCss += `  ${cssVar}-hover: ${h} ${s} ${darkHover}%;\n`;
+      darkModeRules += `  ${cssVar}: ${h} ${s} ${darkLightness}%;\n`;
+      darkModeRules += `  ${cssVar}-foreground: ${darkForeground};\n`;
+      darkModeRules += `  ${cssVar}-hover: ${h} ${s} ${darkHover}%;\n`;
     }
   });
   
-  lightModeCss += '}\n';
-  darkModeCss += '}\n';
-  
-  // Replace entire content to ensure clean state
-  styleEl.textContent = lightModeCss + '\n' + darkModeCss;
+  const css = `:root {\n${lightModeRules}}\n\n.dark {\n${darkModeRules}}\n`;
+  styleEl.textContent = css;
 };
 
 export function useBrandColors() {
@@ -161,7 +158,6 @@ export function useBrandColors() {
   // Apply colors to DOM whenever they change
   useEffect(() => {
     if (brandColors.length > 0) {
-      console.log('Applying brand colors:', brandColors.length);
       applyBrandColorsToDom(brandColors);
     }
   }, [brandColors]);
