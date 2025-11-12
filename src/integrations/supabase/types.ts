@@ -4787,6 +4787,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      initialize_brand_colors: {
+        Args: { p_tenant_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_module:

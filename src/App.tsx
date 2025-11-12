@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ViewModeProvider } from "@/contexts/ViewModeContext";
+import { useBrandColors } from "@/hooks/useBrandColors";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
@@ -67,6 +68,9 @@ const queryClient = new QueryClient({
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
+  // Initialize brand colors
+  useBrandColors();
   
   // Initialize PWA and offline sync for both worker and office apps
   usePWAUpdate();

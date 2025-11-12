@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Palette, Plus, Trash2 } from "lucide-react";
+import { Palette, Plus, Trash2, RotateCcw } from "lucide-react";
+import { applyBrandColorsToDom } from "@/hooks/useBrandColors";
 
 interface BrandColor {
   id: string;
@@ -14,15 +15,20 @@ interface BrandColor {
   display_order: number;
 }
 
-interface ColorGroup {
-  name: string;
-  colors: BrandColor[];
-}
-
 export default function BrandColorsTab() {
   const [colorGroups, setColorGroups] = useState<Record<string, string[]>>({
     primary: [],
     secondary: [],
+    system: [],
+  });
+  const [systemColors, setSystemColors] = useState<Record<string, string>>({
+    primary: '#d1703c',
+    secondary: '#aeba6c',
+    accent: '#f9cb8f',
+    success: '#16a34a',
+    warning: '#f59e0b',
+    error: '#dc2626',
+    info: '#0ea5e9',
   });
   const queryClient = useQueryClient();
 
@@ -34,15 +40,22 @@ export default function BrandColorsTab() {
     },
   });
 
-  const { data: brandColors = [], isLoading } = useQuery({
-    queryKey: ["brand-colors"],
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
     queryFn: async () => {
-      const { data: profile } = await supabase
+      const { data } = await supabase
         .from("profiles")
         .select("tenant_id")
         .eq("id", session?.user?.id)
         .single();
+      return data;
+    },
+    enabled: !!session?.user?.id,
+  });
 
+  const { data: brandColors = [], isLoading } = useQuery({
+    queryKey: ["brand-colors"],
+    queryFn: async () => {
       if (!profile?.tenant_id) return [];
 
       const { data, error } = await supabase
@@ -54,7 +67,7 @@ export default function BrandColorsTab() {
       if (error) throw error;
       return (data || []) as BrandColor[];
     },
-    enabled: !!session?.user?.id,
+    enabled: !!profile?.tenant_id,
   });
 
   useEffect(() => {
@@ -62,32 +75,53 @@ export default function BrandColorsTab() {
       primary: [],
       secondary: [],
     };
+    const sysColors: Record<string, string> = {};
 
     brandColors.forEach((color) => {
-      const group = color.color_group || "primary";
-      if (!groups[group]) groups[group] = [];
-      groups[group].push(color.color_value);
+      if (color.color_group === 'system') {
+        sysColors[color.color_key] = color.color_value;
+      } else {
+        const group = color.color_group || "primary";
+        if (!groups[group]) groups[group] = [];
+        groups[group].push(color.color_value);
+      }
     });
 
-    // Initialize with default colors if empty
+    // Set defaults if empty
     if (groups.primary.length === 0) {
       groups.primary = ["#2e3133", "#d1703c", "#f9cb8f"];
     }
     if (groups.secondary.length === 0) {
       groups.secondary = ["#aac9db", "#aeba6c", "#e2e2e6", "#604d45", "#aa7533"];
     }
+    if (Object.keys(sysColors).length > 0) {
+      setSystemColors({ ...systemColors, ...sysColors });
+    }
 
     setColorGroups(groups);
   }, [brandColors]);
 
+  const initializeColors = useMutation({
+    mutationFn: async () => {
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
+      const { error } = await supabase.rpc('initialize_brand_colors', {
+        p_tenant_id: profile.tenant_id
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["brand-colors"] });
+      toast.success("Brand colors initialized with defaults");
+    },
+    onError: (error: any) => {
+      toast.error("Failed to initialize colors: " + error.message);
+    },
+  });
+
   const saveColors = useMutation({
     mutationFn: async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", session?.user?.id)
-        .single();
-
       if (!profile?.tenant_id) throw new Error("Tenant not found");
 
       // Delete existing colors
@@ -98,6 +132,8 @@ export default function BrandColorsTab() {
 
       // Insert new colors
       const colorsToInsert: any[] = [];
+      
+      // Add palette colors
       Object.entries(colorGroups).forEach(([groupName, colors]) => {
         colors.forEach((color, index) => {
           colorsToInsert.push({
@@ -110,17 +146,31 @@ export default function BrandColorsTab() {
         });
       });
 
+      // Add system colors
+      Object.entries(systemColors).forEach(([key, value], index) => {
+        colorsToInsert.push({
+          tenant_id: profile.tenant_id,
+          color_key: key,
+          color_value: value,
+          color_group: 'system',
+          display_order: index,
+        });
+      });
+
       if (colorsToInsert.length > 0) {
         const { error } = await supabase.from("brand_colors").insert(colorsToInsert);
         if (error) throw error;
       }
+
+      // Apply colors immediately
+      applyBrandColorsToDom(colorsToInsert);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brand-colors"] });
       toast.success("Brand colors saved successfully");
     },
-    onError: () => {
-      toast.error("Failed to save brand colors");
+    onError: (error: any) => {
+      toast.error("Failed to save brand colors: " + error.message);
     },
   });
 
@@ -145,6 +195,13 @@ export default function BrandColorsTab() {
     }));
   };
 
+  const updateSystemColor = (key: string, value: string) => {
+    setSystemColors((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -157,22 +214,35 @@ export default function BrandColorsTab() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Brand Color Palette
+                Brand Color Management
               </CardTitle>
               <CardDescription>
-                Manage your primary and secondary brand colors. These colors will be available as presets in menu customization.
+                Manage all colors used throughout the application. All UI elements reference these colors.
               </CardDescription>
             </div>
-            <Button onClick={() => saveColors.mutate()} disabled={saveColors.isPending}>
-              {saveColors.isPending ? "Saving..." : "Save Colors"}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => initializeColors.mutate()}
+                disabled={initializeColors.isPending}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset to Defaults
+              </Button>
+              <Button onClick={() => saveColors.mutate()} disabled={saveColors.isPending}>
+                {saveColors.isPending ? "Saving..." : "Save Colors"}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-8">
-          {/* Primary Colors */}
+          {/* Primary Brand Colors */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Premrest Primary Colours</h3>
+              <div>
+                <h3 className="text-lg font-semibold">Premrest Primary Colours</h3>
+                <p className="text-sm text-muted-foreground">Used in menu icons, brand elements</p>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -212,10 +282,13 @@ export default function BrandColorsTab() {
             </div>
           </div>
 
-          {/* Secondary Colors */}
+          {/* Secondary Brand Colors */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Premrest Secondary Colours</h3>
+              <div>
+                <h3 className="text-lg font-semibold">Premrest Secondary Colours</h3>
+                <p className="text-sm text-muted-foreground">Used in menu icons, accent elements</p>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -250,6 +323,37 @@ export default function BrandColorsTab() {
                     onChange={(e) => updateColor("secondary", index, e.target.value)}
                     className="text-center text-sm font-mono bg-background border rounded px-2 py-1 w-24"
                   />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* System/Functional Colors */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">System Colors</h3>
+              <p className="text-sm text-muted-foreground">
+                These colors are applied to buttons, alerts, and UI components throughout the app
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(systemColors).map(([key, value]) => (
+                <div key={key} className="flex flex-col gap-2">
+                  <label className="text-sm font-medium capitalize">{key}</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={value}
+                      onChange={(e) => updateSystemColor(key, e.target.value)}
+                      className="h-10 w-16 rounded cursor-pointer border-2 border-border"
+                    />
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => updateSystemColor(key, e.target.value)}
+                      className="text-sm font-mono bg-background border rounded px-2 flex-1"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
