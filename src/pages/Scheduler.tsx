@@ -468,7 +468,6 @@ export default function Scheduler() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success("Appointment updated successfully");
     },
     onError: (error: any, variables, context) => {
       if (context?.previousAppointments) {
@@ -938,6 +937,17 @@ export default function Scheduler() {
         }
         
         let aptEndTime = new Date(aptStartTime.getTime() + durationMs);
+
+        // Check if appointment is actually being moved
+        const isSameTime = 
+          aptStartTime.getTime() === originalStart.getTime() &&
+          aptEndTime.getTime() === originalEnd.getTime();
+        const isSameWorker = workerId === apt.assigned_to || (workerId === null && apt.assigned_to === null);
+
+        // Skip update if nothing changed
+        if (isSameTime && isSameWorker && !isMultiAssign) {
+          return;
+        }
 
         // Check for existing appointments and find next available slot
         if (workerId) {
