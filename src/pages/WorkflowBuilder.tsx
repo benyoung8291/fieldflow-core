@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import { 
   Save, 
@@ -66,6 +67,9 @@ const actionTypes = [
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
 import QuickStartPanel from "@/components/workflows/QuickStartPanel";
 import NodeConfigPanel from "@/components/workflows/NodeConfigPanel";
+import { validateWorkflow, ValidationIssue } from "@/lib/workflowValidation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, Info } from "lucide-react";
 
 export default function WorkflowBuilder() {
   const { id } = useParams();
@@ -79,6 +83,8 @@ export default function WorkflowBuilder() {
   const [showQuickStart, setShowQuickStart] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
+  const { toast: toastHook } = useToast();
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -247,6 +253,35 @@ export default function WorkflowBuilder() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedNode, handleDeleteNode]);
 
+  const handleSave = async () => {
+    // Validate workflow before saving
+    const validation = validateWorkflow(nodes, edges);
+    setValidationIssues(validation.issues);
+
+    if (!validation.isValid) {
+      const errorCount = validation.issues.filter(i => i.severity === "error").length;
+      const warningCount = validation.issues.filter(i => i.severity === "warning").length;
+      
+      toastHook({
+        title: "Workflow Validation Failed",
+        description: `Found ${errorCount} error(s) and ${warningCount} warning(s). Please fix errors before saving.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (validation.issues.length > 0) {
+      const warningCount = validation.issues.filter(i => i.severity === "warning").length;
+      toastHook({
+        title: "Workflow Warnings",
+        description: `Found ${warningCount} warning(s). Workflow can be saved but may not work as expected.`,
+        variant: "default",
+      });
+    }
+
+    saveMutation.mutate();
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -341,6 +376,7 @@ export default function WorkflowBuilder() {
     },
     onSuccess: (workflowId) => {
       toast.success("Workflow saved successfully");
+      setValidationIssues([]); // Clear validation issues on successful save
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
       queryClient.invalidateQueries({ queryKey: ["workflow", workflowId] });
       if (id === "new") {
@@ -380,7 +416,7 @@ export default function WorkflowBuilder() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button onClick={handleSave} disabled={saveMutation.isPending}>
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
@@ -420,6 +456,25 @@ export default function WorkflowBuilder() {
 
         {id && id !== "new" && (
           <WorkflowExecutionsList workflowId={id} />
+        )}
+
+        {validationIssues.length > 0 && (
+          <div className="space-y-2 mt-4">
+            {validationIssues.filter(i => i.severity === "error").map((issue, idx) => (
+              <Alert key={`error-${idx}`} variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{issue.message}</AlertDescription>
+              </Alert>
+            ))}
+            {validationIssues.filter(i => i.severity === "warning").map((issue, idx) => (
+              <Alert key={`warning-${idx}`}>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Warning</AlertTitle>
+                <AlertDescription>{issue.message}</AlertDescription>
+              </Alert>
+            ))}
+          </div>
         )}
       </div>
 
