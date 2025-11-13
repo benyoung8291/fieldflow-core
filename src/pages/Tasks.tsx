@@ -39,6 +39,7 @@ export default function Tasks() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTask, setActiveTask] = useState<any>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [groupMode, setGroupMode] = useState<'status' | 'tag'>('status');
   const queryClient = useQueryClient();
 
   // Drag and drop sensors with mobile support
@@ -315,6 +316,28 @@ export default function Tasks() {
     return groups;
   }, [tasksWithUsers]);
 
+  // Group tasks by tag
+  const groupedByTag = useMemo(() => {
+    const groups: Record<string, any[]> = {
+      'untagged': []
+    };
+    
+    tasksWithUsers.forEach((task: any) => {
+      if (!task.tags || task.tags.length === 0) {
+        groups['untagged'].push(task);
+      } else {
+        task.tags.forEach((tag: string) => {
+          if (!groups[tag]) {
+            groups[tag] = [];
+          }
+          groups[tag].push(task);
+        });
+      }
+    });
+    
+    return groups;
+  }, [tasksWithUsers]);
+
   const statusLabels: Record<string, string> = {
     'pending': 'Pending',
     'in_progress': 'In Progress',
@@ -525,6 +548,26 @@ export default function Tasks() {
                 Kanban
               </Button>
             </div>
+            {viewMode === 'list' && (
+              <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+                <Button
+                  variant={groupMode === 'status' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setGroupMode('status')}
+                  className="gap-2"
+                >
+                  Status
+                </Button>
+                <Button
+                  variant={groupMode === 'tag' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setGroupMode('tag')}
+                  className="gap-2"
+                >
+                  Tag
+                </Button>
+              </div>
+            )}
             <Button onClick={() => { setSelectedTask(null); setIsDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               New Task
@@ -666,32 +709,38 @@ export default function Tasks() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupedTasks).map(([status, statusTasks]) => {
-              if (statusTasks.length === 0) return null;
+            {Object.entries(groupMode === 'status' ? groupedTasks : groupedByTag).map(([groupKey, groupTasks]) => {
+              if (groupTasks.length === 0) return null;
+              
+              const displayLabel = groupMode === 'status' 
+                ? statusLabels[groupKey] 
+                : groupKey === 'untagged' 
+                  ? 'Untagged' 
+                  : groupKey;
               
               return (
-                <div key={status} className="space-y-2">
+                <div key={groupKey} className="space-y-2">
                   <button
-                    onClick={() => toggleSection(status)}
+                    onClick={() => toggleSection(groupKey)}
                     className="flex items-center gap-2 w-full text-left group hover:text-foreground transition-colors"
                   >
                     <ChevronDown 
                       className={cn(
                         "h-4 w-4 transition-transform",
-                        collapsedSections[status] && "-rotate-90"
+                        collapsedSections[groupKey] && "-rotate-90"
                       )}
                     />
                     <h3 className="text-sm font-semibold text-muted-foreground group-hover:text-foreground">
-                      {statusLabels[status]}
+                      {displayLabel}
                     </h3>
                     <span className="text-xs text-muted-foreground">
-                      {statusTasks.length}
+                      {groupTasks.length}
                     </span>
                   </button>
                   
-                  {!collapsedSections[status] && (
+                  {!collapsedSections[groupKey] && (
                     <div className="space-y-1 pl-6">
-                      {statusTasks.map((task: any) => (
+                      {groupTasks.map((task: any) => (
                         <div
                           key={task.id}
                           className="group flex items-start gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
