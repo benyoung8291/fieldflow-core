@@ -14,6 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown, CheckSquare, MessageSquare, Send } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
@@ -29,6 +31,10 @@ export default function Tasks() {
   const [newComment, setNewComment] = useState("");
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
@@ -618,11 +624,36 @@ export default function Tasks() {
   };
   const handleTaskClick = (task: any) => {
     setSelectedTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description || "");
     if (viewMode === 'list') {
       setSidePanelOpen(true);
     } else {
       setIsDialogOpen(true);
     }
+  };
+
+  const handleInlineUpdate = (field: string, value: any) => {
+    if (!selectedTask) return;
+    updateTaskMutation.mutate({
+      id: selectedTask.id,
+      data: { [field]: value } as any
+    });
+    setSelectedTask({ ...selectedTask, [field]: value });
+  };
+
+  const handleTitleSave = () => {
+    if (editTitle.trim() && editTitle !== selectedTask?.title) {
+      handleInlineUpdate('title', editTitle);
+    }
+    setEditingTitle(false);
+  };
+
+  const handleDescriptionSave = () => {
+    if (editDescription !== selectedTask?.description) {
+      handleInlineUpdate('description', editDescription);
+    }
+    setEditingDescription(false);
   };
 
   return <DashboardLayout>
@@ -889,40 +920,143 @@ export default function Tasks() {
                 </div>
 
                 <div className="p-4 space-y-4 overflow-y-auto flex-1">
-                  {/* Task Title */}
-                  <h2 className="text-xl font-semibold leading-tight">{selectedTask.title}</h2>
+                  {/* Task Title - Inline Editable */}
+                  {editingTitle ? (
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onBlur={handleTitleSave}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleTitleSave();
+                        if (e.key === 'Escape') {
+                          setEditTitle(selectedTask.title);
+                          setEditingTitle(false);
+                        }
+                      }}
+                      autoFocus
+                      className="text-xl font-semibold"
+                    />
+                  ) : (
+                    <h2 
+                      className="text-xl font-semibold leading-tight cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2"
+                      onClick={() => setEditingTitle(true)}
+                    >
+                      {selectedTask.title}
+                    </h2>
+                  )}
 
-                  {/* Status and Priority Badges */}
+                  {/* Status and Priority Badges - Inline Editable */}
                   <div className="flex items-center gap-1.5">
-                    <Badge className={cn("text-[10px] h-5 px-2", getStatusColor(selectedTask.status))}>
-                      {statusLabels[selectedTask.status]}
-                    </Badge>
-                    <Badge variant="outline" className={cn("text-[10px] h-5 px-2", getPriorityColor(selectedTask.priority))}>
-                      {selectedTask.priority}
-                    </Badge>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Badge className={cn("text-[10px] h-5 px-2 cursor-pointer hover:opacity-80", getStatusColor(selectedTask.status))}>
+                          {statusLabels[selectedTask.status]}
+                        </Badge>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-40 p-1" align="start">
+                        <div className="space-y-0.5">
+                          {Object.entries(statusLabels).map(([value, label]) => (
+                            <Button
+                              key={value}
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start h-8 text-xs"
+                              onClick={() => handleInlineUpdate('status', value)}
+                            >
+                              {label}
+                            </Button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Badge variant="outline" className={cn("text-[10px] h-5 px-2 cursor-pointer hover:bg-muted", getPriorityColor(selectedTask.priority))}>
+                          {selectedTask.priority}
+                        </Badge>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-32 p-1" align="start">
+                        <div className="space-y-0.5">
+                          {['low', 'medium', 'high', 'urgent'].map((priority) => (
+                            <Button
+                              key={priority}
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start h-8 text-xs capitalize"
+                              onClick={() => handleInlineUpdate('priority', priority)}
+                            >
+                              {priority}
+                            </Button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* Key Details - Compact Grid */}
                   <div className="space-y-2.5">
-                    {/* Assignee */}
+                    {/* Assignee - Inline Editable */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Assignee</span>
-                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                        {selectedTask.assigned_user ? <>
-                            <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs truncate">{selectedTask.assigned_user.first_name} {selectedTask.assigned_user.last_name}</span>
-                          </> : <span className="text-xs text-muted-foreground">Unassigned</span>}
-                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2">
+                            {selectedTask.assigned_user ? <>
+                                <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs truncate">{selectedTask.assigned_user.first_name} {selectedTask.assigned_user.last_name}</span>
+                              </> : <span className="text-xs text-muted-foreground">Unassigned</span>}
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-52 p-1" align="start">
+                          <div className="space-y-0.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start h-8 text-xs"
+                              onClick={() => handleInlineUpdate('assigned_to', null)}
+                            >
+                              Unassigned
+                            </Button>
+                            {workers.map((worker: any) => (
+                              <Button
+                                key={worker.id}
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start h-8 text-xs"
+                                onClick={() => handleInlineUpdate('assigned_to', worker.id)}
+                              >
+                                {worker.first_name} {worker.last_name}
+                              </Button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
-                    {/* Due Date */}
-                    {selectedTask.due_date && <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Due date</span>
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-xs">{format(new Date(selectedTask.due_date), "MMM d, yyyy")}</span>
-                        </div>
-                      </div>}
+                    {/* Due Date - Inline Editable */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Due date</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <div className="flex items-center gap-1.5 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2">
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs">
+                              {selectedTask.due_date ? format(new Date(selectedTask.due_date), "MMM d, yyyy") : "No date"}
+                            </span>
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={selectedTask.due_date ? new Date(selectedTask.due_date) : undefined}
+                            onSelect={(date) => handleInlineUpdate('due_date', date)}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
 
                     {/* Linked Document */}
                     {selectedTask.linked_module && selectedTask.linked_record_name && <div className="flex items-center gap-2">
@@ -947,11 +1081,32 @@ export default function Tasks() {
                       </div>}
                   </div>
 
-                  {/* Description */}
-                  {selectedTask.description && <div className="space-y-1.5 pt-2 border-t">
-                      <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
-                      <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{selectedTask.description}</p>
-                    </div>}
+                  {/* Description - Inline Editable */}
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
+                    {editingDescription ? (
+                      <Textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        onBlur={handleDescriptionSave}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setEditDescription(selectedTask.description || "");
+                            setEditingDescription(false);
+                          }
+                        }}
+                        autoFocus
+                        className="min-h-[100px] text-xs resize-none"
+                      />
+                    ) : (
+                      <p 
+                        className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 min-h-[40px]"
+                        onClick={() => setEditingDescription(true)}
+                      >
+                        {selectedTask.description || "Click to add description..."}
+                      </p>
+                    )}
+                  </div>
 
                   {/* Subtasks Count */}
                   {selectedTask.subtaskCount > 0 && <div className="space-y-1.5 pt-2 border-t">
