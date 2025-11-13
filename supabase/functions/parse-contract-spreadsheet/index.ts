@@ -161,26 +161,50 @@ Identify which column corresponds to each required field.`
             role: "system",
             content: `You are an expert at parsing service contract spreadsheets using provided column mappings. Extract line items according to the specified column mappings.
 
-EXTRACTION RULES:
-- Use ONLY the column names provided in the mappings
+CRITICAL EXTRACTION RULES:
+- You MUST extract ALL rows from the data (skip only the header row at index 0)
+- Use ONLY the column names provided in the mappings to find data
+- For each row, extract the value from the column specified in the mapping
 - Convert prices to numbers (remove $, commas)
-- Standardize frequency to: weekly, monthly, quarterly, annually
-- Convert dates to YYYY-MM-DD format (use 2025 if year not specified)
+- Standardize frequency to: weekly, monthly, quarterly, annually (map "6 Monthly" to "quarterly", "Annual" to "annually", etc.)
+- Convert dates to YYYY-MM-DD format (use 2025 if year not specified, convert month names like "Jul" to "2025-07-01", "Jan" to "2025-01-01", etc.)
 - Default quantity to 1 if mapping is null or value is not a valid number
-- Match existing locations by name and address`
+- Match existing locations by name and address when possible
+
+EXAMPLE:
+If mappings say:
+- description: "description"
+- location_address: "Address"  
+- unit_price: "TOTAL per clean ($)"
+
+And row data is: ["1000150", "R", "ANZ Auburn", "28 Auburn Rd", "Auburn", "NSW", "", "6 Monthly", "2", "Jul", "Jan", "$982.00", "$1,964.00"]
+
+Then extract:
+- description from column "description" (index 2) = "ANZ Auburn"
+- location_address from column "Address" (index 3) = "28 Auburn Rd"
+- unit_price from column "TOTAL per clean ($)" (index 11) = 982.00 (cleaned)
+
+YOU MUST RETURN ALL DATA ROWS AS LINE ITEMS.`
           },
           {
             role: "user",
             content: `Parse this spreadsheet using these column mappings:
 ${JSON.stringify(columnMappings, null, 2)}
 
-Data to parse (${limitedSpreadsheetData.length} rows):
+Data to parse (${limitedSpreadsheetData.length} rows including header):
 ${JSON.stringify(limitedSpreadsheetData, null, 2)}
 
 Existing locations for matching:
 ${JSON.stringify(locations || [], null, 2)}
 
-Extract all line items using the provided mappings.`
+IMPORTANT: 
+- Row 0 is the header row with column names
+- Rows 1 onwards contain the actual data you must extract
+- For each data row (rows 1-${limitedSpreadsheetData.length - 1}), create a line item
+- Use the column mappings to know which column index to extract from
+- You MUST return ${limitedSpreadsheetData.length - 1} line items (one for each data row)
+
+Extract ALL line items using the provided mappings.`
           }
         ],
         tools: processingMode === "analyze" ? [
