@@ -35,3 +35,7 @@ verify_jwt = false
 
 [functions.trigger-workflow]
 verify_jwt = true
+
+[functions.parse-contract-spreadsheet]
+verify_jwt = true
+

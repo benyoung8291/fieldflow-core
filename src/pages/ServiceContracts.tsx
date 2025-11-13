@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,13 +14,17 @@ import { format, addMonths, parseISO, addWeeks } from "date-fns";
 import { useState } from "react";
 import RenewContractDialog from "@/components/quotes/RenewContractDialog";
 import ServiceContractDialog from "@/components/contracts/ServiceContractDialog";
+import ImportContractDialog from "@/components/contracts/ImportContractDialog";
 import DashboardLayout from "@/components/DashboardLayout";
+import { FileSpreadsheet } from "lucide-react";
 
 export default function ServiceContracts() {
   const navigate = useNavigate();
   const { isMobile } = useViewMode();
+  const queryClient = useQueryClient();
   const [renewingContract, setRenewingContract] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
@@ -157,10 +161,20 @@ export default function ServiceContracts() {
             <h1 className="text-3xl font-bold">Service Contracts</h1>
             <p className="text-muted-foreground">Manage active contracts and forecast revenue</p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Contract
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsImportDialogOpen(true)} 
+              className="gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Import from Spreadsheet
+            </Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Contract
+            </Button>
+          </div>
         </div>
 
       {!isMobile && (
@@ -423,6 +437,14 @@ export default function ServiceContracts() {
         <ServiceContractDialog
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
+        />
+
+        <ImportContractDialog
+          open={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["service-contracts-dashboard"] });
+          }}
         />
       </div>
     </DashboardLayout>
