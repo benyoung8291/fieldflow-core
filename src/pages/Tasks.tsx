@@ -172,11 +172,28 @@ export default function Tasks() {
     enabled: !!selectedTask?.id,
   });
 
-  // Real-time subscription for comments
+  // Fetch task activity/audit logs
+  const { data: activityLogs = [] } = useQuery({
+    queryKey: ["task-activity", selectedTask?.id],
+    queryFn: async () => {
+      if (!selectedTask?.id) return [];
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .eq("table_name", "tasks")
+        .eq("record_id", selectedTask.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedTask?.id,
+  });
+
+  // Real-time subscription for comments and activity
   useEffect(() => {
     if (!selectedTask?.id) return;
     const channel = supabase
-      .channel('task-comments-changes')
+      .channel('task-updates')
       .on(
         'postgres_changes',
         {
@@ -187,6 +204,18 @@ export default function Tasks() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["task-comments", selectedTask.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'audit_logs',
+          filter: `record_id=eq.${selectedTask.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["task-activity", selectedTask.id] });
         }
       )
       .subscribe();
@@ -308,6 +337,76 @@ export default function Tasks() {
       }
       return part;
     });
+  };
+
+  const getActivityDescription = (log: any) => {
+    if (log.action === 'create') {
+      return 'created this task';
+    }
+    if (log.action === 'delete') {
+      return 'deleted this task';
+    }
+    if (log.action === 'update' && log.field_name) {
+      const fieldLabels: Record<string, string> = {
+        'title': 'title',
+        'description': 'description',
+        'status': 'status',
+        'priority': 'priority',
+        'assigned_to': 'assignee',
+        'due_date': 'due date',
+        'tags': 'tags',
+        'start_date': 'start date',
+        'end_date': 'end date',
+        'estimated_hours': 'estimated hours',
+        'progress_percentage': 'progress'
+      };
+      
+      const field = fieldLabels[log.field_name] || log.field_name;
+      
+      // Format values for display
+      let oldVal = log.old_value;
+      let newVal = log.new_value;
+      
+      if (log.field_name === 'status') {
+        oldVal = statusLabels[oldVal] || oldVal;
+        newVal = statusLabels[newVal] || newVal;
+      }
+      
+      if (log.field_name === 'assigned_to') {
+        const oldUser = workers.find((w: any) => w.id === oldVal);
+        const newUser = workers.find((w: any) => w.id === newVal);
+        oldVal = oldUser ? `${oldUser.first_name} ${oldUser.last_name}` : 'Unassigned';
+        newVal = newUser ? `${newUser.first_name} ${newUser.last_name}` : 'Unassigned';
+      }
+      
+      if (log.field_name === 'due_date' && newVal) {
+        newVal = format(new Date(newVal), "MMM d, yyyy");
+      }
+      
+      if (oldVal && newVal) {
+        return (
+          <>
+            changed <span className="font-medium">{field}</span> from{' '}
+            <span className="text-muted-foreground">{oldVal}</span> to{' '}
+            <span className="font-medium">{newVal}</span>
+          </>
+        );
+      } else if (newVal) {
+        return (
+          <>
+            set <span className="font-medium">{field}</span> to{' '}
+            <span className="font-medium">{newVal}</span>
+          </>
+        );
+      } else {
+        return (
+          <>
+            cleared <span className="font-medium">{field}</span>
+          </>
+        );
+      }
+    }
+    return 'made a change';
   };
 
   const {
@@ -1201,6 +1300,37 @@ export default function Tasks() {
                         <span>{selectedTask.completedSubtaskCount} of {selectedTask.subtaskCount} completed</span>
                       </div>
                     </div>}
+
+                  {/* Activity Timeline */}
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <h3 className="text-xs font-medium text-muted-foreground">Activity</h3>
+                    <div className="space-y-3 mt-2">
+                      {activityLogs.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No activity yet</p>
+                      ) : (
+                        activityLogs.map((log: any) => (
+                          <div key={log.id} className="flex gap-2 text-xs">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                                <span className="text-[10px] font-medium">
+                                  {log.user_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2) || '??'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-1.5 flex-wrap">
+                                <span className="font-medium text-foreground">{log.user_name || 'Unknown'}</span>
+                                <span className="text-foreground/70">{getActivityDescription(log)}</span>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
 
                   {/* Action Button */}
                   <div className="pt-3 border-t">
