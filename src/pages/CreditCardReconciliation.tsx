@@ -446,53 +446,64 @@ export default function CreditCardReconciliation() {
                 ) : (
                   <div className="p-3">
                     {/* Suggested Matches */}
-                    {findMatches(selectedTransaction).map((match) => (
-                      <div
-                        key={match.id}
-                        className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded"
-                      >
-                        <div className="flex items-start gap-2 mb-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-1" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-muted-foreground mb-0.5">
-                              {format(new Date(match.expense_date), 'dd MMM yyyy')}
-                            </div>
-                            <div className="font-semibold text-sm mb-0.5">
-                              Expense: {match.expense_number}
-                            </div>
-                            <div className="text-xs text-muted-foreground line-clamp-1">
-                              {match.description}
-                            </div>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="font-semibold text-sm">
-                              ${parseFloat(match.amount.toString()).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-emerald-200">
-                          <div className="flex gap-3">
-                            <button className="text-[11px] text-blue-600 hover:underline font-medium">Match</button>
-                            <button className="text-[11px] text-blue-600 hover:underline">Create</button>
-                            <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
-                            <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => matchMutation.mutate({
-                              transactionId: selectedTransaction.id,
-                              expenseId: match.id,
-                            })}
-                            disabled={matchMutation.isPending}
-                            className="h-7 px-4 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
+                    {findMatches(selectedTransaction).length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {findMatches(selectedTransaction).map((match) => (
+                          <div
+                            key={match.id}
+                            className="p-3 bg-emerald-50 border border-emerald-300 rounded relative"
                           >
-                            OK
-                          </Button>
-                        </div>
+                            <div className="flex items-start gap-2">
+                              <div className="flex-shrink-0 mt-1">
+                                <div className="w-5 h-5 rounded border-2 border-emerald-600 bg-emerald-600 flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-white" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[11px] text-muted-foreground mb-0.5">
+                                  {format(new Date(match.expense_date), 'dd MMM yyyy')}
+                                </div>
+                                <div className="font-semibold text-sm mb-0.5">
+                                  Expense: {match.expense_number}
+                                </div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Ref: {match.expense_number}
+                                </div>
+                                <div className="text-xs text-foreground line-clamp-2">
+                                  {match.description}
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <div className="font-semibold text-sm">
+                                  ${parseFloat(match.amount.toString()).toFixed(2)}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-emerald-200">
+                              <div className="flex gap-3">
+                                <button className="text-[11px] text-blue-600 hover:underline font-medium">Match</button>
+                                <button className="text-[11px] text-blue-600 hover:underline">Create</button>
+                                <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
+                                <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => matchMutation.mutate({
+                                  transactionId: selectedTransaction.id,
+                                  expenseId: match.id,
+                                })}
+                                disabled={matchMutation.isPending}
+                                className="h-7 px-5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
+                              >
+                                OK
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
 
-                    {/* Create New Expense Form */}
+                    {/* Tabs - Only show if no matches or user wants to create new */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
                       <TabsList className="w-full justify-start h-8 p-0.5 bg-muted/40">
                         <TabsTrigger value="match" className="text-xs h-7">Match</TabsTrigger>
@@ -504,7 +515,8 @@ export default function CreditCardReconciliation() {
                       <TabsContent value="match" className="space-y-2 mt-3">
                         {findMatches(selectedTransaction).length === 0 && (
                           <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
-                            No matching expenses found. Create a new expense or check other tabs.
+                            <p className="mb-2">This is payment on a really old invoice so wasn't sure where to code it</p>
+                            <p className="text-[10px] italic">Ctrl + S at any time to save</p>
                           </div>
                         )}
                         <div className="text-right">
@@ -596,6 +608,24 @@ export default function CreditCardReconciliation() {
                             Add details
                           </Button>
                         </div>
+
+                        {/* Action Buttons for Create Tab */}
+                        <div className="flex items-center justify-between pt-3 border-t">
+                          <div className="flex gap-3">
+                            <button className="text-[11px] text-blue-600 hover:underline">Match</button>
+                            <button className="text-[11px] text-blue-600 hover:underline font-medium">Create</button>
+                            <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
+                            <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={handleCreateExpense}
+                            disabled={createExpenseMutation.isPending || !formData.description}
+                            className="h-7 px-5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
+                          >
+                            OK
+                          </Button>
+                        </div>
                       </TabsContent>
 
                       <TabsContent value="transfer" className="mt-3">
@@ -610,36 +640,6 @@ export default function CreditCardReconciliation() {
                         </div>
                       </TabsContent>
                     </Tabs>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                      <div className="flex gap-3">
-                        <button className="text-[11px] text-blue-600 hover:underline font-medium">Match</button>
-                        <button className="text-[11px] text-blue-600 hover:underline font-medium">Create</button>
-                        <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
-                        <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
-                      </div>
-                      {activeTab === 'create' && (
-                        <Button
-                          size="sm"
-                          onClick={handleCreateExpense}
-                          disabled={createExpenseMutation.isPending || !formData.description}
-                          className="h-7 px-4 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
-                        >
-                          OK
-                        </Button>
-                      )}
-                      {findMatches(selectedTransaction).length === 0 && activeTab === 'match' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="h-7 px-4 text-xs"
-                          onClick={() => setActiveTab('create')}
-                        >
-                          Create
-                        </Button>
-                      )}
-                    </div>
                   </div>
                 )}
               </ScrollArea>
