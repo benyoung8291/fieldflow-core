@@ -859,7 +859,7 @@ export default function QuoteDetails() {
       value: "versions",
       label: "Version History",
       icon: <History className="h-4 w-4" />,
-      content: <QuoteVersionHistory quoteId={id || ""} />,
+      content: <QuoteVersionHistory quoteId={id || ""} canRestore={canEdit} />,
     },
     {
       value: "helpdesk",
