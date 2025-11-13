@@ -73,7 +73,7 @@ export default function ProjectTasksGrid({ projectId }: ProjectTasksGridProps) {
         const { data: links } = await supabase
           .from("project_task_line_items" as any)
           .select("line_item_id")
-          .eq("project_task_id", task.id);
+          .eq("task_id", task.id);
 
         return {
           ...task,
@@ -147,15 +147,14 @@ export default function ProjectTasksGrid({ projectId }: ProjectTasksGridProps) {
         await supabase
           .from("project_task_line_items" as any)
           .delete()
-          .eq("project_task_id", task.id);
+          .eq("task_id", task.id);
 
         if (task.linked_line_items.length > 0) {
           await supabase
             .from("project_task_line_items" as any)
             .insert(
               task.linked_line_items.map((lineItemId) => ({
-                tenant_id: tenantId,
-                project_task_id: task.id,
+                task_id: task.id,
                 line_item_id: lineItemId,
               }))
             );
@@ -175,8 +174,7 @@ export default function ProjectTasksGrid({ projectId }: ProjectTasksGridProps) {
             .from("project_task_line_items" as any)
             .insert(
               task.linked_line_items.map((lineItemId) => ({
-                tenant_id: tenantId,
-                project_task_id: (newTask as any).id,
+                task_id: (newTask as any).id,
                 line_item_id: lineItemId,
               }))
             );
