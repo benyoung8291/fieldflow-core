@@ -148,9 +148,14 @@ export default function TaskDialog({
         
         {taskId ? (
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className={cn(
+              "grid w-full",
+              linkedModule === 'project' ? "grid-cols-4" : "grid-cols-3"
+            )}>
               <TabsTrigger value="details">Task Details</TabsTrigger>
-              <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
+              {linkedModule === 'project' && (
+                <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
+              )}
               <TabsTrigger value="checklist">Checklist</TabsTrigger>
               <TabsTrigger value="comments">Comments</TabsTrigger>
             </TabsList>
@@ -217,82 +222,93 @@ export default function TaskDialog({
           </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.start_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.start_date ? format(formData.start_date, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.start_date}
-                      onSelect={(date) => setFormData({ ...formData, start_date: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {linkedModule === 'project' && (
+                <>
+                  <div>
+                    <Label>Start Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.start_date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.start_date ? format(formData.start_date, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={formData.start_date}
+                          onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-              <div>
-                <Label>End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.end_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.end_date ? format(formData.end_date, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.end_date}
-                      onSelect={(date) => setFormData({ ...formData, end_date: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                  <div>
+                    <Label>End Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.end_date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.end_date ? format(formData.end_date, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={formData.end_date}
+                          onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <Label>Estimated Hours</Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  placeholder="0"
-                  value={formData.estimated_hours}
-                  onChange={(e) => setFormData({ ...formData, estimated_hours: e.target.value })}
-                />
-              </div>
+            <div className={cn(
+              "grid gap-4",
+              linkedModule === 'project' ? "md:grid-cols-3" : "md:grid-cols-1"
+            )}>
+              {linkedModule === 'project' && (
+                <>
+                  <div>
+                    <Label>Estimated Hours</Label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      placeholder="0"
+                      value={formData.estimated_hours}
+                      onChange={(e) => setFormData({ ...formData, estimated_hours: e.target.value })}
+                    />
+                  </div>
 
-              <div>
-                <Label>Progress (%)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="0"
-                  value={formData.progress_percentage}
-                  onChange={(e) => setFormData({ ...formData, progress_percentage: e.target.value })}
-                />
-              </div>
+                  <div>
+                    <Label>Progress (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={formData.progress_percentage}
+                      onChange={(e) => setFormData({ ...formData, progress_percentage: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <Label>Due Date</Label>
@@ -352,16 +368,13 @@ export default function TaskDialog({
               </div>
             </TabsContent>
             
-            <TabsContent value="dependencies" className="mt-4">
-              {linkedModule === "project" && linkedRecordId && (
-                <TaskDependenciesTab taskId={taskId} projectId={linkedRecordId} />
-              )}
-              {linkedModule !== "project" && (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  Task dependencies are only available for project tasks
-                </div>
-              )}
-            </TabsContent>
+            {linkedModule === 'project' && (
+              <TabsContent value="dependencies" className="mt-4">
+                {linkedRecordId && (
+                  <TaskDependenciesTab taskId={taskId} projectId={linkedRecordId} />
+                )}
+              </TabsContent>
+            )}
             
             <TabsContent value="checklist" className="mt-4">
               <TaskChecklist taskId={taskId} />
