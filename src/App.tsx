@@ -51,6 +51,8 @@ import ExpenseDetails from "@/pages/ExpenseDetails";
 import CreditCardReconciliation from "@/pages/CreditCardReconciliation";
 import UnassignedTransactions from "@/pages/UnassignedTransactions";
 import Contacts from "@/pages/Contacts";
+import Workflows from "@/pages/Workflows";
+import WorkflowBuilder from "@/pages/WorkflowBuilder";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
@@ -199,6 +201,8 @@ const App = () => {
             <Route path="/expenses/:id" element={isAuthenticated ? <ExpenseDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/credit-card-reconciliation" element={isAuthenticated ? <CreditCardReconciliation /> : <Navigate to="/auth" replace />} />
             <Route path="/unassigned-transactions" element={isAuthenticated ? <UnassignedTransactions /> : <Navigate to="/auth" replace />} />
+            <Route path="/workflows" element={isAuthenticated ? <Workflows /> : <Navigate to="/auth" replace />} />
+            <Route path="/workflows/:id" element={isAuthenticated ? <WorkflowBuilder /> : <Navigate to="/auth" replace />} />
             <Route path="/contacts" element={isAuthenticated ? <Contacts /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
             <Route path="/crm-hub" element={isAuthenticated ? <CRMHub /> : <Navigate to="/auth" replace />} />
