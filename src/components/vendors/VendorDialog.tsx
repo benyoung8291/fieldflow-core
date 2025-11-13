@@ -181,6 +181,29 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
+      // Check for duplicate ABN
+      if (formData.abn) {
+        const cleanABN = formData.abn.replace(/\s/g, '');
+        let duplicateQuery = supabase
+          .from("vendors")
+          .select("id, name")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("abn", formData.abn);
+
+        // If editing, exclude current vendor from check
+        if (vendor) {
+          duplicateQuery = duplicateQuery.neq("id", vendor.id);
+        }
+
+        const { data: duplicateVendor } = await duplicateQuery.maybeSingle();
+
+        if (duplicateVendor) {
+          toast.error(`A vendor with ABN ${formData.abn} already exists: ${duplicateVendor.name}`);
+          setSaving(false);
+          return;
+        }
+      }
+
       const vendorData = {
         name: formData.tradingName || formData.name,
         trading_name: formData.tradingName || null,
