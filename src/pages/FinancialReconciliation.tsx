@@ -11,6 +11,7 @@ import { AlertCircle, CheckCircle, Download, Search, RefreshCw } from 'lucide-re
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import LineItemComparisonDialog from '@/components/reconciliation/LineItemComparisonDialog';
 
 interface ReconciliationItem {
   id: string;
@@ -41,6 +42,8 @@ export default function FinancialReconciliation() {
     totalDiscrepancyAmount: 0,
     syncedDocuments: 0,
   });
+  const [selectedItem, setSelectedItem] = useState<ReconciliationItem | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     loadReconciliationData();
@@ -242,6 +245,13 @@ export default function FinancialReconciliation() {
     toast.success('Report exported successfully');
   };
 
+  const handleRowClick = (item: ReconciliationItem) => {
+    if (item.has_discrepancy) {
+      setSelectedItem(item);
+      setDialogOpen(true);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -366,7 +376,11 @@ export default function FinancialReconciliation() {
                       </TableRow>
                     ) : (
                       filteredItems.map((item) => (
-                        <TableRow key={item.id} className={item.has_discrepancy ? 'bg-destructive/5' : ''}>
+                        <TableRow 
+                          key={item.id} 
+                          className={`${item.has_discrepancy ? 'bg-destructive/5 cursor-pointer hover:bg-destructive/10' : ''}`}
+                          onClick={() => handleRowClick(item)}
+                        >
                           <TableCell>
                             {item.has_discrepancy ? (
                               <AlertCircle className="h-5 w-5 text-destructive" />
@@ -447,6 +461,17 @@ export default function FinancialReconciliation() {
           </CardContent>
         </Card>
       </div>
+
+      <LineItemComparisonDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        documentId={selectedItem?.id || ''}
+        documentType={selectedItem?.document_type || 'invoice'}
+        quoteId={selectedItem?.document_type === 'invoice' ? 
+          items.find(i => i.document_type === 'quote' && i.id === selectedItem.id)?.id || null 
+          : null
+        }
+      />
     </DashboardLayout>
   );
 }
