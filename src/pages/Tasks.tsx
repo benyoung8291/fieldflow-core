@@ -685,50 +685,50 @@ export default function Tasks() {
                     </span>
                   </button>
                   
-                  {!collapsedSections[groupKey] && <div className="space-y-1 pl-6">
-                      {groupTasks.map((task: any) => <div key={task.id} className="group flex items-start gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
+                  {!collapsedSections[groupKey] && <div className="space-y-0.5 pl-6">
+                      {groupTasks.map((task: any) => <div key={task.id} className="group flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
                 setSelectedTask(task);
                 setIsDialogOpen(true);
               }}>
-                          <Checkbox checked={task.status === "completed"} onCheckedChange={() => toggleTaskStatus(task)} onClick={e => e.stopPropagation()} className="mt-0.5" />
+                          <Checkbox checked={task.status === "completed"} onCheckedChange={() => toggleTaskStatus(task)} onClick={e => e.stopPropagation()} className="mt-0.5 h-3.5 w-3.5" />
                           
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-3 mb-1">
-                              <h4 className={cn("text-sm font-medium", task.status === "completed" && "line-through text-muted-foreground")}>
+                            <div className="flex items-start justify-between gap-2 mb-0.5">
+                              <h4 className={cn("text-xs font-medium leading-tight", task.status === "completed" && "line-through text-muted-foreground")}>
                                 {task.title}
                               </h4>
                               
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                {task.tags && task.tags.length > 0 && task.tags.slice(0, 2).map((tag: string, index: number) => <Badge key={index} variant="secondary" className="text-xs">
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {task.tags && task.tags.length > 0 && task.tags.slice(0, 2).map((tag: string, index: number) => <Badge key={index} variant="secondary" className="text-[10px] h-4 px-1.5">
                                     {tag}
                                   </Badge>)}
-                                <Badge variant="outline" className={cn("text-xs", getPriorityColor(task.priority))}>
+                                <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5", getPriorityColor(task.priority))}>
                                   {task.priority}
                                 </Badge>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                              {task.due_date && <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+                              {task.due_date && <div className="flex items-center gap-0.5">
+                                  <Calendar className="h-2.5 w-2.5" />
                                   <span>{format(new Date(task.due_date), "MMM d")}</span>
                                 </div>}
                               
-                              {task.assigned_user && <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
+                              {task.assigned_user && <div className="flex items-center gap-0.5">
+                                  <User className="h-2.5 w-2.5" />
                                   <span>{task.assigned_user.first_name}</span>
                                 </div>}
                               
-                              {task.subtaskCount > 0 && <div className="flex items-center gap-1">
-                                  <CheckSquare className="h-3 w-3" />
+                              {task.subtaskCount > 0 && <div className="flex items-center gap-0.5">
+                                  <CheckSquare className="h-2.5 w-2.5" />
                                   <span>{task.completedSubtaskCount}/{task.subtaskCount}</span>
                                 </div>}
                               
-                              {task.linked_module && task.linked_record_name && <div className="flex items-center gap-1 text-primary hover:underline" onClick={e => {
+                              {task.linked_module && task.linked_record_name && <div className="flex items-center gap-0.5 text-primary hover:underline" onClick={e => {
                       e.stopPropagation();
                       navigate(getModuleRoute(task.linked_module, task.linked_record_id));
                     }}>
-                                  <LinkIcon className="h-3 w-3" />
+                                  <LinkIcon className="h-2.5 w-2.5" />
                                   <span>{task.linked_record_name}</span>
                                 </div>}
                             </div>
