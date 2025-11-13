@@ -959,7 +959,9 @@ export type Database = {
           description: string
           expense_date: string
           expense_number: string
+          external_reference: string | null
           id: string
+          last_synced_at: string | null
           notes: string | null
           payment_method: string | null
           project_id: string | null
@@ -970,6 +972,8 @@ export type Database = {
           sub_account: string | null
           submitted_at: string | null
           submitted_by: string
+          sync_error: string | null
+          sync_status: string | null
           tenant_id: string
           updated_at: string
           vendor_id: string | null
@@ -984,7 +988,9 @@ export type Database = {
           description: string
           expense_date?: string
           expense_number: string
+          external_reference?: string | null
           id?: string
+          last_synced_at?: string | null
           notes?: string | null
           payment_method?: string | null
           project_id?: string | null
@@ -995,6 +1001,8 @@ export type Database = {
           sub_account?: string | null
           submitted_at?: string | null
           submitted_by: string
+          sync_error?: string | null
+          sync_status?: string | null
           tenant_id: string
           updated_at?: string
           vendor_id?: string | null
@@ -1009,7 +1017,9 @@ export type Database = {
           description?: string
           expense_date?: string
           expense_number?: string
+          external_reference?: string | null
           id?: string
+          last_synced_at?: string | null
           notes?: string | null
           payment_method?: string | null
           project_id?: string | null
@@ -1020,6 +1030,8 @@ export type Database = {
           sub_account?: string | null
           submitted_at?: string | null
           submitted_by?: string
+          sync_error?: string | null
+          sync_status?: string | null
           tenant_id?: string
           updated_at?: string
           vendor_id?: string | null

@@ -123,6 +123,40 @@ export default function ExpenseDetails() {
         .eq("id", id);
 
       if (error) throw error;
+
+      // Trigger sync to accounting software
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        const { data: integration } = await supabase
+          .from("accounting_integrations")
+          .select("provider, is_enabled")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("is_enabled", true)
+          .maybeSingle();
+
+        if (integration) {
+          const functionName = integration.provider === "acumatica" 
+            ? "sync-expense-to-acumatica"
+            : "sync-expense-to-xero";
+
+          // Trigger sync in background
+          supabase.functions.invoke(functionName, {
+            body: { expenseId: id },
+          }).then(({ error: syncError }) => {
+            if (syncError) {
+              console.error("Sync error:", syncError);
+              toast.error("Expense approved but sync failed. Please retry sync.");
+            } else {
+              toast.success("Expense synced to accounting software");
+            }
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expense", id] });
@@ -156,6 +190,49 @@ export default function ExpenseDetails() {
     },
   });
 
+  const retrySyncMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
+      const { data: integration } = await supabase
+        .from("accounting_integrations")
+        .select("provider, is_enabled")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("is_enabled", true)
+        .maybeSingle();
+
+      if (!integration) {
+        throw new Error("No accounting integration configured");
+      }
+
+      const functionName = integration.provider === "acumatica" 
+        ? "sync-expense-to-acumatica"
+        : "sync-expense-to-xero";
+
+      const { error: syncError } = await supabase.functions.invoke(functionName, {
+        body: { expenseId: id },
+      });
+
+      if (syncError) throw syncError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense", id] });
+      toast.success("Expense synced successfully");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to sync expense");
+    },
+  });
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -173,6 +250,7 @@ export default function ExpenseDetails() {
   }
 
   const canApprove = expense.status === "submitted";
+  const canRetrySync = expense.status === "approved" && expense.sync_status === "error";
 
   return (
     <DashboardLayout>
@@ -192,6 +270,15 @@ export default function ExpenseDetails() {
               <Button onClick={() => setIsEditDialogOpen(true)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
+              </Button>
+            )}
+            {canRetrySync && (
+              <Button 
+                variant="outline" 
+                onClick={() => retrySyncMutation.mutate()}
+                disabled={retrySyncMutation.isPending}
+              >
+                {retrySyncMutation.isPending ? "Syncing..." : "Retry Sync"}
               </Button>
             )}
             {canApprove && (
@@ -249,6 +336,20 @@ export default function ExpenseDetails() {
                   <p className="text-sm text-muted-foreground">Status</p>
                   <Badge>{expense.status}</Badge>
                 </div>
+                {expense.sync_status && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sync Status</p>
+                    <Badge variant={expense.sync_status === "synced" ? "default" : expense.sync_status === "error" ? "destructive" : "secondary"}>
+                      {expense.sync_status}
+                    </Badge>
+                  </div>
+                )}
+                {expense.external_reference && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">External Reference</p>
+                    <p className="font-medium text-xs">{expense.external_reference}</p>
+                  </div>
+                )}
                 {expense.vendor && (
                   <div>
                     <p className="text-sm text-muted-foreground">Vendor</p>
@@ -323,6 +424,16 @@ export default function ExpenseDetails() {
                 <div className="p-4 bg-destructive/10 border border-destructive rounded-lg">
                   <h3 className="font-semibold text-destructive mb-2">Rejection Reason</h3>
                   <p className="text-sm">{expense.rejection_reason}</p>
+                </div>
+              </>
+            )}
+
+            {expense.sync_error && (
+              <>
+                <Separator />
+                <div className="p-4 bg-destructive/10 border border-destructive rounded-lg">
+                  <h3 className="font-semibold text-destructive mb-2">Sync Error</h3>
+                  <p className="text-sm">{expense.sync_error}</p>
                 </div>
               </>
             )}

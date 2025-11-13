@@ -45,7 +45,7 @@ export default function Expenses() {
           vendor:vendors(name),
           category:expense_categories(name),
           service_order:service_orders(work_order_number),
-          project:projects(project_number, name),
+          project:projects(name),
           submitted_by_user:profiles!expenses_submitted_by_fkey(first_name, last_name)
         `)
         .eq("tenant_id", profile.tenant_id)
@@ -120,6 +120,7 @@ export default function Expenses() {
                 <TableHead>Vendor</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Sync</TableHead>
                 <TableHead>Submitted By</TableHead>
               </TableRow>
             </TableHeader>
@@ -138,13 +139,28 @@ export default function Expenses() {
                   <TableCell>{expense.category?.name || "-"}</TableCell>
                   <TableCell>{getStatusBadge(expense.status)}</TableCell>
                   <TableCell>
+                    {expense.sync_status ? (
+                      <Badge 
+                        variant={
+                          expense.sync_status === "synced" ? "default" : 
+                          expense.sync_status === "error" ? "destructive" : 
+                          "secondary"
+                        }
+                      >
+                        {expense.sync_status}
+                      </Badge>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {expense.submitted_by_user?.first_name} {expense.submitted_by_user?.last_name}
                   </TableCell>
                 </TableRow>
               ))}
               {expenses.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No expenses found. Create your first expense to get started.
                   </TableCell>
                 </TableRow>
