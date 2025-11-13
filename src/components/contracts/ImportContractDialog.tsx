@@ -67,6 +67,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [failedGeocodingItems, setFailedGeocodingItems] = useState<number[]>([]);
   const [editingAddressIndex, setEditingAddressIndex] = useState<number | null>(null);
   const [isRetryingGeocode, setIsRetryingGeocode] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
   // Required fields for validation
   const requiredFields = ['description', 'location_name', 'unit_price'];
@@ -174,6 +176,13 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       setFailedGeocodingItems(functionData.failedGeocodingItems || []);
       setStep("review");
 
+      // Show notification if rows were limited
+      if (functionData.hasMoreRows) {
+        toast.warning(
+          `Your spreadsheet has ${functionData.totalRows} rows. Only the first ${functionData.processedRows} rows were processed due to the 1,000 row limit.`
+        );
+      }
+
       toast.success(`Parsed ${functionData.lineItems?.length || 0} line items`);
     } catch (error: any) {
       console.error("Error parsing with mappings:", error);
@@ -231,6 +240,55 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     const updatedItems = [...lineItems];
     (updatedItems[itemIndex].location as any)[field] = value;
     setLineItems(updatedItems);
+  };
+
+  const startEditing = (rowIndex: number, field: string, currentValue: any) => {
+    setEditingCell({ rowIndex, field });
+    setEditValue(String(currentValue || ''));
+  };
+
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  const saveEdit = () => {
+    if (!editingCell) return;
+    
+    const { rowIndex, field } = editingCell;
+    const updatedItems = [...lineItems];
+    
+    // Handle different field types
+    if (field === 'description') {
+      updatedItems[rowIndex].description = editValue;
+    } else if (field === 'quantity') {
+      updatedItems[rowIndex].quantity = parseFloat(editValue) || 1;
+    } else if (field === 'unit_price') {
+      updatedItems[rowIndex].unit_price = parseFloat(editValue) || 0;
+    } else if (field === 'estimated_hours') {
+      updatedItems[rowIndex].estimated_hours = parseFloat(editValue) || 0;
+    } else if (field === 'first_generation_date') {
+      updatedItems[rowIndex].first_generation_date = editValue;
+    } else if (field === 'recurrence_frequency') {
+      updatedItems[rowIndex].recurrence_frequency = editValue as any;
+    } else if (field === 'location_name') {
+      updatedItems[rowIndex].location.name = editValue;
+    } else if (field === 'location_address') {
+      updatedItems[rowIndex].location.address = editValue;
+    } else if (field === 'customer_location_id') {
+      updatedItems[rowIndex].location.customer_location_id = editValue;
+    }
+    
+    setLineItems(updatedItems);
+    cancelEditing();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
   };
 
   const handleImport = async () => {
@@ -774,11 +832,59 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                   <TableBody>
                     {lineItems.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell>{item.description}</TableCell>
+                        <TableCell 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'description', item.description)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'description' ? (
+                            <Input
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={saveEdit}
+                              autoFocus
+                              className="h-8"
+                            />
+                          ) : (
+                            item.description
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{item.location.name}</div>
-                            <div className="text-muted-foreground">{item.location.address}</div>
+                            <div 
+                              className="font-medium cursor-pointer hover:bg-muted/50 rounded px-1"
+                              onClick={() => startEditing(index, 'location_name', item.location.name)}
+                            >
+                              {editingCell?.rowIndex === index && editingCell?.field === 'location_name' ? (
+                                <Input
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  onBlur={saveEdit}
+                                  autoFocus
+                                  className="h-7 text-sm"
+                                />
+                              ) : (
+                                item.location.name
+                              )}
+                            </div>
+                            <div 
+                              className="text-muted-foreground cursor-pointer hover:bg-muted/50 rounded px-1"
+                              onClick={() => startEditing(index, 'location_address', item.location.address)}
+                            >
+                              {editingCell?.rowIndex === index && editingCell?.field === 'location_address' ? (
+                                <Input
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  onBlur={saveEdit}
+                                  autoFocus
+                                  className="h-7 text-sm"
+                                />
+                              ) : (
+                                item.location.address
+                              )}
+                            </div>
                             {item.location.latitude && item.location.longitude && (
                               <div className="text-xs text-success flex items-center gap-1 mt-1">
                                 <Check className="h-3 w-3" />
@@ -787,16 +893,132 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">
-                            {item.location.customer_location_id || '-'}
-                          </span>
+                        <TableCell
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'customer_location_id', item.location.customer_location_id)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'customer_location_id' ? (
+                            <Input
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={saveEdit}
+                              autoFocus
+                              className="h-8"
+                            />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {item.location.customer_location_id || '-'}
+                            </span>
+                          )}
                         </TableCell>
-                        <TableCell className="capitalize">{item.recurrence_frequency}</TableCell>
-                        <TableCell>{item.first_generation_date}</TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{item.estimated_hours || 0}</TableCell>
-                        <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                        <TableCell
+                          className="capitalize cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'recurrence_frequency', item.recurrence_frequency)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'recurrence_frequency' ? (
+                            <Select 
+                              value={editValue} 
+                              onValueChange={(val) => { 
+                                setEditValue(val);
+                                // Auto-save after selection
+                                setTimeout(() => {
+                                  const updatedItems = [...lineItems];
+                                  updatedItems[index].recurrence_frequency = val as any;
+                                  setLineItems(updatedItems);
+                                  cancelEditing();
+                                }, 0);
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="quarterly">Quarterly</SelectItem>
+                                <SelectItem value="annually">Annually</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            item.recurrence_frequency
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'first_generation_date', item.first_generation_date)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'first_generation_date' ? (
+                            <Input
+                              type="date"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={saveEdit}
+                              autoFocus
+                              className="h-8"
+                            />
+                          ) : (
+                            item.first_generation_date
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'quantity', item.quantity)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'quantity' ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={saveEdit}
+                              autoFocus
+                              className="h-8 text-right"
+                            />
+                          ) : (
+                            item.quantity
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'estimated_hours', item.estimated_hours)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'estimated_hours' ? (
+                            <Input
+                              type="number"
+                              step="0.5"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={saveEdit}
+                              autoFocus
+                              className="h-8 text-right"
+                            />
+                          ) : (
+                            item.estimated_hours || 0
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => startEditing(index, 'unit_price', item.unit_price)}
+                        >
+                          {editingCell?.rowIndex === index && editingCell?.field === 'unit_price' ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={saveEdit}
+                              autoFocus
+                              className="h-8 text-right"
+                            />
+                          ) : (
+                            `$${item.unit_price.toFixed(2)}`
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           ${(item.quantity * item.unit_price).toFixed(2)}
                         </TableCell>
