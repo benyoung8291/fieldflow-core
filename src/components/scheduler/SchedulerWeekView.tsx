@@ -147,7 +147,7 @@ export default function SchedulerWeekView({
       
       <div className="space-y-4 overflow-x-auto">
         {/* Header with days */}
-        <div className="grid grid-cols-[150px_repeat(7,1fr)] gap-2 min-w-[900px]">
+        <div className="grid gap-2 min-w-[900px]" style={{ gridTemplateColumns: '150px repeat(7, minmax(140px, 1fr))' }}>
           <div className="text-sm font-medium text-muted-foreground">Technician</div>
           {weekDays.map(day => (
             <div key={day.toISOString()} className="text-center">
@@ -170,7 +170,7 @@ export default function SchedulerWeekView({
         {/* Workers rows */}
         <div className="space-y-2 min-w-[900px]">
           {workers.map(worker => (
-            <div key={worker.id || "unassigned"} className="grid grid-cols-[150px_repeat(7,1fr)] gap-2">
+            <div key={worker.id || "unassigned"} className="grid gap-2" style={{ gridTemplateColumns: '150px repeat(7, minmax(140px, 1fr))' }}>
               {/* Worker name */}
               <div className="flex flex-col items-start px-3 py-2 bg-muted rounded-lg gap-1">
                 <span className="text-sm font-medium truncate w-full">{worker.name}</span>
@@ -214,7 +214,7 @@ export default function SchedulerWeekView({
                     workerId={worker.id}
                     isAvailable={isAvailable}
                     className={cn(
-                      "min-h-[120px] h-full p-2 border-2 border-dashed rounded-lg space-y-1 flex flex-col",
+                      "min-h-[150px] h-full p-2 border-2 border-dashed rounded-lg space-y-1 flex flex-col",
                       isSameDay(day, new Date()) 
                         ? "border-primary/30 bg-primary/5" 
                         : "border-border bg-muted/20"
