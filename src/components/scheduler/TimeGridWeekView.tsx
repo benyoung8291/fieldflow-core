@@ -1,10 +1,10 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, setHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import ResizableAppointmentCard from "./ResizableAppointmentCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import DroppableTimeSlot from "./DroppableTimeSlot";
+import DraggableAppointment from "./DraggableAppointment";
 
 interface TimeGridWeekViewProps {
   currentDate: Date;
@@ -148,19 +148,25 @@ export default function TimeGridWeekView({
                       {/* Appointments positioned absolutely */}
                       {dayAppointments.map(apt => {
                         const top = getTopPosition(new Date(apt.start_time));
+                        const durationHours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
+                        const height = durationHours * PIXELS_PER_HOUR;
+                        
+                        const statusColor = apt.status === 'completed' ? 'bg-success' :
+                          apt.status === 'checked_in' ? 'bg-warning' :
+                          apt.status === 'cancelled' ? 'bg-destructive' :
+                          apt.status === 'published' ? 'bg-info' : 'bg-muted';
                         
                         return (
                           <div
                             key={apt.id}
                             className="absolute left-0.5 right-0.5 z-10"
-                            style={{ top: `${top}px` }}
+                            style={{ top: `${top}px`, height: `${height}px` }}
                           >
-                            <ResizableAppointmentCard
+                            <DraggableAppointment
                               appointment={apt}
-                              onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
-                              onClick={() => onAppointmentClick(apt.id)}
-                              onResize={onResizeAppointment}
-                              pixelsPerHour={PIXELS_PER_HOUR}
+                              statusColor={statusColor}
+                              onViewHistory={() => onAppointmentClick(apt.id)}
+                              showFullDetails={true}
                             />
                           </div>
                         );
