@@ -6,12 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { startOfWeek, endOfWeek, addWeeks, format } from "date-fns";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDroppable } from "@dnd-kit/core";
-import { Clock, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import DraggableServiceOrder from "./DraggableServiceOrder";
 
 interface Worker {
   id: string;
@@ -37,7 +34,6 @@ interface CapacityPlanningViewProps {
   workers: Worker[];
   currentDate: Date;
   onScheduleServiceOrder: (serviceOrderId: string, weekStart: Date, weekEnd: Date) => void;
-  sidebarCollapsed: boolean;
 }
 
 interface DroppableWeekCardProps {
@@ -100,7 +96,7 @@ function DroppableWeekCard({ week, onDrop }: DroppableWeekCardProps) {
   );
 }
 
-export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOrder, sidebarCollapsed }: CapacityPlanningViewProps) {
+export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOrder }: CapacityPlanningViewProps) {
   const numberOfWeeks = 6;
 
   // Fetch appointments for the next N weeks
@@ -143,30 +139,6 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
       return data;
     },
   });
-
-  // Filter service orders that need appointments
-  const serviceOrdersNeedingAppointments = useMemo(() => {
-    if (!serviceOrdersData) return [];
-    
-    return serviceOrdersData.map(so => {
-      const scheduledHours = (so.appointments || [])
-        .filter(apt => apt.status !== 'cancelled')
-        .reduce((total, apt) => {
-          const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
-          return total + hours;
-        }, 0);
-      
-      const lineItemsCount = so.service_order_line_items?.length || 0;
-      const remainingHours = Math.max(0, (so.estimated_hours || 0) - scheduledHours);
-      
-      return {
-        ...so,
-        scheduledHours,
-        remainingHours,
-        lineItemsSummary: `${lineItemsCount} item${lineItemsCount !== 1 ? 's' : ''}`
-      };
-    }).filter(so => so.remainingHours > 0);
-  }, [serviceOrdersData]);
 
   const capacityData = useMemo(() => {
     if (!appointments || !serviceOrdersData) return [];
@@ -241,12 +213,7 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
   }
 
   return (
-    <div className={cn(
-      "grid gap-4 h-full overflow-hidden min-w-[900px]",
-      sidebarCollapsed ? "grid-cols-[1fr]" : "grid-cols-[1fr_280px]"
-    )}>
-      {/* Main Content - Capacity Charts and Week Cards */}
-      <div className="space-y-6 overflow-auto p-6">
+    <div className="space-y-6 p-6">
       <Card>
         <CardHeader>
           <CardTitle>Capacity Planning</CardTitle>
@@ -299,55 +266,15 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
         </CardContent>
       </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {capacityData.map((week) => (
-            <DroppableWeekCard 
-              key={week.week}
-              week={week}
-              onDrop={() => {}}
-            />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {capacityData.map((week) => (
+          <DroppableWeekCard 
+            key={week.week}
+            week={week}
+            onDrop={() => {}}
+          />
+        ))}
       </div>
-
-      {/* Right Sidebar - Service Orders */}
-      {!sidebarCollapsed && (
-        <Card className="flex flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0 p-2">
-            <CardTitle className="text-xs">Service Orders Needing Appointments</CardTitle>
-            <CardDescription className="text-[10px]">
-              Drag to schedule in available weeks
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full px-2 pb-2">
-              <div className="space-y-2">
-                {serviceOrdersNeedingAppointments.map((order) => (
-                  <DraggableServiceOrder 
-                    key={order.id}
-                    serviceOrder={{
-                      id: order.id,
-                      order_number: order.order_number,
-                      title: order.title,
-                      customers: order.customers,
-                      estimated_hours: order.estimated_hours,
-                      scheduledHours: order.scheduledHours,
-                      remainingHours: order.remainingHours,
-                      lineItemsSummary: order.lineItemsSummary
-                    }}
-                    remainingHours={order.remainingHours}
-                  />
-                ))}
-                {serviceOrdersNeedingAppointments.length === 0 && (
-                  <div className="text-center py-8 text-xs text-muted-foreground">
-                    No service orders need appointments
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

@@ -1302,7 +1302,6 @@ export default function Scheduler() {
                 }))}
                 currentDate={currentDate}
                 onScheduleServiceOrder={handleScheduleServiceOrderInWeek}
-                sidebarCollapsed={sidebarCollapsed}
               />
             ) : showServiceOrderView ? (
               <ServiceOrdersCalendarView 
