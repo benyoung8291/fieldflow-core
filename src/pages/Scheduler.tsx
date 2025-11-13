@@ -160,7 +160,7 @@ export default function Scheduler() {
       // Fetch profiles for those users
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, is_active")
+        .select("id, first_name, last_name, is_active, standard_work_hours, employment_type")
         .in("id", workerUserIds)
         .eq("is_active", true)
         .order("first_name", { ascending: true });

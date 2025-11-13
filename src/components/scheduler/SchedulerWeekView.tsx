@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import GPSCheckInDialog from "./GPSCheckInDialog";
 import RecurringEditDialog from "./RecurringEditDialog";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +18,14 @@ import DraggableAppointment from "./DraggableAppointment";
 import AppointmentContextMenu from "./AppointmentContextMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkerUtilization } from "@/hooks/useWorkerUtilization";
+import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SchedulerWeekViewProps {
   currentDate: Date;
@@ -59,18 +67,22 @@ export default function SchedulerWeekView({
   const weekEnd = endOfWeek(currentDate);
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Format workers from passed list
-  const formattedWorkers = passedWorkers.map(worker => ({
-    id: worker.id,
-    name: `${worker.first_name} ${worker.last_name}`,
-    skills: worker.worker_skills || []
+  // Format workers with unassigned row
+  const formattedWorkers = passedWorkers.map(w => ({
+    id: w.id,
+    name: `${w.first_name} ${w.last_name}`,
+    skills: w.worker_skills || [],
+    standard_work_hours: w.standard_work_hours,
+    employment_type: w.employment_type,
   }));
 
-  // Add unassigned row
   const workers = [
-    { id: null, name: "Unassigned", skills: [] },
+    { id: null, name: "Unassigned", skills: [], standard_work_hours: 0, employment_type: null },
     ...formattedWorkers
   ];
+
+  // Calculate utilization for all workers
+  const workerUtilization = useWorkerUtilization(formattedWorkers, appointments, currentDate);
 
   const handleGPSCheckIn = (appointment: any) => {
     setSelectedAppointment(appointment);
@@ -169,21 +181,66 @@ export default function SchedulerWeekView({
 
         {/* Workers rows */}
         <div className="space-y-2 min-w-[900px]">
-          {workers.map(worker => (
-            <div key={worker.id || "unassigned"} className="grid gap-2" style={{ gridTemplateColumns: '150px repeat(7, minmax(140px, 1fr))' }}>
-              {/* Worker name */}
-              <div className="flex flex-col items-start px-3 py-2 bg-muted rounded-lg gap-1">
-                <span className="text-sm font-medium truncate w-full">{worker.name}</span>
-                {worker.skills && worker.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 w-full">
-                    {worker.skills.map((ws: any) => (
-                      <Badge key={ws.skill_id} variant="outline" className="text-[10px] px-1 py-0">
-                        {ws.skills?.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
+          {workers.map((worker, index) => {
+            const utilization = worker.id ? workerUtilization.find(u => u.workerId === worker.id) : null;
+            
+            return (
+              <div key={worker.id || "unassigned"} className="grid gap-2" style={{ gridTemplateColumns: '150px repeat(7, minmax(140px, 1fr))' }}>
+                {/* Worker name with utilization */}
+                <div className="flex flex-col items-start px-3 py-2 bg-muted rounded-lg gap-1">
+                  <span className="text-sm font-medium truncate w-full">{worker.name}</span>
+                  
+                  {/* Worker skills */}
+                  {worker.skills && worker.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1 w-full">
+                      {worker.skills.map((ws: any) => (
+                        <Badge key={ws.skill_id} variant="outline" className="text-[10px] px-1 py-0">
+                          {ws.skills?.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Utilization bar */}
+                  {utilization && utilization.standardHours > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="w-full space-y-0.5">
+                            <div className="flex items-center justify-between text-[9px]">
+                              <span className={cn("font-medium", utilization.utilizationColor)}>
+                                {utilization.utilization}%
+                              </span>
+                              <span className="text-muted-foreground">
+                                {utilization.scheduledHours}h / {utilization.standardHours}h
+                              </span>
+                            </div>
+                            <Progress 
+                              value={Math.min(utilization.utilization, 100)} 
+                              className={cn("h-1.5", "[&>div]:"+utilization.utilizationBgColor)}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <div className="text-xs space-y-1">
+                            <p className="font-semibold">Weekly Utilization</p>
+                            <p>Scheduled: {utilization.scheduledHours}h</p>
+                            <p>Standard: {utilization.standardHours}h</p>
+                            <p className={cn("font-medium", utilization.utilizationColor)}>
+                              {utilization.utilization}% utilized
+                            </p>
+                            {utilization.isOverbooked && (
+                              <p className="text-destructive font-medium">⚠️ Overbooked</p>
+                            )}
+                            {utilization.isUnderUtilized && (
+                              <p className="text-warning font-medium">Under-utilized</p>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
 
               {/* Day cells */}
               {weekDays.map(day => {
@@ -243,7 +300,8 @@ export default function SchedulerWeekView({
                 );
               })}
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {workers.length === 1 && (

@@ -2499,6 +2499,7 @@ export type Database = {
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
+          employment_type: string | null
           first_name: string | null
           id: string
           is_active: boolean | null
@@ -2510,6 +2511,7 @@ export type Database = {
           preferred_start_time: string | null
           projects_enabled: boolean | null
           service_orders_enabled: boolean | null
+          standard_work_hours: number | null
           super_fund_name: string | null
           super_fund_number: string | null
           task_kanban_mode: string | null
@@ -2528,6 +2530,7 @@ export type Database = {
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          employment_type?: string | null
           first_name?: string | null
           id: string
           is_active?: boolean | null
@@ -2539,6 +2542,7 @@ export type Database = {
           preferred_start_time?: string | null
           projects_enabled?: boolean | null
           service_orders_enabled?: boolean | null
+          standard_work_hours?: number | null
           super_fund_name?: string | null
           super_fund_number?: string | null
           task_kanban_mode?: string | null
@@ -2557,6 +2561,7 @@ export type Database = {
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          employment_type?: string | null
           first_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -2568,6 +2573,7 @@ export type Database = {
           preferred_start_time?: string | null
           projects_enabled?: boolean | null
           service_orders_enabled?: boolean | null
+          standard_work_hours?: number | null
           super_fund_name?: string | null
           super_fund_number?: string | null
           task_kanban_mode?: string | null

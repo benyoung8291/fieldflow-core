@@ -88,6 +88,8 @@ export default function WorkerDetails() {
           preferred_start_time: data.preferred_start_time || null,
           preferred_end_time: data.preferred_end_time || null,
           is_active: data.is_active,
+          employment_type: data.employment_type,
+          standard_work_hours: data.standard_work_hours ? parseFloat(data.standard_work_hours) : null,
         })
         .eq("id", id);
 
@@ -324,6 +326,35 @@ export default function WorkerDetails() {
                         </Select>
                       </div>
                       <div className="space-y-2">
+                        <Label>Employment Type</Label>
+                        <Select
+                          value={formData.employment_type || 'full_time'}
+                          onValueChange={(value) => setFormData({ ...formData, employment_type: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="full_time">Full Time</SelectItem>
+                            <SelectItem value="part_time">Part Time</SelectItem>
+                            <SelectItem value="contractor">Contractor</SelectItem>
+                            <SelectItem value="casual">Casual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Standard Work Hours per Week</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="168"
+                          step="0.5"
+                          value={formData.standard_work_hours || '40'}
+                          onChange={(e) => setFormData({ ...formData, standard_work_hours: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">Used for utilization calculations</p>
+                      </div>
+                      <div className="space-y-2">
                         <Label>Tax File Number</Label>
                         <Input
                           value={formData.tax_file_number}
@@ -340,6 +371,24 @@ export default function WorkerDetails() {
                     </>
                   ) : (
                     <>
+                      {worker.employment_type && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm text-muted-foreground">Employment Type</div>
+                            <div className="font-medium capitalize">{worker.employment_type.replace('_', ' ')}</div>
+                          </div>
+                        </div>
+                      )}
+                      {worker.standard_work_hours && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm text-muted-foreground">Standard Hours/Week</div>
+                            <div className="font-medium">{worker.standard_work_hours}h</div>
+                          </div>
+                        </div>
+                      )}
                       {worker.pay_rate_category && (
                         <div className="flex items-center gap-2">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
