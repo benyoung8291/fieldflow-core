@@ -15,18 +15,8 @@ import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import {
-  DndContext, 
-  DragEndEvent, 
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors
-} from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import DraggableTaskCard from "@/components/tasks/DraggableTaskCard";
-
 export default function Tasks() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -43,20 +33,16 @@ export default function Tasks() {
   const queryClient = useQueryClient();
 
   // Drag and drop sensors with mobile support
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
-  );
-
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 8
+    }
+  }), useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5
+    }
+  }));
   const getModuleRoute = (module: string, id: string) => {
     const routes: Record<string, string> = {
       customer: `/customers/${id}`,
@@ -66,35 +52,43 @@ export default function Tasks() {
       service_order: `/service-orders/${id}`,
       appointment: `/appointments/${id}`,
       invoice: `/invoices/${id}`,
-      contract: `/service-contracts/${id}`,
+      contract: `/service-contracts/${id}`
     };
     return routes[module] || '#';
   };
-
-  const { data: currentUser } = useQuery({
+  const {
+    data: currentUser
+  } = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       return user;
-    },
+    }
   });
 
   // Fetch user profile for view preference and kanban mode
-  const { data: userProfile } = useQuery({
+  const {
+    data: userProfile
+  } = useQuery({
     queryKey: ["user-profile-tasks"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return null;
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("task_view_preference, task_kanban_mode")
-        .eq("id", user.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from("profiles").select("task_view_preference, task_kanban_mode").eq("id", user.id).single();
       if (error) throw error;
       return data;
-    },
+    }
   });
 
   // Set view mode from user profile
@@ -107,47 +101,54 @@ export default function Tasks() {
   // Save view preference mutation
   const saveViewPreference = useMutation({
     mutationFn: async (preference: 'list' | 'kanban') => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ task_view_preference: preference })
-        .eq("id", user.id);
-
+      const {
+        error
+      } = await supabase.from("profiles").update({
+        task_view_preference: preference
+      }).eq("id", user.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-profile-tasks"] });
-    },
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-tasks"]
+      });
+    }
   });
-
   const handleViewModeChange = (mode: 'list' | 'kanban') => {
     setViewMode(mode);
     saveViewPreference.mutate(mode);
   };
-
-  const { data: workers = [] } = useQuery({
+  const {
+    data: workers = []
+  } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .eq("is_active", true)
-        .order("first_name");
+      const {
+        data,
+        error
+      } = await supabase.from("profiles").select("id, first_name, last_name").eq("is_active", true).order("first_name");
       if (error) throw error;
       return data || [];
-    },
+    }
   });
-
-  const { data: tasks = [], isLoading } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading
+  } = useQuery({
     queryKey: ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery],
     queryFn: async () => {
-      let query = supabase
-        .from("tasks" as any)
-        .select("*")
-        .order("due_date", { ascending: true, nullsFirst: false })
-        .order("priority", { ascending: false });
+      let query = supabase.from("tasks" as any).select("*").order("due_date", {
+        ascending: true,
+        nullsFirst: false
+      }).order("priority", {
+        ascending: false
+      });
 
       // Filter by assignee (default: my tasks)
       if (filterAssignee === "my-tasks" && currentUser) {
@@ -170,39 +171,39 @@ export default function Tasks() {
       if (searchQuery) {
         query = query.ilike("title", `%${searchQuery}%`);
       }
-
-      const { data, error } = await query;
+      const {
+        data,
+        error
+      } = await query;
       if (error) throw error;
-      
+
       // Client-side tag filtering (since tags are array)
       let filteredData = data || [];
       if (filterTag !== "all") {
-        filteredData = filteredData.filter((task: any) => 
-          task.tags && task.tags.includes(filterTag)
-        );
+        filteredData = filteredData.filter((task: any) => task.tags && task.tags.includes(filterTag));
       }
-      
+
       // Fetch linked record names and format document types
       const tasksWithLinks = await Promise.all(filteredData.map(async (task: any) => {
         // Fetch subtask counts
-        const { data: subtasks } = await supabase
-          .from("tasks")
-          .select("id, status")
-          .eq("parent_task_id", task.id);
-        
+        const {
+          data: subtasks
+        } = await supabase.from("tasks").select("id, status").eq("parent_task_id", task.id);
         const subtaskCount = subtasks?.length || 0;
         const completedSubtaskCount = subtasks?.filter((st: any) => st.status === "completed").length || 0;
-        
         if (!task.linked_module || !task.linked_record_id) {
-          return { ...task, subtaskCount, completedSubtaskCount };
+          return {
+            ...task,
+            subtaskCount,
+            completedSubtaskCount
+          };
         }
-        
         let linkedRecordName = null;
         let documentType = task.linked_module;
         try {
           let tableName = task.linked_module;
           let nameField = 'name';
-          
+
           // Map module to table and field names
           if (task.linked_module === 'service_order') {
             tableName = 'service_orders';
@@ -229,56 +230,46 @@ export default function Tasks() {
             tableName = 'service_contracts';
             nameField = 'name';
           }
-
-          const { data: linkedData } = await supabase
-            .from(tableName)
-            .select(nameField)
-            .eq('id', task.linked_record_id)
-            .maybeSingle();
-          
+          const {
+            data: linkedData
+          } = await supabase.from(tableName).select(nameField).eq('id', task.linked_record_id).maybeSingle();
           if (linkedData) {
             linkedRecordName = (linkedData as any)[nameField] || null;
           }
 
           // Format document type for display
-          documentType = task.linked_module
-            .replace('_', ' ')
-            .split(' ')
-            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+          documentType = task.linked_module.replace('_', ' ').split(' ').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         } catch (e) {
           console.error('Error fetching linked record:', e);
         }
-        
-        return { 
-          ...task, 
-          linked_record_name: linkedRecordName, 
+        return {
+          ...task,
+          linked_record_name: linkedRecordName,
           document_type: documentType,
           subtaskCount,
           completedSubtaskCount
         };
       }));
-      
       return tasksWithLinks;
-    },
+    }
   });
 
   // Fetch assigned users data
-  const { data: assignedUsersData = [] } = useQuery({
+  const {
+    data: assignedUsersData = []
+  } = useQuery({
     queryKey: ["assigned-users-data", tasks.map((t: any) => t?.assigned_to).filter(Boolean)],
     queryFn: async () => {
       const userIds = [...new Set(tasks.map((t: any) => t?.assigned_to).filter(Boolean))];
       if (userIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .in("id", userIds);
-      
+      const {
+        data,
+        error
+      } = await supabase.from("profiles").select("id, first_name, last_name").in("id", userIds);
       if (error) throw error;
       return data || [];
     },
-    enabled: tasks.length > 0,
+    enabled: tasks.length > 0
   });
 
   // Merge assigned user data with tasks
@@ -306,13 +297,11 @@ export default function Tasks() {
       'completed': [],
       'cancelled': []
     };
-    
     tasksWithUsers.forEach((task: any) => {
       if (groups[task.status]) {
         groups[task.status].push(task);
       }
     });
-    
     return groups;
   }, [tasksWithUsers]);
 
@@ -321,7 +310,6 @@ export default function Tasks() {
     const groups: Record<string, any[]> = {
       'untagged': []
     };
-    
     tasksWithUsers.forEach((task: any) => {
       if (!task.tags || task.tags.length === 0) {
         groups['untagged'].push(task);
@@ -334,7 +322,6 @@ export default function Tasks() {
         });
       }
     });
-    
     return groups;
   }, [tasksWithUsers]);
 
@@ -343,7 +330,6 @@ export default function Tasks() {
     const groups: Record<string, any[]> = {
       'no_link': []
     };
-    
     tasksWithUsers.forEach((task: any) => {
       if (!task.document_type) {
         groups['no_link'].push(task);
@@ -354,17 +340,14 @@ export default function Tasks() {
         groups[task.document_type].push(task);
       }
     });
-    
     return groups;
   }, [tasksWithUsers]);
-
   const statusLabels: Record<string, string> = {
     'pending': 'Pending',
     'in_progress': 'In Progress',
     'completed': 'Complete',
     'cancelled': 'Cancelled'
   };
-
   const documentTypeLabels: Record<string, string> = {
     'customer': 'Customer',
     'lead': 'Lead',
@@ -376,28 +359,28 @@ export default function Tasks() {
     'contract': 'Contract',
     'no_link': 'Not Linked'
   };
-
   const toggleSection = (status: string) => {
     setCollapsedSections(prev => ({
       ...prev,
       [status]: !prev[status]
     }));
   };
-
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: TaskFormData) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
+      const {
+        data: profile
+      } = await supabase.from("profiles").select("tenant_id").eq("id", user.id).single();
       if (!profile?.tenant_id) throw new Error("No tenant found");
-
-      const { data: newTask, error } = await supabase.from("tasks" as any).insert({
+      const {
+        data: newTask,
+        error
+      } = await supabase.from("tasks" as any).insert({
         tenant_id: profile.tenant_id,
         title: taskData.title,
         description: taskData.description,
@@ -410,71 +393,77 @@ export default function Tasks() {
         estimated_hours: taskData.estimated_hours ? parseFloat(taskData.estimated_hours) : null,
         progress_percentage: taskData.progress_percentage ? parseInt(taskData.progress_percentage) : 0,
         tags: taskData.tags || [],
-        created_by: user.id,
+        created_by: user.id
       }).select().single();
-
       if (error) throw error;
-      
+
       // Apply checklist items if provided
       const checklistItems = (taskData as any)._checklistItems;
       if (checklistItems && checklistItems.length > 0 && newTask) {
         const checklistData = checklistItems.map((item: any) => ({
           task_id: (newTask as any).id,
           title: item.title,
-          item_order: item.item_order,
+          item_order: item.item_order
         }));
-        
         await supabase.from("task_checklist_items" as any).insert(checklistData);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["tasks"]
+      });
       toast.success("Task created successfully");
       setIsDialogOpen(false);
     },
     onError: () => {
       toast.error("Failed to create task");
-    },
+    }
   });
-
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<TaskFormData> }) => {
-      const { error } = await supabase
-        .from("tasks" as any)
-        .update({
-          title: data.title,
-          description: data.description,
-          status: data.status,
-          priority: data.priority,
-          assigned_to: data.assigned_to || null,
-          due_date: data.due_date?.toISOString() || null,
-          start_date: data.start_date?.toISOString()?.split('T')[0] || null,
-          end_date: data.end_date?.toISOString()?.split('T')[0] || null,
-          estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
-          progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
-          tags: data.tags || [],
-          completed_at: data.status === "completed" ? new Date().toISOString() : null,
-        })
-        .eq("id", id);
-
+    mutationFn: async ({
+      id,
+      data
+    }: {
+      id: string;
+      data: Partial<TaskFormData>;
+    }) => {
+      const {
+        error
+      } = await supabase.from("tasks" as any).update({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        assigned_to: data.assigned_to || null,
+        due_date: data.due_date?.toISOString() || null,
+        start_date: data.start_date?.toISOString()?.split('T')[0] || null,
+        end_date: data.end_date?.toISOString()?.split('T')[0] || null,
+        estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
+        progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
+        tags: data.tags || [],
+        completed_at: data.status === "completed" ? new Date().toISOString() : null
+      }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["tasks"]
+      });
       toast.success("Task updated successfully");
       setSelectedTask(null);
       setIsDialogOpen(false);
     },
     onError: () => {
       toast.error("Failed to update task");
-    },
+    }
   });
-
   const toggleTaskStatus = async (task: any) => {
     const newStatus = task.status === "completed" ? "pending" : "completed";
     updateTaskMutation.mutate({
       id: task.id,
-      data: { status: newStatus } as any,
+      data: {
+        status: newStatus
+      } as any
     });
   };
 
@@ -485,36 +474,33 @@ export default function Tasks() {
       setActiveTask(task);
     }
   };
-
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
+    const {
+      active,
+      over
+    } = event;
     setActiveTask(null);
-
     if (!over) return;
-
     const task = active.data.current?.task;
     const newDateKey = over.id as string;
-
     if (!task || !newDateKey) return;
 
     // Parse the new date from the column ID (format: yyyy-MM-dd)
     const newDueDate = new Date(newDateKey);
 
     // Only update if the date actually changed
-    const currentDateKey = task.due_date 
-      ? format(new Date(task.due_date), 'yyyy-MM-dd')
-      : null;
-
+    const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
     if (currentDateKey !== newDateKey) {
       try {
-        const { error } = await supabase
-          .from("tasks")
-          .update({ due_date: newDueDate.toISOString() })
-          .eq("id", task.id);
-
+        const {
+          error
+        } = await supabase.from("tasks").update({
+          due_date: newDueDate.toISOString()
+        }).eq("id", task.id);
         if (error) throw error;
-
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({
+          queryKey: ["tasks"]
+        });
         toast.success("Task date updated");
       } catch (error) {
         console.error("Error updating task:", error);
@@ -522,7 +508,6 @@ export default function Tasks() {
       }
     }
   };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent":
@@ -537,7 +522,6 @@ export default function Tasks() {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
@@ -550,62 +534,39 @@ export default function Tasks() {
         return "bg-yellow-100 text-yellow-800";
     }
   };
-
-  return (
-    <DashboardLayout>
+  return <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Tasks</h1>
-            <p className="text-muted-foreground">Manage your to-do list and assignments</p>
+            
           </div>
           <div className="flex items-center gap-2">
-            {viewMode === 'list' && (
-              <div className="flex items-center border rounded-lg p-1 bg-muted/30">
-                <Button
-                  variant={groupMode === 'status' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setGroupMode('status')}
-                >
+            {viewMode === 'list' && <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+                <Button variant={groupMode === 'status' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('status')}>
                   Status
                 </Button>
-                <Button
-                  variant={groupMode === 'tag' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setGroupMode('tag')}
-                >
+                <Button variant={groupMode === 'tag' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('tag')}>
                   Tag
                 </Button>
-                <Button
-                  variant={groupMode === 'document' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setGroupMode('document')}
-                >
+                <Button variant={groupMode === 'document' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('document')}>
                   Document
                 </Button>
-              </div>
-            )}
+              </div>}
             <div className="flex items-center border rounded-lg p-1 bg-muted/30">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleViewModeChange('list')}
-                className="gap-2"
-              >
+              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => handleViewModeChange('list')} className="gap-2">
                 <List className="h-4 w-4" />
                 List
               </Button>
-              <Button
-                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleViewModeChange('kanban')}
-                className="gap-2"
-              >
+              <Button variant={viewMode === 'kanban' ? 'default' : 'ghost'} size="sm" onClick={() => handleViewModeChange('kanban')} className="gap-2">
                 <Kanban className="h-4 w-4" />
                 Kanban
               </Button>
             </div>
-            <Button onClick={() => { setSelectedTask(null); setIsDialogOpen(true); }}>
+            <Button onClick={() => {
+            setSelectedTask(null);
+            setIsDialogOpen(true);
+          }}>
               <Plus className="h-4 w-4 mr-2" />
               New Task
             </Button>
@@ -618,12 +579,7 @@ export default function Tasks() {
             <div className="grid gap-4 md:grid-cols-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
               </div>
 
               <Select value={filterAssignee} onValueChange={setFilterAssignee}>
@@ -634,11 +590,9 @@ export default function Tasks() {
                 <SelectContent>
                   <SelectItem value="my-tasks">My Tasks</SelectItem>
                   <SelectItem value="all">All Tasks</SelectItem>
-                  {workers.filter(w => w.id && w.id.trim()).map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id}>
+                  {workers.filter(w => w.id && w.id.trim()).map(worker => <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
 
@@ -675,24 +629,19 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tags</SelectItem>
-                  {allTags.map((tag) => (
-                    <SelectItem key={tag} value={tag}>
+                  {allTags.map(tag => <SelectItem key={tag} value={tag}>
                       {tag}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
 
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setFilterStatus("all");
-                  setFilterPriority("all");
-                  setFilterAssignee("my-tasks");
-                  setFilterTag("all");
-                  setSearchQuery("");
-                }}
-              >
+              <Button variant="outline" onClick={() => {
+              setFilterStatus("all");
+              setFilterPriority("all");
+              setFilterAssignee("my-tasks");
+              setFilterTag("all");
+              setSearchQuery("");
+            }}>
                 Reset
               </Button>
             </div>
@@ -700,81 +649,34 @@ export default function Tasks() {
         </Card>
 
         {/* Tasks List or Kanban View */}
-        {viewMode === 'kanban' ? (
-          <DndContext
-            sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <TaskKanbanView
-              tasks={tasksWithUsers}
-              onTaskClick={(task) => {
-                setSelectedTask(task);
-                setIsDialogOpen(true);
-              }}
-              onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))}
-              kanbanMode={userProfile?.task_kanban_mode || 'business_days'}
-            />
+        {viewMode === 'kanban' ? <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <TaskKanbanView tasks={tasksWithUsers} onTaskClick={task => {
+          setSelectedTask(task);
+          setIsDialogOpen(true);
+        }} onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))} kanbanMode={userProfile?.task_kanban_mode || 'business_days'} />
             <DragOverlay>
-              {activeTask ? (
-                <DraggableTaskCard
-                  task={activeTask}
-                  onTaskClick={() => {}}
-                  onNavigateToLinked={() => {}}
-                  subtaskCount={activeTask.subtaskCount}
-                  completedSubtaskCount={activeTask.completedSubtaskCount}
-                />
-              ) : null}
+              {activeTask ? <DraggableTaskCard task={activeTask} onTaskClick={() => {}} onNavigateToLinked={() => {}} subtaskCount={activeTask.subtaskCount} completedSubtaskCount={activeTask.completedSubtaskCount} /> : null}
             </DragOverlay>
-          </DndContext>
-        ) : isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i}>
+          </DndContext> : isLoading ? <div className="space-y-3">
+            {Array.from({
+          length: 5
+        }).map((_, i) => <Card key={i}>
                 <CardContent className="p-4">
                   <div className="h-16 bg-muted animate-pulse rounded" />
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : tasksWithUsers.length === 0 ? (
-          <Card>
+              </Card>)}
+          </div> : tasksWithUsers.length === 0 ? <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No tasks found</p>
               <p className="text-sm text-muted-foreground mt-1">Create your first task to get started</p>
             </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(
-              groupMode === 'status' 
-                ? groupedTasks 
-                : groupMode === 'tag' 
-                  ? groupedByTag 
-                  : groupedByDocument
-            ).map(([groupKey, groupTasks]) => {
-              if (groupTasks.length === 0) return null;
-              
-              const displayLabel = groupMode === 'status' 
-                ? statusLabels[groupKey] 
-                : groupMode === 'tag'
-                  ? groupKey === 'untagged' 
-                    ? 'Untagged' 
-                    : groupKey
-                  : documentTypeLabels[groupKey] || groupKey;
-              
-              return (
-                <div key={groupKey} className="space-y-2">
-                  <button
-                    onClick={() => toggleSection(groupKey)}
-                    className="flex items-center gap-2 w-full text-left group hover:text-foreground transition-colors"
-                  >
-                    <ChevronDown 
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        collapsedSections[groupKey] && "-rotate-90"
-                      )}
-                    />
+          </Card> : <div className="space-y-6">
+            {Object.entries(groupMode === 'status' ? groupedTasks : groupMode === 'tag' ? groupedByTag : groupedByDocument).map(([groupKey, groupTasks]) => {
+          if (groupTasks.length === 0) return null;
+          const displayLabel = groupMode === 'status' ? statusLabels[groupKey] : groupMode === 'tag' ? groupKey === 'untagged' ? 'Untagged' : groupKey : documentTypeLabels[groupKey] || groupKey;
+          return <div key={groupKey} className="space-y-2">
+                  <button onClick={() => toggleSection(groupKey)} className="flex items-center gap-2 w-full text-left group hover:text-foreground transition-colors">
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", collapsedSections[groupKey] && "-rotate-90")} />
                     <h3 className="text-sm font-semibold text-muted-foreground group-hover:text-foreground">
                       {displayLabel}
                     </h3>
@@ -783,126 +685,80 @@ export default function Tasks() {
                     </span>
                   </button>
                   
-                  {!collapsedSections[groupKey] && (
-                    <div className="space-y-1 pl-6">
-                      {groupTasks.map((task: any) => (
-                        <div
-                          key={task.id}
-                          className="group flex items-start gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedTask(task);
-                            setIsDialogOpen(true);
-                          }}
-                        >
-                          <Checkbox
-                            checked={task.status === "completed"}
-                            onCheckedChange={() => toggleTaskStatus(task)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="mt-0.5"
-                          />
+                  {!collapsedSections[groupKey] && <div className="space-y-1 pl-6">
+                      {groupTasks.map((task: any) => <div key={task.id} className="group flex items-start gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
+                setSelectedTask(task);
+                setIsDialogOpen(true);
+              }}>
+                          <Checkbox checked={task.status === "completed"} onCheckedChange={() => toggleTaskStatus(task)} onClick={e => e.stopPropagation()} className="mt-0.5" />
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-3 mb-1">
-                              <h4 className={cn(
-                                "text-sm font-medium",
-                                task.status === "completed" && "line-through text-muted-foreground"
-                              )}>
+                              <h4 className={cn("text-sm font-medium", task.status === "completed" && "line-through text-muted-foreground")}>
                                 {task.title}
                               </h4>
                               
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                {task.tags && task.tags.length > 0 && task.tags.slice(0, 2).map((tag: string, index: number) => (
-                                  <Badge 
-                                    key={index} 
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
+                                {task.tags && task.tags.length > 0 && task.tags.slice(0, 2).map((tag: string, index: number) => <Badge key={index} variant="secondary" className="text-xs">
                                     {tag}
-                                  </Badge>
-                                ))}
-                                <Badge 
-                                  variant="outline" 
-                                  className={cn("text-xs", getPriorityColor(task.priority))}
-                                >
+                                  </Badge>)}
+                                <Badge variant="outline" className={cn("text-xs", getPriorityColor(task.priority))}>
                                   {task.priority}
                                 </Badge>
                               </div>
                             </div>
                             
                             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                              {task.due_date && (
-                                <div className="flex items-center gap-1">
+                              {task.due_date && <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
                                   <span>{format(new Date(task.due_date), "MMM d")}</span>
-                                </div>
-                              )}
+                                </div>}
                               
-                              {task.assigned_user && (
-                                <div className="flex items-center gap-1">
+                              {task.assigned_user && <div className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
                                   <span>{task.assigned_user.first_name}</span>
-                                </div>
-                              )}
+                                </div>}
                               
-                              {task.subtaskCount > 0 && (
-                                <div className="flex items-center gap-1">
+                              {task.subtaskCount > 0 && <div className="flex items-center gap-1">
                                   <CheckSquare className="h-3 w-3" />
                                   <span>{task.completedSubtaskCount}/{task.subtaskCount}</span>
-                                </div>
-                              )}
+                                </div>}
                               
-                              {task.linked_module && task.linked_record_name && (
-                                <div 
-                                  className="flex items-center gap-1 text-primary hover:underline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(getModuleRoute(task.linked_module, task.linked_record_id));
-                                  }}
-                                >
+                              {task.linked_module && task.linked_record_name && <div className="flex items-center gap-1 text-primary hover:underline" onClick={e => {
+                      e.stopPropagation();
+                      navigate(getModuleRoute(task.linked_module, task.linked_record_id));
+                    }}>
                                   <LinkIcon className="h-3 w-3" />
                                   <span>{task.linked_record_name}</span>
-                                </div>
-                              )}
+                                </div>}
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                        </div>)}
+                    </div>}
+                </div>;
+        })}
+          </div>}
       </div>
 
-      <TaskDialog
-        open={isDialogOpen}
-        onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setSelectedTask(null);
-        }}
-        onSubmit={(data) => {
-          if (selectedTask) {
-            updateTaskMutation.mutate({ id: selectedTask.id, data });
-          } else {
-            createTaskMutation.mutate(data);
-          }
-        }}
-        taskId={selectedTask?.id}
-        defaultValues={selectedTask ? {
-          title: selectedTask.title,
-          description: selectedTask.description || "",
-          status: selectedTask.status,
-          priority: selectedTask.priority,
-          assigned_to: selectedTask.assigned_to || undefined,
-          due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined,
-        } : undefined}
-        linkedModule={selectedTask?.linked_module}
-        linkedRecordId={selectedTask?.linked_record_id}
-        linkedRecordName={selectedTask?.linked_record_name}
-        workers={workers}
-      />
-    </DashboardLayout>
-  );
+      <TaskDialog open={isDialogOpen} onOpenChange={open => {
+      setIsDialogOpen(open);
+      if (!open) setSelectedTask(null);
+    }} onSubmit={data => {
+      if (selectedTask) {
+        updateTaskMutation.mutate({
+          id: selectedTask.id,
+          data
+        });
+      } else {
+        createTaskMutation.mutate(data);
+      }
+    }} taskId={selectedTask?.id} defaultValues={selectedTask ? {
+      title: selectedTask.title,
+      description: selectedTask.description || "",
+      status: selectedTask.status,
+      priority: selectedTask.priority,
+      assigned_to: selectedTask.assigned_to || undefined,
+      due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined
+    } : undefined} linkedModule={selectedTask?.linked_module} linkedRecordId={selectedTask?.linked_record_id} linkedRecordName={selectedTask?.linked_record_name} workers={workers} />
+    </DashboardLayout>;
 }
