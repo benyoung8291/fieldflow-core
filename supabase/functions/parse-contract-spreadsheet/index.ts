@@ -50,18 +50,23 @@ serve(async (req) => {
 
     const tenantId = profile.tenant_id;
 
-    // Fetch existing customers and locations for reference
+    // Fetch a limited sample of existing customers and locations for reference
     const { data: customers } = await supabase
       .from("customers")
       .select("id, name, abn, email")
-      .eq("tenant_id", tenantId);
+      .eq("tenant_id", tenantId)
+      .limit(50);
 
     const { data: locations } = await supabase
       .from("customer_locations")
       .select("id, name, customer_id, address, city, state, postcode")
-      .eq("tenant_id", tenantId);
+      .eq("tenant_id", tenantId)
+      .limit(50);
 
     console.log("Sending to AI for parsing...");
+    
+    // Limit spreadsheet data to prevent token overflow
+    const limitedSpreadsheetData = spreadsheetData.slice(0, 100);
     
     // Use Lovable AI with structured output to parse the spreadsheet
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -75,31 +80,17 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert at parsing service contract spreadsheets and mapping them to structured data. 
-Analyze the spreadsheet data and extract service contract information including:
-- Customer information (name, email, ABN)
-- Contract details (title, description, contract type, start date, end date, renewal terms)
-- Location information (name, address, city, state, postcode)
-- Billing information (billing frequency, service frequency, amount)
-- Line items (description, quantity, unit price, frequency)
-
-Match existing customers and locations when possible using the provided reference data.
-For each row, determine if it represents a new contract or line item for existing contract.`
+            content: `You are an expert at parsing service contract spreadsheets. Extract service contract information including customer details, contract terms, location information, and line items. Match existing customers and locations when possible.`
           },
           {
             role: "user",
-            content: `Parse this spreadsheet data into service contracts:
+            content: `Parse this spreadsheet data into service contracts. Match customers by name/ABN/email and locations by address when found in the reference lists.
 
-Spreadsheet Data:
-${JSON.stringify(spreadsheetData, null, 2)}
+Spreadsheet rows: ${limitedSpreadsheetData.length}
+Sample customers available: ${customers?.length || 0}
+Sample locations available: ${locations?.length || 0}
 
-Existing Customers (match if possible):
-${JSON.stringify(customers || [], null, 2)}
-
-Existing Locations (match if possible):
-${JSON.stringify(locations || [], null, 2)}
-
-Extract all service contracts with their line items and locations. Group line items by contract.`
+Extract all contracts with line items and locations.`
           }
         ],
         tools: [
