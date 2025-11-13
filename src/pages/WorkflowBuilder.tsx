@@ -71,6 +71,7 @@ import { validateWorkflow, ValidationIssue } from "@/lib/workflowValidation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Info } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import WorkflowTestDialog from "@/components/workflows/WorkflowTestDialog";
 
 export default function WorkflowBuilder() {
   const { id } = useParams();
@@ -86,6 +87,7 @@ export default function WorkflowBuilder() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const { toast: toastHook } = useToast();
+  const [showTestDialog, setShowTestDialog] = useState(false);
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -422,7 +424,7 @@ export default function WorkflowBuilder() {
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowTestDialog(true)}>
               <Play className="h-4 w-4 mr-2" />
               Test Run
             </Button>
@@ -534,9 +536,16 @@ export default function WorkflowBuilder() {
             onDelete={handleDeleteNode}
           />
         </div>
-      </div>
+        </div>
         </>
       )}
+
+      <WorkflowTestDialog
+        open={showTestDialog}
+        onOpenChange={setShowTestDialog}
+        workflowId={id && id !== "new" ? id : null}
+        triggerType={triggerType}
+      />
       </div>
     </DashboardLayout>
   );

@@ -17,9 +17,9 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { workflowId, triggerData, tenantId } = await req.json();
+    const { workflowId, triggerData, tenantId, testMode } = await req.json();
 
-    console.log("Executing workflow:", workflowId, "for tenant:", tenantId);
+    console.log("Executing workflow:", workflowId, "for tenant:", tenantId, "testMode:", testMode);
 
     // Fetch workflow with nodes and connections
     const { data: workflow, error: workflowError } = await supabaseClient
@@ -45,6 +45,7 @@ serve(async (req) => {
         tenant_id: tenantId,
         trigger_data: triggerData,
         status: "running",
+        test_mode: testMode || false,
       })
       .select()
       .single();
@@ -61,7 +62,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         executionId: execution.id,
-        message: "Workflow execution started"
+        message: testMode ? "Test execution started" : "Workflow execution started"
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
