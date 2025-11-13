@@ -67,12 +67,55 @@ serve(async (req) => {
 
     console.log(`Sending to AI for ${processingMode}...`);
     
+    // Clean and validate spreadsheet data
+    const cleanSpreadsheetData = (data: any[]): any[] => {
+      return data.map((row, rowIndex) => {
+        if (rowIndex === 0) return row; // Keep headers unchanged
+        
+        return row.map((cell: any) => {
+          if (cell === null || cell === undefined) return '';
+          
+          let cleanedCell = String(cell).trim();
+          
+          // Handle Excel error values
+          if (cleanedCell.startsWith('#')) {
+            console.warn(`Excel error detected in row ${rowIndex + 1}: ${cleanedCell}`);
+            return '0'; // Default error cells to 0 for numeric fields
+          }
+          
+          // Clean currency values: remove $, commas, extra spaces
+          if (cleanedCell.match(/^\$?[\d,]+\.?\d*\s*$/)) {
+            cleanedCell = cleanedCell.replace(/[\$,\s]/g, '');
+          }
+          
+          return cleanedCell;
+        });
+      });
+    };
+    
+    const cleanedData = cleanSpreadsheetData(spreadsheetData);
+    
     // For analysis, only need a few rows. For parsing, limit to 1,000.
     const limitedSpreadsheetData = processingMode === "analyze" 
-      ? spreadsheetData.slice(0, 5) 
-      : spreadsheetData.slice(0, 1000);
+      ? cleanedData.slice(0, 5) 
+      : cleanedData.slice(0, 1000);
     
     const hasMoreRows = spreadsheetData.length > 1000;
+    
+    // Validate data quality
+    const dataIssues: string[] = [];
+    cleanedData.forEach((row, index) => {
+      if (index === 0) return; // Skip header
+      row.forEach((cell: any) => {
+        if (String(cell).startsWith('#')) {
+          dataIssues.push(`Row ${index + 1} contains Excel error`);
+        }
+      });
+    });
+    
+    if (dataIssues.length > 0) {
+      console.warn(`Data quality issues detected: ${dataIssues.length} issues found`);
+    }
     
     // Use Lovable AI with structured output to parse the spreadsheet
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -402,7 +445,8 @@ Extract all line items using the provided mappings.`
           tenantId,
           hasMoreRows,
           totalRows: spreadsheetData.length,
-          processedRows: limitedSpreadsheetData.length
+          processedRows: limitedSpreadsheetData.length,
+          dataIssues: dataIssues.length > 0 ? dataIssues.slice(0, 10) : [] // Return first 10 issues
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

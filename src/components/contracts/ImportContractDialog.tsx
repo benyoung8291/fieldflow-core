@@ -183,6 +183,14 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
         );
       }
 
+      // Show data quality issues if any
+      if (functionData.dataIssues && functionData.dataIssues.length > 0) {
+        toast.warning(
+          `Data quality issues detected: ${functionData.dataIssues.join(', ')}. Excel errors have been cleaned and defaulted to appropriate values.`,
+          { duration: 8000 }
+        );
+      }
+
       toast.success(`Parsed ${functionData.lineItems?.length || 0} line items`);
     } catch (error: any) {
       console.error("Error parsing with mappings:", error);
