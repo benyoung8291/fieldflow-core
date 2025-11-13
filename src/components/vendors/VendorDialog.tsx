@@ -75,8 +75,10 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
 
     setValidatingABN(true);
     try {
+      // Strip spaces before sending to API
+      const cleanABN = formData.abn.replace(/\s/g, '');
       const { data, error } = await supabase.functions.invoke('validate-abn', {
-        body: { abn: formData.abn },
+        body: { abn: cleanABN },
       });
 
       if (error) throw error;
