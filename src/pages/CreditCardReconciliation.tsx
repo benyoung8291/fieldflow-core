@@ -292,73 +292,73 @@ export default function CreditCardReconciliation() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Reconcile ({unreconciledCount})</h1>
+            <h1 className="text-xl font-semibold">Reconcile ({unreconciledCount})</h1>
           </div>
-          <Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} size="sm" variant="outline">
+            <RefreshCw className="h-3 w-3 mr-2" />
             Sync
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {/* Left Panel - Transactions */}
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground px-2 py-1 bg-muted/30">
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t">
               Review your credit card transactions...
             </div>
-            <Card className="p-0">
-              <ScrollArea className="h-[calc(100vh-220px)]">
+            <Card className="p-0 rounded-t-none">
+              <ScrollArea className="h-[calc(100vh-200px)]">
                 <div className="divide-y">
                   {transactions?.map((txn) => {
                     const isSelected = selectedTransaction?.id === txn.id;
                     const matches = findMatches(txn);
-                    const hasMatch = matches.length > 0;
                     const isMatched = txn.status === 'reconciled';
                     
                     return (
                       <div
                         key={txn.id}
-                        className={`p-4 cursor-pointer transition-colors ${
+                        className={`p-3 cursor-pointer transition-colors ${
                           isMatched 
-                            ? 'bg-green-50 hover:bg-green-100' 
+                            ? 'bg-emerald-50 hover:bg-emerald-100 border-l-4 border-emerald-500' 
                             : isSelected 
-                            ? 'bg-blue-50' 
-                            : 'hover:bg-muted/50'
+                            ? 'bg-blue-50 border-l-4 border-blue-500' 
+                            : 'hover:bg-muted/30'
                         }`}
                         onClick={() => !isMatched && handleSelectTransaction(txn)}
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs text-muted-foreground mb-1">
+                            <div className="text-[11px] text-muted-foreground mb-0.5">
                               {format(new Date(txn.transaction_date), 'MMM d, yyyy')}
                             </div>
-                            <div className="font-medium text-sm mb-1">
+                            <div className="font-semibold text-sm mb-0.5">
                               {txn.merchant_name || 'Unknown Merchant'}
                             </div>
                             {txn.external_reference && (
-                              <div className="text-xs text-muted-foreground mb-2">
+                              <div className="text-[11px] text-muted-foreground mb-1">
                                 {txn.external_reference}
                               </div>
                             )}
-                            {txn.company_credit_cards && (
-                              <button className="text-xs text-blue-600 hover:underline">
-                                More details
-                              </button>
-                            )}
+                            <button className="text-[11px] text-blue-600 hover:underline">
+                              More details
+                            </button>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-semibold mb-2">
+                            <div className="text-sm font-semibold mb-1">
                               ${txn.amount.toFixed(2)}
                             </div>
                             {isMatched ? (
-                              <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
+                              <Button 
+                                size="sm" 
+                                className="h-7 px-4 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
+                              >
                                 OK
                               </Button>
                             ) : (
-                              <Button size="sm" variant="ghost" className="text-xs">
+                              <Button size="sm" variant="ghost" className="text-[11px] h-6 px-2">
                                 Options <ChevronDown className="h-3 w-3 ml-1" />
                               </Button>
                             )}
@@ -373,49 +373,53 @@ export default function CreditCardReconciliation() {
           </div>
 
           {/* Right Panel - Matching */}
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground px-2 py-1 bg-muted/30">
-              ...then match with your transactions
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t flex items-center justify-between">
+              <span>...then match with your transactions</span>
+              <div className="flex items-center gap-2 text-[11px]">
+                <span className="font-semibold">Spent</span>
+                <span className="font-semibold">Received</span>
+              </div>
             </div>
-            <Card className="p-0">
-              <ScrollArea className="h-[calc(100vh-220px)]">
+            <Card className="p-0 rounded-t-none">
+              <ScrollArea className="h-[calc(100vh-200px)]">
                 {!selectedTransaction ? (
-                  <div className="p-8 text-center text-muted-foreground">
+                  <div className="p-8 text-center text-sm text-muted-foreground">
                     <p>Select a transaction from the left to match or create an expense</p>
                   </div>
                 ) : (
-                  <div className="p-4">
+                  <div className="p-3">
                     {/* Suggested Matches */}
                     {findMatches(selectedTransaction).map((match) => (
                       <div
                         key={match.id}
-                        className="mb-4 p-4 bg-green-50 border-2 border-green-200 rounded-lg"
+                        className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded"
                       >
-                        <div className="flex items-start gap-3 mb-3">
-                          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <div className="text-xs text-muted-foreground mb-1">
+                        <div className="flex items-start gap-2 mb-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-1" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] text-muted-foreground mb-0.5">
                               {format(new Date(match.expense_date), 'dd MMM yyyy')}
                             </div>
-                            <div className="font-semibold text-sm mb-1">
+                            <div className="font-semibold text-sm mb-0.5">
                               Expense: {match.expense_number}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-xs text-muted-foreground line-clamp-1">
                               {match.description}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <div className="font-semibold">
+                            <div className="font-semibold text-sm">
                               ${parseFloat(match.amount.toString()).toFixed(2)}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex gap-2">
-                            <button className="text-xs text-blue-600 hover:underline">Match</button>
-                            <button className="text-xs text-blue-600 hover:underline">Create</button>
-                            <button className="text-xs text-blue-600 hover:underline">Transfer</button>
-                            <button className="text-xs text-muted-foreground hover:underline">Discuss</button>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-emerald-200">
+                          <div className="flex gap-3">
+                            <button className="text-[11px] text-blue-600 hover:underline font-medium">Match</button>
+                            <button className="text-[11px] text-blue-600 hover:underline">Create</button>
+                            <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
+                            <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
                           </div>
                           <Button
                             size="sm"
@@ -424,7 +428,7 @@ export default function CreditCardReconciliation() {
                               expenseId: match.id,
                             })}
                             disabled={matchMutation.isPending}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="h-7 px-4 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
                           >
                             OK
                           </Button>
@@ -433,45 +437,45 @@ export default function CreditCardReconciliation() {
                     ))}
 
                     {/* Create New Expense Form */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                      <TabsList className="w-full justify-start mb-4">
-                        <TabsTrigger value="match">Match</TabsTrigger>
-                        <TabsTrigger value="create">Create</TabsTrigger>
-                        <TabsTrigger value="transfer">Transfer</TabsTrigger>
-                        <TabsTrigger value="discuss">Discuss</TabsTrigger>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
+                      <TabsList className="w-full justify-start h-8 p-0.5 bg-muted/40">
+                        <TabsTrigger value="match" className="text-xs h-7">Match</TabsTrigger>
+                        <TabsTrigger value="create" className="text-xs h-7">Create</TabsTrigger>
+                        <TabsTrigger value="transfer" className="text-xs h-7">Transfer</TabsTrigger>
+                        <TabsTrigger value="discuss" className="text-xs h-7">Discuss</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="match" className="space-y-2">
+                      <TabsContent value="match" className="space-y-2 mt-3">
                         {findMatches(selectedTransaction).length === 0 && (
-                          <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">
+                          <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
                             No matching expenses found. Create a new expense or check other tabs.
-                          </p>
+                          </div>
                         )}
                         <div className="text-right">
                           <Button 
                             size="sm" 
                             variant="link" 
-                            className="text-blue-600"
+                            className="text-blue-600 text-xs h-auto p-0 hover:underline"
                           >
                             Find & Match
                           </Button>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="create" className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <TabsContent value="create" className="space-y-3 mt-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs">Vendor</Label>
+                            <Label className="text-[11px] text-muted-foreground">Who</Label>
                             <Select
                               value={formData.vendor_id}
                               onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
                             >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder="Select vendor..." />
+                              <SelectTrigger className="h-7 text-xs mt-1">
+                                <SelectValue placeholder="Name of the contact..." />
                               </SelectTrigger>
                               <SelectContent>
                                 {vendors.map((vendor) => (
-                                  <SelectItem key={vendor.id} value={vendor.id}>
+                                  <SelectItem key={vendor.id} value={vendor.id} className="text-xs">
                                     {vendor.name}
                                   </SelectItem>
                                 ))}
@@ -480,17 +484,17 @@ export default function CreditCardReconciliation() {
                           </div>
 
                           <div>
-                            <Label className="text-xs">Category</Label>
+                            <Label className="text-[11px] text-muted-foreground">What</Label>
                             <Select
                               value={formData.category_id}
                               onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                             >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder="Select category..." />
+                              <SelectTrigger className="h-7 text-xs mt-1">
+                                <SelectValue placeholder="Choose the account..." />
                               </SelectTrigger>
                               <SelectContent>
                                 {categories.map((category) => (
-                                  <SelectItem key={category.id} value={category.id}>
+                                  <SelectItem key={category.id} value={category.id} className="text-xs">
                                     {category.name}
                                   </SelectItem>
                                 ))}
@@ -500,35 +504,86 @@ export default function CreditCardReconciliation() {
                         </div>
 
                         <div>
-                          <Label className="text-xs">Description</Label>
+                          <Label className="text-[11px] text-muted-foreground">Why</Label>
                           <Textarea
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="text-sm min-h-[60px]"
+                            className="text-xs min-h-[50px] mt-1"
                             placeholder="Enter a description..."
                           />
                         </div>
 
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Region</Label>
+                            <Select>
+                              <SelectTrigger className="h-7 text-xs mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Tax Rate</Label>
+                            <Select>
+                              <SelectTrigger className="h-7 text-xs mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </Select>
+                          </div>
+                        </div>
+
                         <div className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={handleCreateExpense}
-                            disabled={createExpenseMutation.isPending || !formData.description}
-                            className="bg-blue-600 hover:bg-blue-700"
+                          <Button 
+                            variant="link" 
+                            className="text-blue-600 text-xs h-auto p-0 hover:underline mr-3"
                           >
-                            Create & Match
+                            Add details
                           </Button>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="transfer" className="p-4 bg-muted/30 rounded text-sm text-muted-foreground">
-                        Transfer functionality not available for expenses
+                      <TabsContent value="transfer" className="mt-3">
+                        <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
+                          Transfer functionality not available for expenses
+                        </div>
                       </TabsContent>
 
-                      <TabsContent value="discuss" className="p-4 bg-muted/30 rounded text-sm text-muted-foreground">
-                        Discussion feature coming soon
+                      <TabsContent value="discuss" className="mt-3">
+                        <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
+                          Discussion feature coming soon
+                        </div>
                       </TabsContent>
                     </Tabs>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                      <div className="flex gap-3">
+                        <button className="text-[11px] text-blue-600 hover:underline font-medium">Match</button>
+                        <button className="text-[11px] text-blue-600 hover:underline font-medium">Create</button>
+                        <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
+                        <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
+                      </div>
+                      {activeTab === 'create' && (
+                        <Button
+                          size="sm"
+                          onClick={handleCreateExpense}
+                          disabled={createExpenseMutation.isPending || !formData.description}
+                          className="h-7 px-4 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
+                        >
+                          OK
+                        </Button>
+                      )}
+                      {findMatches(selectedTransaction).length === 0 && activeTab === 'match' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="h-7 px-4 text-xs"
+                          onClick={() => setActiveTab('create')}
+                        >
+                          Create
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
               </ScrollArea>
