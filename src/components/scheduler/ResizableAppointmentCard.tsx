@@ -140,6 +140,12 @@ export default function ResizableAppointmentCard({
           onClick={onClick}
         >
           <div className="space-y-1 h-full flex flex-col">
+            {/* Duration badge - top right */}
+            <div className="absolute top-1 right-1 bg-muted/80 backdrop-blur-sm text-[10px] font-medium px-1.5 py-0.5 rounded text-muted-foreground z-10">
+              <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+              {durationHours.toFixed(1)}h
+            </div>
+
             {/* Time */}
             <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
               <Clock className="h-3 w-3" />

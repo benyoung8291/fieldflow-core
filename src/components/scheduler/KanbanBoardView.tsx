@@ -187,8 +187,19 @@ function AppointmentCard({
         )}
         onClick={onClick}
       >
-        <CardHeader className="p-2 pb-1">
-          <CardTitle className="text-xs font-medium truncate">{appointment.title}</CardTitle>
+        <CardHeader className="p-2 pb-1 relative">
+          {/* Duration badge - top right */}
+          <div className="absolute top-1 right-1 bg-muted/80 backdrop-blur-sm text-[10px] font-medium px-1.5 py-0.5 rounded text-muted-foreground z-10">
+            <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+            {(() => {
+              const start = new Date(appointment.start_time);
+              const end = new Date(appointment.end_time);
+              const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+              return (Math.round(hours * 10) / 10).toFixed(1);
+            })()}h
+          </div>
+          
+          <CardTitle className="text-xs font-medium truncate pr-12">{appointment.title}</CardTitle>
         </CardHeader>
         <CardContent className="p-2 pt-0 space-y-1">
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
