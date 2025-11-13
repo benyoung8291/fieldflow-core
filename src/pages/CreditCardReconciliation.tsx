@@ -293,7 +293,13 @@ export default function CreditCardReconciliation() {
     });
   };
 
-  const unreconciledCount = transactions?.filter(t => t.status === 'unreconciled').length || 0;
+  // Filter out reconciled transactions and expenses
+  const unreconciledTransactions = transactions?.filter(t => t.status === 'unreconciled') || [];
+  const unreconciledExpenses = potentialMatches?.filter(e => 
+    !transactions?.some(t => t.expense_id === e.id)
+  ) || [];
+
+  const unreconciledCount = unreconciledTransactions.length;
 
   if (isLoading) {
     return (
@@ -363,285 +369,114 @@ export default function CreditCardReconciliation() {
           {/* Left Panel - Transactions */}
           <div className="space-y-1">
             <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t">
-              Review your credit card transactions...
+              Credit Card Transactions
             </div>
             <Card className="p-0 rounded-t-none">
               <ScrollArea className="h-[calc(100vh-200px)]">
-                <div className="divide-y">
-                  {transactions?.map((txn) => {
-                    const isSelected = selectedTransaction?.id === txn.id;
-                    const matches = findMatches(txn);
-                    const isMatched = txn.status === 'reconciled';
-                    
-                    return (
-                      <div
-                        key={txn.id}
-                        className={`p-3 cursor-pointer transition-colors ${
-                          isMatched 
-                            ? 'bg-emerald-50 hover:bg-emerald-100 border-l-4 border-emerald-500' 
-                            : isSelected 
-                            ? 'bg-blue-50 border-l-4 border-blue-500' 
-                            : 'hover:bg-muted/30'
-                        }`}
-                        onClick={() => !isMatched && handleSelectTransaction(txn)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-muted-foreground mb-0.5">
-                              {format(new Date(txn.transaction_date), 'MMM d, yyyy')}
+                <div className="p-2 space-y-2">
+                  {unreconciledTransactions.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
+                      <p>All transactions matched!</p>
+                    </div>
+                  ) : (
+                    unreconciledTransactions.map((txn) => {
+                      const matches = findMatches(txn);
+                      
+                      return (
+                        <Card key={txn.id} className="p-3 hover:shadow-md transition-shadow">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[11px] text-muted-foreground mb-0.5">
+                                  {format(new Date(txn.transaction_date), 'MMM d, yyyy')}
+                                </div>
+                                <div className="font-semibold text-sm mb-0.5">
+                                  {txn.merchant_name || 'Unknown Merchant'}
+                                </div>
+                                {txn.external_reference && (
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {txn.external_reference}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-sm font-semibold">
+                                  ${txn.amount.toFixed(2)}
+                                </div>
+                              </div>
                             </div>
-                            <div className="font-semibold text-sm mb-0.5">
-                              {txn.merchant_name || 'Unknown Merchant'}
-                            </div>
-                            {txn.external_reference && (
-                              <div className="text-[11px] text-muted-foreground mb-1">
-                                {txn.external_reference}
+                            {matches.length > 0 && (
+                              <div className="pt-2 border-t space-y-1">
+                                {matches.map((match) => (
+                                  <button
+                                    key={match.id}
+                                    onClick={() => matchMutation.mutate({ transactionId: txn.id, expenseId: match.id })}
+                                    className="w-full p-2 bg-emerald-50 border border-emerald-300 rounded text-left hover:bg-emerald-100 transition-colors"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 flex-1">
+                                        <Check className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                                        <div className="text-[11px] font-medium">
+                                          {match.expense_number}
+                                        </div>
+                                      </div>
+                                      <Button size="sm" className="h-6 px-3 bg-emerald-600 hover:bg-emerald-700 text-xs">
+                                        Match
+                                      </Button>
+                                    </div>
+                                  </button>
+                                ))}
                               </div>
                             )}
-                            <button className="text-[11px] text-blue-600 hover:underline">
-                              More details
-                            </button>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-semibold mb-1">
-                              ${txn.amount.toFixed(2)}
-                            </div>
-                            {isMatched ? (
-                              <Button 
-                                size="sm" 
-                                className="h-7 px-4 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
-                              >
-                                OK
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="ghost" className="text-[11px] h-6 px-2">
-                                Options <ChevronDown className="h-3 w-3 ml-1" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        </Card>
+                      );
+                    })
+                  )}
                 </div>
               </ScrollArea>
             </Card>
           </div>
 
-          {/* Right Panel - Matching */}
+          {/* Right Panel - Expenses */}
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t flex items-center justify-between">
-              <span>...then match with your transactions</span>
-              <div className="flex items-center gap-2 text-[11px]">
-                <span className="font-semibold">Spent</span>
-                <span className="font-semibold">Received</span>
-              </div>
+            <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t">
+              Submitted Expenses
             </div>
             <Card className="p-0 rounded-t-none">
               <ScrollArea className="h-[calc(100vh-200px)]">
-                {!selectedTransaction ? (
-                  <div className="p-8 text-center text-sm text-muted-foreground">
-                    <p>Select a transaction from the left to match or create an expense</p>
-                  </div>
-                ) : (
-                  <div className="p-3">
-                    {/* Suggested Matches */}
-                    {findMatches(selectedTransaction).length > 0 && (
-                      <div className="space-y-2 mb-3">
-                        {findMatches(selectedTransaction).map((match) => (
-                          <div
-                            key={match.id}
-                            className="p-3 bg-emerald-50 border border-emerald-300 rounded relative"
-                          >
-                            <div className="flex items-start gap-2">
-                              <div className="flex-shrink-0 mt-1">
-                                <div className="w-5 h-5 rounded border-2 border-emerald-600 bg-emerald-600 flex items-center justify-center">
-                                  <Check className="h-3 w-3 text-white" />
-                                </div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[11px] text-muted-foreground mb-0.5">
-                                  {format(new Date(match.expense_date), 'dd MMM yyyy')}
-                                </div>
-                                <div className="font-semibold text-sm mb-0.5">
-                                  Expense: {match.expense_number}
-                                </div>
-                                <div className="text-xs text-muted-foreground mb-1">
-                                  Ref: {match.expense_number}
-                                </div>
-                                <div className="text-xs text-foreground line-clamp-2">
-                                  {match.description}
-                                </div>
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <div className="font-semibold text-sm">
-                                  ${parseFloat(match.amount.toString()).toFixed(2)}
-                                </div>
-                              </div>
+                <div className="p-2 space-y-2">
+                  {unreconciledExpenses.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
+                      <p>All expenses matched!</p>
+                    </div>
+                  ) : (
+                    unreconciledExpenses.map((expense) => (
+                      <Card key={expense.id} className="p-3 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] text-muted-foreground mb-0.5">
+                              {format(new Date(expense.expense_date), 'MMM d, yyyy')}
                             </div>
-                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-emerald-200">
-                              <div className="flex gap-3">
-                                <button className="text-[11px] text-blue-600 hover:underline font-medium">Match</button>
-                                <button className="text-[11px] text-blue-600 hover:underline">Create</button>
-                                <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
-                                <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
-                              </div>
-                              <Button
-                                size="sm"
-                                onClick={() => matchMutation.mutate({
-                                  transactionId: selectedTransaction.id,
-                                  expenseId: match.id,
-                                })}
-                                disabled={matchMutation.isPending}
-                                className="h-7 px-5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
-                              >
-                                OK
-                              </Button>
+                            <div className="font-semibold text-sm mb-0.5">
+                              Expense: {expense.expense_number}
+                            </div>
+                            <div className="text-xs text-muted-foreground line-clamp-2">
+                              {expense.description}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Tabs - Only show if no matches or user wants to create new */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
-                      <TabsList className="w-full justify-start h-8 p-0.5 bg-muted/40">
-                        <TabsTrigger value="match" className="text-xs h-7">Match</TabsTrigger>
-                        <TabsTrigger value="create" className="text-xs h-7">Create</TabsTrigger>
-                        <TabsTrigger value="transfer" className="text-xs h-7">Transfer</TabsTrigger>
-                        <TabsTrigger value="discuss" className="text-xs h-7">Discuss</TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="match" className="space-y-2 mt-3">
-                        {findMatches(selectedTransaction).length === 0 && (
-                          <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
-                            <p className="mb-2">This is payment on a really old invoice so wasn't sure where to code it</p>
-                            <p className="text-[10px] italic">Ctrl + S at any time to save</p>
-                          </div>
-                        )}
-                        <div className="text-right">
-                          <Button 
-                            size="sm" 
-                            variant="link" 
-                            className="text-blue-600 text-xs h-auto p-0 hover:underline"
-                          >
-                            Find & Match
-                          </Button>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="create" className="space-y-3 mt-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">Who</Label>
-                            <Select
-                              value={formData.vendor_id}
-                              onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
-                            >
-                              <SelectTrigger className="h-7 text-xs mt-1">
-                                <SelectValue placeholder="Name of the contact..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {vendors.map((vendor) => (
-                                  <SelectItem key={vendor.id} value={vendor.id} className="text-xs">
-                                    {vendor.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">What</Label>
-                            <Select
-                              value={formData.category_id}
-                              onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                            >
-                              <SelectTrigger className="h-7 text-xs mt-1">
-                                <SelectValue placeholder="Choose the account..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.map((category) => (
-                                  <SelectItem key={category.id} value={category.id} className="text-xs">
-                                    {category.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-sm font-semibold">
+                              ${expense.amount.toFixed(2)}
+                            </div>
                           </div>
                         </div>
-
-                        <div>
-                          <Label className="text-[11px] text-muted-foreground">Why</Label>
-                          <Textarea
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="text-xs min-h-[50px] mt-1"
-                            placeholder="Enter a description..."
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">Region</Label>
-                            <Select>
-                              <SelectTrigger className="h-7 text-xs mt-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">Tax Rate</Label>
-                            <Select>
-                              <SelectTrigger className="h-7 text-xs mt-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <Button 
-                            variant="link" 
-                            className="text-blue-600 text-xs h-auto p-0 hover:underline mr-3"
-                          >
-                            Add details
-                          </Button>
-                        </div>
-
-                        {/* Action Buttons for Create Tab */}
-                        <div className="flex items-center justify-between pt-3 border-t">
-                          <div className="flex gap-3">
-                            <button className="text-[11px] text-blue-600 hover:underline">Match</button>
-                            <button className="text-[11px] text-blue-600 hover:underline font-medium">Create</button>
-                            <button className="text-[11px] text-blue-600 hover:underline">Transfer</button>
-                            <button className="text-[11px] text-muted-foreground hover:underline">Discuss</button>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={handleCreateExpense}
-                            disabled={createExpenseMutation.isPending || !formData.description}
-                            className="h-7 px-5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold"
-                          >
-                            OK
-                          </Button>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="transfer" className="mt-3">
-                        <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
-                          Transfer functionality not available for expenses
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="discuss" className="mt-3">
-                        <div className="p-3 bg-muted/30 rounded text-xs text-muted-foreground">
-                          Discussion feature coming soon
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                )}
+                      </Card>
+                    ))
+                  )}
+                </div>
               </ScrollArea>
             </Card>
           </div>
