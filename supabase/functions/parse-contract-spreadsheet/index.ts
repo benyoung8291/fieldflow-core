@@ -93,6 +93,7 @@ Your task is to suggest column mappings for:
 - location_city: City/suburb field
 - location_state: State/province field
 - location_postcode: Postal/zip code field
+- customer_location_id: Customer's external location ID/reference field
 - unit_price: Price per service field (with $, cost, amount, rate, etc.)
 - quantity: Quantity field (if not found, null)
 - estimated_hours: Estimated hours field (hours, time, duration, etc. - if not found, null)
@@ -156,6 +157,7 @@ Extract all line items using the provided mappings.`
                       location_city: { type: "string", description: "Column name for city", nullable: true },
                       location_state: { type: "string", description: "Column name for state", nullable: true },
                       location_postcode: { type: "string", description: "Column name for postcode", nullable: true },
+                      customer_location_id: { type: "string", description: "Column name for customer location ID/reference", nullable: true },
                       unit_price: { type: "string", description: "Column name for price per service", nullable: true },
                       quantity: { type: "string", description: "Column name for quantity", nullable: true },
                       estimated_hours: { type: "string", description: "Column name for estimated hours", nullable: true },
@@ -202,7 +204,8 @@ Extract all line items using the provided mappings.`
                             address: { type: "string", description: "Full street address" },
                             city: { type: "string", description: "City/suburb name" },
                             state: { type: "string", description: "State/province code" },
-                            postcode: { type: "string", description: "Postal/zip code if available" }
+                            postcode: { type: "string", description: "Postal/zip code if available" },
+                            customer_location_id: { type: "string", description: "Customer's external location ID/reference if provided" }
                           },
                           required: ["name", "address"]
                         }

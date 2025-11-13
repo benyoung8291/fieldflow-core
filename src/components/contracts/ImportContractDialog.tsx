@@ -44,6 +44,7 @@ interface ParsedLineItem {
     city?: string;
     state?: string;
     postcode?: string;
+    customer_location_id?: string;
     latitude?: number;
     longitude?: number;
     formatted_address?: string;
@@ -318,6 +319,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               city: item.location.city,
               state: item.location.state,
               postcode: item.location.postcode,
+              customer_location_id: item.location.customer_location_id || null,
               latitude: item.location.latitude,
               longitude: item.location.longitude,
             })
@@ -491,6 +493,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                     location_city: "City",
                     location_state: "State",
                     location_postcode: "Postcode",
+                    customer_location_id: "Customer Location ID",
                     unit_price: "Unit Price",
                     quantity: "Quantity",
                     estimated_hours: "Estimated Hours",
@@ -759,6 +762,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                     <TableRow>
                       <TableHead>Description</TableHead>
                       <TableHead>Location</TableHead>
+                      <TableHead>Customer Loc ID</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
@@ -782,6 +786,11 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                               </div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {item.location.customer_location_id || '-'}
+                          </span>
                         </TableCell>
                         <TableCell className="capitalize">{item.recurrence_frequency}</TableCell>
                         <TableCell>{item.first_generation_date}</TableCell>
