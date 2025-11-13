@@ -483,8 +483,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                           <SelectValue placeholder="Select column" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
-                          {availableColumns.map((col) => (
+                          {availableColumns.filter(col => col && col.trim()).map((col) => (
                             <SelectItem key={col} value={col}>
                               {col}
                             </SelectItem>
