@@ -4,20 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format, isPast, startOfDay } from "date-fns";
-import { Calendar, User, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Calendar, User, Link as LinkIcon, ExternalLink, CheckSquare } from "lucide-react";
 
 interface DraggableTaskCardProps {
   task: any;
   onTaskClick: (task: any) => void;
   onNavigateToLinked: (module: string, id: string) => void;
   workerName?: string;
+  subtaskCount?: number;
+  completedSubtaskCount?: number;
 }
 
 export default function DraggableTaskCard({ 
   task, 
   onTaskClick, 
   onNavigateToLinked,
-  workerName 
+  workerName,
+  subtaskCount = 0,
+  completedSubtaskCount = 0
 }: DraggableTaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -98,6 +102,13 @@ export default function DraggableTaskCard({
                 {tag}
               </Badge>
             ))}
+            
+            {subtaskCount > 0 && (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <CheckSquare className="h-3 w-3" />
+                {completedSubtaskCount}/{subtaskCount}
+              </Badge>
+            )}
           </div>
 
           {task.linked_module && task.linked_record_name && (

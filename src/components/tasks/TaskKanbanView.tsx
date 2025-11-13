@@ -102,6 +102,8 @@ function DroppableColumn({
               onTaskClick={onTaskClick}
               onNavigateToLinked={onNavigateToLinked}
               workerName={task.assigned_to ? workersMap[task.assigned_to] : undefined}
+              subtaskCount={task.subtaskCount || 0}
+              completedSubtaskCount={task.completedSubtaskCount || 0}
             />
           ))
         )}

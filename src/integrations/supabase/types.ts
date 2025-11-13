@@ -4837,6 +4837,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           created_by: string
+          depth_level: number | null
           description: string | null
           due_date: string | null
           end_date: string | null
@@ -4844,6 +4845,7 @@ export type Database = {
           id: string
           linked_module: string | null
           linked_record_id: string | null
+          parent_task_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           progress_percentage: number | null
           start_date: string | null
@@ -4859,6 +4861,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by: string
+          depth_level?: number | null
           description?: string | null
           due_date?: string | null
           end_date?: string | null
@@ -4866,6 +4869,7 @@ export type Database = {
           id?: string
           linked_module?: string | null
           linked_record_id?: string | null
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           progress_percentage?: number | null
           start_date?: string | null
@@ -4881,6 +4885,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string
+          depth_level?: number | null
           description?: string | null
           due_date?: string | null
           end_date?: string | null
@@ -4888,6 +4893,7 @@ export type Database = {
           id?: string
           linked_module?: string | null
           linked_record_id?: string | null
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           progress_percentage?: number | null
           start_date?: string | null
@@ -4897,7 +4903,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_settings: {
         Row: {

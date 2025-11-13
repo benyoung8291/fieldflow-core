@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TaskComments from "./TaskComments";
 import TaskChecklist from "./TaskChecklist";
 import TaskDependenciesTab from "./TaskDependenciesTab";
+import TaskSubtasks from "./TaskSubtasks";
 
 interface TaskDialogProps {
   open: boolean;
@@ -155,12 +156,13 @@ export default function TaskDialog({
           <Tabs defaultValue="details" className="w-full">
             <TabsList className={cn(
               "grid w-full",
-              linkedModule === 'project' ? "grid-cols-4" : "grid-cols-3"
+              linkedModule === 'project' ? "grid-cols-5" : "grid-cols-4"
             )}>
               <TabsTrigger value="details">Task Details</TabsTrigger>
               {linkedModule === 'project' && (
                 <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
               )}
+              <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
               <TabsTrigger value="checklist">Checklist</TabsTrigger>
               <TabsTrigger value="comments">Comments</TabsTrigger>
             </TabsList>
@@ -434,6 +436,10 @@ export default function TaskDialog({
                 )}
               </TabsContent>
             )}
+            
+            <TabsContent value="subtasks" className="mt-4">
+              <TaskSubtasks taskId={taskId} parentTaskId={taskId} />
+            </TabsContent>
             
             <TabsContent value="checklist" className="mt-4">
               <TaskChecklist taskId={taskId} />

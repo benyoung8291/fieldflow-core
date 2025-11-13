@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown } from "lucide-react";
+import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown, CheckSquare } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format } from "date-fns";
@@ -183,7 +183,18 @@ export default function Tasks() {
       
       // Fetch linked record names and format document types
       const tasksWithLinks = await Promise.all(filteredData.map(async (task: any) => {
-        if (!task.linked_module || !task.linked_record_id) return task;
+        // Fetch subtask counts
+        const { data: subtasks } = await supabase
+          .from("tasks")
+          .select("id, status")
+          .eq("parent_task_id", task.id);
+        
+        const subtaskCount = subtasks?.length || 0;
+        const completedSubtaskCount = subtasks?.filter((st: any) => st.status === "completed").length || 0;
+        
+        if (!task.linked_module || !task.linked_record_id) {
+          return { ...task, subtaskCount, completedSubtaskCount };
+        }
         
         let linkedRecordName = null;
         let documentType = task.linked_module;
@@ -238,7 +249,13 @@ export default function Tasks() {
           console.error('Error fetching linked record:', e);
         }
         
-        return { ...task, linked_record_name: linkedRecordName, document_type: documentType };
+        return { 
+          ...task, 
+          linked_record_name: linkedRecordName, 
+          document_type: documentType,
+          subtaskCount,
+          completedSubtaskCount
+        };
       }));
       
       return tasksWithLinks;
@@ -624,6 +641,8 @@ export default function Tasks() {
                   task={activeTask}
                   onTaskClick={() => {}}
                   onNavigateToLinked={() => {}}
+                  subtaskCount={activeTask.subtaskCount}
+                  completedSubtaskCount={activeTask.completedSubtaskCount}
                 />
               ) : null}
             </DragOverlay>
@@ -728,6 +747,13 @@ export default function Tasks() {
                                 <div className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
                                   <span>{task.assigned_user.first_name}</span>
+                                </div>
+                              )}
+                              
+                              {task.subtaskCount > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <CheckSquare className="h-3 w-3" />
+                                  <span>{task.completedSubtaskCount}/{task.subtaskCount}</span>
                                 </div>
                               )}
                               
