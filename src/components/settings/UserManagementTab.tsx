@@ -366,8 +366,16 @@ export const UserManagementTab = () => {
                     type="password"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
-                    placeholder="Minimum 6 characters"
+                    placeholder="Enter secure password"
                   />
+                  <p className="text-xs text-muted-foreground space-y-1">
+                    <span className="block">Password must contain:</span>
+                    <span className="block">• At least 12 characters</span>
+                    <span className="block">• At least one uppercase letter (A-Z)</span>
+                    <span className="block">• At least one lowercase letter (a-z)</span>
+                    <span className="block">• At least one number (0-9)</span>
+                    <span className="block">• At least one special character (!@#$%^&*)</span>
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Initial Role (Optional)</Label>
