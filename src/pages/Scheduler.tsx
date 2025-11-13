@@ -761,6 +761,74 @@ export default function Scheduler() {
     });
   };
 
+  const handleScheduleServiceOrderInWeek = async (
+    serviceOrder: any, 
+    weekStart: Date, 
+    weekEnd: Date
+  ) => {
+    // Find workers with available capacity in this week
+    const workersWithCapacity = workers
+      .map(worker => {
+        const standardHours = worker.standard_work_hours || 
+          (worker.employment_type === 'full_time' ? 40 : 0);
+        
+        // Calculate scheduled hours for this worker in the week
+        const scheduledHours = appointments
+          .filter(apt => {
+            const aptStart = new Date(apt.start_time);
+            if (apt.status === 'cancelled') return false;
+            if (aptStart < weekStart || aptStart > weekEnd) return false;
+            
+            const isPrimary = apt.assigned_to === worker.id;
+            const isAssigned = apt.appointment_workers?.some((aw: any) => aw.worker_id === worker.id);
+            
+            return isPrimary || isAssigned;
+          })
+          .reduce((total, apt) => {
+            const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
+            return total + hours;
+          }, 0);
+
+        const availableHours = Math.max(0, standardHours - scheduledHours);
+        return { worker, availableHours, standardHours };
+      })
+      .filter(w => w.availableHours > 0)
+      .sort((a, b) => b.availableHours - a.availableHours);
+
+    if (workersWithCapacity.length === 0) {
+      toast.error("No workers have available capacity this week");
+      return;
+    }
+
+    // Select worker with most availability
+    const bestWorker = workersWithCapacity[0].worker;
+    const estimatedHours = serviceOrder.estimated_hours || 4;
+    
+    // Schedule on Monday of the week at 9 AM
+    const startDate = new Date(weekStart);
+    startDate.setDate(startDate.getDate() + (1 - startDate.getDay())); // Monday
+    startDate.setHours(9, 0, 0, 0);
+    
+    const endDate = new Date(startDate);
+    endDate.setHours(startDate.getHours() + estimatedHours);
+
+    try {
+      await createAppointmentMutation.mutateAsync({
+        serviceOrderId: serviceOrder.id,
+        startTime: startDate,
+        endTime: endDate,
+        workerId: bestWorker.id,
+      });
+      
+      toast.success(
+        `Scheduled with ${bestWorker.first_name} ${bestWorker.last_name} who has ${workersWithCapacity[0].availableHours.toFixed(1)}h available`
+      );
+    } catch (error) {
+      console.error("Error scheduling appointment:", error);
+      toast.error("Failed to schedule appointment");
+    }
+  };
+
   const clearSelection = () => {
     setSelectedAppointmentIds(new Set());
   };
@@ -854,6 +922,15 @@ export default function Scheduler() {
     // For service orders, use 4 hour default, otherwise 2 hours
     const defaultDuration = draggedItem?.type === "service-order" ? 4 : 2;
     let endTime = addHours(startTime, defaultDuration);
+
+    // Handle dropping a service order on capacity week
+    if (draggedItem?.type === "service-order" && dropTarget?.type === "capacity-week") {
+      const serviceOrder = draggedItem.serviceOrder;
+      const { weekStart, weekEnd } = dropTarget;
+      
+      handleScheduleServiceOrderInWeek(serviceOrder, weekStart, weekEnd);
+      return;
+    }
 
     // Handle dropping a service order
     if (draggedItem?.type === "service-order") {
@@ -1190,6 +1267,7 @@ export default function Scheduler() {
                   full_name: `${w.first_name} ${w.last_name}`
                 }))}
                 currentDate={currentDate}
+                onScheduleServiceOrder={handleScheduleServiceOrderInWeek}
               />
             ) : showServiceOrderView ? (
               <ServiceOrdersCalendarView 

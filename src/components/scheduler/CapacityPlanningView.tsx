@@ -6,6 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { startOfWeek, endOfWeek, addWeeks, format } from "date-fns";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useDroppable } from "@dnd-kit/core";
+import { Clock, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import DraggableServiceOrder from "./DraggableServiceOrder";
 
 interface Worker {
   id: string;
@@ -30,9 +36,70 @@ interface ServiceOrder {
 interface CapacityPlanningViewProps {
   workers: Worker[];
   currentDate: Date;
+  onScheduleServiceOrder: (serviceOrderId: string, weekStart: Date, weekEnd: Date) => void;
 }
 
-export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningViewProps) {
+interface DroppableWeekCardProps {
+  week: {
+    week: string;
+    weekStart: Date;
+    availableHours: number;
+    demandHours: number;
+    utilization: number;
+  };
+  onDrop: () => void;
+}
+
+function DroppableWeekCard({ week, onDrop }: DroppableWeekCardProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `capacity-week-${week.weekStart.toISOString()}`,
+    data: { 
+      type: 'capacity-week',
+      weekStart: week.weekStart,
+      weekEnd: endOfWeek(week.weekStart)
+    }
+  });
+
+  return (
+    <Card 
+      ref={setNodeRef}
+      className={cn(
+        "transition-all cursor-pointer hover:shadow-lg",
+        isOver && "ring-2 ring-primary bg-primary/5"
+      )}
+    >
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center justify-between">
+          Week of {week.week}
+          {isOver && <Badge variant="outline" className="ml-2">Drop Here</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Available:</span>
+          <span className="font-medium text-success">{week.availableHours}h</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Demand:</span>
+          <span className="font-medium text-primary">{week.demandHours}h</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Utilization:</span>
+          <span className={cn(
+            "font-medium",
+            week.utilization > 100 ? 'text-destructive' :
+            week.utilization > 90 ? 'text-warning' :
+            'text-success'
+          )}>
+            {week.utilization}%
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOrder }: CapacityPlanningViewProps) {
   const numberOfWeeks = 6;
 
   // Fetch appointments for the next N weeks
@@ -54,22 +121,54 @@ export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningV
     },
   });
 
-  // Fetch service orders that need appointments
-  const { data: serviceOrders, isLoading: serviceOrdersLoading } = useQuery({
+  // Fetch service orders that need appointments with full details
+  const { data: serviceOrdersData, isLoading: serviceOrdersLoading } = useQuery({
     queryKey: ["capacity-service-orders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_orders")
-        .select("id, estimated_hours, appointments(start_time, end_time, status)")
+        .select(`
+          id, 
+          order_number,
+          title,
+          estimated_hours, 
+          appointments(id, start_time, end_time, status),
+          customers!service_orders_customer_id_fkey(name),
+          service_order_line_items(id)
+        `)
         .in("status", ["draft", "scheduled", "in_progress"]);
 
       if (error) throw error;
-      return data as ServiceOrder[];
+      return data;
     },
   });
 
+  // Filter service orders that need appointments
+  const serviceOrdersNeedingAppointments = useMemo(() => {
+    if (!serviceOrdersData) return [];
+    
+    return serviceOrdersData.map(so => {
+      const scheduledHours = (so.appointments || [])
+        .filter(apt => apt.status !== 'cancelled')
+        .reduce((total, apt) => {
+          const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
+          return total + hours;
+        }, 0);
+      
+      const lineItemsCount = so.service_order_line_items?.length || 0;
+      const remainingHours = Math.max(0, (so.estimated_hours || 0) - scheduledHours);
+      
+      return {
+        ...so,
+        scheduledHours,
+        remainingHours,
+        lineItemsSummary: `${lineItemsCount} item${lineItemsCount !== 1 ? 's' : ''}`
+      };
+    }).filter(so => so.remainingHours > 0);
+  }, [serviceOrdersData]);
+
   const capacityData = useMemo(() => {
-    if (!appointments || !serviceOrders) return [];
+    if (!appointments || !serviceOrdersData) return [];
 
     const weeks = [];
     
@@ -105,11 +204,11 @@ export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningV
 
       // Calculate service order demand (estimated hours minus scheduled hours)
       let demandHours = 0;
-      serviceOrders.forEach(so => {
+      serviceOrdersData.forEach(so => {
         const estimatedHours = so.estimated_hours || 0;
         const scheduledHours = (so.appointments || [])
-          .filter(apt => apt.status !== 'cancelled')
-          .reduce((total, apt) => {
+          .filter((apt: any) => apt.status !== 'cancelled')
+          .reduce((total: number, apt: any) => {
             const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
             return total + hours;
           }, 0);
@@ -120,6 +219,7 @@ export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningV
 
       weeks.push({
         week: format(weekStart, "MMM d"),
+        weekStart: weekStart,
         availableHours: Math.round(totalAvailableHours),
         demandHours: Math.round(demandHours),
         utilization: totalAvailableHours > 0 
@@ -129,7 +229,7 @@ export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningV
     }
 
     return weeks;
-  }, [appointments, serviceOrders, workers, currentDate]);
+  }, [appointments, serviceOrdersData, workers, currentDate]);
 
   if (appointmentsLoading || serviceOrdersLoading) {
     return (
@@ -140,7 +240,46 @@ export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningV
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="grid grid-cols-[300px_1fr] gap-4 h-full overflow-hidden">
+      {/* Left Sidebar - Service Orders */}
+      <Card className="flex flex-col overflow-hidden">
+        <CardHeader className="flex-shrink-0">
+          <CardTitle className="text-sm">Service Orders Needing Appointments</CardTitle>
+          <CardDescription className="text-xs">
+            Drag to schedule in available weeks
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <ScrollArea className="h-full px-4 pb-4">
+            <div className="space-y-2">
+              {serviceOrdersNeedingAppointments.map((order) => (
+                <DraggableServiceOrder 
+                  key={order.id}
+                  serviceOrder={{
+                    id: order.id,
+                    order_number: order.order_number,
+                    title: order.title,
+                    customers: order.customers,
+                    estimated_hours: order.estimated_hours,
+                    scheduledHours: order.scheduledHours,
+                    remainingHours: order.remainingHours,
+                    lineItemsSummary: order.lineItemsSummary
+                  }}
+                  remainingHours={order.remainingHours}
+                />
+              ))}
+              {serviceOrdersNeedingAppointments.length === 0 && (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  No service orders need appointments
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Right Content - Capacity Charts and Week Cards */}
+      <div className="space-y-6 overflow-auto p-6">
       <Card>
         <CardHeader>
           <CardTitle>Capacity Planning</CardTitle>
@@ -193,34 +332,15 @@ export function CapacityPlanningView({ workers, currentDate }: CapacityPlanningV
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {capacityData.map((week) => (
-          <Card key={week.week}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Week of {week.week}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Available:</span>
-                <span className="font-medium text-success">{week.availableHours}h</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Demand:</span>
-                <span className="font-medium text-primary">{week.demandHours}h</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Utilization:</span>
-                <span className={`font-medium ${
-                  week.utilization > 100 ? 'text-destructive' :
-                  week.utilization > 90 ? 'text-warning' :
-                  'text-success'
-                }`}>
-                  {week.utilization}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {capacityData.map((week) => (
+            <DroppableWeekCard 
+              key={week.week}
+              week={week}
+              onDrop={() => {}}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
