@@ -54,6 +54,7 @@ export default function Scheduler() {
     data: any;
   }>>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [successWeek, setSuccessWeek] = useState<Date | null>(null);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
@@ -854,6 +855,10 @@ export default function Scheduler() {
         workerId: bestWorker.id,
       });
       
+      // Trigger success animation
+      setSuccessWeek(weekStart);
+      setTimeout(() => setSuccessWeek(null), 600);
+      
       toast.success(
         `Scheduled with ${bestWorker.first_name} ${bestWorker.last_name} who has ${workersWithCapacity[0].availableHours.toFixed(1)}h available`
       );
@@ -1302,6 +1307,7 @@ export default function Scheduler() {
                 }))}
                 currentDate={currentDate}
                 onScheduleServiceOrder={handleScheduleServiceOrderInWeek}
+                successWeek={successWeek}
               />
             ) : showServiceOrderView ? (
               <ServiceOrdersCalendarView 
