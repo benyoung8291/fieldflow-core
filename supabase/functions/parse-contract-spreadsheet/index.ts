@@ -264,6 +264,74 @@ Extract all line items using the provided mappings.`
       );
     } else {
       console.log("Parsed line items:", JSON.stringify(parsedData, null, 2));
+      
+      // Enrich location data with geocoding from Google Maps API
+      const GOOGLE_PLACES_API_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY");
+      
+      if (GOOGLE_PLACES_API_KEY) {
+        console.log("Enriching locations with Google Maps geocoding...");
+        
+        // Create a map to store unique addresses to avoid duplicate API calls
+        const geocodedAddresses = new Map();
+        
+        for (const item of parsedData.lineItems) {
+          const addressKey = `${item.location.address}, ${item.location.city || ''}, ${item.location.state || ''}, ${item.location.postcode || ''}`.trim();
+          
+          // Skip if already geocoded
+          if (geocodedAddresses.has(addressKey)) {
+            const cachedData = geocodedAddresses.get(addressKey);
+            item.location.latitude = cachedData.latitude;
+            item.location.longitude = cachedData.longitude;
+            item.location.formatted_address = cachedData.formatted_address;
+            continue;
+          }
+          
+          try {
+            // Call Google Geocoding API
+            const geocodeUrl = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+            geocodeUrl.searchParams.append("address", addressKey);
+            geocodeUrl.searchParams.append("components", "country:AU");
+            geocodeUrl.searchParams.append("key", GOOGLE_PLACES_API_KEY);
+            
+            const geocodeResponse = await fetch(geocodeUrl.toString());
+            const geocodeData = await geocodeResponse.json();
+            
+            if (geocodeData.status === "OK" && geocodeData.results && geocodeData.results.length > 0) {
+              const result = geocodeData.results[0];
+              const location = result.geometry.location;
+              
+              const enrichedData = {
+                latitude: location.lat,
+                longitude: location.lng,
+                formatted_address: result.formatted_address
+              };
+              
+              // Cache and apply to item
+              geocodedAddresses.set(addressKey, enrichedData);
+              item.location.latitude = enrichedData.latitude;
+              item.location.longitude = enrichedData.longitude;
+              item.location.formatted_address = enrichedData.formatted_address;
+              
+              // Also update the address field with the validated address if it looks better
+              if (result.formatted_address && result.formatted_address.length > 0) {
+                item.location.address = result.formatted_address.split(',')[0].trim();
+              }
+              
+              console.log(`Geocoded: ${addressKey} -> lat: ${location.lat}, lng: ${location.lng}`);
+            } else {
+              console.warn(`Failed to geocode address: ${addressKey} - Status: ${geocodeData.status}`);
+            }
+          } catch (geocodeError) {
+            console.error(`Error geocoding address ${addressKey}:`, geocodeError);
+            // Continue without geocoding for this address
+          }
+        }
+        
+        console.log(`Successfully geocoded ${geocodedAddresses.size} unique addresses`);
+      } else {
+        console.warn("Google Places API key not configured - skipping geocoding");
+      }
+      
       return new Response(
         JSON.stringify({
           success: true,
