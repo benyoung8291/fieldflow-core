@@ -377,13 +377,13 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
             </div>
 
             <div>
-              <Label>Vendor</Label>
+              <Label>Supplier</Label>
               <Select
                 value={formData.vendor_id}
                 onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select vendor..." />
+                  <SelectValue placeholder="Select supplier..." />
                 </SelectTrigger>
                 <SelectContent>
                   {vendors.map((vendor) => (

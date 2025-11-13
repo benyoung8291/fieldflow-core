@@ -636,7 +636,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
 
             <TabsContent value="additional" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="linkedVendor">Link to Supplier/Vendor (Optional)</Label>
+                <Label htmlFor="linkedVendor">Link to Supplier (Optional)</Label>
                 <Select
                   value={linkedVendorId || "none"}
                   onValueChange={(value) => setLinkedVendorId(value === "none" ? null : value)}

@@ -416,7 +416,7 @@ export default function PurchaseOrderDetails() {
           <Card className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <h3 className="font-semibold mb-2">Vendor Information</h3>
+                <h3 className="font-semibold mb-2">Supplier Information</h3>
                 <div className="space-y-1 text-sm">
                   <div><span className="text-muted-foreground">Name:</span> {vendor?.name}</div>
                   {vendor?.abn && (

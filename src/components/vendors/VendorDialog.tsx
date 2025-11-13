@@ -271,7 +271,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
         const { data: duplicateVendor } = await duplicateQuery.maybeSingle();
 
         if (duplicateVendor) {
-          toast.error(`A vendor with ABN ${formData.abn} already exists: ${duplicateVendor.name}`);
+          toast.error(`A supplier with ABN ${formData.abn} already exists: ${duplicateVendor.name}`);
           setSaving(false);
           return;
         }
@@ -304,21 +304,21 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
           .eq("id", vendor.id);
 
         if (error) throw error;
-        toast.success("Vendor updated successfully");
+        toast.success("Supplier updated successfully");
       } else {
         const { error } = await supabase
           .from("vendors")
           .insert(vendorData);
 
         if (error) throw error;
-        toast.success("Vendor created successfully");
+        toast.success("Supplier created successfully");
       }
 
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error saving vendor:", error);
-      toast.error(error.message || "Failed to save vendor");
+      console.error("Error saving supplier:", error);
+      toast.error(error.message || "Failed to save supplier");
     } finally {
       setSaving(false);
     }
@@ -329,10 +329,10 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {vendor ? "Edit Vendor" : "New Vendor"}
+            {vendor ? "Edit Supplier" : "New Supplier"}
           </DialogTitle>
           <DialogDescription>
-            {vendor ? "Update vendor/supplier information" : "Add a new vendor/supplier to your system"}
+            {vendor ? "Update supplier information" : "Add a new supplier to your system"}
           </DialogDescription>
         </DialogHeader>
 
@@ -557,13 +557,13 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="isActive">Active Vendor</Label>
+              <div className="flex items-center gap-2">
                 <Switch
                   id="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                 />
+                <Label htmlFor="isActive">Active Supplier</Label>
               </div>
 
               <div className="space-y-2">
@@ -594,7 +594,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
                   Saving...
                 </>
               ) : (
-                vendor ? "Update Vendor" : "Create Vendor"
+                vendor ? "Update Supplier" : "Create Supplier"
               )}
             </Button>
           </div>

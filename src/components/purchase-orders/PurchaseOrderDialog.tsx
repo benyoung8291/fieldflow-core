@@ -23,7 +23,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  vendor_id: z.string().min(1, "Vendor is required"),
+  vendor_id: z.string().min(1, "Supplier is required"),
   po_number: z.string().min(1, "PO number is required"),
   po_date: z.string(),
   expected_delivery_date: z.string().optional(),
@@ -106,7 +106,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       .order("name");
 
     if (error) {
-      toast.error("Failed to load vendors");
+      toast.error("Failed to load suppliers");
       return;
     }
     setVendors(data || []);
@@ -145,7 +145,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       .single();
 
     if (error) {
-      toast.error("Failed to load vendor details");
+      toast.error("Failed to load supplier details");
       return;
     }
     setSelectedVendor(data);
@@ -189,7 +189,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
     // Enforce GST-free if vendor is not registered
     if (field === "is_gst_free" && !canApplyGST(selectedVendor)) {
       updated[index].is_gst_free = true;
-      toast.warning("This vendor is not GST registered and cannot charge GST");
+      toast.warning("This supplier is not GST registered and cannot charge GST");
     }
 
     setLineItems(updated);
@@ -398,7 +398,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                 name="vendor_id"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Vendor *</FormLabel>
+                    <FormLabel>Supplier *</FormLabel>
                     <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -412,15 +412,15 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                           >
                             {field.value
                               ? vendors.find((v) => v.id === field.value)?.name
-                              : "Select vendor"}
+                              : "Select supplier"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-[400px] p-0">
                         <Command>
-                          <CommandInput placeholder="Search vendors..." />
-                          <CommandEmpty>No vendor found.</CommandEmpty>
+                          <CommandInput placeholder="Search suppliers..." />
+                          <CommandEmpty>No supplier found.</CommandEmpty>
                           <CommandGroup>
                             {vendors.map((vendor) => (
                               <CommandItem

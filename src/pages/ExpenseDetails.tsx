@@ -352,7 +352,7 @@ export default function ExpenseDetails() {
                 )}
                 {expense.vendor && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Vendor</p>
+                    <p className="text-sm text-muted-foreground">Supplier</p>
                     <p className="font-medium">{expense.vendor.name}</p>
                   </div>
                 )}

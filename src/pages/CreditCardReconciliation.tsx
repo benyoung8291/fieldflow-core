@@ -548,13 +548,13 @@ export default function CreditCardReconciliation() {
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <Label className="text-[11px] text-muted-foreground">Vendor *</Label>
+                              <Label className="text-[11px] text-muted-foreground">Supplier *</Label>
                               <Select
                                 value={formData.vendor_id}
                                 onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
                               >
                                 <SelectTrigger className="h-8 text-xs mt-1">
-                                  <SelectValue placeholder="Select vendor..." />
+                                  <SelectValue placeholder="Select supplier..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {vendors.map((vendor) => (

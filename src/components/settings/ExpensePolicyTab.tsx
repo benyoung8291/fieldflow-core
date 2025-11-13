@@ -191,7 +191,7 @@ export function ExpensePolicyTab() {
   const getRuleTypeLabel = (type: string) => {
     switch (type) {
       case "max_amount": return "Max Amount";
-      case "restricted_vendor": return "Restricted Vendor";
+      case "restricted_vendor": return "Restricted Supplier";
       case "prohibited_category": return "Prohibited Category";
       default: return type;
     }
@@ -316,7 +316,7 @@ export function ExpensePolicyTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="max_amount">Max Amount</SelectItem>
-                  <SelectItem value="restricted_vendor">Restricted Vendor</SelectItem>
+                  <SelectItem value="restricted_vendor">Restricted Supplier</SelectItem>
                   <SelectItem value="prohibited_category">Prohibited Category</SelectItem>
                 </SelectContent>
               </Select>
@@ -338,13 +338,13 @@ export function ExpensePolicyTab() {
 
             {formData.rule_type === "restricted_vendor" && (
               <div>
-                <Label>Vendor *</Label>
+                <Label>Supplier *</Label>
                 <Select
                   value={formData.vendor_id}
                   onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select vendor..." />
+                    <SelectValue placeholder="Select supplier..." />
                   </SelectTrigger>
                   <SelectContent>
                     {vendors.map((vendor) => (

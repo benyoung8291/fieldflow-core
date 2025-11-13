@@ -67,12 +67,12 @@ export default function Vendors() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Vendors</h1>
-            <p className="text-muted-foreground">Manage your suppliers and vendors</p>
+            <h1 className="text-3xl font-bold">Suppliers</h1>
+            <p className="text-muted-foreground">Manage your suppliers</p>
           </div>
           <Button onClick={handleCreateVendor}>
             <Plus className="mr-2 h-4 w-4" />
-            New Vendor
+            New Supplier
           </Button>
         </div>
 
@@ -80,7 +80,7 @@ export default function Vendors() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search vendors by name, ABN, or email..."
+            placeholder="Search suppliers by name, ABN, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -174,12 +174,12 @@ export default function Vendors() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-muted-foreground mb-4">
-                {searchQuery ? "No vendors found matching your search" : "No vendors yet"}
+                {searchQuery ? "No suppliers found matching your search" : "No suppliers yet"}
               </p>
               {!searchQuery && (
                 <Button onClick={handleCreateVendor}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Your First Vendor
+                  Add Your First Supplier
                 </Button>
               )}
             </CardContent>

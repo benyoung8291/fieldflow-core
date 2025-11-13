@@ -32,7 +32,7 @@ const moreNavItems: NavItem[] = [
   { icon: Users, label: "Workers", path: "/workers" },
   { icon: Calendar, label: "Appointments", path: "/appointments" },
   { icon: FileText, label: "Service Contracts", path: "/service-contracts" },
-  { icon: Building2, label: "Vendors", path: "/vendors" },
+  { icon: Building2, label: "Suppliers", path: "/vendors" },
   { icon: ShoppingCart, label: "Purchase Orders", path: "/purchase-orders" },
   { icon: Receipt, label: "Expenses", path: "/expenses" },
 ];

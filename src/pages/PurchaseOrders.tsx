@@ -79,7 +79,7 @@ export default function PurchaseOrders() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Purchase Orders</h1>
-          <p className="text-muted-foreground">Manage purchase orders and vendor invoices</p>
+          <p className="text-muted-foreground">Manage purchase orders and supplier invoices</p>
         </div>
         <Button onClick={handleCreateNew}>
           <Plus className="h-4 w-4 mr-2" />
@@ -137,11 +137,11 @@ export default function PurchaseOrders() {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Vendor:</span>
-                      <span className="ml-2 font-medium">{po.vendors?.name}</span>
-                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Supplier:</span>
+                        <span className="ml-2 font-medium">{po.vendors?.name}</span>
+                      </div>
                     <div>
                       <span className="text-muted-foreground">PO Date:</span>
                       <span className="ml-2">{new Date(po.po_date).toLocaleDateString()}</span>
