@@ -112,7 +112,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
       {
         description: "",
         quantity: "1",
-        cost_price: "0",
+        cost_price: "",
         margin_percentage: "30",
         sell_price: "0",
         line_total: 0,
@@ -134,9 +134,9 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
     newItems[parentIndex].subItems!.push({
       description: "",
       quantity: "1",
-      cost_price: "0",
+      cost_price: "",
       margin_percentage: "30",
-      sell_price: "0",
+      sell_price: "",
       line_total: 0,
     });
     newItems[parentIndex].expanded = true;

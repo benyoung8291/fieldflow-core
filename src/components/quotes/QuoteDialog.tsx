@@ -714,7 +714,26 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         await supabase.from("quote_line_items").delete().eq("quote_id", quoteId);
       } else {
         quoteData.created_by = user.id;
-        quoteData.quote_number = `QT-${Date.now()}`;
+        
+        // Get sequential number from settings
+        const { data: sequentialSetting } = await supabase
+          .from("sequential_number_settings")
+          .select("*")
+          .eq("tenant_id", profile?.tenant_id)
+          .eq("entity_type", "quote")
+          .maybeSingle();
+
+        let nextNumber = 1;
+        let prefix = "QT";
+        let numberLength = 5;
+
+        if (sequentialSetting) {
+          nextNumber = sequentialSetting.next_number || 1;
+          prefix = sequentialSetting.prefix || "QT";
+          numberLength = sequentialSetting.number_length || 5;
+        }
+
+        quoteData.quote_number = `${prefix}-${String(nextNumber).padStart(numberLength, "0")}`;
 
         const { data: newQuote, error } = await supabase
           .from("quotes")
@@ -724,6 +743,25 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
 
         if (error) throw error;
         savedQuoteId = newQuote.id;
+
+        // Update the next number in settings
+        if (sequentialSetting) {
+          await supabase
+            .from("sequential_number_settings")
+            .update({ next_number: nextNumber + 1 })
+            .eq("id", sequentialSetting.id);
+        } else {
+          // Create initial setting if it doesn't exist
+          await supabase
+            .from("sequential_number_settings")
+            .insert({
+              tenant_id: profile?.tenant_id,
+              entity_type: "quote",
+              prefix: "QT",
+              next_number: 2,
+              number_length: 5,
+            });
+        }
       }
 
       // Save line items with hierarchy

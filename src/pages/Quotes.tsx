@@ -124,13 +124,31 @@ export default function Quotes() {
         .eq("quote_id", quote.id)
         .order("item_order");
 
+      // Get sequential number from settings
+      const { data: sequentialSetting } = await supabase
+        .from("sequential_number_settings")
+        .select("*")
+        .eq("tenant_id", profile?.tenant_id)
+        .eq("entity_type", "quote")
+        .maybeSingle();
+
+      let nextNumber = 1;
+      let prefix = "QT";
+      let numberLength = 5;
+
+      if (sequentialSetting) {
+        nextNumber = sequentialSetting.next_number || 1;
+        prefix = sequentialSetting.prefix || "QT";
+        numberLength = sequentialSetting.number_length || 5;
+      }
+
       // Create new quote
       const newQuoteData = {
         tenant_id: profile?.tenant_id,
         customer_id: quote.customer_id,
         title: `${quote.title} (Copy)`,
         description: quote.description,
-        quote_number: `QT-${Date.now()}`,
+        quote_number: `${prefix}-${String(nextNumber).padStart(numberLength, "0")}`,
         quote_type: quote.quote_type,
         subtotal: quote.subtotal,
         tax_rate: quote.tax_rate,
@@ -151,6 +169,25 @@ export default function Quotes() {
         .single();
 
       if (error) throw error;
+
+      // Update the next number in settings
+      if (sequentialSetting) {
+        await supabase
+          .from("sequential_number_settings")
+          .update({ next_number: nextNumber + 1 })
+          .eq("id", sequentialSetting.id);
+      } else {
+        // Create initial setting if it doesn't exist
+        await supabase
+          .from("sequential_number_settings")
+          .insert({
+            tenant_id: profile?.tenant_id,
+            entity_type: "quote",
+            prefix: "QT",
+            next_number: 2,
+            number_length: 5,
+          });
+      }
 
       // Copy line items
       if (lineItems && lineItems.length > 0) {
