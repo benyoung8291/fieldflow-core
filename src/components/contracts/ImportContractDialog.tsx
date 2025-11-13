@@ -124,9 +124,9 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
             if (functionError) throw functionError;
 
-            // Set suggested mappings and available columns
+            // Set suggested mappings and available columns (filter out empty strings)
             setColumnMappings(functionData.mappings || {});
-            setAvailableColumns(functionData.availableColumns || []);
+            setAvailableColumns((functionData.availableColumns || []).filter((col: string) => col && col.trim() !== ""));
             setStep("mapping");
 
             toast.success("Analyzed spreadsheet structure");
