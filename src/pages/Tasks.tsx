@@ -560,26 +560,6 @@ export default function Tasks() {
             <p className="text-muted-foreground">Manage your to-do list and assignments</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center border rounded-lg p-1 bg-muted/30">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleViewModeChange('list')}
-                className="gap-2"
-              >
-                <List className="h-4 w-4" />
-                List
-              </Button>
-              <Button
-                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleViewModeChange('kanban')}
-                className="gap-2"
-              >
-                <Kanban className="h-4 w-4" />
-                Kanban
-              </Button>
-            </div>
             {viewMode === 'list' && (
               <div className="flex items-center border rounded-lg p-1 bg-muted/30">
                 <Button
@@ -605,6 +585,26 @@ export default function Tasks() {
                 </Button>
               </div>
             )}
+            <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewModeChange('list')}
+                className="gap-2"
+              >
+                <List className="h-4 w-4" />
+                List
+              </Button>
+              <Button
+                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewModeChange('kanban')}
+                className="gap-2"
+              >
+                <Kanban className="h-4 w-4" />
+                Kanban
+              </Button>
+            </div>
             <Button onClick={() => { setSelectedTask(null); setIsDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               New Task
