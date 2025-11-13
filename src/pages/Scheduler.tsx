@@ -28,13 +28,14 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
 import DraggableWorker from "@/components/scheduler/DraggableWorker";
+import { CapacityPlanningView } from "@/components/scheduler/CapacityPlanningView";
 import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export default function Scheduler() {
-  const [viewType, setViewType] = useState<"day" | "week" | "timegrid" | "month" | "kanban">("week");
+  const [viewType, setViewType] = useState<"day" | "week" | "timegrid" | "month" | "kanban" | "capacity">("week");
   const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1173,6 +1174,7 @@ export default function Scheduler() {
                     <TabsTrigger value="timegrid" className="text-[10px] px-2 py-0">Grid</TabsTrigger>
                     <TabsTrigger value="month" className="text-[10px] px-2 py-0">Month</TabsTrigger>
                     <TabsTrigger value="kanban" className="text-[10px] px-2 py-0">Kanban</TabsTrigger>
+                    <TabsTrigger value="capacity" className="text-[10px] px-2 py-0">Capacity</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -1181,6 +1183,14 @@ export default function Scheduler() {
           <CardContent className="p-2 flex-1 overflow-hidden flex flex-col">
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
+            ) : viewType === "capacity" ? (
+              <CapacityPlanningView
+                workers={workers.map(w => ({
+                  ...w,
+                  full_name: `${w.first_name} ${w.last_name}`
+                }))}
+                currentDate={currentDate}
+              />
             ) : showServiceOrderView ? (
               <ServiceOrdersCalendarView 
                 currentDate={currentDate}
