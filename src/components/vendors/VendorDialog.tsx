@@ -36,6 +36,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
     tradingName: "",
     legalName: "",
     abn: "",
+    gstRegistered: false,
     email: "",
     phone: "",
     mobile: "",
@@ -93,6 +94,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
       setFormData(prev => ({
         ...prev,
         legalName: data.legalName || prev.legalName,
+        gstRegistered: data.gstRegistered,
       }));
 
       toast.success(
@@ -120,6 +122,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
         tradingName: vendor.trading_name || "",
         legalName: vendor.legal_company_name || "",
         abn: vendor.abn || "",
+        gstRegistered: vendor.gst_registered || false,
         email: vendor.email || "",
         phone: vendor.phone || "",
         mobile: vendor.mobile || "",
@@ -132,7 +135,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
         notes: vendor.notes || "",
       });
       setAbnValidated(false);
-      setGstRegistered(null);
+      setGstRegistered(vendor.gst_registered || false);
       setAvailableTradingNames([]);
     } else {
       setFormData({
@@ -140,6 +143,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
         tradingName: "",
         legalName: "",
         abn: "",
+        gstRegistered: false,
         email: "",
         phone: "",
         mobile: "",
@@ -178,6 +182,7 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
         trading_name: formData.tradingName || null,
         legal_company_name: formData.legalName || null,
         abn: formData.abn || null,
+        gst_registered: formData.gstRegistered,
         email: formData.email || null,
         phone: formData.phone || null,
         mobile: formData.mobile || null,

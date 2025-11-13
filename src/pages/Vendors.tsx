@@ -133,6 +133,11 @@ export default function Vendors() {
                     <div className="flex items-center gap-2 text-sm">
                       <span className="font-medium">ABN:</span>
                       <span className="text-muted-foreground">{vendor.abn}</span>
+                      {vendor.gst_registered && (
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          GST Registered
+                        </Badge>
+                      )}
                     </div>
                   )}
                   {vendor.email && (

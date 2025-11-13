@@ -470,6 +470,7 @@ export type Database = {
           description: string
           id: string
           is_from_price_book: boolean | null
+          is_gst_free: boolean | null
           item_order: number
           line_total: number
           margin_percentage: number | null
@@ -489,6 +490,7 @@ export type Database = {
           description: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           margin_percentage?: number | null
@@ -508,6 +510,7 @@ export type Database = {
           description?: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           margin_percentage?: number | null
@@ -1368,6 +1371,7 @@ export type Database = {
           description: string
           id: string
           invoice_id: string
+          is_gst_free: boolean | null
           item_order: number
           line_item_id: string | null
           line_total: number
@@ -1382,6 +1386,7 @@ export type Database = {
           description: string
           id?: string
           invoice_id: string
+          is_gst_free?: boolean | null
           item_order?: number
           line_item_id?: string | null
           line_total?: number
@@ -1396,6 +1401,7 @@ export type Database = {
           description?: string
           id?: string
           invoice_id?: string
+          is_gst_free?: boolean | null
           item_order?: number
           line_item_id?: string | null
           line_total?: number
@@ -2351,6 +2357,7 @@ export type Database = {
           description: string
           id: string
           is_from_price_book: boolean | null
+          is_gst_free: boolean | null
           item_order: number
           line_total: number
           margin_percentage: number | null
@@ -2370,6 +2377,7 @@ export type Database = {
           description: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           margin_percentage?: number | null
@@ -2389,6 +2397,7 @@ export type Database = {
           description?: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           margin_percentage?: number | null
@@ -2686,6 +2695,7 @@ export type Database = {
           description: string
           id: string
           is_from_price_book: boolean | null
+          is_gst_free: boolean | null
           item_order: number
           line_total: number
           notes: string | null
@@ -2702,6 +2712,7 @@ export type Database = {
           description: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           notes?: string | null
@@ -2718,6 +2729,7 @@ export type Database = {
           description?: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           notes?: string | null
@@ -2996,6 +3008,7 @@ export type Database = {
           description: string
           id: string
           is_from_price_book: boolean | null
+          is_gst_free: boolean | null
           item_order: number
           line_total: number
           margin_percentage: number | null
@@ -3015,6 +3028,7 @@ export type Database = {
           description: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           margin_percentage?: number | null
@@ -3034,6 +3048,7 @@ export type Database = {
           description?: string
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           margin_percentage?: number | null
@@ -3747,6 +3762,7 @@ export type Database = {
           estimated_hours: number
           id: string
           is_from_price_book: boolean | null
+          is_gst_free: boolean | null
           item_order: number
           line_total: number
           notes: string | null
@@ -3764,6 +3780,7 @@ export type Database = {
           estimated_hours?: number
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           notes?: string | null
@@ -3781,6 +3798,7 @@ export type Database = {
           estimated_hours?: number
           id?: string
           is_from_price_book?: boolean | null
+          is_gst_free?: boolean | null
           item_order?: number
           line_total?: number
           notes?: string | null
@@ -4639,6 +4657,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           email: string | null
+          gst_registered: boolean | null
           id: string
           is_active: boolean | null
           legal_company_name: string | null
@@ -4659,6 +4678,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          gst_registered?: boolean | null
           id?: string
           is_active?: boolean | null
           legal_company_name?: string | null
@@ -4679,6 +4699,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           email?: string | null
+          gst_registered?: boolean | null
           id?: string
           is_active?: boolean | null
           legal_company_name?: string | null
