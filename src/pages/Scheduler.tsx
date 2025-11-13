@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,6 +50,7 @@ export default function Scheduler() {
     type: 'appointment-move' | 'worker-add' | 'worker-remove' | 'bulk-move';
     data: any;
   }>>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
@@ -1086,8 +1087,12 @@ export default function Scheduler() {
       )}
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
-        <div className="grid grid-cols-[1fr_280px] gap-3 h-[calc(100vh-64px)] overflow-hidden">
-          <div className="flex flex-col min-h-0">
+        <div className="overflow-x-auto overflow-y-hidden h-[calc(100vh-64px)]">
+          <div className={cn(
+            "grid gap-3 h-full transition-all duration-300 min-w-[900px]",
+            sidebarCollapsed ? "grid-cols-[1fr]" : "grid-cols-[1fr_280px]"
+          )}>
+            <div className="flex flex-col min-h-0">
         
         {/* Calendar Controls */}
         <Card className="shadow-md flex flex-col min-h-0 flex-1">
@@ -1120,6 +1125,15 @@ export default function Scheduler() {
                 <h3 className="text-xs font-semibold ml-1">{getDateRangeLabel()}</h3>
               </div>
               <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                >
+                  {sidebarCollapsed ? <PanelRightOpen className="h-3 w-3" /> : <PanelRightClose className="h-3 w-3" />}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1280,32 +1294,37 @@ export default function Scheduler() {
             )}
           </CardContent>
         </Card>
-          </div>
-
-          {/* Right Sidebar - Service Orders or Workers depending on view */}
-          {!showServiceOrderView ? (
-            <div className="flex flex-col min-h-0">
-              <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
             </div>
-          ) : (
-            <Card className="h-full flex flex-col min-h-0">
-              <CardHeader className="p-2 flex-shrink-0">
-                <CardTitle className="text-xs">Workers</CardTitle>
-                <p className="text-[10px] text-muted-foreground">
-                  Drag to appointments
-                </p>
-              </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-hidden">
-                <ScrollArea className="h-full px-2 pb-2">
-                  <div className="space-y-2">
-                    {workers.map(worker => (
-                      <DraggableWorker key={worker.id} worker={worker} />
-                    ))}
+
+            {/* Right Sidebar - Service Orders or Workers depending on view */}
+            {!sidebarCollapsed && (
+              <>
+                {!showServiceOrderView ? (
+                  <div className="flex flex-col min-h-0">
+                    <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
                   </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
+                ) : (
+                  <Card className="h-full flex flex-col min-h-0">
+                    <CardHeader className="p-2 flex-shrink-0">
+                      <CardTitle className="text-xs">Workers</CardTitle>
+                      <p className="text-[10px] text-muted-foreground">
+                        Drag to appointments
+                      </p>
+                    </CardHeader>
+                    <CardContent className="p-0 flex-1 overflow-hidden">
+                      <ScrollArea className="h-full px-2 pb-2">
+                        <div className="space-y-2">
+                          {workers.map(worker => (
+                            <DraggableWorker key={worker.id} worker={worker} />
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
         </div>
         
         {/* Drag Overlay - shows the item being dragged */}
