@@ -192,6 +192,8 @@ const App = () => {
             <Route path="/vendors" element={isAuthenticated ? <Vendors /> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders" element={isAuthenticated ? <PurchaseOrders /> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders/:id" element={isAuthenticated ? <PurchaseOrderDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/expenses" element={isAuthenticated ? <Expenses /> : <Navigate to="/auth" replace />} />
+            <Route path="/expenses/:id" element={isAuthenticated ? <ExpenseDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
             <Route path="/crm-hub" element={isAuthenticated ? <CRMHub /> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
