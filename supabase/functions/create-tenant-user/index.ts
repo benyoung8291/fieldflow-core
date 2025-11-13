@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { sanitizeError } from "../_shared/errorHandler.ts";
+import { sanitizeError, sanitizeValidationError } from "../_shared/errorHandler.ts";
 
 const createUserSchema = z.object({
   email: z.string().email("Invalid email address").max(255, "Email too long"),
@@ -66,7 +66,18 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const validatedData = createUserSchema.parse(requestBody);
+    
+    let validatedData;
+    try {
+      validatedData = createUserSchema.parse(requestBody);
+    } catch (zodError) {
+      // Return detailed validation errors to the user
+      if (zodError instanceof z.ZodError) {
+        const errors = zodError.errors.map(err => err.message).join(", ");
+        throw new Error(sanitizeValidationError(errors));
+      }
+      throw zodError;
+    }
     
     const { email, firstName, lastName, role, password } = validatedData;
 
@@ -118,7 +129,11 @@ serve(async (req) => {
     }
   );
 } catch (error) {
-  const message = sanitizeError(error, "create-tenant-user");
+  // Check if this is a validation error that should be shown to the user
+  const message = error instanceof Error && error.message.includes("Password must") 
+    ? error.message 
+    : sanitizeError(error, "create-tenant-user");
+  
   return new Response(
     JSON.stringify({ error: message }),
     {
