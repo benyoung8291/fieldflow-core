@@ -21,6 +21,7 @@ import {
   Mail,
   Phone
 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface QuoteQuickViewDialogProps {
   quoteId: string | null;
@@ -140,18 +141,18 @@ export default function QuoteQuickViewDialog({
               <CardContent className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-semibold">${quote?.subtotal?.toLocaleString() || '0.00'}</span>
+                  <span className="font-semibold">{formatCurrency(quote?.subtotal || 0)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Tax ({quote?.tax_rate}%):</span>
-                  <span className="font-semibold">${quote?.tax_amount?.toLocaleString() || '0.00'}</span>
+                  <span className="font-semibold">{formatCurrency(quote?.tax_amount || 0)}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between text-lg">
                   <span className="font-semibold">Total Amount:</span>
                   <span className="font-bold text-primary flex items-center gap-1">
                     <DollarSign className="h-5 w-5" />
-                    {quote?.total_amount?.toLocaleString() || '0.00'}
+                    {formatCurrency(quote?.total_amount || 0)}
                   </span>
                 </div>
               </CardContent>
@@ -246,11 +247,11 @@ export default function QuoteQuickViewDialog({
                         <div className="flex-1">
                           <p className="text-sm font-medium">{item.description}</p>
                           <p className="text-xs text-muted-foreground">
-                            Qty: {item.quantity} × ${item.unit_price?.toLocaleString()}
+                            Qty: {item.quantity} × {formatCurrency(item.unit_price || 0)}
                           </p>
                         </div>
                         <span className="text-sm font-semibold">
-                          ${item.line_total?.toLocaleString()}
+                          {formatCurrency(item.line_total || 0)}
                         </span>
                       </div>
                     ))}

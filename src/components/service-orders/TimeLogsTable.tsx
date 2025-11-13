@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Save, X, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface TimeLogsTableProps {
   appointmentId: string;
@@ -212,7 +213,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                           className="h-7 text-xs text-right"
                         />
                       ) : (
-                        `$${log.hourly_rate.toFixed(2)}/hr`
+                        `${formatCurrency(log.hourly_rate)}/hr`
                       )}
                     </td>
                     <td className="py-2 px-2 text-right text-xs">
@@ -231,7 +232,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                       )}
                     </td>
                     <td className="py-2 px-2 text-right text-xs font-bold">
-                      {log.total_cost ? `$${log.total_cost.toFixed(2)}` : "-"}
+                      {log.total_cost ? formatCurrency(log.total_cost) : "-"}
                     </td>
                   </>
                 )}

@@ -18,6 +18,7 @@ import QuoteItemTemplatesDialog from "./QuoteItemTemplatesDialog";
 import SaveAsTemplateDialog from "./SaveAsTemplateDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { formatCurrency } from "@/lib/utils";
 
 const quoteSchema = z.object({
   customer_id: z.string().optional(),
@@ -362,7 +363,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       return {
         cost_price: cost,
         margin_percentage: margin,
-        sell_price: (costNum * (1 + marginNum / 100)).toFixed(2),
+        sell_price: formatCurrency(costNum * (1 + marginNum / 100)),
       };
     } else {
       const newMargin = costNum > 0 ? (((sellNum - costNum) / costNum) * 100).toFixed(2) : "0";
@@ -1165,7 +1166,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                             </>
                           )}
                           <TableCell className="text-right font-medium">
-                            ${item.line_total.toFixed(2)}
+                            {formatCurrency(item.line_total)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-1 justify-end">
@@ -1260,7 +1261,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
                                 />
                               </TableCell>
                               <TableCell className="text-right text-sm">
-                                ${subItem.line_total.toFixed(2)}
+                                {formatCurrency(subItem.line_total)}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Button
@@ -1299,15 +1300,15 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
             <div className="bg-muted p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax ({formData.tax_rate}%):</span>
-                <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(taxAmount)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
 

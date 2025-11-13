@@ -23,6 +23,7 @@ import QuickContactDialog from "@/components/customers/QuickContactDialog";
 import PriceBookDialog from "@/components/quotes/PriceBookDialog";
 import { Badge } from "@/components/ui/badge";
 import SkillsMultiSelect from "@/components/skills/SkillsMultiSelect";
+import { formatCurrency } from "@/lib/utils";
 
 interface LineItem {
   id?: string;
@@ -1127,7 +1128,7 @@ export default function ServiceOrderDialog({
                               />
                             </TableCell>
                             <TableCell>
-                              ${item.line_total.toFixed(2)}
+                              {formatCurrency(item.line_total)}
                             </TableCell>
                             <TableCell>
                               <Button
@@ -1150,15 +1151,15 @@ export default function ServiceOrderDialog({
                   <div className="w-80 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Subtotal:</span>
-                      <span>${totals.subtotal.toFixed(2)}</span>
+                      <span>{formatCurrency(totals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Tax ({taxRate}%):</span>
-                      <span>${totals.taxAmount.toFixed(2)}</span>
+                      <span>{formatCurrency(totals.taxAmount)}</span>
                     </div>
                     <div className="flex justify-between font-bold border-t pt-2">
                       <span>Total:</span>
-                      <span>${totals.total.toFixed(2)}</span>
+                      <span>{formatCurrency(totals.total)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>Est. Total Hours:</span>
