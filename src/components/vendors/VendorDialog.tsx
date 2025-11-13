@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -295,13 +296,42 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
 
               <div className="space-y-2">
                 <Label htmlFor="tradingName">Trading Name *</Label>
-                <Input
-                  id="tradingName"
-                  value={formData.tradingName}
-                  onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
-                  placeholder="Enter trading name"
-                  required
-                />
+                {availableTradingNames.length > 0 ? (
+                  <div className="space-y-2">
+                    <Select
+                      value={formData.tradingName}
+                      onValueChange={(value) => setFormData({ ...formData, tradingName: value })}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select a trading name" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {availableTradingNames.map((name) => (
+                          <SelectItem key={name} value={name}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__custom__">Enter custom name</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {formData.tradingName === "__custom__" && (
+                      <Input
+                        value=""
+                        onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
+                        placeholder="Enter custom trading name"
+                        autoFocus
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <Input
+                    id="tradingName"
+                    value={formData.tradingName}
+                    onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
+                    placeholder="Enter trading name"
+                    required
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
