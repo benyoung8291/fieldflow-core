@@ -34,6 +34,7 @@ export default function QuickLocationDialog({
     contact_phone: "",
     contact_email: "",
     location_notes: "",
+    customer_location_id: "",
     latitude: null as number | null,
     longitude: null as number | null,
   });
@@ -66,6 +67,7 @@ export default function QuickLocationDialog({
           contact_phone: formData.contact_phone || null,
           contact_email: formData.contact_email || null,
           location_notes: formData.location_notes || null,
+          customer_location_id: formData.customer_location_id || null,
           latitude: formData.latitude,
           longitude: formData.longitude,
         })
@@ -100,6 +102,7 @@ export default function QuickLocationDialog({
       contact_phone: "",
       contact_email: "",
       location_notes: "",
+      customer_location_id: "",
       latitude: null,
       longitude: null,
     });
@@ -120,6 +123,15 @@ export default function QuickLocationDialog({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Main Office"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Customer Location ID</Label>
+            <Input
+              value={formData.customer_location_id}
+              onChange={(e) => setFormData({ ...formData, customer_location_id: e.target.value })}
+              placeholder="External location reference ID"
             />
           </div>
 

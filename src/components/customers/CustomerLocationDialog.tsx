@@ -29,6 +29,7 @@ interface LocationFormData {
   contact_phone: string;
   contact_email: string;
   location_notes: string;
+  customer_location_id: string;
   is_primary: boolean;
   is_active: boolean;
   latitude?: number | null;
@@ -56,6 +57,7 @@ export default function CustomerLocationDialog({
       contact_phone: "",
       contact_email: "",
       location_notes: "",
+      customer_location_id: "",
       is_primary: false,
       is_active: true,
       latitude: null,
@@ -112,6 +114,15 @@ export default function CustomerLocationDialog({
             <div className="col-span-2">
               <Label htmlFor="name">Location Name *</Label>
               <Input id="name" {...register("name")} required />
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="customer_location_id">Customer Location ID</Label>
+              <Input 
+                id="customer_location_id" 
+                {...register("customer_location_id")} 
+                placeholder="External location reference ID"
+              />
             </div>
 
             <div className="col-span-2">
