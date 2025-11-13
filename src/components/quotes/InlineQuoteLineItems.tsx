@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useState } from "react";
 
 interface LineItem {
   id?: string;
@@ -24,6 +25,18 @@ interface InlineQuoteLineItemsProps {
 }
 
 export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = false }: InlineQuoteLineItemsProps) {
+  const [updatedFields, setUpdatedFields] = useState<Record<string, boolean>>({});
+
+  const clearUpdatedField = (key: string) => {
+    setTimeout(() => {
+      setUpdatedFields(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+    }, 600);
+  };
+
   const calculateLineTotal = (item: LineItem): number => {
     const qty = parseFloat(item.quantity) || 0;
     
@@ -80,11 +93,28 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
       item.cost_price = pricing.cost_price;
       item.margin_percentage = pricing.margin_percentage;
       item.sell_price = pricing.sell_price;
+      
+      // Mark auto-updated fields
+      if (field === "cost_price" || field === "margin_percentage") {
+        const sellKey = `${index}-sell_price`;
+        setUpdatedFields(prev => ({ ...prev, [sellKey]: true }));
+        clearUpdatedField(sellKey);
+      } else if (field === "sell_price") {
+        const marginKey = `${index}-margin_percentage`;
+        setUpdatedFields(prev => ({ ...prev, [marginKey]: true }));
+        clearUpdatedField(marginKey);
+      }
     } else {
       (item as any)[field] = value;
     }
 
     item.line_total = calculateLineTotal(item);
+    
+    // Mark line total as updated
+    const totalKey = `${index}-line_total`;
+    setUpdatedFields(prev => ({ ...prev, [totalKey]: true }));
+    clearUpdatedField(totalKey);
+    
     onChange(newItems);
   };
 
@@ -97,12 +127,35 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
       subItem.cost_price = pricing.cost_price;
       subItem.margin_percentage = pricing.margin_percentage;
       subItem.sell_price = pricing.sell_price;
+      
+      // Mark auto-updated fields
+      if (field === "cost_price" || field === "margin_percentage") {
+        const sellKey = `${parentIndex}-${subIndex}-sell_price`;
+        setUpdatedFields(prev => ({ ...prev, [sellKey]: true }));
+        clearUpdatedField(sellKey);
+      } else if (field === "sell_price") {
+        const marginKey = `${parentIndex}-${subIndex}-margin_percentage`;
+        setUpdatedFields(prev => ({ ...prev, [marginKey]: true }));
+        clearUpdatedField(marginKey);
+      }
     } else {
       (subItem as any)[field] = value;
     }
 
     subItem.line_total = calculateLineTotal(subItem);
+    
+    // Mark sub-item line total as updated
+    const subTotalKey = `${parentIndex}-${subIndex}-line_total`;
+    setUpdatedFields(prev => ({ ...prev, [subTotalKey]: true }));
+    clearUpdatedField(subTotalKey);
+    
     newItems[parentIndex].line_total = calculateLineTotal(newItems[parentIndex]);
+    
+    // Mark parent line total as updated
+    const parentTotalKey = `${parentIndex}-line_total`;
+    setUpdatedFields(prev => ({ ...prev, [parentTotalKey]: true }));
+    clearUpdatedField(parentTotalKey);
+    
     onChange(newItems);
   };
 
@@ -330,7 +383,9 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
                       onFocus={(e) => e.target.select()}
                       disabled={hasSubItems(item)}
-                      className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
+                      className={`border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50 transition-colors ${
+                        updatedFields[`${index}-margin_percentage`] ? 'bg-primary/20 animate-pulse' : ''
+                      }`}
                     />
                   </TableCell>
                   <TableCell>
@@ -341,10 +396,14 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
                       onFocus={(e) => e.target.select()}
                       disabled={hasSubItems(item)}
-                      className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
+                      className={`border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50 transition-colors ${
+                        updatedFields[`${index}-sell_price`] ? 'bg-primary/20 animate-pulse' : ''
+                      }`}
                     />
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className={`text-right font-medium transition-colors ${
+                    updatedFields[`${index}-line_total`] ? 'bg-primary/10 animate-pulse' : ''
+                  }`}>
                     {formatCurrency(item.line_total)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -421,7 +480,9 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                             updateSubItem(index, subIndex, "margin_percentage", e.target.value)
                           }
                           onFocus={(e) => e.target.select()}
-                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                          className={`border-0 focus-visible:ring-0 text-right text-sm bg-transparent transition-colors ${
+                            updatedFields[`${index}-${subIndex}-margin_percentage`] ? 'bg-primary/20 animate-pulse' : ''
+                          }`}
                         />
                       </TableCell>
                       <TableCell>
@@ -433,10 +494,14 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                             updateSubItem(index, subIndex, "sell_price", e.target.value)
                           }
                           onFocus={(e) => e.target.select()}
-                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
+                          className={`border-0 focus-visible:ring-0 text-right text-sm bg-transparent transition-colors ${
+                            updatedFields[`${index}-${subIndex}-sell_price`] ? 'bg-primary/20 animate-pulse' : ''
+                          }`}
                         />
                       </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className={`text-right text-sm transition-colors ${
+                        updatedFields[`${index}-${subIndex}-line_total`] ? 'bg-primary/10 animate-pulse' : ''
+                      }`}>
                         {formatCurrency(subItem.line_total)}
                       </TableCell>
                       <TableCell className="text-right">
