@@ -748,64 +748,89 @@ export default function Tasks() {
 
             {/* Side Panel for Task Details */}
             {sidePanelOpen && selectedTask && <div className="w-[40%] border-l border-border bg-background h-[calc(100vh-12rem)] overflow-y-auto sticky top-0">
-                <div className="p-6 space-y-6">
-                  {/* Header with close button */}
-                  <div className="flex items-start justify-between">
-                    <h2 className="text-2xl font-semibold">{selectedTask.title}</h2>
-                    <Button variant="ghost" size="sm" onClick={() => setSidePanelOpen(false)}>
+                {/* Toolbar */}
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => toggleTaskStatus(selectedTask)}
+                    className="gap-1.5 h-8 text-xs"
+                  >
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    {selectedTask.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <LinkIcon className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <User className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={() => setSidePanelOpen(false)}
+                    >
                       <ExternalLink className="h-4 w-4 rotate-180" />
                     </Button>
                   </div>
+                </div>
 
-                  {/* Status Badge */}
-                  <div className="flex items-center gap-2">
-                    <Badge className={cn("text-xs", getStatusColor(selectedTask.status))}>
+                <div className="p-4 space-y-4">
+                  {/* Task Title */}
+                  <h2 className="text-xl font-semibold leading-tight">{selectedTask.title}</h2>
+
+                  {/* Status and Priority Badges */}
+                  <div className="flex items-center gap-1.5">
+                    <Badge className={cn("text-[10px] h-5 px-2", getStatusColor(selectedTask.status))}>
                       {statusLabels[selectedTask.status]}
                     </Badge>
-                    <Badge variant="outline" className={cn("text-xs", getPriorityColor(selectedTask.priority))}>
+                    <Badge variant="outline" className={cn("text-[10px] h-5 px-2", getPriorityColor(selectedTask.priority))}>
                       {selectedTask.priority}
                     </Badge>
                   </div>
 
-                  {/* Key Details */}
-                  <div className="space-y-4">
+                  {/* Key Details - Compact Grid */}
+                  <div className="space-y-2.5">
                     {/* Assignee */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground w-24">Assignee</span>
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Assignee</span>
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         {selectedTask.assigned_user ? <>
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{selectedTask.assigned_user.first_name} {selectedTask.assigned_user.last_name}</span>
-                          </> : <span className="text-sm text-muted-foreground">Unassigned</span>}
+                            <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs truncate">{selectedTask.assigned_user.first_name} {selectedTask.assigned_user.last_name}</span>
+                          </> : <span className="text-xs text-muted-foreground">Unassigned</span>}
                       </div>
                     </div>
 
                     {/* Due Date */}
-                    {selectedTask.due_date && <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground w-24">Due date</span>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{format(new Date(selectedTask.due_date), "MMM d, yyyy")}</span>
+                    {selectedTask.due_date && <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Due date</span>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-xs">{format(new Date(selectedTask.due_date), "MMM d, yyyy")}</span>
                         </div>
                       </div>}
 
                     {/* Linked Document */}
-                    {selectedTask.linked_module && selectedTask.linked_record_name && <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground w-24">Project</span>
-                        <div className="flex items-center gap-2 text-primary cursor-pointer hover:underline" onClick={e => {
+                    {selectedTask.linked_module && selectedTask.linked_record_name && <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Project</span>
+                        <div className="flex items-center gap-1.5 text-primary cursor-pointer hover:underline" onClick={e => {
                     e.stopPropagation();
                     navigate(getModuleRoute(selectedTask.linked_module, selectedTask.linked_record_id));
                   }}>
-                          <LinkIcon className="h-4 w-4" />
-                          <span className="text-sm">{selectedTask.linked_record_name}</span>
+                          <LinkIcon className="h-3.5 w-3.5" />
+                          <span className="text-xs truncate">{selectedTask.linked_record_name}</span>
                         </div>
                       </div>}
 
                     {/* Tags */}
-                    {selectedTask.tags && selectedTask.tags.length > 0 && <div className="flex items-start gap-3">
-                        <span className="text-sm text-muted-foreground w-24">Tags</span>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedTask.tags.map((tag: string, index: number) => <Badge key={index} variant="secondary" className="text-xs">
+                    {selectedTask.tags && selectedTask.tags.length > 0 && <div className="flex items-start gap-2">
+                        <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Tags</span>
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {selectedTask.tags.map((tag: string, index: number) => <Badge key={index} variant="secondary" className="text-[10px] h-4 px-1.5">
                               {tag}
                             </Badge>)}
                         </div>
@@ -813,30 +838,27 @@ export default function Tasks() {
                   </div>
 
                   {/* Description */}
-                  {selectedTask.description && <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Description</h3>
-                      <p className="text-sm whitespace-pre-wrap">{selectedTask.description}</p>
+                  {selectedTask.description && <div className="space-y-1.5 pt-2 border-t">
+                      <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
+                      <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">{selectedTask.description}</p>
                     </div>}
 
                   {/* Subtasks Count */}
-                  {selectedTask.subtaskCount > 0 && <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Subtasks</h3>
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                  {selectedTask.subtaskCount > 0 && <div className="space-y-1.5 pt-2 border-t">
+                      <h3 className="text-xs font-medium text-muted-foreground">Subtasks</h3>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <CheckSquare className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>{selectedTask.completedSubtaskCount} of {selectedTask.subtaskCount} completed</span>
                       </div>
                     </div>}
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-4 border-t">
+                  {/* Action Button */}
+                  <div className="pt-3 border-t">
                     <Button variant="outline" size="sm" onClick={() => {
                   setSidePanelOpen(false);
                   setIsDialogOpen(true);
-                }} className="flex-1">
-                      Edit Task
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => toggleTaskStatus(selectedTask)} className="flex-1">
-                      {selectedTask.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
+                }} className="w-full h-8 text-xs">
+                      Edit Task Details
                     </Button>
                   </div>
                 </div>
