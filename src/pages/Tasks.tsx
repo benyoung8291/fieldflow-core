@@ -14,7 +14,17 @@ import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { DndContext } from "@dnd-kit/core";
+import { 
+  DndContext, 
+  DragEndEvent, 
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors
+} from "@dnd-kit/core";
+import DraggableTaskCard from "@/components/tasks/DraggableTaskCard";
 
 export default function Tasks() {
   const navigate = useNavigate();
@@ -25,7 +35,23 @@ export default function Tasks() {
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [activeTask, setActiveTask] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  // Drag and drop sensors with mobile support
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
 
   const getModuleRoute = (module: string, id: string) => {
     const routes: Record<string, string> = {
@@ -316,6 +342,51 @@ export default function Tasks() {
     });
   };
 
+  // Drag handlers for kanban view
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = event.active.data.current?.task;
+    if (task) {
+      setActiveTask(task);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const task = active.data.current?.task;
+    const newDateKey = over.id as string;
+
+    if (!task || !newDateKey) return;
+
+    // Parse the new date from the column ID (format: yyyy-MM-dd)
+    const newDueDate = new Date(newDateKey);
+
+    // Only update if the date actually changed
+    const currentDateKey = task.due_date 
+      ? format(new Date(task.due_date), 'yyyy-MM-dd')
+      : null;
+
+    if (currentDateKey !== newDateKey) {
+      try {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ due_date: newDueDate.toISOString() })
+          .eq("id", task.id);
+
+        if (error) throw error;
+
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        toast.success("Task date updated");
+      } catch (error) {
+        console.error("Error updating task:", error);
+        toast.error("Failed to update task date");
+      }
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent":
@@ -454,7 +525,11 @@ export default function Tasks() {
 
         {/* Tasks List or Kanban View */}
         {viewMode === 'kanban' ? (
-          <DndContext>
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
             <TaskKanbanView
               tasks={tasksWithUsers}
               onTaskClick={(task) => {
@@ -464,6 +539,15 @@ export default function Tasks() {
               onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))}
               kanbanMode={userProfile?.task_kanban_mode || 'business_days'}
             />
+            <DragOverlay>
+              {activeTask ? (
+                <DraggableTaskCard
+                  task={activeTask}
+                  onTaskClick={() => {}}
+                  onNavigateToLinked={() => {}}
+                />
+              ) : null}
+            </DragOverlay>
           </DndContext>
         ) : isLoading ? (
           <div className="space-y-3">

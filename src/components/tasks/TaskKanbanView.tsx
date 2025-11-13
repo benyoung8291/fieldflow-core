@@ -2,12 +2,11 @@ import { useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { format, addDays, isWeekend, isSameDay, startOfDay } from "date-fns";
-import { Calendar, User, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { format, addDays, isWeekend, isSameDay, startOfDay, isPast } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import DraggableTaskCard from "./DraggableTaskCard";
 
 interface TaskKanbanViewProps {
   tasks: any[];
@@ -22,14 +21,104 @@ interface DroppableColumnProps {
   tasks: any[];
   onTaskClick: (task: any) => void;
   onNavigateToLinked: (module: string, id: string) => void;
+  workersMap: Record<string, string>;
+  isToday: boolean;
 }
 
-function DroppableColumn({ date, title, tasks, onTaskClick, onNavigateToLinked }: DroppableColumnProps) {
+function DroppableColumn({ 
+  date, 
+  title, 
+  tasks, 
+  onTaskClick, 
+  onNavigateToLinked,
+  workersMap,
+  isToday 
+}: DroppableColumnProps) {
   const dateKey = format(date, 'yyyy-MM-dd');
   const { isOver, setNodeRef } = useDroppable({
     id: dateKey,
   });
 
+  // Sort tasks: overdue first, then by priority
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort((a, b) => {
+      const aOverdue = a.due_date && isPast(startOfDay(new Date(a.due_date))) && a.status !== 'completed';
+      const bOverdue = b.due_date && isPast(startOfDay(new Date(b.due_date))) && b.status !== 'completed';
+      
+      // Overdue tasks come first
+      if (aOverdue && !bOverdue) return -1;
+      if (!aOverdue && bOverdue) return 1;
+      
+      // Then sort by priority
+      const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+      return (priorityOrder[a.priority] || 4) - (priorityOrder[b.priority] || 4);
+    });
+  }, [tasks]);
+
+  return (
+    <Card
+      className={cn(
+        "flex flex-col min-h-[500px]",
+        isToday && "ring-2 ring-primary shadow-lg"
+      )}
+    >
+      <CardHeader className={cn(
+        "pb-3",
+        isToday && "bg-primary/5 border-b border-primary/20"
+      )}>
+        <div className="flex items-center justify-between">
+          <CardTitle className={cn(
+            "text-lg font-semibold",
+            isToday && "text-primary"
+          )}>
+            {title}
+            {isToday && <span className="ml-2 text-xs font-normal">(Featured)</span>}
+          </CardTitle>
+          <Badge variant={isToday ? "default" : "secondary"} className="shrink-0">
+            {tasks.length}
+          </Badge>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {format(date, 'EEE, MMM d')}
+        </div>
+      </CardHeader>
+      
+      <CardContent
+        ref={setNodeRef}
+        className={cn(
+          "flex-1 space-y-2 p-3 overflow-y-auto transition-colors",
+          isOver && "bg-primary/5"
+        )}
+      >
+        {sortedTasks.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+            No tasks
+          </div>
+        ) : (
+          sortedTasks.map((task) => (
+            <DraggableTaskCard
+              key={task.id}
+              task={task}
+              onTaskClick={onTaskClick}
+              onNavigateToLinked={onNavigateToLinked}
+              workerName={task.assigned_to ? workersMap[task.assigned_to] : undefined}
+            />
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function TaskKanbanView({ 
+  tasks, 
+  onTaskClick, 
+  onNavigateToLinked,
+  kanbanMode 
+}: TaskKanbanViewProps) {
+  const today = startOfDay(new Date());
+
+  // Fetch workers for display names
   const { data: workers = [] } = useQuery({
     queryKey: ["workers-map"],
     queryFn: async () => {
@@ -47,114 +136,6 @@ function DroppableColumn({ date, title, tasks, onTaskClick, onNavigateToLinked }
       return acc;
     }, {});
   }, [workers]);
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-destructive text-destructive-foreground';
-      case 'medium': return 'bg-warning text-warning-foreground';
-      case 'low': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-success/10 text-success';
-      case 'in_progress': return 'bg-info/10 text-info';
-      case 'todo': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "flex flex-col min-h-[500px] rounded-lg border bg-card transition-colors",
-        isOver && "ring-2 ring-primary"
-      )}
-    >
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold">
-          {title}
-          <div className="text-sm font-normal text-muted-foreground mt-1">
-            {format(date, 'EEE, MMM d')}
-          </div>
-        </CardTitle>
-        <Badge variant="secondary" className="w-fit">
-          {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
-        </Badge>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-2">
-        {tasks.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-            No tasks
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <Card
-              key={task.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onTaskClick(task)}
-            >
-              <CardContent className="p-3">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h4 className="font-medium text-sm line-clamp-2">{task.title}</h4>
-                  <Badge className={cn("text-xs", getPriorityColor(task.priority))}>
-                    {task.priority}
-                  </Badge>
-                </div>
-                
-                {task.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    {task.description}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <Badge variant="outline" className={getStatusColor(task.status)}>
-                    {task.status.replace('_', ' ')}
-                  </Badge>
-
-                  {task.assigned_to && (
-                    <Badge variant="outline" className="gap-1">
-                      <User className="h-3 w-3" />
-                      {workersMap[task.assigned_to] || 'Unknown'}
-                    </Badge>
-                  )}
-
-                  {task.linked_module && task.linked_record_name && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onNavigateToLinked(task.linked_module, task.linked_record_id);
-                      }}
-                    >
-                      <LinkIcon className="h-3 w-3" />
-                      {task.document_type}: {task.linked_record_name}
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </CardContent>
-    </div>
-  );
-}
-
-export default function TaskKanbanView({ 
-  tasks, 
-  onTaskClick, 
-  onNavigateToLinked,
-  kanbanMode 
-}: TaskKanbanViewProps) {
-  const today = startOfDay(new Date());
 
   // Calculate the three days to display based on mode
   const getDaysToDisplay = () => {
@@ -233,6 +214,7 @@ export default function TaskKanbanView({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {daysToDisplay.map((date, index) => {
         const dateKey = format(date, 'yyyy-MM-dd');
+        const isToday = isSameDay(date, today);
         return (
           <DroppableColumn
             key={dateKey}
@@ -241,6 +223,8 @@ export default function TaskKanbanView({
             tasks={tasksByDate[dateKey] || []}
             onTaskClick={onTaskClick}
             onNavigateToLinked={onNavigateToLinked}
+            workersMap={workersMap}
+            isToday={isToday}
           />
         );
       })}
