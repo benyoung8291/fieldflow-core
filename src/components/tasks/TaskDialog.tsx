@@ -40,6 +40,7 @@ export interface TaskFormData {
   end_date: Date | undefined;
   estimated_hours: string;
   progress_percentage: string;
+  tags: string[];
 }
 
 export default function TaskDialog({
@@ -66,7 +67,10 @@ export default function TaskDialog({
     end_date: defaultValues?.end_date,
     estimated_hours: defaultValues?.estimated_hours || "",
     progress_percentage: defaultValues?.progress_percentage || "0",
+    tags: defaultValues?.tags || [],
   });
+  
+  const [tagInput, setTagInput] = useState("");
 
   // Fetch active task templates
   const { data: templates = [] } = useQuery({
@@ -98,6 +102,7 @@ export default function TaskDialog({
         end_date: defaultValues?.end_date,
         estimated_hours: defaultValues?.estimated_hours || "",
         progress_percentage: defaultValues?.progress_percentage || "0",
+        tags: defaultValues?.tags || [],
       });
     }
   }, [defaultValues, open]);
@@ -355,6 +360,60 @@ export default function TaskDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="tags">Tags</Label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    id="tags"
+                    placeholder="Add tag and press Enter"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && tagInput.trim()) {
+                        e.preventDefault();
+                        if (!formData.tags.includes(tagInput.trim())) {
+                          setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
+                        }
+                        setTagInput("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+                        setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
+                        setTagInput("");
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-primary/10 text-primary"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, tags: formData.tags.filter((_, i) => i !== index) })}
+                          className="hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
                 <div className="flex justify-end gap-2 pt-4">

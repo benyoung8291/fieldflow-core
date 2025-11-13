@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,8 +14,7 @@ import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, L
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
-import { 
+import {
   DndContext, 
   DragEndEvent, 
   DragOverlay,
@@ -33,6 +33,7 @@ export default function Tasks() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
+  const [filterTag, setFilterTag] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTask, setActiveTask] = useState<any>(null);
@@ -170,8 +171,16 @@ export default function Tasks() {
       const { data, error } = await query;
       if (error) throw error;
       
+      // Client-side tag filtering (since tags are array)
+      let filteredData = data || [];
+      if (filterTag !== "all") {
+        filteredData = filteredData.filter((task: any) => 
+          task.tags && task.tags.includes(filterTag)
+        );
+      }
+      
       // Fetch linked record names and format document types
-      const tasksWithLinks = await Promise.all((data || []).map(async (task: any) => {
+      const tasksWithLinks = await Promise.all(filteredData.map(async (task: any) => {
         if (!task.linked_module || !task.linked_record_id) return task;
         
         let linkedRecordName = null;
@@ -258,6 +267,17 @@ export default function Tasks() {
     assigned_user: assignedUsersData.find((u: any) => u.id === task.assigned_to)
   }));
 
+  // Extract unique tags from all tasks
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    tasks.forEach((task: any) => {
+      if (task.tags && Array.isArray(task.tags)) {
+        task.tags.forEach((tag: string) => tagSet.add(tag));
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [tasks]);
+
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: TaskFormData) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -283,6 +303,7 @@ export default function Tasks() {
         end_date: taskData.end_date?.toISOString().split('T')[0] || null,
         estimated_hours: taskData.estimated_hours ? parseFloat(taskData.estimated_hours) : null,
         progress_percentage: taskData.progress_percentage ? parseInt(taskData.progress_percentage) : 0,
+        tags: taskData.tags || [],
         created_by: user.id,
       }).select().single();
 
@@ -325,6 +346,7 @@ export default function Tasks() {
           end_date: data.end_date?.toISOString()?.split('T')[0] || null,
           estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
           progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
+          tags: data.tags || [],
           completed_at: data.status === "completed" ? new Date().toISOString() : null,
         })
         .eq("id", id);
@@ -462,7 +484,7 @@ export default function Tasks() {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -516,12 +538,27 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
 
+              <Select value={filterTag} onValueChange={setFilterTag}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Tags" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tags</SelectItem>
+                  {allTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button
                 variant="outline"
                 onClick={() => {
                   setFilterStatus("all");
                   setFilterPriority("all");
                   setFilterAssignee("my-tasks");
+                  setFilterTag("all");
                   setSearchQuery("");
                 }}
               >
@@ -611,6 +648,19 @@ export default function Tasks() {
                         <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{task.description}</p>
                       )}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                        {task.tags && task.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {task.tags.map((tag: string, index: number) => (
+                              <Badge 
+                                key={index} 
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         {task.due_date && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />

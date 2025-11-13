@@ -4848,6 +4848,7 @@ export type Database = {
           progress_percentage: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["task_status"]
+          tags: string[] | null
           tenant_id: string
           title: string
           updated_at: string | null
@@ -4869,6 +4870,7 @@ export type Database = {
           progress_percentage?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
+          tags?: string[] | null
           tenant_id: string
           title: string
           updated_at?: string | null
@@ -4890,6 +4892,7 @@ export type Database = {
           progress_percentage?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
+          tags?: string[] | null
           tenant_id?: string
           title?: string
           updated_at?: string | null

@@ -88,6 +88,16 @@ export default function DraggableTaskCard({
                 {workerName}
               </Badge>
             )}
+            
+            {task.tags && task.tags.length > 0 && task.tags.map((tag: string, index: number) => (
+              <Badge 
+                key={index} 
+                variant="secondary"
+                className="text-xs"
+              >
+                {tag}
+              </Badge>
+            ))}
           </div>
 
           {task.linked_module && task.linked_record_name && (
