@@ -149,8 +149,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
             if (functionError) throw functionError;
 
-            if (functionData.suggestedMappings) {
-              setColumnMappings(functionData.suggestedMappings);
+            if (functionData.mappings) {
+              setColumnMappings(functionData.mappings);
               setAvailableColumns(functionData.availableColumns);
               setStep("mapping");
             }
@@ -165,7 +165,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
           toast.error(`Failed to parse file: ${error.message}`);
           setIsProcessing(false);
         },
-        header: true,
+        header: false,
         skipEmptyLines: true,
       });
     } catch (error: any) {
