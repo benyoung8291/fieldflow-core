@@ -36,6 +36,7 @@ interface ParsedLineItem {
   unit_price: number;
   recurrence_frequency: "weekly" | "monthly" | "quarterly" | "annually";
   first_generation_date: string;
+  estimated_hours?: number;
   location: {
     existingLocationId?: string;
     name: string;
@@ -328,8 +329,10 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
           first_generation_date: item.first_generation_date,
           next_generation_date: item.first_generation_date,
           location_id: locationId,
+          estimated_hours: item.estimated_hours || 0,
           item_order: index,
           is_active: true,
+          tenant_id: profile.tenant_id,
         };
       });
 
@@ -454,6 +457,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                     location_postcode: "Postcode",
                     unit_price: "Unit Price",
                     quantity: "Quantity",
+                    estimated_hours: "Estimated Hours",
                     frequency: "Frequency",
                     start_date: "Start Date",
                   }).map(([field, label]) => {
@@ -722,6 +726,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                       <TableHead>Frequency</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Est. Hours</TableHead>
                       <TableHead className="text-right">Unit Price</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
@@ -745,6 +750,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                         <TableCell className="capitalize">{item.recurrence_frequency}</TableCell>
                         <TableCell>{item.first_generation_date}</TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">{item.estimated_hours || 0}</TableCell>
                         <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                           ${(item.quantity * item.unit_price).toFixed(2)}

@@ -95,6 +95,7 @@ Your task is to suggest column mappings for:
 - location_postcode: Postal/zip code field
 - unit_price: Price per service field (with $, cost, amount, rate, etc.)
 - quantity: Quantity field (if not found, null)
+- estimated_hours: Estimated hours field (hours, time, duration, etc. - if not found, null)
 - frequency: Service frequency field (monthly, quarterly, etc.)
 - start_date: First service date or month field
 
@@ -157,6 +158,7 @@ Extract all line items using the provided mappings.`
                       location_postcode: { type: "string", description: "Column name for postcode", nullable: true },
                       unit_price: { type: "string", description: "Column name for price per service", nullable: true },
                       quantity: { type: "string", description: "Column name for quantity", nullable: true },
+                      estimated_hours: { type: "string", description: "Column name for estimated hours", nullable: true },
                       frequency: { type: "string", description: "Column name for service frequency", nullable: true },
                       start_date: { type: "string", description: "Column name for start date/first service", nullable: true }
                     }
@@ -189,6 +191,7 @@ Extract all line items using the provided mappings.`
                         description: { type: "string", description: "Service description or address - use most descriptive field available" },
                         quantity: { type: "number", description: "Service quantity (default 1 if not specified)" },
                         unit_price: { type: "number", description: "Price per service as number (no currency symbols)" },
+                        estimated_hours: { type: "number", description: "Estimated hours for this service (default 0 if not specified)" },
                         recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Service frequency - standardized format" },
                         first_generation_date: { type: "string", description: "First service date in YYYY-MM-DD format" },
                         location: {
