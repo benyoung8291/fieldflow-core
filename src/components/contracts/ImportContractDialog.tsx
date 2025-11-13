@@ -67,7 +67,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
         .from("customers")
         .select("id, name")
         .eq("is_active", true)
-        .order("name");
+        .order("name")
+        .limit(1000);
       
       if (error) throw error;
       return data;
