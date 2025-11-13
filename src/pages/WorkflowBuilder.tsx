@@ -52,14 +52,15 @@ const nodeTypes = {
 };
 
 const actionTypes = [
-  { value: "create_project", label: "Create Project", icon: FileText },
-  { value: "create_service_order", label: "Create Service Order", icon: FileText },
-  { value: "create_invoice", label: "Create Invoice", icon: FileText },
-  { value: "create_task", label: "Create Task", icon: CheckSquare },
-  { value: "update_status", label: "Update Status", icon: GitBranch },
-  { value: "send_email", label: "Send Email", icon: Mail },
-  { value: "assign_user", label: "Assign User", icon: User },
-  { value: "delay", label: "Delay", icon: Clock },
+  { value: "create_project", label: "Create Project", icon: FileText, type: "action" },
+  { value: "create_service_order", label: "Create Service Order", icon: FileText, type: "action" },
+  { value: "create_invoice", label: "Create Invoice", icon: FileText, type: "action" },
+  { value: "create_task", label: "Create Task", icon: CheckSquare, type: "action" },
+  { value: "update_status", label: "Update Status", icon: GitBranch, type: "action" },
+  { value: "send_email", label: "Send Email", icon: Mail, type: "action" },
+  { value: "assign_user", label: "Assign User", icon: User, type: "action" },
+  { value: "delay", label: "Delay", icon: Clock, type: "action" },
+  { value: "condition", label: "Add Condition", icon: GitBranch, type: "condition" },
 ];
 
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
@@ -183,13 +184,16 @@ export default function WorkflowBuilder() {
   );
 
   const addNode = (actionType: string) => {
+    const actionDef = actionTypes.find(t => t.value === actionType);
+    const nodeType = actionDef?.type || "action";
+    
     const newNode: Node = {
       id: `${actionType}-${Date.now()}`,
-      type: "action",
+      type: nodeType,
       position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 200 },
       data: { 
-        label: actionTypes.find(t => t.value === actionType)?.label || actionType,
-        actionType,
+        label: actionDef?.label || actionType,
+        actionType: nodeType === "action" ? actionType : undefined,
         config: {}
       },
     };
@@ -388,18 +392,34 @@ export default function WorkflowBuilder() {
 
       <div className="flex flex-1">
         <Card className="w-64 m-4 p-4 space-y-2 overflow-y-auto">
-          <h3 className="font-semibold mb-3">Add Actions</h3>
-          {actionTypes.map((action) => (
-            <Button
-              key={action.value}
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => addNode(action.value)}
-            >
-              <action.icon className="h-4 w-4 mr-2" />
-              {action.label}
-            </Button>
-          ))}
+          <h3 className="font-semibold mb-3">Add Nodes</h3>
+          <div className="space-y-1">
+            {actionTypes.filter(a => a.type === "action").map((action) => (
+              <Button
+                key={action.value}
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => addNode(action.value)}
+              >
+                <action.icon className="h-4 w-4 mr-2" />
+                {action.label}
+              </Button>
+            ))}
+          </div>
+          <div className="border-t pt-2 mt-2">
+            <div className="text-xs text-muted-foreground uppercase mb-2 font-semibold">Logic</div>
+            {actionTypes.filter(a => a.type === "condition").map((action) => (
+              <Button
+                key={action.value}
+                variant="outline"
+                className="w-full justify-start border-yellow-500/50 hover:border-yellow-500"
+                onClick={() => addNode(action.value)}
+              >
+                <action.icon className="h-4 w-4 mr-2 text-yellow-600" />
+                {action.label}
+              </Button>
+            ))}
+          </div>
         </Card>
 
         <div className="flex-1 relative">
