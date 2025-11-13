@@ -43,6 +43,9 @@ interface ParsedLineItem {
     city?: string;
     state?: string;
     postcode?: string;
+    latitude?: number;
+    longitude?: number;
+    formatted_address?: string;
   };
 }
 
@@ -224,6 +227,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               city: item.location.city,
               state: item.location.state,
               postcode: item.location.postcode,
+              latitude: item.location.latitude,
+              longitude: item.location.longitude,
             })
             .select()
             .single();
@@ -540,7 +545,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
             <div>
               <h3 className="font-semibold mb-2">Line Items ({lineItems.length})</h3>
               <div className="border rounded-lg overflow-hidden">
-                <Table>
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Description</TableHead>
@@ -560,6 +565,12 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                           <div className="text-sm">
                             <div className="font-medium">{item.location.name}</div>
                             <div className="text-muted-foreground">{item.location.address}</div>
+                            {item.location.latitude && item.location.longitude && (
+                              <div className="text-xs text-success flex items-center gap-1 mt-1">
+                                <Check className="h-3 w-3" />
+                                Address validated
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="capitalize">{item.recurrence_frequency}</TableCell>
