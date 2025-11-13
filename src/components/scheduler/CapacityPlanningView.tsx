@@ -35,6 +35,7 @@ interface CapacityPlanningViewProps {
   workers: Worker[];
   currentDate: Date;
   onScheduleServiceOrder: (serviceOrderId: string, weekStart: Date, weekEnd: Date) => void;
+  successWeek?: Date | null;
 }
 
 interface DroppableWeekCardProps {
@@ -47,9 +48,10 @@ interface DroppableWeekCardProps {
   };
   onDrop: () => void;
   activeServiceOrder?: any;
+  isSuccess?: boolean;
 }
 
-function DroppableWeekCard({ week, onDrop, activeServiceOrder }: DroppableWeekCardProps) {
+function DroppableWeekCard({ week, onDrop, activeServiceOrder, isSuccess }: DroppableWeekCardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `capacity-week-${week.weekStart.toISOString()}`,
     data: { 
@@ -64,7 +66,8 @@ function DroppableWeekCard({ week, onDrop, activeServiceOrder }: DroppableWeekCa
       ref={setNodeRef}
       className={cn(
         "transition-all cursor-pointer hover:shadow-lg",
-        isOver && "ring-2 ring-primary bg-primary/5"
+        isOver && "ring-2 ring-primary bg-primary/5",
+        isSuccess && "animate-scale-in ring-2 ring-success bg-success/10"
       )}
     >
       <CardHeader className="pb-3">
@@ -121,7 +124,7 @@ function DroppableWeekCard({ week, onDrop, activeServiceOrder }: DroppableWeekCa
   );
 }
 
-export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOrder }: CapacityPlanningViewProps) {
+export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOrder, successWeek }: CapacityPlanningViewProps) {
   const numberOfWeeks = 6;
   const [activeServiceOrder, setActiveServiceOrder] = useState<any>(null);
 
@@ -313,6 +316,7 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
             week={week}
             onDrop={() => {}}
             activeServiceOrder={activeServiceOrder}
+            isSuccess={successWeek?.toISOString() === week.weekStart.toISOString()}
           />
         ))}
       </div>
