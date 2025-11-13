@@ -156,6 +156,36 @@ export default function ConvertQuoteDialog({
         note: `Quote converted to Project: ${projectData.name} (${project.id})`,
       });
 
+      // Create version snapshot
+      const { data: existingVersions } = await supabase
+        .from("quote_versions")
+        .select("version_number")
+        .eq("quote_id", quote.id)
+        .order("version_number", { ascending: false })
+        .limit(1);
+
+      const nextVersion = existingVersions && existingVersions.length > 0 
+        ? existingVersions[0].version_number + 1 
+        : 1;
+
+      await supabase.from("quote_versions").insert({
+        quote_id: quote.id,
+        version_number: nextVersion,
+        title: quote.title,
+        description: quote.description,
+        subtotal: quote.subtotal,
+        tax_rate: quote.tax_rate || 0,
+        tax_amount: quote.tax_amount,
+        discount_amount: 0,
+        total_amount: quote.total_amount,
+        quote_type: 'conversion',
+        line_items: lineItems,
+        notes: quote.notes,
+        terms_conditions: quote.terms_conditions,
+        changed_by: user.id,
+        change_description: `Snapshot before conversion to Project: ${projectData.name}`,
+      } as any);
+
       return project;
     },
     onSuccess: (project) => {
@@ -235,6 +265,36 @@ export default function ConvertQuoteDialog({
         new_value: serviceOrder.id,
         note: `Quote converted to Service Order: ${serviceOrderData.title} (${serviceOrder.id})`,
       });
+
+      // Create version snapshot
+      const { data: existingVersions } = await supabase
+        .from("quote_versions")
+        .select("version_number")
+        .eq("quote_id", quote.id)
+        .order("version_number", { ascending: false })
+        .limit(1);
+
+      const nextVersion = existingVersions && existingVersions.length > 0 
+        ? existingVersions[0].version_number + 1 
+        : 1;
+
+      await supabase.from("quote_versions").insert({
+        quote_id: quote.id,
+        version_number: nextVersion,
+        title: quote.title,
+        description: quote.description,
+        subtotal: quote.subtotal,
+        tax_rate: quote.tax_rate || 0,
+        tax_amount: quote.tax_amount,
+        discount_amount: 0,
+        total_amount: quote.total_amount,
+        quote_type: 'conversion',
+        line_items: lineItems,
+        notes: quote.notes,
+        terms_conditions: quote.terms_conditions,
+        changed_by: user.id,
+        change_description: `Snapshot before conversion to Service Order: ${serviceOrderData.title}`,
+      } as any);
 
       return serviceOrder;
     },
@@ -340,6 +400,36 @@ export default function ConvertQuoteDialog({
         new_value: (contract as any).id,
         note: `Quote converted to Service Contract: ${contractData.title} (${(contract as any).id})`,
       });
+
+      // Create version snapshot
+      const { data: existingVersions } = await supabase
+        .from("quote_versions")
+        .select("version_number")
+        .eq("quote_id", quote.id)
+        .order("version_number", { ascending: false })
+        .limit(1);
+
+      const nextVersion = existingVersions && existingVersions.length > 0 
+        ? existingVersions[0].version_number + 1 
+        : 1;
+
+      await supabase.from("quote_versions").insert({
+        quote_id: quote.id,
+        version_number: nextVersion,
+        title: quote.title,
+        description: quote.description,
+        subtotal: quote.subtotal,
+        tax_rate: quote.tax_rate || 0,
+        tax_amount: quote.tax_amount,
+        discount_amount: 0,
+        total_amount: quote.total_amount,
+        quote_type: 'conversion',
+        line_items: lineItems,
+        notes: quote.notes,
+        terms_conditions: quote.terms_conditions,
+        changed_by: user.id,
+        change_description: `Snapshot before conversion to Service Contract: ${contractData.title}`,
+      } as any);
 
       return contract;
     },

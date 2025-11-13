@@ -51,6 +51,7 @@ import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
+import QuoteVersionHistory from "@/components/quotes/QuoteVersionHistory";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -853,6 +854,12 @@ export default function QuoteDetails() {
       label: "Tasks",
       icon: <ListChecks className="h-4 w-4" />,
       content: <LinkedTasksList linkedModule="quote" linkedRecordId={id!} />,
+    },
+    {
+      value: "versions",
+      label: "Version History",
+      icon: <History className="h-4 w-4" />,
+      content: <QuoteVersionHistory quoteId={id || ""} />,
     },
     {
       value: "helpdesk",
