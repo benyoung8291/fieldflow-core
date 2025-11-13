@@ -22,9 +22,10 @@ interface InlineQuoteLineItemsProps {
   lineItems: LineItem[];
   onChange: (items: LineItem[]) => void;
   readOnly?: boolean;
+  defaultMarginPercentage?: number;
 }
 
-export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = false }: InlineQuoteLineItemsProps) {
+export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = false, defaultMarginPercentage = 30 }: InlineQuoteLineItemsProps) {
   const [updatedFields, setUpdatedFields] = useState<Record<string, boolean>>({});
 
   const clearUpdatedField = (key: string) => {
@@ -166,8 +167,8 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
         description: "",
         quantity: "1",
         cost_price: "",
-        margin_percentage: "30",
-        sell_price: "0",
+        margin_percentage: defaultMarginPercentage.toString(),
+        sell_price: "",
         line_total: 0,
         subItems: [],
         expanded: false,
@@ -188,7 +189,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
       description: "",
       quantity: "1",
       cost_price: "",
-      margin_percentage: "30",
+      margin_percentage: defaultMarginPercentage.toString(),
       sell_price: "",
       line_total: 0,
     });
