@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import PriceBookDialog from "@/components/quotes/PriceBookDialog";
+import { formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -433,7 +434,7 @@ export default function ProjectChangeOrderDialog({
                           <label className="text-sm font-medium">Total</label>
                           <Input
                             type="number"
-                            value={item.line_total.toFixed(2)}
+                            value={formatCurrency(item.line_total)}
                             disabled
                           />
                         </div>
@@ -457,19 +458,19 @@ export default function ProjectChangeOrderDialog({
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>${totals.subtotal.toFixed(2)}</span>
+                  <span>{formatCurrency(totals.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax (10%):</span>
-                  <span>${totals.taxAmount.toFixed(2)}</span>
+                  <span>{formatCurrency(totals.taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>${totals.total.toFixed(2)}</span>
+                  <span>{formatCurrency(totals.total)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Margin:</span>
-                  <span>${totals.totalMargin.toFixed(2)}</span>
+                  <span>{formatCurrency(totals.totalMargin)}</span>
                 </div>
               </div>
 

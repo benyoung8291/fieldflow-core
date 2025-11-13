@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Lock, Save, X, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/utils";
 import PriceBookDialog from "@/components/quotes/PriceBookDialog";
 import { Label } from "@/components/ui/label";
 
@@ -63,13 +64,6 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
       return data || [];
     },
   });
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD',
-    }).format(value);
-  };
 
   const handleEdit = () => {
     const itemsWithFlags = (lineItems as any)?.map((item: any) => ({

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, CheckCircle, Clock, XCircle } from "lucide-react";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 import ProjectChangeOrderDialog from "./ProjectChangeOrderDialog";
 import {
   AlertDialog,
@@ -140,13 +141,6 @@ export default function ProjectChangeOrdersTab({ projectId }: ProjectChangeOrder
     approved: { color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle },
     rejected: { color: "bg-red-500/10 text-red-500 border-red-500/20", icon: XCircle },
     completed: { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: CheckCircle },
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD',
-    }).format(value);
   };
 
   if (isLoading) {

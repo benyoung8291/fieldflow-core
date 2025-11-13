@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatCurrency } from "@/lib/utils";
 
 interface EditInvoiceLineDialogProps {
   open: boolean;
@@ -39,7 +40,7 @@ export default function EditInvoiceLineDialog({
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
     const price = parseFloat(unitPrice) || 0;
-    return (qty * price).toFixed(2);
+    return formatCurrency(qty * price);
   };
 
   const handleSave = () => {

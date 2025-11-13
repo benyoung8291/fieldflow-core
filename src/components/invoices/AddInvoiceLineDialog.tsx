@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatCurrency } from "@/lib/utils";
 
 interface AddInvoiceLineDialogProps {
   open: boolean;
@@ -23,7 +24,7 @@ export default function AddInvoiceLineDialog({
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
     const price = parseFloat(unitPrice) || 0;
-    return (qty * price).toFixed(2);
+    return formatCurrency(qty * price);
   };
 
   const handleAdd = () => {

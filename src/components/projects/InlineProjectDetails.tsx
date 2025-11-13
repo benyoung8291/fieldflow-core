@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Edit2, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface InlineProjectDetailsProps {
   project: any;
@@ -213,7 +213,7 @@ export default function InlineProjectDetails({ project }: InlineProjectDetailsPr
             label="Budget"
             value={project.budget}
             type="number"
-            format={(val) => val ? `$${val.toLocaleString()}` : ""}
+            format={(val) => val ? formatCurrency(val) : ""}
           />
 
           <EditableField

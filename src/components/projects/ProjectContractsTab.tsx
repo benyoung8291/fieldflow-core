@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface ProjectContractsTabProps {
   projectId: string;
@@ -91,7 +92,7 @@ export default function ProjectContractsTab({ projectId }: ProjectContractsTabPr
                     <div>
                       <p className="text-sm font-medium">Contract Value</p>
                       <p className="text-2xl font-bold text-primary">
-                        ${contract.contract_value.toLocaleString()}
+                        {formatCurrency(contract.contract_value)}
                       </p>
                     </div>
                   )}
