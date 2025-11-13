@@ -69,15 +69,14 @@ export default function DraggableAppointment({
         borderLeftColor: getBorderColor(),
       }}
       className={cn(
-        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none",
-        isDragging && "opacity-50 cursor-grabbing"
+        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none cursor-grab active:cursor-grabbing",
+        isDragging && "opacity-50"
       )}
+      {...listeners}
+      {...attributes}
+      onClick={handleClick}
     >
-      {/* Clickable area - opens details */}
-      <div 
-        onClick={handleClick}
-        className="cursor-pointer relative z-10"
-      >
+      <div className="pointer-events-none">
         <div className={cn(!showFullDetails && "font-medium truncate", showFullDetails && "space-y-2")}>
           {showFullDetails ? (
             <>
@@ -145,16 +144,8 @@ export default function DraggableAppointment({
         </div>
       </div>
 
-      {/* Drag handle - for dragging */}
-      <div 
-        {...listeners}
-        {...attributes}
-        className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        style={{ zIndex: 0 }}
-      />
-
       {onDelete && (
-        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto" style={{ zIndex: 20 }}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
