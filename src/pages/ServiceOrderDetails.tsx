@@ -276,6 +276,50 @@ export default function ServiceOrderDetails() {
           new_value: null,
           note: `Service Order deleted - Quote unlocked for editing (Service Order: ${order?.order_number || id})`,
         });
+
+        // Create unlock version snapshot
+        const { data: quoteDetails } = await supabase
+          .from("quotes")
+          .select("*")
+          .eq("id", quoteData.id)
+          .single();
+
+        const { data: quoteLineItems } = await supabase
+          .from("quote_line_items")
+          .select("*")
+          .eq("quote_id", quoteData.id)
+          .order("item_order");
+
+        if (quoteDetails) {
+          const { data: existingVersions } = await supabase
+            .from("quote_versions")
+            .select("version_number")
+            .eq("quote_id", quoteData.id)
+            .order("version_number", { ascending: false })
+            .limit(1);
+
+          const nextVersion = existingVersions && existingVersions.length > 0 
+            ? existingVersions[0].version_number + 1 
+            : 1;
+
+          await supabase.from("quote_versions").insert({
+            quote_id: quoteData.id,
+            version_number: nextVersion,
+            title: quoteDetails.title,
+            description: quoteDetails.description,
+            subtotal: quoteDetails.subtotal,
+            tax_rate: quoteDetails.tax_rate || 0,
+            tax_amount: quoteDetails.tax_amount,
+            discount_amount: 0,
+            total_amount: quoteDetails.total_amount,
+            quote_type: 'unlock',
+            line_items: quoteLineItems || [],
+            notes: quoteDetails.notes,
+            terms_conditions: quoteDetails.terms_conditions,
+            changed_by: user.id,
+            change_description: `Quote unlocked - Service Order ${order?.order_number || id} was deleted`,
+          } as any);
+        }
       }
     },
     onSuccess: () => {
