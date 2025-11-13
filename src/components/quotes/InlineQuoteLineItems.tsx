@@ -51,11 +51,11 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
     const sellNum = parseFloat(sell) || 0;
 
     if (field === "cost_price" || field === "margin_percentage") {
-      const newSell = formatCurrency(costNum * (1 + marginNum / 100));
+      const newSellNum = costNum * (1 + marginNum / 100);
       return {
         cost_price: cost,
         margin_percentage: margin,
-        sell_price: newSell,
+        sell_price: newSellNum.toFixed(2),
       };
     }
 

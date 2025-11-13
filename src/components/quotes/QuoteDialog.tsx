@@ -341,9 +341,9 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     setLineItems([{ 
       description: "", 
       quantity: "1", 
-      cost_price: "0",
+      cost_price: "",
       margin_percentage: "30",
-      sell_price: "0",
+      sell_price: "",
       line_total: 0,
       subItems: [],
       expanded: false
@@ -360,10 +360,11 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     const sellNum = parseFloat(sell) || 0;
 
     if (changedField === "cost_price" || changedField === "margin_percentage") {
+      const newSellNum = costNum * (1 + marginNum / 100);
       return {
         cost_price: cost,
         margin_percentage: margin,
-        sell_price: formatCurrency(costNum * (1 + marginNum / 100)),
+        sell_price: newSellNum.toFixed(2),
       };
     } else {
       const newMargin = costNum > 0 ? (((sellNum - costNum) / costNum) * 100).toFixed(2) : "0";
