@@ -141,7 +141,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               {
                 body: {
                   spreadsheetData: results.data,
-                  analyzeOnly: true
+                  customerId,
+                  mode: "analyze"
                 }
               }
             );
@@ -188,7 +189,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
           body: {
             spreadsheetData,
             columnMappings,
-            customerId
+            customerId,
+            mode: "parse"
           }
         }
       );
