@@ -575,16 +575,16 @@ export default function Tasks() {
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-6">
+          <CardContent className="py-3 px-4">
+            <div className="grid gap-2 md:grid-cols-6">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 h-8 text-sm" />
               </div>
 
               <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-                <SelectTrigger>
-                  <User className="h-4 w-4 mr-2" />
+                <SelectTrigger className="h-8 text-sm">
+                  <User className="h-3.5 w-3.5 mr-1.5" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -597,8 +597,8 @@ export default function Tasks() {
               </Select>
 
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <Filter className="h-4 w-4 mr-2" />
+                <SelectTrigger className="h-8 text-sm">
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -611,7 +611,7 @@ export default function Tasks() {
               </Select>
 
               <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -624,7 +624,7 @@ export default function Tasks() {
               </Select>
 
               <Select value={filterTag} onValueChange={setFilterTag}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="All Tags" />
                 </SelectTrigger>
                 <SelectContent>
@@ -635,7 +635,7 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" onClick={() => {
+              <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => {
               setFilterStatus("all");
               setFilterPriority("all");
               setFilterAssignee("my-tasks");
