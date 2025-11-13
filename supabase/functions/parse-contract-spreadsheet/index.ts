@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { spreadsheetData, customerId } = await req.json();
+    const { spreadsheetData, customerId, mode, columnMappings } = await req.json();
     
     if (!spreadsheetData || !Array.isArray(spreadsheetData) || spreadsheetData.length === 0) {
       throw new Error("Invalid spreadsheet data");
@@ -21,6 +21,9 @@ serve(async (req) => {
     if (!customerId) {
       throw new Error("Customer ID is required");
     }
+
+    // Mode: "analyze" for column mapping, "parse" for full parsing
+    const processingMode = mode || "parse";
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -62,10 +65,12 @@ serve(async (req) => {
       .eq("customer_id", customerId)
       .limit(50);
 
-    console.log("Sending to AI for parsing...");
+    console.log(`Sending to AI for ${processingMode}...`);
     
-    // Limit spreadsheet data to prevent token overflow
-    const limitedSpreadsheetData = spreadsheetData.slice(0, 100);
+    // For analysis, only need a few rows. For parsing, limit to 100.
+    const limitedSpreadsheetData = processingMode === "analyze" 
+      ? spreadsheetData.slice(0, 5) 
+      : spreadsheetData.slice(0, 100);
     
     // Use Lovable AI with structured output to parse the spreadsheet
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -76,49 +81,98 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
-        messages: [
+        messages: processingMode === "analyze" ? [
           {
             role: "system",
-            content: `You are an expert at analyzing and parsing service contract spreadsheets of any format. Your job is to intelligently understand the data structure and extract service contract line items.
+            content: `You are an expert at analyzing spreadsheet structures for service contracts. Examine the column headers and sample data to identify which columns contain which information.
 
-ANALYSIS APPROACH:
-1. Examine the column headers and data to understand what information is available
-2. Identify which columns contain address/location information, pricing, frequency, dates, and service descriptions
-3. Extract meaningful data for each line item
+Your task is to suggest column mappings for:
+- description: Service description or address field
+- location_name: Suburb, city, or location name field
+- location_address: Street address field
+- location_city: City/suburb field
+- location_state: State/province field
+- location_postcode: Postal/zip code field
+- unit_price: Price per service field (with $, cost, amount, rate, etc.)
+- quantity: Quantity field (if not found, null)
+- frequency: Service frequency field (monthly, quarterly, etc.)
+- start_date: First service date or month field
 
-EXTRACTION GUIDELINES:
-- Description: Use the most descriptive field available (address, service description, or property identifier)
-- Location name: Preferably use suburb/city name if available, otherwise use a location identifier
-- Location address: Extract full street address
-- Quantity: Default to 1 unless a quantity field is clearly present
-- Unit price: Find pricing information (look for columns with $, price, cost, amount, rate, etc.) - remove currency symbols and commas, convert to number
-- Frequency: Identify service frequency - convert any format to one of: weekly, monthly, quarterly, annually (interpret "6 Monthly" as "monthly", "Bi-monthly" as "monthly", etc.)
-- Start date: Find start date, first service date, or month indicators - convert to YYYY-MM-DD format (use 2025 as default year if not specified)
-- State: Extract state/province code if available
-
-LOCATION MATCHING:
-- Compare extracted location names and addresses against existing customer locations
-- Match if the location name (suburb/city) and address are similar
-- Set existingLocationId if a match is found
-
-Be intelligent and flexible - spreadsheet formats vary widely. Focus on extracting the core information needed for service contracts.`
+Return the exact column name from the spreadsheet for each field. If a field cannot be found, return null for that mapping.`
           },
           {
             role: "user",
-            content: `Analyze and parse this service contract spreadsheet. Each row should become a line item.
+            content: `Analyze this spreadsheet structure and suggest column mappings:
 
-Data preview (showing structure and first few rows):
+Headers and sample data:
+${JSON.stringify(limitedSpreadsheetData, null, 2)}
+
+Identify which column corresponds to each required field.`
+          }
+        ] : [
+          {
+            role: "system",
+            content: `You are an expert at parsing service contract spreadsheets using provided column mappings. Extract line items according to the specified column mappings.
+
+EXTRACTION RULES:
+- Use ONLY the column names provided in the mappings
+- Convert prices to numbers (remove $, commas)
+- Standardize frequency to: weekly, monthly, quarterly, annually
+- Convert dates to YYYY-MM-DD format (use 2025 if year not specified)
+- Default quantity to 1 if mapping is null
+- Match existing locations by name and address`
+          },
+          {
+            role: "user",
+            content: `Parse this spreadsheet using these column mappings:
+${JSON.stringify(columnMappings, null, 2)}
+
+Data to parse (${limitedSpreadsheetData.length} rows):
 ${JSON.stringify(limitedSpreadsheetData.slice(0, 3), null, 2)}
+... and ${limitedSpreadsheetData.length - 3} more rows
 
-Total rows to process: ${limitedSpreadsheetData.length}
-
-Existing customer locations for matching:
+Existing locations for matching:
 ${JSON.stringify(locations || [], null, 2)}
 
-Analyze the data structure, identify the relevant columns, and extract all line items with their location information.`
+Extract all line items using the provided mappings.`
           }
         ],
-        tools: [
+        tools: processingMode === "analyze" ? [
+          {
+            type: "function",
+            function: {
+              name: "suggest_column_mappings",
+              description: "Suggest which columns map to which fields",
+              parameters: {
+                type: "object",
+                properties: {
+                  mappings: {
+                    type: "object",
+                    properties: {
+                      description: { type: "string", description: "Column name for service description", nullable: true },
+                      location_name: { type: "string", description: "Column name for location/suburb name", nullable: true },
+                      location_address: { type: "string", description: "Column name for street address", nullable: true },
+                      location_city: { type: "string", description: "Column name for city", nullable: true },
+                      location_state: { type: "string", description: "Column name for state", nullable: true },
+                      location_postcode: { type: "string", description: "Column name for postcode", nullable: true },
+                      unit_price: { type: "string", description: "Column name for price per service", nullable: true },
+                      quantity: { type: "string", description: "Column name for quantity", nullable: true },
+                      frequency: { type: "string", description: "Column name for service frequency", nullable: true },
+                      start_date: { type: "string", description: "Column name for start date/first service", nullable: true }
+                    }
+                  },
+                  availableColumns: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of all column names found in spreadsheet"
+                  }
+                },
+                required: ["mappings", "availableColumns"],
+                additionalProperties: false
+              }
+            }
+          }
+        ] : [
           {
             type: "function",
             function: {
@@ -160,7 +214,9 @@ Analyze the data structure, identify the relevant columns, and extract all line 
             }
           }
         ],
-        tool_choice: { type: "function", function: { name: "parse_line_items" } }
+        tool_choice: processingMode === "analyze" 
+          ? { type: "function", function: { name: "suggest_column_mappings" } }
+          : { type: "function", function: { name: "parse_line_items" } }
       }),
     });
 
@@ -191,18 +247,35 @@ Analyze the data structure, identify the relevant columns, and extract all line 
     }
 
     const parsedData = JSON.parse(toolCall.function.arguments);
-    console.log("Parsed line items:", JSON.stringify(parsedData, null, 2));
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        lineItems: parsedData.lineItems,
-        tenantId
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    
+    if (processingMode === "analyze") {
+      console.log("Suggested mappings:", JSON.stringify(parsedData, null, 2));
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: "analyze",
+          mappings: parsedData.mappings,
+          availableColumns: parsedData.availableColumns,
+          tenantId
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    } else {
+      console.log("Parsed line items:", JSON.stringify(parsedData, null, 2));
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: "parse",
+          lineItems: parsedData.lineItems,
+          tenantId
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
   } catch (error) {
     console.error("Error parsing spreadsheet:", error);
