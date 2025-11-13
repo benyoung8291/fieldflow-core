@@ -62,6 +62,8 @@ const actionTypes = [
   { value: "delay", label: "Delay", icon: Clock },
 ];
 
+import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
+
 export default function WorkflowBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -320,6 +322,10 @@ export default function WorkflowBuilder() {
             />
           </div>
         </div>
+
+        {id && id !== "new" && (
+          <WorkflowExecutionsList workflowId={id} />
+        )}
       </div>
 
       <div className="flex flex-1">

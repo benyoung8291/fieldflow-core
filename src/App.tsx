@@ -53,6 +53,7 @@ import UnassignedTransactions from "@/pages/UnassignedTransactions";
 import Contacts from "@/pages/Contacts";
 import Workflows from "@/pages/Workflows";
 import WorkflowBuilder from "@/pages/WorkflowBuilder";
+import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
