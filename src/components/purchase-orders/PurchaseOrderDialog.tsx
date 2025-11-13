@@ -1,0 +1,699 @@
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Plus, Trash2, Upload, AlertTriangle } from "lucide-react";
+import { canApplyGST, isLineItemGSTFree, calculateDocumentTotals, getGSTWarning } from "@/lib/gstCompliance";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const formSchema = z.object({
+  vendor_id: z.string().min(1, "Vendor is required"),
+  po_number: z.string().min(1, "PO number is required"),
+  po_date: z.string(),
+  expected_delivery_date: z.string().optional(),
+  notes: z.string().optional(),
+  internal_notes: z.string().optional(),
+  tax_rate: z.number().min(0).max(100),
+});
+
+interface LineItem {
+  id?: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  is_gst_free: boolean;
+  notes?: string;
+  source_type?: string;
+  source_id?: string;
+}
+
+interface PurchaseOrderDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  purchaseOrder?: any;
+  onSuccess?: () => void;
+}
+
+export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSuccess }: PurchaseOrderDialogProps) {
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [vendorOpen, setVendorOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [serviceOrders, setServiceOrders] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      vendor_id: "",
+      po_number: "PO-",
+      po_date: new Date().toISOString().split("T")[0],
+      expected_delivery_date: "",
+      notes: "",
+      internal_notes: "",
+      tax_rate: 10,
+    },
+  });
+
+  useEffect(() => {
+    if (open) {
+      fetchVendors();
+      fetchServiceOrders();
+      fetchProjects();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (purchaseOrder) {
+      form.reset({
+        vendor_id: purchaseOrder.vendor_id,
+        po_number: purchaseOrder.po_number,
+        po_date: purchaseOrder.po_date,
+        expected_delivery_date: purchaseOrder.expected_delivery_date || "",
+        notes: purchaseOrder.notes || "",
+        internal_notes: purchaseOrder.internal_notes || "",
+        tax_rate: purchaseOrder.tax_rate || 10,
+      });
+      fetchVendorDetails(purchaseOrder.vendor_id);
+      // Load line items if editing
+    }
+  }, [purchaseOrder]);
+
+  const fetchVendors = async () => {
+    const { data, error } = await supabase
+      .from("vendors")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+
+    if (error) {
+      toast.error("Failed to load vendors");
+      return;
+    }
+    setVendors(data || []);
+  };
+
+  const fetchServiceOrders = async () => {
+    const { data, error } = await supabase
+      .from("service_orders")
+      .select("*, customers(name)")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setServiceOrders(data);
+    }
+  };
+
+  const fetchProjects = async () => {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*, customers(name)")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setProjects(data);
+    }
+  };
+
+  const fetchVendorDetails = async (vendorId: string) => {
+    const { data, error } = await supabase
+      .from("vendors")
+      .select("*")
+      .eq("id", vendorId)
+      .single();
+
+    if (error) {
+      toast.error("Failed to load vendor details");
+      return;
+    }
+    setSelectedVendor(data);
+    
+    const warning = getGSTWarning(data);
+    if (warning) {
+      toast.warning(warning);
+    }
+
+    // Update all line items to GST-free if vendor is not GST registered
+    if (!canApplyGST(data)) {
+      setLineItems(prev => prev.map(item => ({ ...item, is_gst_free: true })));
+    }
+  };
+
+  const handleVendorChange = (vendorId: string) => {
+    form.setValue("vendor_id", vendorId);
+    fetchVendorDetails(vendorId);
+  };
+
+  const addLineItem = () => {
+    const newItem: LineItem = {
+      description: "",
+      quantity: 1,
+      unit_price: 0,
+      line_total: 0,
+      is_gst_free: !canApplyGST(selectedVendor),
+    };
+    setLineItems([...lineItems, newItem]);
+  };
+
+  const updateLineItem = (index: number, field: keyof LineItem, value: any) => {
+    const updated = [...lineItems];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Recalculate line total
+    if (field === "quantity" || field === "unit_price") {
+      updated[index].line_total = updated[index].quantity * updated[index].unit_price;
+    }
+
+    // Enforce GST-free if vendor is not registered
+    if (field === "is_gst_free" && !canApplyGST(selectedVendor)) {
+      updated[index].is_gst_free = true;
+      toast.warning("This vendor is not GST registered and cannot charge GST");
+    }
+
+    setLineItems(updated);
+  };
+
+  const removeLineItem = (index: number) => {
+    setLineItems(lineItems.filter((_, i) => i !== index));
+  };
+
+  const importFromServiceOrder = async (serviceOrderId: string) => {
+    const { data, error } = await supabase
+      .from("service_order_line_items")
+      .select("*")
+      .eq("service_order_id", serviceOrderId)
+      .order("item_order");
+
+    if (error) {
+      toast.error("Failed to import line items");
+      return;
+    }
+
+    const imported: LineItem[] = (data || []).map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price || 0,
+      line_total: item.line_total || 0,
+      is_gst_free: !canApplyGST(selectedVendor),
+      notes: item.notes || "",
+      source_type: "service_order",
+      source_id: serviceOrderId,
+    }));
+
+    setLineItems([...lineItems, ...imported]);
+    setImportOpen(false);
+    toast.success(`Imported ${imported.length} line items`);
+  };
+
+  const importFromProject = async (projectId: string) => {
+    const { data, error } = await supabase
+      .from("project_line_items")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("item_order");
+
+    if (error) {
+      toast.error("Failed to import line items");
+      return;
+    }
+
+    const imported: LineItem[] = (data || []).map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.cost_price || item.unit_price || 0,
+      line_total: item.line_total || 0,
+      is_gst_free: !canApplyGST(selectedVendor),
+      notes: item.notes || "",
+      source_type: "project",
+      source_id: projectId,
+    }));
+
+    setLineItems([...lineItems, ...imported]);
+    setImportOpen(false);
+    toast.success(`Imported ${imported.length} line items`);
+  };
+
+  const totals = calculateDocumentTotals(
+    lineItems.map(item => ({
+      line_total: item.line_total,
+      is_gst_free: item.is_gst_free,
+    })),
+    form.watch("tax_rate"),
+    selectedVendor
+  );
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (lineItems.length === 0) {
+      toast.error("Add at least one line item");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const poData = {
+        ...values,
+        tenant_id: profile?.tenant_id,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        subtotal: totals.subtotal,
+        tax_amount: totals.taxAmount,
+        total_amount: totals.total,
+        status: "draft",
+      };
+
+      let poId: string;
+
+      if (purchaseOrder) {
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({
+          vendor_id: poData.vendor_id,
+          po_number: poData.po_number,
+          po_date: poData.po_date,
+          expected_delivery_date: poData.expected_delivery_date,
+          notes: poData.notes,
+          internal_notes: poData.internal_notes,
+          tax_rate: poData.tax_rate,
+          subtotal: poData.subtotal,
+          tax_amount: poData.tax_amount,
+          total_amount: poData.total_amount,
+        })
+        .eq("id", purchaseOrder.id);
+
+        if (error) throw error;
+        poId = purchaseOrder.id;
+
+        // Delete existing line items
+        await supabase
+          .from("purchase_order_line_items")
+          .delete()
+          .eq("po_id", poId);
+      } else {
+        const { data, error } = await supabase
+          .from("purchase_orders")
+          .insert({
+            vendor_id: poData.vendor_id,
+            po_number: poData.po_number,
+            po_date: poData.po_date,
+            expected_delivery_date: poData.expected_delivery_date,
+            notes: poData.notes,
+            internal_notes: poData.internal_notes,
+            tax_rate: poData.tax_rate,
+            subtotal: poData.subtotal,
+            tax_amount: poData.tax_amount,
+            total_amount: poData.total_amount,
+            tenant_id: poData.tenant_id,
+            created_by: poData.created_by,
+            status: 'draft',
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        poId = data.id;
+      }
+
+      // Insert line items
+      const lineItemsData = lineItems.map((item, index) => ({
+        po_id: poId,
+        tenant_id: profile?.tenant_id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        line_total: item.line_total,
+        is_gst_free: item.is_gst_free,
+        notes: item.notes || "",
+        item_order: index,
+      }));
+
+      const { error: lineItemsError } = await supabase
+        .from("purchase_order_line_items")
+        .insert(lineItemsData);
+
+      if (lineItemsError) throw lineItemsError;
+
+      toast.success(purchaseOrder ? "Purchase order updated" : "Purchase order created");
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{purchaseOrder ? "Edit" : "Create"} Purchase Order</DialogTitle>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="vendor_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Vendor *</FormLabel>
+                    <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? vendors.find((v) => v.id === field.value)?.name
+                              : "Select vendor"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search vendors..." />
+                          <CommandEmpty>No vendor found.</CommandEmpty>
+                          <CommandGroup>
+                            {vendors.map((vendor) => (
+                              <CommandItem
+                                key={vendor.id}
+                                value={vendor.name}
+                                onSelect={() => {
+                                  handleVendorChange(vendor.id);
+                                  setVendorOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    vendor.id === field.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex items-center gap-2">
+                                  {vendor.name}
+                                  {vendor.gst_registered && (
+                                    <Badge variant="outline" className="text-xs">GST Reg</Badge>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="po_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PO Number</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Auto-generated" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="po_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PO Date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="expected_delivery_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expected Delivery Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {selectedVendor && !canApplyGST(selectedVendor) && (
+              <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning rounded-md">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <span className="text-sm text-warning">
+                  This vendor is not GST registered. All line items will be GST-free.
+                </span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Line Items</h3>
+                <div className="flex gap-2">
+                  <Popover open={importOpen} onOpenChange={setImportOpen}>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="outline" size="sm">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-4">
+                        <h4 className="font-semibold">Import Line Items</h4>
+                        
+                        {serviceOrders.length > 0 && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">From Service Order</label>
+                            <Select onValueChange={importFromServiceOrder}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select service order" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {serviceOrders.map((so) => (
+                                  <SelectItem key={so.id} value={so.id}>
+                                    {so.work_order_number} - {so.customers?.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {projects.length > 0 && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">From Project</label>
+                            <Select onValueChange={importFromProject}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select project" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {projects.map((proj) => (
+                                  <SelectItem key={proj.id} value={proj.id}>
+                                    {proj.project_name} - {proj.customers?.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Button type="button" onClick={addLineItem} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+              </div>
+
+              {lineItems.length > 0 ? (
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[40%]">Description</TableHead>
+                        <TableHead className="w-[10%]">Qty</TableHead>
+                        <TableHead className="w-[15%]">Unit Price</TableHead>
+                        <TableHead className="w-[15%]">Total</TableHead>
+                        <TableHead className="w-[10%]">GST Free</TableHead>
+                        <TableHead className="w-[10%]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lineItems.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Input
+                              value={item.description}
+                              onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                              placeholder="Item description"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                              min="0"
+                              step="0.01"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                              min="0"
+                              step="0.01"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            ${item.line_total.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={item.is_gst_free}
+                              onCheckedChange={(checked) => updateLineItem(index, "is_gst_free", checked)}
+                              disabled={!canApplyGST(selectedVendor)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeLineItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground border rounded-md border-dashed">
+                  No line items added yet
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <div className="w-80 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>${totals.subtotal.toFixed(2)}</span>
+                  </div>
+                  {totals.gstFreeAmount > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>GST Free Amount:</span>
+                      <span>${totals.gstFreeAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {totals.taxableAmount > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Taxable Amount:</span>
+                      <span>${totals.taxableAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span>GST ({form.watch("tax_rate")}%):</span>
+                    <span>${totals.taxAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-semibold pt-2 border-t">
+                    <span>Total:</span>
+                    <span>${totals.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="internal_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Internal Notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Saving..." : purchaseOrder ? "Update" : "Create"} Purchase Order
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
