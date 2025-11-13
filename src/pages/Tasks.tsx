@@ -902,6 +902,7 @@ export default function Tasks() {
               New Task
             </Button>
           </div>
+        </div>
 
         {/* Filters */}
         <Card>
@@ -967,65 +968,9 @@ export default function Tasks() {
                 </Select>
               )}
             </div>
-          </CardContent>
-        </Card>
-                  {workers.filter(w => w.id && w.id.trim()).map(worker => <SelectItem key={worker.id} value={worker.id}>
-                      {worker.first_name} {worker.last_name}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="h-8 text-sm">
-                  <Filter className="h-3.5 w-3.5 mr-1.5" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterTag} onValueChange={setFilterTag}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="All Tags" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tags</SelectItem>
-                  {allTags.map(tag => <SelectItem key={tag} value={tag}>
-                      {tag}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => {
-              setFilterStatus("all");
-              setFilterPriority("all");
-              setFilterAssignee("my-tasks");
-              setFilterTag("all");
-              setSearchQuery("");
-            }}>
-                Reset
-              </Button>
             </div>
           </CardContent>
-        </div>
+        </Card>
 
         {/* Tasks List or Kanban View */}
         {viewMode === 'kanban' ? <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
