@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ export default function Scheduler() {
   const [viewType, setViewType] = useState<"day" | "week" | "timegrid" | "month" | "kanban" | "capacity">("week");
   const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | undefined>();
@@ -77,19 +79,51 @@ export default function Scheduler() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undoStack]);
 
-  const { data: appointments = [], isLoading } = useQuery({
-    queryKey: ["appointments"],
+  // Fetch unique states for filtering
+  const { data: states = [] } = useQuery({
+    queryKey: ["customer-states"],
     queryFn: async () => {
-      // First, fetch appointments
+      const { data, error } = await supabase
+        .from("customer_locations")
+        .select("state")
+        .not("state", "is", null);
+      
+      if (error) throw error;
+      
+      const uniqueStates = [...new Set(data.map(loc => loc.state))].filter(Boolean).sort();
+      return uniqueStates as string[];
+    },
+  });
+
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ["appointments", stateFilter],
+    queryFn: async () => {
+      // First, fetch appointments with customer location data for filtering
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
           *,
-          service_orders(order_number, title)
+          service_orders(
+            order_number, 
+            title,
+            customers(
+              name,
+              customer_locations(state)
+            )
+          )
         `)
         .order("start_time", { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
+
+      // Filter by state if selected
+      let filteredAppointments = appointmentsData || [];
+      if (stateFilter !== "all") {
+        filteredAppointments = filteredAppointments.filter((apt: any) => {
+          const customerLocations = apt.service_orders?.customers?.customer_locations || [];
+          return customerLocations.some((loc: any) => loc.state === stateFilter);
+        });
+      }
       
       // Then fetch all appointment_workers with profiles
       const { data: appointmentWorkersData, error: workersError } = await supabase
@@ -115,7 +149,7 @@ export default function Scheduler() {
       
       // Fetch assigned profiles separately for appointments with assigned_to
       const appointmentsWithProfiles = await Promise.all(
-        (appointmentsData || []).map(async (apt: any) => {
+        filteredAppointments.map(async (apt: any) => {
           const appointmentWorkers = workersByAppointment[apt.id] || [];
           
           if (!apt.assigned_to) return { 
@@ -1268,6 +1302,7 @@ export default function Scheduler() {
                 }))}
                 currentDate={currentDate}
                 onScheduleServiceOrder={handleScheduleServiceOrderInWeek}
+                sidebarCollapsed={sidebarCollapsed}
               />
             ) : showServiceOrderView ? (
               <ServiceOrdersCalendarView 
