@@ -67,6 +67,125 @@ serve(async (req) => {
 
     console.log(`Sending to AI for ${processingMode}...`);
     
+    // Helper function to process a batch of rows
+    const processBatch = async (batchData: any[], batchNumber: number, totalBatches: number) => {
+      console.log(`Processing batch ${batchNumber}/${totalBatches} (${batchData.length - 1} rows)`);
+      
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert at parsing service contract spreadsheets using provided column mappings. Extract line items according to the specified column mappings.
+
+CRITICAL EXTRACTION RULES:
+- You MUST extract ALL rows from the data (skip only the header row at index 0)
+- Use ONLY the column names provided in the mappings to find data
+- For each row, extract the value from the column specified in the mapping
+- Convert prices to numbers (remove $, commas)
+- Standardize frequency to: weekly, monthly, quarterly, annually (map "6 Monthly" to "quarterly", "Annual" to "annually", etc.)
+- Convert dates to YYYY-MM-DD format (use 2025 if year not specified, convert month names like "Jul" to "2025-07-01", "Jan" to "2025-01-01", etc.)
+- Default quantity to 1 if mapping is null or value is not a valid number
+- Match existing locations by name and address when possible
+
+YOU MUST RETURN ALL DATA ROWS AS LINE ITEMS.`
+            },
+            {
+              role: "user",
+              content: `Parse this spreadsheet batch using these column mappings:
+${JSON.stringify(columnMappings, null, 2)}
+
+Data to parse (${batchData.length} rows including header):
+${JSON.stringify(batchData, null, 2)}
+
+Existing locations for matching:
+${JSON.stringify(locations || [], null, 2)}
+
+IMPORTANT: 
+- Row 0 is the header row with column names
+- Rows 1 onwards contain the actual data you must extract
+- For each data row (rows 1-${batchData.length - 1}), create a line item
+- Use the column mappings to know which column index to extract from
+- You MUST return ${batchData.length - 1} line items (one for each data row)
+
+Extract ALL line items using the provided mappings.`
+            }
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "parse_line_items",
+                description: "Extract service contract line items from spreadsheet",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    lineItems: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          description: { type: "string", description: "Service description or address - use most descriptive field available" },
+                          quantity: { type: "number", description: "Service quantity - MUST be 1 if field is missing, null, empty, or not a valid number" },
+                          unit_price: { type: "number", description: "Price per service as number (no currency symbols)" },
+                          estimated_hours: { type: "number", description: "Estimated hours for this service (default 0 if not specified)" },
+                          recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Service frequency - standardized format" },
+                          first_generation_date: { type: "string", description: "First service date in YYYY-MM-DD format" },
+                          location: {
+                            type: "object",
+                            properties: {
+                              existingLocationId: { type: "string", description: "ID if location matches existing location by name and address" },
+                              name: { type: "string", description: "Location name - preferably suburb/city name" },
+                              address: { type: "string", description: "Full street address" },
+                              city: { type: "string", description: "City/suburb name" },
+                              state: { type: "string", description: "State/province code" },
+                              postcode: { type: "string", description: "Postal/zip code if available" },
+                              customer_location_id: { type: "string", description: "Customer's external location ID/reference if provided" }
+                            },
+                            required: ["name", "address"]
+                          }
+                        },
+                        required: ["description", "quantity", "unit_price", "recurrence_frequency", "first_generation_date", "location"]
+                      }
+                    }
+                  },
+                  required: ["lineItems"],
+                  additionalProperties: false
+                }
+              }
+            }
+          ],
+          tool_choice: { type: "function", function: { name: "parse_line_items" } }
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        if (aiResponse.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        }
+        if (aiResponse.status === 402) {
+          throw new Error("Payment required. Please add credits to your Lovable AI workspace.");
+        }
+        const errorText = await aiResponse.text();
+        console.error(`AI gateway error for batch ${batchNumber}:`, aiResponse.status, errorText);
+        throw new Error(`AI parsing failed for batch ${batchNumber}`);
+      }
+
+      const result = await aiResponse.json();
+      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+      if (!toolCall) {
+        throw new Error(`No structured output from AI for batch ${batchNumber}`);
+      }
+
+      return JSON.parse(toolCall.function.arguments);
+    };
+    
     // Clean and validate spreadsheet data
     const cleanSpreadsheetData = (data: any[]): any[] => {
       return data.map((row, rowIndex) => {
@@ -98,9 +217,10 @@ serve(async (req) => {
     // For analysis, only need a few rows. For parsing, limit to 1,000.
     const limitedSpreadsheetData = processingMode === "analyze" 
       ? cleanedData.slice(0, 5) 
-      : cleanedData.slice(0, 1000);
+      : cleanedData.slice(0, 1001); // +1 for header
     
-    const hasMoreRows = spreadsheetData.length > 1000;
+    const hasMoreRows = spreadsheetData.length > 1001;
+    const BATCH_SIZE = 50; // Process 50 rows per AI request for better performance
     
     // Validate data quality
     const dataIssues: string[] = [];
@@ -117,7 +237,59 @@ serve(async (req) => {
       console.warn(`Data quality issues detected: ${dataIssues.length} issues found`);
     }
     
-    // Use Lovable AI with structured output to parse the spreadsheet
+    // Handle parse mode with batching
+    if (processingMode === "parse") {
+      const header = limitedSpreadsheetData[0];
+      const dataRows = limitedSpreadsheetData.slice(1);
+      
+      // Split into batches
+      const batches: any[][] = [];
+      for (let i = 0; i < dataRows.length; i += BATCH_SIZE) {
+        const batchRows = dataRows.slice(i, i + BATCH_SIZE);
+        batches.push([header, ...batchRows]); // Include header in each batch
+      }
+      
+      console.log(`Processing ${dataRows.length} rows in ${batches.length} batches of ${BATCH_SIZE}`);
+      
+      // Process batches in parallel
+      const batchPromises = batches.map((batch, index) => 
+        processBatch(batch, index + 1, batches.length)
+      );
+      
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Combine all line items from all batches
+      const allLineItems = batchResults.flatMap(result => result.lineItems);
+      
+      console.log(`Parsed ${allLineItems.length} total line items from ${batches.length} batches`);
+      
+      // Normalize quantity values: ensure all quantities are valid numbers, default to 1 if invalid
+      for (const item of allLineItems) {
+        if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity <= 0) {
+          console.log(`Normalizing invalid quantity for item "${item.description}": ${item.quantity} -> 1`);
+          item.quantity = 1;
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: "parse",
+          lineItems: allLineItems,
+          tenantId,
+          hasMoreRows,
+          totalRows: spreadsheetData.length,
+          processedRows: limitedSpreadsheetData.length - 1, // Exclude header
+          batchesProcessed: batches.length,
+          dataIssues: dataIssues.length > 0 ? dataIssues.slice(0, 10) : [] // Return first 10 issues
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    // Handle analyze mode with single AI call
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -126,7 +298,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
-        messages: processingMode === "analyze" ? [
+        messages: [
           {
             role: "system",
             content: `You are an expert at analyzing spreadsheet structures for service contracts. Examine the column headers and sample data to identify which columns contain which information.
@@ -156,58 +328,8 @@ ${JSON.stringify(limitedSpreadsheetData, null, 2)}
 
 Identify which column corresponds to each required field.`
           }
-        ] : [
-          {
-            role: "system",
-            content: `You are an expert at parsing service contract spreadsheets using provided column mappings. Extract line items according to the specified column mappings.
-
-CRITICAL EXTRACTION RULES:
-- You MUST extract ALL rows from the data (skip only the header row at index 0)
-- Use ONLY the column names provided in the mappings to find data
-- For each row, extract the value from the column specified in the mapping
-- Convert prices to numbers (remove $, commas)
-- Standardize frequency to: weekly, monthly, quarterly, annually (map "6 Monthly" to "quarterly", "Annual" to "annually", etc.)
-- Convert dates to YYYY-MM-DD format (use 2025 if year not specified, convert month names like "Jul" to "2025-07-01", "Jan" to "2025-01-01", etc.)
-- Default quantity to 1 if mapping is null or value is not a valid number
-- Match existing locations by name and address when possible
-
-EXAMPLE:
-If mappings say:
-- description: "description"
-- location_address: "Address"  
-- unit_price: "TOTAL per clean ($)"
-
-And row data is: ["1000150", "R", "ANZ Auburn", "28 Auburn Rd", "Auburn", "NSW", "", "6 Monthly", "2", "Jul", "Jan", "$982.00", "$1,964.00"]
-
-Then extract:
-- description from column "description" (index 2) = "ANZ Auburn"
-- location_address from column "Address" (index 3) = "28 Auburn Rd"
-- unit_price from column "TOTAL per clean ($)" (index 11) = 982.00 (cleaned)
-
-YOU MUST RETURN ALL DATA ROWS AS LINE ITEMS.`
-          },
-          {
-            role: "user",
-            content: `Parse this spreadsheet using these column mappings:
-${JSON.stringify(columnMappings, null, 2)}
-
-Data to parse (${limitedSpreadsheetData.length} rows including header):
-${JSON.stringify(limitedSpreadsheetData, null, 2)}
-
-Existing locations for matching:
-${JSON.stringify(locations || [], null, 2)}
-
-IMPORTANT: 
-- Row 0 is the header row with column names
-- Rows 1 onwards contain the actual data you must extract
-- For each data row (rows 1-${limitedSpreadsheetData.length - 1}), create a line item
-- Use the column mappings to know which column index to extract from
-- You MUST return ${limitedSpreadsheetData.length - 1} line items (one for each data row)
-
-Extract ALL line items using the provided mappings.`
-          }
         ],
-        tools: processingMode === "analyze" ? [
+        tools: [
           {
             type: "function",
             function: {
@@ -244,53 +366,8 @@ Extract ALL line items using the provided mappings.`
               }
             }
           }
-        ] : [
-          {
-            type: "function",
-            function: {
-              name: "parse_line_items",
-              description: "Extract service contract line items from spreadsheet",
-              parameters: {
-                type: "object",
-                properties: {
-                  lineItems: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        description: { type: "string", description: "Service description or address - use most descriptive field available" },
-                        quantity: { type: "number", description: "Service quantity - MUST be 1 if field is missing, null, empty, or not a valid number" },
-                        unit_price: { type: "number", description: "Price per service as number (no currency symbols)" },
-                        estimated_hours: { type: "number", description: "Estimated hours for this service (default 0 if not specified)" },
-                        recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Service frequency - standardized format" },
-                        first_generation_date: { type: "string", description: "First service date in YYYY-MM-DD format" },
-                        location: {
-                          type: "object",
-                          properties: {
-                            existingLocationId: { type: "string", description: "ID if location matches existing location by name and address" },
-                            name: { type: "string", description: "Location name - preferably suburb/city name" },
-                            address: { type: "string", description: "Full street address" },
-                            city: { type: "string", description: "City/suburb name" },
-                            state: { type: "string", description: "State/province code" },
-                            postcode: { type: "string", description: "Postal/zip code if available" },
-                            customer_location_id: { type: "string", description: "Customer's external location ID/reference if provided" }
-                          },
-                          required: ["name", "address"]
-                        }
-                      },
-                      required: ["description", "quantity", "unit_price", "recurrence_frequency", "first_generation_date", "location"]
-                    }
-                  }
-                },
-                required: ["lineItems"],
-                additionalProperties: false
-              }
-            }
-          }
         ],
-        tool_choice: processingMode === "analyze" 
-          ? { type: "function", function: { name: "suggest_column_mappings" } }
-          : { type: "function", function: { name: "parse_line_items" } }
+        tool_choice: { type: "function", function: { name: "suggest_column_mappings" } }
       }),
     });
 
@@ -322,50 +399,20 @@ Extract ALL line items using the provided mappings.`
 
     const parsedData = JSON.parse(toolCall.function.arguments);
     
-    if (processingMode === "analyze") {
-      console.log("Suggested mappings:", JSON.stringify(parsedData, null, 2));
-      return new Response(
-        JSON.stringify({
-          success: true,
-          mode: "analyze",
-          mappings: parsedData.mappings,
-          availableColumns: parsedData.availableColumns,
-          tenantId
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    } else {
-      console.log("Parsed line items:", JSON.stringify(parsedData, null, 2));
-      
-      // Note: Geocoding will be handled as a background task after location creation
-      // to avoid slowing down the parsing process
-      
-      // Normalize quantity values: ensure all quantities are valid numbers, default to 1 if invalid
-      for (const item of parsedData.lineItems) {
-        if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity <= 0) {
-          console.log(`Normalizing invalid quantity for item "${item.description}": ${item.quantity} -> 1`);
-          item.quantity = 1;
-        }
+    // Return analyze results
+    console.log("Suggested mappings:", JSON.stringify(parsedData, null, 2));
+    return new Response(
+      JSON.stringify({
+        success: true,
+        mode: "analyze",
+        mappings: parsedData.mappings,
+        availableColumns: parsedData.availableColumns,
+        tenantId
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          mode: "parse",
-          lineItems: parsedData.lineItems,
-          tenantId,
-          hasMoreRows,
-          totalRows: spreadsheetData.length,
-          processedRows: limitedSpreadsheetData.length,
-          dataIssues: dataIssues.length > 0 ? dataIssues.slice(0, 10) : [] // Return first 10 issues
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    );
 
   } catch (error) {
     console.error("Error parsing spreadsheet:", error);
