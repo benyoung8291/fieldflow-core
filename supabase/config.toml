@@ -39,3 +39,6 @@ verify_jwt = true
 [functions.parse-contract-spreadsheet]
 verify_jwt = true
 
+[functions.geocode-locations]
+verify_jwt = true
+
