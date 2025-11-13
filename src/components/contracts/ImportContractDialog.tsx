@@ -270,6 +270,41 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       const locationsToCreate = lineItems.filter(item => !item.location.existingLocationId);
       const createdLocationMap = new Map<string, string>();
 
+      // Collect unique location keys to check for existing locations
+      const uniqueLocationKeys = new Set<string>();
+      for (const item of locationsToCreate) {
+        const locationKey = `${item.location.name}-${item.location.address}`;
+        uniqueLocationKeys.add(locationKey);
+      }
+
+      // Check database for existing locations with the same name and address
+      if (uniqueLocationKeys.size > 0) {
+        const locationChecks = Array.from(uniqueLocationKeys).map(async (locationKey) => {
+          const [name, address] = locationKey.split('-');
+          const { data: existingLocation } = await supabase
+            .from("customer_locations")
+            .select("id, name, address")
+            .eq("tenant_id", profile.tenant_id)
+            .eq("customer_id", customerId)
+            .eq("name", name)
+            .eq("address", address)
+            .maybeSingle();
+          
+          return { locationKey, existingLocation };
+        });
+
+        const existingLocationsResults = await Promise.all(locationChecks);
+        
+        // Map existing locations
+        for (const { locationKey, existingLocation } of existingLocationsResults) {
+          if (existingLocation) {
+            createdLocationMap.set(locationKey, existingLocation.id);
+            console.log(`Using existing location for ${locationKey}: ${existingLocation.id}`);
+          }
+        }
+      }
+
+      // Create only locations that don't already exist
       for (const item of locationsToCreate) {
         const locationKey = `${item.location.name}-${item.location.address}`;
         if (!createdLocationMap.has(locationKey)) {
@@ -291,6 +326,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
           if (locationError) throw locationError;
           createdLocationMap.set(locationKey, newLocation.id);
+          console.log(`Created new location for ${locationKey}: ${newLocation.id}`);
         }
       }
 
