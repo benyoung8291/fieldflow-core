@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase } from "lucide-react";
+import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase, Building2, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import {
@@ -32,6 +32,8 @@ const moreNavItems: NavItem[] = [
   { icon: Users, label: "Workers", path: "/workers" },
   { icon: Calendar, label: "Appointments", path: "/appointments" },
   { icon: FileText, label: "Service Contracts", path: "/service-contracts" },
+  { icon: Building2, label: "Vendors", path: "/vendors" },
+  { icon: ShoppingCart, label: "Purchase Orders", path: "/purchase-orders" },
 ];
 
 export const MobileBottomNav = () => {
