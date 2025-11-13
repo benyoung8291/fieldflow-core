@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
+import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { DndContext } from "@dnd-kit/core";
 
 export default function Tasks() {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ export default function Tasks() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const queryClient = useQueryClient();
 
   const getModuleRoute = (module: string, id: string) => {
@@ -45,6 +48,54 @@ export default function Tasks() {
       return user;
     },
   });
+
+  // Fetch user profile for view preference and kanban mode
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile-tasks"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("task_view_preference, task_kanban_mode")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Set view mode from user profile
+  useEffect(() => {
+    if (userProfile?.task_view_preference) {
+      setViewMode(userProfile.task_view_preference as 'list' | 'kanban');
+    }
+  }, [userProfile]);
+
+  // Save view preference mutation
+  const saveViewPreference = useMutation({
+    mutationFn: async (preference: 'list' | 'kanban') => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ task_view_preference: preference })
+        .eq("id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-profile-tasks"] });
+    },
+  });
+
+  const handleViewModeChange = (mode: 'list' | 'kanban') => {
+    setViewMode(mode);
+    saveViewPreference.mutate(mode);
+  };
 
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
@@ -301,10 +352,32 @@ export default function Tasks() {
             <h1 className="text-3xl font-bold">Tasks</h1>
             <p className="text-muted-foreground">Manage your to-do list and assignments</p>
           </div>
-          <Button onClick={() => { setSelectedTask(null); setIsDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Task
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewModeChange('list')}
+                className="gap-2"
+              >
+                <List className="h-4 w-4" />
+                List
+              </Button>
+              <Button
+                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewModeChange('kanban')}
+                className="gap-2"
+              >
+                <Kanban className="h-4 w-4" />
+                Kanban
+              </Button>
+            </div>
+            <Button onClick={() => { setSelectedTask(null); setIsDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Task
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -379,8 +452,20 @@ export default function Tasks() {
           </CardContent>
         </Card>
 
-        {/* Tasks List */}
-        {isLoading ? (
+        {/* Tasks List or Kanban View */}
+        {viewMode === 'kanban' ? (
+          <DndContext>
+            <TaskKanbanView
+              tasks={tasksWithUsers}
+              onTaskClick={(task) => {
+                setSelectedTask(task);
+                setIsDialogOpen(true);
+              }}
+              onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))}
+              kanbanMode={userProfile?.task_kanban_mode || 'business_days'}
+            />
+          </DndContext>
+        ) : isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
               <Card key={i}>

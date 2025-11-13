@@ -31,6 +31,7 @@ export default function UserProfileTab() {
   const queryClient = useQueryClient();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
   const [selectedStageId, setSelectedStageId] = useState<string>('');
+  const [taskKanbanMode, setTaskKanbanMode] = useState<string>('business_days');
 
   // Fetch current user profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -41,7 +42,7 @@ export default function UserProfileTab() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('default_pipeline_id, default_stage_id')
+        .select('default_pipeline_id, default_stage_id, task_kanban_mode')
         .eq('id', user.id)
         .single();
 
@@ -93,6 +94,9 @@ export default function UserProfileTab() {
       if (profile.default_stage_id) {
         setSelectedStageId(profile.default_stage_id);
       }
+      if (profile.task_kanban_mode) {
+        setTaskKanbanMode(profile.task_kanban_mode);
+      }
     }
   }, [profile]);
 
@@ -107,6 +111,7 @@ export default function UserProfileTab() {
         .update({
           default_pipeline_id: selectedPipelineId || null,
           default_stage_id: selectedStageId || null,
+          task_kanban_mode: taskKanbanMode,
         })
         .eq('id', user.id);
 
@@ -183,6 +188,48 @@ export default function UserProfileTab() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Task Kanban View</CardTitle>
+          <CardDescription>
+            Configure how the 3-day kanban view displays tasks
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="task-kanban-mode">Kanban Display Mode</Label>
+            <Select
+              value={taskKanbanMode}
+              onValueChange={setTaskKanbanMode}
+            >
+              <SelectTrigger id="task-kanban-mode">
+                <SelectValue placeholder="Select a mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="business_days">
+                  Business Days Only (Mon-Fri, includes weekends with tasks)
+                </SelectItem>
+                <SelectItem value="consecutive_days">
+                  Consecutive Days (Always show today, tomorrow, day after)
+                </SelectItem>
+                <SelectItem value="include_weekends">
+                  Include Weekends (Always show next 3 calendar days)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              This setting controls which 3 days are shown in the task kanban view
+            </p>
           </div>
 
           <div className="flex justify-end pt-4">

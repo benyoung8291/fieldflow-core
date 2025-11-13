@@ -2512,6 +2512,8 @@ export type Database = {
           service_orders_enabled: boolean | null
           super_fund_name: string | null
           super_fund_number: string | null
+          task_kanban_mode: string | null
+          task_view_preference: string | null
           tax_file_number: string | null
           tenant_id: string | null
           theme_preference: string | null
@@ -2539,6 +2541,8 @@ export type Database = {
           service_orders_enabled?: boolean | null
           super_fund_name?: string | null
           super_fund_number?: string | null
+          task_kanban_mode?: string | null
+          task_view_preference?: string | null
           tax_file_number?: string | null
           tenant_id?: string | null
           theme_preference?: string | null
@@ -2566,6 +2570,8 @@ export type Database = {
           service_orders_enabled?: boolean | null
           super_fund_name?: string | null
           super_fund_number?: string | null
+          task_kanban_mode?: string | null
+          task_view_preference?: string | null
           tax_file_number?: string | null
           tenant_id?: string | null
           theme_preference?: string | null
