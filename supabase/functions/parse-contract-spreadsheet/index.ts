@@ -120,7 +120,7 @@ EXTRACTION RULES:
 - Convert prices to numbers (remove $, commas)
 - Standardize frequency to: weekly, monthly, quarterly, annually
 - Convert dates to YYYY-MM-DD format (use 2025 if year not specified)
-- Default quantity to 1 if mapping is null
+- Default quantity to 1 if mapping is null or value is not a valid number
 - Match existing locations by name and address`
           },
           {
@@ -189,7 +189,7 @@ Extract all line items using the provided mappings.`
                       type: "object",
                       properties: {
                         description: { type: "string", description: "Service description or address - use most descriptive field available" },
-                        quantity: { type: "number", description: "Service quantity (default 1 if not specified)" },
+                        quantity: { type: "number", description: "Service quantity - MUST be 1 if field is missing, null, empty, or not a valid number" },
                         unit_price: { type: "number", description: "Price per service as number (no currency symbols)" },
                         estimated_hours: { type: "number", description: "Estimated hours for this service (default 0 if not specified)" },
                         recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Service frequency - standardized format" },
@@ -379,6 +379,14 @@ Extract all line items using the provided mappings.`
         console.log(`Failed to geocode ${failedGeocodingItems.length} addresses`);
       } else {
         console.warn("Google Places API key not configured - skipping geocoding");
+      }
+      
+      // Normalize quantity values: ensure all quantities are valid numbers, default to 1 if invalid
+      for (const item of parsedData.lineItems) {
+        if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity <= 0) {
+          console.log(`Normalizing invalid quantity for item "${item.description}": ${item.quantity} -> 1`);
+          item.quantity = 1;
+        }
       }
       
       return new Response(
