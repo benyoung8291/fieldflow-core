@@ -13,9 +13,11 @@ interface ContractLineItem {
   quantity: number;
   unit_price: number;
   line_total: number;
+  estimated_hours: number;
   recurrence_frequency: string;
   next_generation_date: string;
   first_generation_date: string;
+  location_id: string;
   service_contracts: {
     id: string;
     contract_number: string;
@@ -25,6 +27,14 @@ interface ContractLineItem {
     customers: {
       name: string;
     };
+  };
+  customer_locations?: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    postcode: string;
   };
 }
 
@@ -126,36 +136,46 @@ serve(async (req) => {
       );
     }
 
-    // Group line items by contract_id
-    const groupedByContract = lineItems.reduce((acc: any, item: any) => {
-      const contractId = item.contract_id;
-      if (!acc[contractId]) {
-        acc[contractId] = {
+    // Group line items by location_id and next_generation_date
+    // This ensures multiple items for the same location and date are on one service order
+    // But items for different locations get separate service orders
+    const groupedByLocationAndDate = lineItems.reduce((acc: any, item: any) => {
+      const locationId = item.location_id || 'no-location';
+      const generationDate = item.next_generation_date;
+      const groupKey = `${locationId}_${generationDate}`;
+      
+      if (!acc[groupKey]) {
+        acc[groupKey] = {
+          locationId: item.location_id,
+          location: item.customer_locations,
+          generationDate: generationDate,
           contract: item.service_contracts,
+          customerId: item.service_contracts.customer_id,
+          tenantId: item.service_contracts.tenant_id,
           items: [],
         };
       }
-      acc[contractId].items.push(item);
+      acc[groupKey].items.push(item);
       return acc;
     }, {});
 
-    console.log(`Grouped into ${Object.keys(groupedByContract).length} contracts`);
+    console.log(`Grouped into ${Object.keys(groupedByLocationAndDate).length} service orders (by location + date)`);
 
     const createdOrders: any[] = [];
     const errors: any[] = [];
 
-    // Create service orders for each contract
-    for (const [contractId, data] of Object.entries(groupedByContract) as any) {
+    // Create service orders for each location+date group
+    for (const [groupKey, data] of Object.entries(groupedByLocationAndDate) as any) {
       try {
-        const { contract, items } = data;
+        const { locationId, location, contract, customerId, tenantId, items } = data;
         
-        console.log(`Processing contract ${contract.contract_number} with ${items.length} items`);
+        console.log(`Processing group ${groupKey} with ${items.length} items`);
 
         // Generate service order number
         const { data: latestOrder } = await supabase
           .from("service_orders")
           .select("order_number")
-          .eq("tenant_id", contract.tenant_id)
+          .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -163,35 +183,31 @@ serve(async (req) => {
         const lastNumber = latestOrder?.order_number?.match(/\d+$/)?.[0] || "0";
         const newOrderNumber = `SO-${String(parseInt(lastNumber) + 1).padStart(5, "0")}`;
 
-        // Calculate total estimated hours and fixed amount
+        // Calculate total estimated hours from contract line items
         const estimatedHours = items.reduce((sum: number, item: any) => {
-          // Assuming quantity represents hours for service items
-          return sum + parseFloat(item.quantity);
+          return sum + (parseFloat(item.estimated_hours) || 0);
         }, 0);
 
         const fixedAmount = items.reduce((sum: number, item: any) => {
           return sum + parseFloat(item.line_total);
         }, 0);
 
-        // Create service order title from line items
+        // Create service order title
         const title = items.length === 1
           ? items[0].description
-          : `${contract.title} - Service Order`;
+          : `${contract.title} - Multiple Services`;
 
         const description = items.map((item: any) => 
-          `${item.description} (Qty: ${item.quantity})`
+          `${item.description} (Qty: ${item.quantity}${item.estimated_hours ? `, Est. Hours: ${item.estimated_hours}` : ''})`
         ).join("\n");
-
-        // Get location from first line item (all items in group should have same location)
-        const locationId = items[0].location_id || null;
         
         // Create the service order
         const { data: newOrder, error: orderError } = await supabase
           .from("service_orders")
           .insert({
-            tenant_id: contract.tenant_id,
-            customer_id: contract.customer_id,
-            contract_id: contractId,
+            tenant_id: tenantId,
+            customer_id: customerId,
+            contract_id: items[0].contract_id,
             order_number: newOrderNumber,
             title,
             description,
@@ -200,22 +216,47 @@ serve(async (req) => {
             fixed_amount: fixedAmount,
             estimated_hours: estimatedHours,
             priority: "normal",
-            location_id: locationId,
+            location_id: locationId !== 'no-location' ? locationId : null,
             notes: `Auto-generated from contract ${contract.contract_number}`,
           })
           .select()
           .single();
 
         if (orderError) {
-          console.error(`Error creating service order for contract ${contract.contract_number}:`, orderError);
+          console.error(`Error creating service order for group ${groupKey}:`, orderError);
           errors.push({
-            contract: contract.contract_number,
+            groupKey,
             error: orderError.message,
           });
           continue;
         }
 
-        console.log(`Created service order ${newOrderNumber} for contract ${contract.contract_number}`);
+        console.log(`Created service order ${newOrderNumber} with ${items.length} line items`);
+
+        // Create service order line items for each contract line item
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          
+          const { error: lineItemError } = await supabase
+            .from("service_order_line_items")
+            .insert({
+              tenant_id: tenantId,
+              service_order_id: newOrder.id,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              line_total: item.line_total,
+              estimated_hours: item.estimated_hours || 0,
+              item_order: i,
+              notes: `From contract line item`,
+            });
+
+          if (lineItemError) {
+            console.error(`Error creating line item for service order ${newOrderNumber}:`, lineItemError);
+          } else {
+            console.log(`Created line item ${i + 1} for service order ${newOrderNumber}`);
+          }
+        }
 
         // Update next_generation_date for each line item
         for (const item of items) {
@@ -243,13 +284,15 @@ serve(async (req) => {
           orderNumber: newOrderNumber,
           contract: contract.contract_number,
           customer: contract.customers.name,
+          location: location ? `${location.name} - ${location.address}` : 'No location',
           itemCount: items.length,
           amount: fixedAmount,
+          estimatedHours,
         });
       } catch (error: any) {
-        console.error(`Error processing contract ${contractId}:`, error);
+        console.error(`Error processing group ${groupKey}:`, error);
         errors.push({
-          contractId,
+          groupKey,
           error: error.message,
         });
       }
@@ -262,7 +305,7 @@ serve(async (req) => {
         message: "Service order generation completed",
         summary: {
           total_line_items: lineItems.length,
-          contracts_processed: Object.keys(groupedByContract).length,
+          groups_processed: Object.keys(groupedByLocationAndDate).length,
           orders_created: createdOrders.length,
           errors: errors.length,
         },
