@@ -29,9 +29,13 @@ const defaultNavigation = [
   { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature", color: "#f59e0b", isFolder: false },
   { name: "Scheduler", href: "/scheduler", icon: "Calendar", color: "#f59e0b", isFolder: false },
   { name: "Appointments", href: "/appointments", icon: "CalendarCheck", color: "#f59e0b", isFolder: false },
+  { name: "Tasks", href: "/tasks", icon: "CheckSquare", color: "#f59e0b", isFolder: false },
   { name: "Customers", href: "/customers", icon: "Users", color: "#10b981", isFolder: false },
   { name: "Leads", href: "/leads", icon: "Target", color: "#10b981", isFolder: false },
+  { name: "CRM Hub", href: "/crm-hub", icon: "Building", color: "#10b981", isFolder: false },
   { name: "Workers", href: "/workers", icon: "HardHat", color: "#f59e0b", isFolder: false },
+  { name: "Skills", href: "/skills", icon: "Award", color: "#f59e0b", isFolder: false },
+  { name: "Training Matrix", href: "/training-matrix", icon: "GraduationCap", color: "#f59e0b", isFolder: false },
   { 
     name: "Accounts", 
     href: null, 
@@ -43,8 +47,12 @@ const defaultNavigation = [
       { name: "Recurring Invoices", href: "/recurring-invoices", icon: "RefreshCw", color: "#8b5cf6", isFolder: false },
       { name: "Vendors", href: "/vendors", icon: "Building2", color: "#8b5cf6", isFolder: false },
       { name: "Purchase Orders", href: "/purchase-orders", icon: "FileText", color: "#8b5cf6", isFolder: false },
+      { name: "Expenses", href: "/expenses", icon: "Receipt", color: "#8b5cf6", isFolder: false },
+      { name: "Card Reconciliation", href: "/credit-card-reconciliation", icon: "CreditCard", color: "#8b5cf6", isFolder: false },
+      { name: "Unassigned Transactions", href: "/unassigned-transactions", icon: "AlertCircle", color: "#8b5cf6", isFolder: false },
     ]
   },
+  { name: "Help Desk", href: "/helpdesk", icon: "Headphones", color: "#ec4899", isFolder: false },
   { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899", isFolder: false },
   { name: "Settings", href: "/settings", icon: "Settings", color: "#6366f1", isFolder: false },
 ];

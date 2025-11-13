@@ -28,7 +28,8 @@ import {
   PieChart,
   Headphones,
   Activity,
-  ScrollText
+  ScrollText,
+  CreditCard
 } from "lucide-react";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
@@ -97,6 +98,7 @@ const settingsNavigation = [
       { title: "Help Desk", value: "helpdesk", icon: Headphones },
       { title: "Expense Categories", value: "expense-categories", icon: Receipt },
       { title: "Expense Policy", value: "expense-policy", icon: ShieldCheck },
+      { title: "Credit Cards", value: "credit-cards", icon: CreditCard },
     ]
   },
   {
@@ -483,6 +485,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <ExpensePolicyTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "credit-cards" && (
+              <Card>
+                <CardContent className="pt-6">
+                  <CreditCardsTab />
                 </CardContent>
               </Card>
             )}
