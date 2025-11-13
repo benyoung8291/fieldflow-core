@@ -307,6 +307,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       step="0.01"
                       value={item.quantity}
                       onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       className="border-0 focus-visible:ring-0 text-right bg-transparent"
                     />
                   </TableCell>
@@ -316,6 +317,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       step="0.01"
                       value={item.cost_price}
                       onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       disabled={hasSubItems(item)}
                       className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
                     />
@@ -326,6 +328,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       step="0.01"
                       value={item.margin_percentage}
                       onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       disabled={hasSubItems(item)}
                       className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
                     />
@@ -336,6 +339,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       step="0.01"
                       value={item.sell_price}
                       onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       disabled={hasSubItems(item)}
                       className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
                     />
@@ -392,6 +396,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                           onChange={(e) =>
                             updateSubItem(index, subIndex, "quantity", e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
                         />
                       </TableCell>
@@ -403,6 +408,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                           onChange={(e) =>
                             updateSubItem(index, subIndex, "cost_price", e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
                         />
                       </TableCell>
@@ -414,6 +420,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                           onChange={(e) =>
                             updateSubItem(index, subIndex, "margin_percentage", e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
                         />
                       </TableCell>
@@ -425,6 +432,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                           onChange={(e) =>
                             updateSubItem(index, subIndex, "sell_price", e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
                         />
                       </TableCell>
