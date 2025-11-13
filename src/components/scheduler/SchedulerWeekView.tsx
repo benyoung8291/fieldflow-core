@@ -214,7 +214,7 @@ export default function SchedulerWeekView({
                     workerId={worker.id}
                     isAvailable={isAvailable}
                     className={cn(
-                      "min-h-[100px] p-2 border-2 border-dashed rounded-lg space-y-1 flex flex-col",
+                      "min-h-[120px] h-full p-2 border-2 border-dashed rounded-lg space-y-1 flex flex-col",
                       isSameDay(day, new Date()) 
                         ? "border-primary/30 bg-primary/5" 
                         : "border-border bg-muted/20"
@@ -235,7 +235,7 @@ export default function SchedulerWeekView({
                       </AppointmentContextMenu>
                     ))}
                     {dayAppointments.length === 0 && (
-                      <div className="text-xs text-muted-foreground text-center py-4">
+                      <div className="text-xs text-muted-foreground text-center flex-1 flex items-center justify-center">
                         Drop here
                       </div>
                     )}
