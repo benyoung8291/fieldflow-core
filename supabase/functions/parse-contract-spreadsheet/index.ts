@@ -130,8 +130,7 @@ EXTRACTION RULES:
 ${JSON.stringify(columnMappings, null, 2)}
 
 Data to parse (${limitedSpreadsheetData.length} rows):
-${JSON.stringify(limitedSpreadsheetData.slice(0, 3), null, 2)}
-... and ${limitedSpreadsheetData.length - 3} more rows
+${JSON.stringify(limitedSpreadsheetData, null, 2)}
 
 Existing locations for matching:
 ${JSON.stringify(locations || [], null, 2)}
