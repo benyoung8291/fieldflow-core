@@ -179,7 +179,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       // Show notification if rows were limited
       if (functionData.hasMoreRows) {
         toast.warning(
-          `Your spreadsheet has ${functionData.totalRows} rows. Only the first ${functionData.processedRows} rows were processed due to the 1,000 row limit.`
+          `Your spreadsheet has ${functionData.totalRows} rows. Only the first ${functionData.processedRows} rows were processed due to the 250 row limit for optimal performance.`
         );
       }
 
