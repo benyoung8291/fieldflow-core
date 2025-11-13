@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactFlow, {
   Node,
@@ -78,6 +78,7 @@ export default function WorkflowBuilder() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [showQuickStart, setShowQuickStart] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -213,6 +214,38 @@ export default function WorkflowBuilder() {
       )
     );
   }, [setNodes]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+  }, [setNodes, setEdges]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedNode) {
+        // Prevent deletion if user is typing in an input
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+        
+        // Don't allow deleting trigger nodes
+        if (selectedNode.type === 'trigger') {
+          toast.error("Cannot delete trigger node");
+          return;
+        }
+        
+        event.preventDefault();
+        if (confirm(`Delete this ${selectedNode.type === 'condition' ? 'condition' : 'action'} node?`)) {
+          handleDeleteNode(selectedNode.id);
+          setSelectedNode(null);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode, handleDeleteNode]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -422,7 +455,7 @@ export default function WorkflowBuilder() {
           </div>
         </Card>
 
-        <div className="flex-1 relative">
+        <div className="flex-1 relative" ref={reactFlowWrapper}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -441,6 +474,7 @@ export default function WorkflowBuilder() {
             selectedNode={selectedNode}
             onClose={() => setSelectedNode(null)}
             onSave={handleSaveNodeConfig}
+            onDelete={handleDeleteNode}
           />
         </div>
       </div>

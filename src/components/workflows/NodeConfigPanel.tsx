@@ -5,16 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { Node } from "reactflow";
 
 interface NodeConfigPanelProps {
   selectedNode: Node | null;
   onClose: () => void;
   onSave: (nodeId: string, config: any) => void;
+  onDelete: (nodeId: string) => void;
 }
 
-export default function NodeConfigPanel({ selectedNode, onClose, onSave }: NodeConfigPanelProps) {
+export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelete }: NodeConfigPanelProps) {
   const [config, setConfig] = useState<any>({});
 
   useEffect(() => {
@@ -28,6 +29,13 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave }: NodeC
   const handleSave = () => {
     onSave(selectedNode.id, config);
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (confirm(`Delete this ${selectedNode.type === 'trigger' ? 'trigger' : selectedNode.type === 'condition' ? 'condition' : 'action'} node?`)) {
+      onDelete(selectedNode.id);
+      onClose();
+    }
   };
 
   const renderConfigFields = () => {
@@ -340,6 +348,19 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave }: NodeC
           Cancel
         </Button>
       </div>
+      
+      {selectedNode.type !== "trigger" && (
+        <div className="mt-4 pt-4 border-t">
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete}
+            className="w-full"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Node
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
