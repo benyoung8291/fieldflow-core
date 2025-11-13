@@ -928,6 +928,7 @@ export type Database = {
           tenant_id: string
           trading_name: string | null
           updated_at: string | null
+          vendor_id: string | null
         }
         Insert: {
           abn?: string | null
@@ -953,6 +954,7 @@ export type Database = {
           tenant_id: string
           trading_name?: string | null
           updated_at?: string | null
+          vendor_id?: string | null
         }
         Update: {
           abn?: string | null
@@ -978,6 +980,7 @@ export type Database = {
           tenant_id?: string
           trading_name?: string | null
           updated_at?: string | null
+          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -992,6 +995,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -4998,6 +5008,7 @@ export type Database = {
           address: string | null
           city: string | null
           created_at: string | null
+          customer_id: string | null
           email: string | null
           gst_registered: boolean | null
           id: string
@@ -5019,6 +5030,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string | null
+          customer_id?: string | null
           email?: string | null
           gst_registered?: boolean | null
           id?: string
@@ -5040,6 +5052,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string | null
+          customer_id?: string | null
           email?: string | null
           gst_registered?: boolean | null
           id?: string
@@ -5056,7 +5069,15 @@ export type Database = {
           trading_name?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vendors_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       worker_certificates: {
         Row: {

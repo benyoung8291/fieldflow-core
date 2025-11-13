@@ -20,7 +20,7 @@ import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Link2 } from "lucide-react";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 
 interface CustomerDialogProps {
@@ -36,6 +36,8 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
   const [validatingABN, setValidatingABN] = useState(false);
   const [abnValidated, setAbnValidated] = useState(false);
   const [availableTradingNames, setAvailableTradingNames] = useState<string[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [linkedVendorId, setLinkedVendorId] = useState<string | null>(null);
   const [currentField, setCurrentField] = useState<string>("");
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
     page: "customer-dialog",
@@ -142,6 +144,37 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
   };
 
   useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", user.id)
+          .single();
+
+        if (!profile?.tenant_id) return;
+
+        const { data, error } = await supabase
+          .from("vendors")
+          .select("id, name, trading_name")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("is_active", true)
+          .order("name");
+
+        if (error) throw error;
+        setVendors(data || []);
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+      }
+    };
+
+    if (open) {
+      fetchVendors();
+    }
+
     if (customer) {
       setFormData({
         customerType: customer.customer_type || "company",
@@ -163,6 +196,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         isActive: customer.is_active ?? true,
         notes: customer.notes || "",
       });
+      setLinkedVendorId(customer.vendor_id || null);
       setAbnValidated(false);
       setAvailableTradingNames([]);
     } else {
@@ -187,6 +221,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         isActive: true,
         notes: "",
       });
+      setLinkedVendorId(null);
       setAbnValidated(false);
       setAvailableTradingNames([]);
     }
@@ -231,6 +266,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         notes: formData.notes || null,
         tenant_id: profile.tenant_id,
         parent_customer_id: parentCustomerId || null,
+        vendor_id: linkedVendorId || null,
       };
 
       if (customer) {
@@ -294,6 +330,15 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         <RemoteCursors users={onlineUsers} />
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {linkedVendorId && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                This customer is also a supplier in your system
+              </span>
+            </div>
+          )}
+
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="general">General</TabsTrigger>
@@ -590,6 +635,29 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             </TabsContent>
 
             <TabsContent value="additional" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="linkedVendor">Link to Supplier/Vendor (Optional)</Label>
+                <Select
+                  value={linkedVendorId || "none"}
+                  onValueChange={(value) => setLinkedVendorId(value === "none" ? null : value)}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select a supplier" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="none">Not linked to a supplier</SelectItem>
+                    {vendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.trading_name || vendor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Link this customer to a supplier if they also provide goods or services to your business
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
