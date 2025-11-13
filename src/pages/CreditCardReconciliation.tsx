@@ -365,122 +365,121 @@ export default function CreditCardReconciliation() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {/* Left Panel - Transactions */}
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t">
-              Credit Card Transactions
-            </div>
-            <Card className="p-0 rounded-t-none">
-              <ScrollArea className="h-[calc(100vh-200px)]">
-                <div className="p-2 space-y-2">
-                  {unreconciledTransactions.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
-                      <p>All transactions matched!</p>
-                    </div>
-                  ) : (
-                    unreconciledTransactions.map((txn) => {
-                      const matches = findMatches(txn);
-                      
-                      return (
-                        <Card key={txn.id} className="p-3 hover:shadow-md transition-shadow">
-                          <div className="space-y-2">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[11px] text-muted-foreground mb-0.5">
-                                  {format(new Date(txn.transaction_date), 'MMM d, yyyy')}
-                                </div>
-                                <div className="font-semibold text-sm mb-0.5">
-                                  {txn.merchant_name || 'Unknown Merchant'}
-                                </div>
-                                {txn.external_reference && (
-                                  <div className="text-[11px] text-muted-foreground">
-                                    {txn.external_reference}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <div className="text-sm font-semibold">
-                                  ${txn.amount.toFixed(2)}
-                                </div>
-                              </div>
-                            </div>
-                            {matches.length > 0 && (
-                              <div className="pt-2 border-t space-y-1">
-                                {matches.map((match) => (
-                                  <button
-                                    key={match.id}
-                                    onClick={() => matchMutation.mutate({ transactionId: txn.id, expenseId: match.id })}
-                                    className="w-full p-2 bg-emerald-50 border border-emerald-300 rounded text-left hover:bg-emerald-100 transition-colors"
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex items-center gap-2 flex-1">
-                                        <Check className="h-3 w-3 text-emerald-600 flex-shrink-0" />
-                                        <div className="text-[11px] font-medium">
-                                          {match.expense_number}
-                                        </div>
-                                      </div>
-                                      <Button size="sm" className="h-6 px-3 bg-emerald-600 hover:bg-emerald-700 text-xs">
-                                        Match
-                                      </Button>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </Card>
-                      );
-                    })
-                  )}
+        <ScrollArea className="h-[calc(100vh-200px)]">
+          <div className="space-y-2 p-3">
+            {unreconciledTransactions.length === 0 ? (
+              <Card className="p-8">
+                <div className="text-center space-y-2">
+                  <CheckCircle2 className="h-8 w-8 mx-auto text-emerald-600" />
+                  <p className="text-muted-foreground">All transactions matched!</p>
                 </div>
-              </ScrollArea>
-            </Card>
-          </div>
-
-          {/* Right Panel - Expenses */}
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground px-3 py-2 bg-muted/40 rounded-t">
-              Submitted Expenses
-            </div>
-            <Card className="p-0 rounded-t-none">
-              <ScrollArea className="h-[calc(100vh-200px)]">
-                <div className="p-2 space-y-2">
-                  {unreconciledExpenses.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
-                      <p>All expenses matched!</p>
-                    </div>
-                  ) : (
-                    unreconciledExpenses.map((expense) => (
-                      <Card key={expense.id} className="p-3 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-muted-foreground mb-0.5">
-                              {format(new Date(expense.expense_date), 'MMM d, yyyy')}
-                            </div>
-                            <div className="font-semibold text-sm mb-0.5">
-                              Expense: {expense.expense_number}
-                            </div>
-                            <div className="text-xs text-muted-foreground line-clamp-2">
-                              {expense.description}
-                            </div>
+              </Card>
+            ) : (
+              unreconciledTransactions.map((txn) => {
+                const matches = findMatches(txn);
+                const hasMatch = matches.length > 0;
+                
+                return (
+                  <div key={txn.id} className="grid grid-cols-2 gap-3">
+                    {/* Left: Transaction Card */}
+                    <Card className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] text-muted-foreground mb-0.5">
+                            {format(new Date(txn.transaction_date), 'MMM d, yyyy')}
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-semibold">
-                              ${expense.amount.toFixed(2)}
+                          <div className="font-semibold text-sm mb-0.5">
+                            {txn.merchant_name || 'Unknown Merchant'}
+                          </div>
+                          {txn.external_reference && (
+                            <div className="text-[11px] text-muted-foreground">
+                              {txn.external_reference}
                             </div>
+                          )}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-sm font-semibold">
+                            ${txn.amount.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Right: Matching Card or Create Options */}
+                    {hasMatch ? (
+                      <Card className="p-3 bg-emerald-50 border-emerald-300">
+                        <div className="space-y-2">
+                          {matches.map((match) => (
+                            <div key={match.id} className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-2 flex-1">
+                                <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-[11px] text-muted-foreground mb-0.5">
+                                    {format(new Date(match.expense_date), 'MMM d, yyyy')}
+                                  </div>
+                                  <div className="font-semibold text-sm mb-0.5">
+                                    {match.expense_number}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground line-clamp-1">
+                                    {match.description}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="text-sm font-semibold">
+                                  ${match.amount.toFixed(2)}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => matchMutation.mutate({ transactionId: txn.id, expenseId: match.id })}
+                                  className="h-7 px-4 bg-emerald-600 hover:bg-emerald-700"
+                                >
+                                  Match
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    ) : (
+                      <Card className="p-3">
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium text-muted-foreground mb-2">
+                            Create or match expense
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start"
+                              onClick={() => handleSelectTransaction(txn)}
+                            >
+                              Create Expense
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start"
+                            >
+                              Find & Match
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start"
+                            >
+                              Transfer
+                            </Button>
                           </div>
                         </div>
                       </Card>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </Card>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
-        </div>
+        </ScrollArea>
       </div>
     </DashboardLayout>
   );
