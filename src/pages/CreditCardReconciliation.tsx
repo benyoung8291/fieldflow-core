@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function CreditCardReconciliation() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<string>("match");
+  const [creatingExpenseForTxn, setCreatingExpenseForTxn] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
@@ -162,14 +162,14 @@ export default function CreditCardReconciliation() {
 
   const handleSelectTransaction = (transaction: any) => {
     setSelectedTransaction(transaction);
+    setCreatingExpenseForTxn(transaction.id);
     setFormData({
-      description: transaction.description || "",
+      description: transaction.merchant_name || "",
       amount: transaction.amount?.toString() || "",
       expense_date: transaction.transaction_date || "",
       vendor_id: "",
       category_id: "",
     });
-    setActiveTab("match");
   };
 
   const matchMutation = useMutation({
@@ -269,14 +269,7 @@ export default function CreditCardReconciliation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-credit-card-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['potential-expense-matches'] });
-      setSelectedTransaction(null);
-      setFormData({
-        description: "",
-        amount: "",
-        expense_date: "",
-        vendor_id: "",
-        category_id: "",
-      });
+      handleCancelCreate();
       toast.success('Expense created and matched');
     },
     onError: (error) => {
@@ -284,12 +277,22 @@ export default function CreditCardReconciliation() {
     },
   });
 
-  const handleCreateExpense = () => {
-    if (!selectedTransaction) return;
-    
+  const handleCreateExpense = (transactionId: string) => {
     createExpenseMutation.mutate({
       ...formData,
-      transactionId: selectedTransaction.id,
+      transactionId: transactionId,
+    });
+  };
+
+  const handleCancelCreate = () => {
+    setCreatingExpenseForTxn(null);
+    setSelectedTransaction(null);
+    setFormData({
+      description: "",
+      amount: "",
+      expense_date: "",
+      vendor_id: "",
+      category_id: "",
     });
   };
 
@@ -469,6 +472,121 @@ export default function CreditCardReconciliation() {
                             </div>
                           </div>
                         ))}
+                      </Card>
+                    ) : creatingExpenseForTxn === txn.id ? (
+                      <Card className="p-4 hover:shadow-md transition-shadow">
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">Who</Label>
+                              <Select
+                                value={formData.vendor_id}
+                                onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
+                              >
+                                <SelectTrigger className="h-8 text-xs mt-1">
+                                  <SelectValue placeholder="Name of the contact..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {vendors.map((vendor) => (
+                                    <SelectItem key={vendor.id} value={vendor.id} className="text-xs">
+                                      {vendor.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">What</Label>
+                              <Select
+                                value={formData.category_id}
+                                onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                              >
+                                <SelectTrigger className="h-8 text-xs mt-1">
+                                  <SelectValue placeholder="Choose the account..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories.map((category) => (
+                                    <SelectItem key={category.id} value={category.id} className="text-xs">
+                                      {category.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Why</Label>
+                            <Textarea
+                              value={formData.description}
+                              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                              className="text-xs min-h-[60px] mt-1"
+                              placeholder="Enter a description..."
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">Date</Label>
+                              <Input
+                                type="date"
+                                value={formData.expense_date}
+                                onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+                                className="h-8 text-xs mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">Amount</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={formData.amount}
+                                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                className="h-8 text-xs mt-1"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <Button 
+                              variant="link" 
+                              className="text-blue-600 text-xs h-auto p-0 hover:underline"
+                            >
+                              Add details
+                            </Button>
+                          </div>
+
+                          <div className="pt-2 border-t">
+                            <div className="flex items-center justify-between">
+                              <div className="flex gap-3">
+                                <button 
+                                  className="text-[11px] text-blue-600 hover:underline"
+                                  onClick={handleCancelCreate}
+                                >
+                                  Match
+                                </button>
+                                <button className="text-[11px] text-blue-600 hover:underline font-medium">
+                                  Create
+                                </button>
+                                <button className="text-[11px] text-blue-600 hover:underline">
+                                  Transfer
+                                </button>
+                                <button className="text-[11px] text-muted-foreground hover:underline">
+                                  Discuss
+                                </button>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => handleCreateExpense(txn.id)}
+                                disabled={createExpenseMutation.isPending || !formData.description}
+                                className="h-8 px-6 bg-blue-600 hover:bg-blue-700 font-semibold"
+                              >
+                                OK
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </Card>
                     ) : (
                       <Card className="p-4 hover:shadow-md transition-shadow">
