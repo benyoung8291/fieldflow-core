@@ -173,7 +173,8 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
           title,
           estimated_hours, 
           preferred_date,
-          preferred_date_range,
+          preferred_date_start,
+          preferred_date_end,
           appointments(id, start_time, end_time, status),
           customers!service_orders_customer_id_fkey(name),
           service_order_line_items(id)
@@ -242,31 +243,42 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
       let demandHours = 0;
       serviceOrdersWithRemaining.forEach(so => {
         const preferredDate = so.preferred_date ? new Date(so.preferred_date) : null;
-        const preferredRange = so.preferred_date_range || 7; // Default 7 days if not specified
+        const dateRangeStart = so.preferred_date_start ? new Date(so.preferred_date_start) : null;
+        const dateRangeEnd = so.preferred_date_end ? new Date(so.preferred_date_end) : null;
         
-        if (preferredDate) {
-          // Calculate the range window around preferred date
-          const rangeStart = new Date(preferredDate);
-          rangeStart.setDate(rangeStart.getDate() - Math.floor(preferredRange / 2));
-          const rangeEnd = new Date(preferredDate);
-          rangeEnd.setDate(rangeEnd.getDate() + Math.ceil(preferredRange / 2));
-          
-          // Check if this week overlaps with the preferred date range
-          if (weekEnd >= rangeStart && weekStart <= rangeEnd) {
+        // If we have a date range, use it
+        if (dateRangeStart && dateRangeEnd) {
+          // Check if this week overlaps with the date range
+          if (weekEnd >= dateRangeStart && weekStart <= dateRangeEnd) {
             // Calculate overlap days
-            const overlapStart = weekStart > rangeStart ? weekStart : rangeStart;
-            const overlapEnd = weekEnd < rangeEnd ? weekEnd : rangeEnd;
+            const overlapStart = weekStart > dateRangeStart ? weekStart : dateRangeStart;
+            const overlapEnd = weekEnd < dateRangeEnd ? weekEnd : dateRangeEnd;
             const overlapDays = Math.max(0, (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24) + 1);
             
             // Calculate total days in the range
-            const totalRangeDays = (rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24) + 1;
+            const totalRangeDays = (dateRangeEnd.getTime() - dateRangeStart.getTime()) / (1000 * 60 * 60 * 24) + 1;
             
             // Weight the demand proportionally based on overlap
             const weight = overlapDays / totalRangeDays;
             demandHours += so.remainingHours * weight;
           }
+        } else if (preferredDate) {
+          // If only preferred date (no range), distribute across a default 7-day window
+          const rangeStart = new Date(preferredDate);
+          rangeStart.setDate(rangeStart.getDate() - 3); // 3 days before
+          const rangeEnd = new Date(preferredDate);
+          rangeEnd.setDate(rangeEnd.getDate() + 3); // 3 days after
+          
+          if (weekEnd >= rangeStart && weekStart <= rangeEnd) {
+            const overlapStart = weekStart > rangeStart ? weekStart : rangeStart;
+            const overlapEnd = weekEnd < rangeEnd ? weekEnd : rangeEnd;
+            const overlapDays = Math.max(0, (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24) + 1);
+            const totalRangeDays = 7;
+            const weight = overlapDays / totalRangeDays;
+            demandHours += so.remainingHours * weight;
+          }
         } else {
-          // No preferred date: distribute evenly across all weeks
+          // No preferred date or range: distribute evenly across all weeks
           demandHours += so.remainingHours / numberOfWeeks;
         }
       });
