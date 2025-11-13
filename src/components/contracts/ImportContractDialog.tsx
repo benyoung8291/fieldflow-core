@@ -367,48 +367,85 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
             <div className="space-y-2">
               <h3 className="font-semibold">Column Mapping</h3>
               <p className="text-sm text-muted-foreground">
-                Review and adjust which columns contain each type of information
+                Review and adjust which columns contain each type of information. Example values are shown to help verify your selections.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {Object.entries({
-                description: "Description",
-                location_name: "Location Name",
-                location_address: "Location Address",
-                location_city: "City",
-                location_state: "State",
-                location_postcode: "Postcode",
-                unit_price: "Unit Price",
-                quantity: "Quantity",
-                frequency: "Frequency",
-                start_date: "Start Date",
-              }).map(([field, label]) => (
-                <div key={field} className="space-y-2">
-                  <Label htmlFor={field}>{label}</Label>
-                  <Select
-                    value={columnMappings[field] || "none"}
-                    onValueChange={(value) =>
-                      setColumnMappings((prev) => ({
-                        ...prev,
-                        [field]: value === "none" ? null : value,
-                      }))
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Field Name</TableHead>
+                    <TableHead className="w-[250px]">Mapped Column</TableHead>
+                    <TableHead>Example Data</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries({
+                    description: "Description",
+                    location_name: "Location Name",
+                    location_address: "Location Address",
+                    location_city: "City",
+                    location_state: "State",
+                    location_postcode: "Postcode",
+                    unit_price: "Unit Price",
+                    quantity: "Quantity",
+                    frequency: "Frequency",
+                    start_date: "Start Date",
+                  }).map(([field, label]) => {
+                    const mappedColumn = columnMappings[field];
+                    let exampleValues = "";
+                    
+                    if (mappedColumn && spreadsheetData.length > 1) {
+                      // Get column index from header row
+                      const headerRow = spreadsheetData[0] as any[];
+                      const columnIndex = headerRow.indexOf(mappedColumn);
+                      
+                      if (columnIndex !== -1) {
+                        // Get first 2 non-empty values as examples
+                        const examples = spreadsheetData
+                          .slice(1, 6)
+                          .map((row: any) => row[columnIndex])
+                          .filter((val: any) => val !== null && val !== undefined && val !== "")
+                          .slice(0, 2);
+                        exampleValues = examples.join(", ");
+                      }
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select column" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {availableColumns.map((col) => (
-                        <SelectItem key={col} value={col}>
-                          {col}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
+
+                    return (
+                      <TableRow key={field}>
+                        <TableCell className="font-medium">{label}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={columnMappings[field] || "none"}
+                            onValueChange={(value) =>
+                              setColumnMappings((prev) => ({
+                                ...prev,
+                                [field]: value === "none" ? null : value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select column" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {availableColumns.map((col) => (
+                                <SelectItem key={col} value={col}>
+                                  {col}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {exampleValues || <span className="italic">No data</span>}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
 
             <div className="flex justify-between pt-4">
