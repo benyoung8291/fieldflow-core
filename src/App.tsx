@@ -43,7 +43,7 @@ import RecurringInvoices from "./pages/RecurringInvoices";
 import RecurringInvoiceDetails from "./pages/RecurringInvoiceDetails";
 import HelpDesk from "./pages/HelpDesk";
 import CRMHub from "./pages/CRMHub";
-import Vendors from "@/pages/Vendors";
+import Suppliers from "@/pages/Suppliers";
 import PurchaseOrders from "@/pages/PurchaseOrders";
 import PurchaseOrderDetails from "@/pages/PurchaseOrderDetails";
 import Expenses from "@/pages/Expenses";
@@ -191,7 +191,7 @@ const App = () => {
             <Route path="/invoices/:id" element={isAuthenticated ? <InvoiceDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices" element={isAuthenticated ? <RecurringInvoices /> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices/:id" element={isAuthenticated ? <RecurringInvoiceDetails /> : <Navigate to="/auth" replace />} />
-            <Route path="/vendors" element={isAuthenticated ? <Vendors /> : <Navigate to="/auth" replace />} />
+            <Route path="/suppliers" element={isAuthenticated ? <Suppliers /> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders" element={isAuthenticated ? <PurchaseOrders /> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders/:id" element={isAuthenticated ? <PurchaseOrderDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/expenses" element={isAuthenticated ? <Expenses /> : <Navigate to="/auth" replace />} />

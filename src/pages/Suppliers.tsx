@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Phone, Mail, MapPin } from "lucide-react";
-import VendorDialog from "@/components/vendors/VendorDialog";
+import SupplierDialog from "@/components/suppliers/SupplierDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function Vendors() {
+export default function Suppliers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -187,7 +187,7 @@ export default function Vendors() {
         )}
       </div>
 
-      <VendorDialog
+      <SupplierDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         vendor={selectedVendor}

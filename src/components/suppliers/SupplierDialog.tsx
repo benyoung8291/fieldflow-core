@@ -25,7 +25,7 @@ interface VendorDialogProps {
   vendor?: any;
 }
 
-export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialogProps) {
+export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDialogProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [validatingABN, setValidatingABN] = useState(false);
