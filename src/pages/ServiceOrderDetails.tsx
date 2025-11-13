@@ -224,6 +224,17 @@ export default function ServiceOrderDetails() {
 
   const deleteServiceOrderMutation = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
       // First check if this service order was created from a quote
       const { data: quoteData } = await supabase
         .from("quotes")
@@ -247,6 +258,24 @@ export default function ServiceOrderDetails() {
           .eq("id", quoteData.id);
 
         if (quoteError) throw quoteError;
+
+        // Add audit log for unlocking the quote
+        const userName = user.user_metadata?.first_name 
+          ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim()
+          : user.email?.split("@")[0] || "System";
+
+        await supabase.from("audit_logs").insert({
+          tenant_id: profile.tenant_id,
+          user_id: user.id,
+          user_name: userName,
+          table_name: "quotes",
+          record_id: quoteData.id,
+          action: "update",
+          field_name: "converted_to_service_order",
+          old_value: id,
+          new_value: null,
+          note: `Service Order deleted - Quote unlocked for editing (Service Order: ${order?.order_number || id})`,
+        });
       }
     },
     onSuccess: () => {

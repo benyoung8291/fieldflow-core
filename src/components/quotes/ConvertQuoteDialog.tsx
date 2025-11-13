@@ -138,6 +138,24 @@ export default function ConvertQuoteDialog({
 
       if (quoteError) throw quoteError;
 
+      // Add audit log for conversion
+      const userName = user.user_metadata?.first_name 
+        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim()
+        : user.email?.split("@")[0] || "System";
+
+      await supabase.from("audit_logs").insert({
+        tenant_id: profile.tenant_id,
+        user_id: user.id,
+        user_name: userName,
+        table_name: "quotes",
+        record_id: quote.id,
+        action: "update",
+        field_name: "converted_to_project",
+        old_value: null,
+        new_value: project.id,
+        note: `Quote converted to Project: ${projectData.name} (${project.id})`,
+      });
+
       return project;
     },
     onSuccess: (project) => {
@@ -199,6 +217,24 @@ export default function ConvertQuoteDialog({
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
+
+      // Add audit log for conversion
+      const userName = user.user_metadata?.first_name 
+        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim()
+        : user.email?.split("@")[0] || "System";
+
+      await supabase.from("audit_logs").insert({
+        tenant_id: profile.tenant_id,
+        user_id: user.id,
+        user_name: userName,
+        table_name: "quotes",
+        record_id: quote.id,
+        action: "update",
+        field_name: "converted_to_service_order",
+        old_value: null,
+        new_value: serviceOrder.id,
+        note: `Quote converted to Service Order: ${serviceOrderData.title} (${serviceOrder.id})`,
+      });
 
       return serviceOrder;
     },
@@ -286,6 +322,24 @@ export default function ConvertQuoteDialog({
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
+
+      // Add audit log for conversion
+      const userName = user.user_metadata?.first_name 
+        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim()
+        : user.email?.split("@")[0] || "System";
+
+      await supabase.from("audit_logs").insert({
+        tenant_id: profile.tenant_id,
+        user_id: user.id,
+        user_name: userName,
+        table_name: "quotes",
+        record_id: quote.id,
+        action: "update",
+        field_name: "converted_to_contract",
+        old_value: null,
+        new_value: (contract as any).id,
+        note: `Quote converted to Service Contract: ${contractData.title} (${(contract as any).id})`,
+      });
 
       return contract;
     },
