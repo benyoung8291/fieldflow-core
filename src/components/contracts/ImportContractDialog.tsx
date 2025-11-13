@@ -62,6 +62,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [duplicateLocations, setDuplicateLocations] = useState<Set<number>>(new Set());
+  const [validationErrors, setValidationErrors] = useState<Map<number, string[]>>(new Map());
 
   // Required fields for validation
   const requiredFields = ['description', 'location_name', 'unit_price'];
@@ -555,9 +557,11 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                     estimated_hours: "Estimated Hours",
                     frequency: "Frequency",
                     start_date: "Start Date",
-                  }).map(([field, label]) => {
-                    const mappedColumn = columnMappings[field];
-                    let exampleValues = "";
+                    }).map(([field, label]) => {
+                      const mappedColumn = columnMappings[field];
+                      const isRequired = requiredFields.includes(field);
+                      const isMissing = isRequired && !mappedColumn;
+                      let exampleValues = "";
                     
                     if (mappedColumn && spreadsheetData.length > 1) {
                       // Get column index from header row
@@ -576,8 +580,16 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                     }
 
                     return (
-                      <TableRow key={field}>
-                        <TableCell className="font-medium">{label}</TableCell>
+                      <TableRow 
+                        key={field}
+                        className={isMissing ? "border-l-4 border-l-destructive bg-destructive/5" : ""}
+                      >
+                        <TableCell className="font-medium">
+                          {label}
+                          {isRequired && (
+                            <span className="text-destructive ml-1" title="Required field">*</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Select
                             value={columnMappings[field] || "none"}
@@ -588,7 +600,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                               }))
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={isMissing ? "border-destructive" : ""}>
                               <SelectValue placeholder="Select column" />
                             </SelectTrigger>
                             <SelectContent>
@@ -714,8 +726,16 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems.map((item, index) => (
-                      <TableRow key={index}>
+                    {lineItems.map((item, index) => {
+                      const isDuplicate = duplicateLocations.has(index);
+                      const errors = validationErrors.get(index);
+                      const hasErrors = errors && errors.length > 0;
+                      
+                      return (
+                        <TableRow 
+                          key={index}
+                          className={hasErrors ? "border-l-4 border-l-warning bg-warning/5" : ""}
+                        >
                         <TableCell 
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => startEditing(index, 'description', item.description)}
@@ -730,13 +750,21 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                               className="h-8"
                             />
                           ) : (
-                            item.description
+                            <div className="flex items-center gap-2">
+                              <span>{item.description}</span>
+                              {hasErrors && (
+                                <div className="flex items-center gap-1 text-xs text-warning">
+                                  <X className="h-3 w-3" />
+                                  <span className="hidden sm:inline">{errors.join(', ')}</span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
                             <div 
-                              className="font-medium cursor-pointer hover:bg-muted/50 rounded px-1"
+                              className={`font-medium cursor-pointer hover:bg-muted/50 rounded px-1 ${isDuplicate ? 'text-warning' : ''}`}
                               onClick={() => startEditing(index, 'location_name', item.location.name)}
                             >
                               {editingCell?.rowIndex === index && editingCell?.field === 'location_name' ? (
@@ -749,11 +777,16 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                                   className="h-7 text-sm"
                                 />
                               ) : (
-                                item.location.name
+                                <div className="flex items-center gap-1">
+                                  <span>{item.location.name}</span>
+                                  {isDuplicate && (
+                                    <span className="text-xs text-warning" title="Duplicate location">⚠</span>
+                                  )}
+                                </div>
                               )}
                             </div>
                             <div 
-                              className="text-muted-foreground cursor-pointer hover:bg-muted/50 rounded px-1"
+                              className={`text-muted-foreground cursor-pointer hover:bg-muted/50 rounded px-1 ${isDuplicate ? 'text-warning/80' : ''}`}
                               onClick={() => startEditing(index, 'location_address', item.location.address)}
                             >
                               {editingCell?.rowIndex === index && editingCell?.field === 'location_address' ? (
@@ -789,7 +822,9 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                               {item.location.customer_location_id || '-'}
                             </span>
                           )}
-                        </TableCell>
+                        </TableRow>
+                      );
+                    })}
                         <TableCell
                           className="capitalize cursor-pointer hover:bg-muted/50"
                           onClick={() => startEditing(index, 'recurrence_frequency', item.recurrence_frequency)}
