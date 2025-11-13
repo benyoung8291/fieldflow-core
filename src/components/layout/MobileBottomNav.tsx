@@ -24,6 +24,14 @@ const primaryNavItems: NavItem[] = [
   { icon: FileText, label: "Quotes", path: "/quotes" },
 ];
 
+const crmPages = [
+  { icon: Users, label: "Leads", path: "/leads" },
+  { icon: Users, label: "Contacts", path: "/contacts" },
+  { icon: Users, label: "Customers", path: "/customers" },
+  { icon: FileText, label: "Quotes", path: "/quotes" },
+  { icon: FileText, label: "Pipeline", path: "/quote-pipeline" },
+];
+
 const moreNavItems: NavItem[] = [
   { icon: Receipt, label: "Invoices", path: "/invoices" },
   { icon: Calendar, label: "Scheduler", path: "/scheduler" },

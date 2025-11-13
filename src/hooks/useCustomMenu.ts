@@ -22,16 +22,25 @@ export interface MenuItemWithIcon extends MenuItem {
 
 const defaultNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", color: "#3b82f6", isFolder: false },
-  { name: "Quotes", href: "/quotes", icon: "FileText", color: "#3b82f6", isFolder: false },
-  { name: "Pipeline", href: "/pipeline", icon: "GitBranch", color: "#3b82f6", isFolder: false },
+  {
+    name: "CRM",
+    icon: "Users",
+    color: "#10b981",
+    isFolder: true,
+    children: [
+      { name: "Leads", href: "/leads", icon: "User", color: "#10b981", isFolder: false },
+      { name: "Contacts", href: "/contacts", icon: "Users", color: "#10b981", isFolder: false },
+      { name: "Customers", href: "/customers", icon: "Users", color: "#10b981", isFolder: false },
+      { name: "Quotes", href: "/quotes", icon: "FileText", color: "#10b981", isFolder: false },
+      { name: "Quote Pipeline", href: "/quote-pipeline", icon: "Kanban", color: "#10b981", isFolder: false },
+    ]
+  },
   { name: "Projects", href: "/projects", icon: "FolderKanban", color: "#3b82f6", isFolder: false },
   { name: "Service Orders", href: "/service-orders", icon: "Wrench", color: "#f59e0b", isFolder: false },
   { name: "Service Contracts", href: "/service-contracts", icon: "FileSignature", color: "#f59e0b", isFolder: false },
   { name: "Scheduler", href: "/scheduler", icon: "Calendar", color: "#f59e0b", isFolder: false },
   { name: "Appointments", href: "/appointments", icon: "CalendarCheck", color: "#f59e0b", isFolder: false },
   { name: "Tasks", href: "/tasks", icon: "CheckSquare", color: "#f59e0b", isFolder: false },
-  { name: "Customers", href: "/customers", icon: "Users", color: "#10b981", isFolder: false },
-  { name: "Leads", href: "/leads", icon: "Target", color: "#10b981", isFolder: false },
   { name: "CRM Hub", href: "/crm-hub", icon: "Building", color: "#10b981", isFolder: false },
   { name: "Workers", href: "/workers", icon: "HardHat", color: "#f59e0b", isFolder: false },
   { name: "Skills", href: "/skills", icon: "Award", color: "#f59e0b", isFolder: false },

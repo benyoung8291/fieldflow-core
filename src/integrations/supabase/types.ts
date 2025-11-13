@@ -586,6 +586,135 @@ export type Database = {
         }
         Relationships: []
       }
+      contacts: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          city: string | null
+          company_name: string | null
+          contact_type: string
+          created_at: string
+          customer_id: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_primary: boolean | null
+          last_contacted_at: string | null
+          last_name: string
+          lead_id: string | null
+          linkedin_url: string | null
+          mobile: string | null
+          notes: string | null
+          phone: string | null
+          position: string | null
+          postcode: string | null
+          source: string | null
+          state: string | null
+          status: string
+          supplier_id: string | null
+          tags: string[] | null
+          tenant_id: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          city?: string | null
+          company_name?: string | null
+          contact_type?: string
+          created_at?: string
+          customer_id?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_primary?: boolean | null
+          last_contacted_at?: string | null
+          last_name: string
+          lead_id?: string | null
+          linkedin_url?: string | null
+          mobile?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          postcode?: string | null
+          source?: string | null
+          state?: string | null
+          status?: string
+          supplier_id?: string | null
+          tags?: string[] | null
+          tenant_id: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          city?: string | null
+          company_name?: string | null
+          contact_type?: string
+          created_at?: string
+          customer_id?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_primary?: boolean | null
+          last_contacted_at?: string | null
+          last_name?: string
+          lead_id?: string | null
+          linkedin_url?: string | null
+          mobile?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          postcode?: string | null
+          source?: string | null
+          state?: string | null
+          status?: string
+          supplier_id?: string | null
+          tags?: string[] | null
+          tenant_id?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_card_transactions: {
         Row: {
           amount: number
