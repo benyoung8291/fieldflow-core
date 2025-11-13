@@ -435,31 +435,60 @@ export default function QuoteDetails() {
     converted: "default",
   };
 
+  const isDraft = quote?.status === "draft";
+  const isSent = quote?.status === "sent";
+  const isApproved = quote?.status === "approved";
+  const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
+  const canEdit = isDraft && !isConverted;
+
   const statusBadges: StatusBadge[] = [
     {
       label: quote?.status || "",
       variant: statusColors[quote?.status || "draft"],
     },
+    ...(isConverted ? [{
+      label: "Locked",
+      variant: "outline" as const,
+    }] : []),
   ];
 
-  const isDraft = quote?.status === "draft";
-  const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
-  const canEdit = isDraft && !isConverted;
-
-  // Primary actions - Save button for draft quotes that haven't been converted
-  const primaryActions: DocumentAction[] = canEdit ? [
-    {
-      label: isSaving ? "Saving..." : "Save",
+  // Primary actions based on quote status
+  const primaryActions: DocumentAction[] = [];
+  
+  // Save button for editable drafts
+  if (canEdit) {
+    primaryActions.push({
+      label: isSaving ? "Saving..." : "Save Changes",
       icon: <Save className="h-4 w-4" />,
       onClick: handleSaveInlineEdits,
       variant: "default",
-    },
-  ] : [];
+    });
+  }
+  
+  // Approve button for sent quotes
+  if (isSent && !isConverted) {
+    primaryActions.push({
+      label: "Approve Quote",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: () => updateStatus("approved"),
+      variant: "default",
+    });
+  }
+  
+  // Convert button for approved quotes
+  if (isApproved && !isConverted) {
+    primaryActions.push({
+      label: "Convert to Service Order / Project",
+      icon: <RefreshCw className="h-4 w-4" />,
+      onClick: () => setConvertDialogOpen(true),
+      variant: "default",
+    });
+  }
 
   // File menu actions
   const fileMenuActions: FileMenuAction[] = [
     ...(!isConverted ? [{
-      label: "Edit Quote",
+      label: "Edit in Dialog",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
     }] : []),
@@ -468,13 +497,13 @@ export default function QuoteDetails() {
       icon: <Mail className="h-4 w-4" />,
       onClick: () => setPdfDialogOpen(true),
     },
-    ...(quote?.status === "draft" ? [{
+    ...(isDraft ? [{
       label: "Mark as Sent",
       icon: <Send className="h-4 w-4" />,
       onClick: () => updateStatus("sent"),
       separator: true,
     }] : []),
-    ...(quote?.status === "sent" ? [
+    ...(isSent ? [
       {
         label: "Approve Quote",
         icon: <CheckCircle className="h-4 w-4" />,
@@ -487,22 +516,19 @@ export default function QuoteDetails() {
         onClick: () => updateStatus("rejected"),
       },
     ] : []),
-    ...((quote?.status === "approved" || quote?.status === "sent") &&
-      !quote?.converted_to_service_order_id &&
-      !quote?.converted_to_project_id &&
-      !quote?.converted_to_contract_id ? [{
-        label: "Convert Quote",
-        icon: <RefreshCw className="h-4 w-4" />,
-        onClick: () => setConvertDialogOpen(true),
-        separator: true,
-      }] : []),
-    {
+    ...(isApproved && !isConverted ? [{
+      label: "Convert to Service Order / Project",
+      icon: <RefreshCw className="h-4 w-4" />,
+      onClick: () => setConvertDialogOpen(true),
+      separator: true,
+    }] : []),
+    ...(isDraft && !isConverted ? [{
       label: "Delete Quote",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: () => setDeleteDialogOpen(true),
       destructive: true,
       separator: true,
-    },
+    }] : []),
   ];
 
   // Key info section
@@ -570,33 +596,48 @@ export default function QuoteDetails() {
       content: quote && !lineItemsLoading && (
         <Card>
           <CardHeader>
-            <CardTitle>Line Items</CardTitle>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle>Line Items</CardTitle>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline">{editedLineItems?.length || 0} items</Badge>
+                <Badge variant="outline">
+                  Total: ${calculatedTotal?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || "0.00"}
+                </Badge>
+                {!canEdit && isConverted && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    Locked - Quote Converted
+                  </Badge>
+                )}
+                {!canEdit && !isConverted && !isDraft && (
+                  <Badge variant="secondary">
+                    Read Only - {quote?.status}
+                  </Badge>
+                )}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent>
             <InlineQuoteLineItems
               lineItems={editedLineItems}
               onChange={setEditedLineItems}
               readOnly={!canEdit}
             />
-
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span className="font-medium">
-                  ${(isDraft ? calculatedSubtotal : quote.subtotal).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax ({quote.tax_rate}%):</span>
-                <span className="font-medium">
-                  ${(isDraft ? calculatedTax : quote.tax_amount).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>
-                  ${(isDraft ? calculatedTotal : quote.total_amount).toFixed(2)}
-                </span>
+            
+            <div className="mt-6 flex justify-end">
+              <div className="w-full max-w-sm space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-medium">${calculatedSubtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax ({quote?.tax_rate || 10}%):</span>
+                  <span className="font-medium">${calculatedTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                  <span>Total:</span>
+                  <span>${calculatedTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -614,7 +655,15 @@ export default function QuoteDetails() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <Label className="text-sm font-medium">Title</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-sm font-medium">Title</Label>
+                {!canEdit && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Read Only
+                  </Badge>
+                )}
+              </div>
               {canEdit ? (
                 <Input
                   value={editedFields.title}
@@ -828,12 +877,20 @@ export default function QuoteDetails() {
           </CardHeader>
           <CardContent className="pt-4">
             <div>
-              <Label className="text-sm font-medium">Internal Notes</Label>
-              {isDraft ? (
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-sm font-medium">Internal Notes</Label>
+                {!canEdit && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Read Only
+                  </Badge>
+                )}
+              </div>
+              {canEdit ? (
                 <Textarea
                   value={editedFields.internal_notes}
                   onChange={(e) => setEditedFields(prev => ({ ...prev, internal_notes: e.target.value }))}
-                  placeholder="Enter internal notes"
+                  placeholder="Enter internal notes (not visible to customer)"
                   className="mt-1"
                   rows={3}
                 />
