@@ -315,8 +315,16 @@ export default function Tasks() {
       const { error } = await supabase
         .from("tasks" as any)
         .update({
-          ...data,
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+          assigned_to: data.assigned_to || null,
           due_date: data.due_date?.toISOString() || null,
+          start_date: data.start_date?.toISOString()?.split('T')[0] || null,
+          end_date: data.end_date?.toISOString()?.split('T')[0] || null,
+          estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
+          progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
           completed_at: data.status === "completed" ? new Date().toISOString() : null,
         })
         .eq("id", id);
