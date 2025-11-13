@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, DollarSign, Calendar, Eye, Copy, Archive, Trash2 } from "lucide-react";
+import { Plus, Search, DollarSign, Calendar, Eye, Copy, Archive, Trash2, Lock } from "lucide-react";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -420,6 +420,12 @@ export default function Quotes() {
                         <Badge variant="outline" className={statusColors[quote.status]}>
                           {quote.status}
                         </Badge>
+                        {(quote.converted_to_service_order_id || quote.converted_to_project_id || quote.converted_to_contract_id) && (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Converted
+                          </Badge>
+                        )}
                         {quote.valid_until && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Calendar className="h-3 w-3" />
