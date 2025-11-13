@@ -178,12 +178,20 @@ Extract ALL line items using the provided mappings.`
       }
 
       const result = await aiResponse.json();
+      console.log(`Batch ${batchNumber} AI response:`, JSON.stringify(result, null, 2));
+      
       const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
       if (!toolCall) {
-        throw new Error(`No structured output from AI for batch ${batchNumber}`);
+        console.error(`No tool call in batch ${batchNumber}. Full response:`, JSON.stringify(result, null, 2));
+        const message = result.choices?.[0]?.message;
+        console.error(`Message content:`, message?.content);
+        console.error(`Finish reason:`, result.choices?.[0]?.finish_reason);
+        throw new Error(`No structured output from AI for batch ${batchNumber}. Finish reason: ${result.choices?.[0]?.finish_reason}`);
       }
 
-      return JSON.parse(toolCall.function.arguments);
+      const parsedArgs = JSON.parse(toolCall.function.arguments);
+      console.log(`Batch ${batchNumber} returned ${parsedArgs.lineItems?.length || 0} line items`);
+      return parsedArgs;
     };
     
     // Clean and validate spreadsheet data
@@ -251,10 +259,15 @@ Extract ALL line items using the provided mappings.`
       
       console.log(`Processing ${dataRows.length} rows in ${batches.length} batches of ${BATCH_SIZE}`);
       
-      // Process batches in parallel
-      const batchPromises = batches.map((batch, index) => 
-        processBatch(batch, index + 1, batches.length)
-      );
+      // Process batches in parallel with error handling
+      const batchPromises = batches.map(async (batch, index) => {
+        try {
+          return await processBatch(batch, index + 1, batches.length);
+        } catch (error) {
+          console.error(`Batch ${index + 1} failed:`, error);
+          throw new Error(`Batch ${index + 1} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      });
       
       const batchResults = await Promise.all(batchPromises);
       
