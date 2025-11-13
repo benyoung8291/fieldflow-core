@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function Workflows() {
   const navigate = useNavigate();
@@ -92,9 +93,10 @@ export default function Workflows() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <DashboardLayout>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
           <h1 className="text-3xl font-bold">Workflow Automation</h1>
           <p className="text-muted-foreground mt-1">
             Create automated workflows to streamline your business processes
@@ -212,6 +214,7 @@ export default function Workflows() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

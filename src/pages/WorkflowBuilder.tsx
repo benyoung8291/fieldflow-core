@@ -70,6 +70,7 @@ import NodeConfigPanel from "@/components/workflows/NodeConfigPanel";
 import { validateWorkflow, ValidationIssue } from "@/lib/workflowValidation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Info } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function WorkflowBuilder() {
   const { id } = useParams();
@@ -394,11 +395,12 @@ export default function WorkflowBuilder() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {showQuickStart ? (
-        <QuickStartPanel onSelectTemplate={handleTemplateSelection} />
-      ) : (
-        <>
+    <DashboardLayout>
+      <div className="flex flex-col h-screen">
+        {showQuickStart ? (
+          <QuickStartPanel onSelectTemplate={handleTemplateSelection} />
+        ) : (
+          <>
           <div className="border-b bg-background p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
@@ -535,6 +537,7 @@ export default function WorkflowBuilder() {
       </div>
         </>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
