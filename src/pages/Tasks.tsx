@@ -35,6 +35,10 @@ export default function Tasks() {
   const [editingDescription, setEditingDescription] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionPosition, setMentionPosition] = useState(0);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
@@ -223,6 +227,87 @@ export default function Tasks() {
   const handleSubmitComment = () => {
     if (!newComment.trim()) return;
     createCommentMutation.mutate(newComment);
+    setShowMentions(false);
+    setMentionSearch("");
+  };
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const cursorPosition = e.target.selectionStart;
+    setNewComment(value);
+
+    // Check for @ mention trigger
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      // Check if there's no space after @ (still typing the mention)
+      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        setMentionSearch(textAfterAt.toLowerCase());
+        setMentionPosition(lastAtIndex);
+        setShowMentions(true);
+        setSelectedMentionIndex(0);
+        return;
+      }
+    }
+    
+    setShowMentions(false);
+    setMentionSearch("");
+  };
+
+  const filteredMentionUsers = useMemo(() => {
+    if (!mentionSearch) return workers;
+    return workers.filter((worker: any) => 
+      `${worker.first_name} ${worker.last_name}`.toLowerCase().includes(mentionSearch)
+    );
+  }, [workers, mentionSearch]);
+
+  const insertMention = (worker: any) => {
+    const beforeMention = newComment.slice(0, mentionPosition);
+    const afterMention = newComment.slice(mentionPosition + mentionSearch.length + 1);
+    const mention = `@${worker.first_name} ${worker.last_name}`;
+    setNewComment(`${beforeMention}${mention} ${afterMention}`);
+    setShowMentions(false);
+    setMentionSearch("");
+  };
+
+  const handleMentionKeyDown = (e: React.KeyboardEvent) => {
+    if (!showMentions) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedMentionIndex(prev => 
+        prev < filteredMentionUsers.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedMentionIndex(prev => prev > 0 ? prev - 1 : 0);
+    } else if (e.key === 'Enter' && filteredMentionUsers.length > 0) {
+      e.preventDefault();
+      insertMention(filteredMentionUsers[selectedMentionIndex]);
+    } else if (e.key === 'Escape') {
+      setShowMentions(false);
+      setMentionSearch("");
+    }
+  };
+
+  const renderCommentWithMentions = (text: string) => {
+    // Match @FirstName LastName pattern
+    const mentionRegex = /@([A-Za-z]+\s[A-Za-z]+)/g;
+    const parts = text.split(mentionRegex);
+    
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        // This is a mention
+        return (
+          <span key={index} className="bg-primary/10 text-primary rounded px-1 font-medium">
+            @{part}
+          </span>
+        );
+      }
+      return part;
+    });
   };
 
   const {
@@ -1156,7 +1241,7 @@ export default function Tasks() {
                               </span>
                             </div>
                             <p className="text-foreground/80 leading-snug whitespace-pre-wrap break-words">
-                              {comment.comment}
+                              {renderCommentWithMentions(comment.comment)}
                             </p>
                           </div>
                         </div>
@@ -1164,19 +1249,49 @@ export default function Tasks() {
                     )}
                   </div>
                   
-                  <div className="p-2 border-t bg-background">
+                  <div className="p-2 border-t bg-background relative">
                     <div className="flex gap-2">
-                      <Textarea 
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="min-h-[60px] text-xs resize-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                            handleSubmitComment();
-                          }
-                        }}
-                      />
+                      <div className="flex-1 relative">
+                        <Textarea 
+                          value={newComment}
+                          onChange={handleCommentChange}
+                          onKeyDown={(e) => {
+                            handleMentionKeyDown(e);
+                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !showMentions) {
+                              handleSubmitComment();
+                            }
+                          }}
+                          placeholder="Add a comment... (use @ to mention)"
+                          className="min-h-[60px] text-xs resize-none"
+                        />
+                        
+                        {/* Mention Autocomplete Dropdown */}
+                        {showMentions && filteredMentionUsers.length > 0 && (
+                          <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                            <div className="p-1">
+                              {filteredMentionUsers.map((worker: any, index: number) => (
+                                <button
+                                  key={worker.id}
+                                  type="button"
+                                  className={cn(
+                                    "w-full text-left px-3 py-2 rounded text-xs hover:bg-muted transition-colors flex items-center gap-2",
+                                    index === selectedMentionIndex && "bg-muted"
+                                  )}
+                                  onClick={() => insertMention(worker)}
+                                  onMouseEnter={() => setSelectedMentionIndex(index)}
+                                >
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarFallback className="text-[10px]">
+                                      {worker.first_name[0]}{worker.last_name[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{worker.first_name} {worker.last_name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <Button 
                         size="sm" 
                         onClick={handleSubmitComment}
@@ -1186,7 +1301,9 @@ export default function Tasks() {
                         <Send className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-1 px-1">Cmd/Ctrl + Enter to send</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                      Use @ to mention · Cmd/Ctrl + Enter to send
+                    </p>
                   </div>
                 </div>
               </div>}
