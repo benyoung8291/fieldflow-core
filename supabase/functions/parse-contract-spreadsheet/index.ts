@@ -315,118 +315,8 @@ Extract all line items using the provided mappings.`
     } else {
       console.log("Parsed line items:", JSON.stringify(parsedData, null, 2));
       
-      // Enrich location data with geocoding from Google Maps API
-      const GOOGLE_PLACES_API_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY");
-      const failedGeocodingItems: number[] = [];
-      
-      if (GOOGLE_PLACES_API_KEY) {
-        console.log("Enriching locations with Google Maps geocoding...");
-        
-        // Create a map to store unique addresses to avoid duplicate API calls
-        const geocodedAddresses = new Map();
-        
-        for (let i = 0; i < parsedData.lineItems.length; i++) {
-          const item = parsedData.lineItems[i];
-          const addressKey = `${item.location.address}, ${item.location.city || ''}, ${item.location.state || ''}, ${item.location.postcode || ''}`.trim();
-          
-          // Skip if already geocoded
-          if (geocodedAddresses.has(addressKey)) {
-            const cachedData = geocodedAddresses.get(addressKey);
-            item.location.latitude = cachedData.latitude;
-            item.location.longitude = cachedData.longitude;
-            item.location.formatted_address = cachedData.formatted_address;
-            item.location.geocoding_status = cachedData.geocoding_status;
-            if (cachedData.geocoding_status === 'failed') {
-              failedGeocodingItems.push(i);
-            }
-            continue;
-          }
-          
-          try {
-            // Call Google Geocoding API with retry logic
-            let geocodeSuccess = false;
-            let retryCount = 0;
-            const maxRetries = 2;
-            
-            while (!geocodeSuccess && retryCount <= maxRetries) {
-              try {
-                const geocodeUrl = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-                geocodeUrl.searchParams.append("address", addressKey);
-                geocodeUrl.searchParams.append("components", "country:AU");
-                geocodeUrl.searchParams.append("key", GOOGLE_PLACES_API_KEY);
-                
-                const geocodeResponse = await fetch(geocodeUrl.toString());
-                const geocodeData = await geocodeResponse.json();
-                
-                if (geocodeData.status === "OK" && geocodeData.results && geocodeData.results.length > 0) {
-                  const result = geocodeData.results[0];
-                  const location = result.geometry.location;
-                  
-                  const enrichedData = {
-                    latitude: location.lat,
-                    longitude: location.lng,
-                    formatted_address: result.formatted_address,
-                    geocoding_status: 'success'
-                  };
-                  
-                  // Cache and apply to item
-                  geocodedAddresses.set(addressKey, enrichedData);
-                  item.location.latitude = enrichedData.latitude;
-                  item.location.longitude = enrichedData.longitude;
-                  item.location.formatted_address = enrichedData.formatted_address;
-                  item.location.geocoding_status = 'success';
-                  
-                  // Also update the address field with the validated address if it looks better
-                  if (result.formatted_address && result.formatted_address.length > 0) {
-                    item.location.address = result.formatted_address.split(',')[0].trim();
-                  }
-                  
-                  console.log(`Geocoded: ${addressKey} -> lat: ${location.lat}, lng: ${location.lng}`);
-                  geocodeSuccess = true;
-                } else {
-                  console.warn(`Geocoding attempt ${retryCount + 1} failed for: ${addressKey} - Status: ${geocodeData.status}`);
-                  retryCount++;
-                  
-                  if (retryCount <= maxRetries) {
-                    // Wait before retry (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-                  }
-                }
-              } catch (fetchError) {
-                console.error(`Geocoding fetch error (attempt ${retryCount + 1}):`, fetchError);
-                retryCount++;
-                
-                if (retryCount <= maxRetries) {
-                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-                }
-              }
-            }
-            
-            // If all retries failed, mark as failed
-            if (!geocodeSuccess) {
-              const failedData = {
-                latitude: null,
-                longitude: null,
-                formatted_address: null,
-                geocoding_status: 'failed'
-              };
-              geocodedAddresses.set(addressKey, failedData);
-              item.location.geocoding_status = 'failed';
-              failedGeocodingItems.push(i);
-              console.error(`Failed to geocode after ${maxRetries + 1} attempts: ${addressKey}`);
-            }
-          } catch (geocodeError) {
-            console.error(`Error geocoding address ${addressKey}:`, geocodeError);
-            item.location.geocoding_status = 'failed';
-            failedGeocodingItems.push(i);
-          }
-        }
-        
-        console.log(`Successfully geocoded ${geocodedAddresses.size - failedGeocodingItems.length} unique addresses`);
-        console.log(`Failed to geocode ${failedGeocodingItems.length} addresses`);
-      } else {
-        console.warn("Google Places API key not configured - skipping geocoding");
-      }
+      // Note: Geocoding will be handled as a background task after location creation
+      // to avoid slowing down the parsing process
       
       // Normalize quantity values: ensure all quantities are valid numbers, default to 1 if invalid
       for (const item of parsedData.lineItems) {
@@ -441,7 +331,6 @@ Extract all line items using the provided mappings.`
           success: true,
           mode: "parse",
           lineItems: parsedData.lineItems,
-          failedGeocodingItems,
           tenantId,
           hasMoreRows,
           totalRows: spreadsheetData.length,

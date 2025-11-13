@@ -45,10 +45,6 @@ interface ParsedLineItem {
     state?: string;
     postcode?: string;
     customer_location_id?: string;
-    latitude?: number;
-    longitude?: number;
-    formatted_address?: string;
-    geocoding_status?: 'success' | 'failed';
   };
 }
 
@@ -64,9 +60,6 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [columnMappings, setColumnMappings] = useState<Record<string, string | null>>({});
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
-  const [failedGeocodingItems, setFailedGeocodingItems] = useState<number[]>([]);
-  const [editingAddressIndex, setEditingAddressIndex] = useState<number | null>(null);
-  const [isRetryingGeocode, setIsRetryingGeocode] = useState(false);
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
@@ -173,7 +166,6 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       if (functionError) throw functionError;
 
       setLineItems(functionData.lineItems || []);
-      setFailedGeocodingItems(functionData.failedGeocodingItems || []);
       setStep("review");
 
       // Show notification if rows were limited
@@ -197,50 +189,6 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       toast.error(error.message || "Failed to parse spreadsheet");
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handleRetryGeocode = async (itemIndex: number) => {
-    setIsRetryingGeocode(true);
-    
-    try {
-      const item = lineItems[itemIndex];
-      const addressString = `${item.location.address}, ${item.location.city || ''}, ${item.location.state || ''}, ${item.location.postcode || ''}`.trim();
-      
-      // Call Google Geocoding API directly
-      const { data: geocodeData, error: geocodeError } = await supabase.functions.invoke(
-        "places-details",
-        {
-          body: { address: addressString }
-        }
-      );
-      
-      if (geocodeError) throw geocodeError;
-      
-      if (geocodeData.latitude && geocodeData.longitude) {
-        // Update the line item with geocoded data
-        const updatedItems = [...lineItems];
-        updatedItems[itemIndex].location.latitude = geocodeData.latitude;
-        updatedItems[itemIndex].location.longitude = geocodeData.longitude;
-        updatedItems[itemIndex].location.geocoding_status = 'success';
-        if (geocodeData.formatted_address) {
-          updatedItems[itemIndex].location.formatted_address = geocodeData.formatted_address;
-        }
-        
-        setLineItems(updatedItems);
-        
-        // Remove from failed list
-        setFailedGeocodingItems(prev => prev.filter(i => i !== itemIndex));
-        
-        toast.success("Address validated successfully");
-      } else {
-        toast.error("Unable to validate this address");
-      }
-    } catch (error: any) {
-      console.error("Retry geocoding error:", error);
-      toast.error("Failed to validate address");
-    } finally {
-      setIsRetryingGeocode(false);
     }
   };
 
@@ -372,6 +320,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       }
 
       // Create only locations that don't already exist
+      const locationIdsToGeocode: string[] = [];
+      
       for (const item of locationsToCreate) {
         const locationKey = `${item.location.name}-${item.location.address}`;
         if (!createdLocationMap.has(locationKey)) {
@@ -386,14 +336,13 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               state: item.location.state,
               postcode: item.location.postcode,
               customer_location_id: item.location.customer_location_id || null,
-              latitude: item.location.latitude,
-              longitude: item.location.longitude,
             })
             .select()
             .single();
 
           if (locationError) throw locationError;
           createdLocationMap.set(locationKey, newLocation.id);
+          locationIdsToGeocode.push(newLocation.id);
           console.log(`Created new location for ${locationKey}: ${newLocation.id}`);
         }
       }
@@ -447,6 +396,25 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       if (lineItemsError) throw lineItemsError;
 
       toast.success("Service contract imported successfully");
+      
+      // Start background geocoding for new locations
+      if (locationIdsToGeocode.length > 0) {
+        console.log(`Starting background geocoding for ${locationIdsToGeocode.length} locations...`);
+        supabase.functions
+          .invoke("geocode-locations", {
+            body: { locationIds: locationIdsToGeocode }
+          })
+          .then(({ data, error }) => {
+            if (error) {
+              console.error("Background geocoding failed:", error);
+            } else {
+              console.log(`Background geocoding complete: ${data?.geocoded} locations geocoded`);
+              if (data?.geocoded > 0) {
+                toast.success(`Geocoded ${data.geocoded} locations`);
+              }
+            }
+          });
+      }
 
       onSuccess();
       handleClose();
@@ -893,12 +861,6 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                                 item.location.address
                               )}
                             </div>
-                            {item.location.latitude && item.location.longitude && (
-                              <div className="text-xs text-success flex items-center gap-1 mt-1">
-                                <Check className="h-3 w-3" />
-                                Address validated
-                              </div>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell
