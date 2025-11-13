@@ -97,8 +97,7 @@ export default function DroppableAppointmentCard({
 
       <div className="space-y-2">
         {/* Duration badge - top right */}
-        <div className="absolute top-1 right-1 bg-muted/80 backdrop-blur-sm text-[10px] font-medium px-1.5 py-0.5 rounded text-muted-foreground z-20">
-          <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+        <div className="absolute top-0.5 right-0.5 bg-muted/70 backdrop-blur-sm text-[9px] font-medium px-1 py-0.5 rounded text-muted-foreground z-20">
           {calculateAppointmentHours(appointment)}h
         </div>
 
