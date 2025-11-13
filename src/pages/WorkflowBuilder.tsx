@@ -63,6 +63,7 @@ const actionTypes = [
 ];
 
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
+import QuickStartPanel from "@/components/workflows/QuickStartPanel";
 
 export default function WorkflowBuilder() {
   const { id } = useParams();
@@ -73,6 +74,7 @@ export default function WorkflowBuilder() {
   const [triggerType, setTriggerType] = useState("quote_approved");
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [showQuickStart, setShowQuickStart] = useState(true);
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -124,8 +126,16 @@ export default function WorkflowBuilder() {
 
       setNodes(loadedNodes);
       setEdges(loadedEdges);
+      setShowQuickStart(false);
     } else if (id === "new") {
-      // Initialize with trigger node for new workflows
+      // Show quick start for new workflows
+      setShowQuickStart(true);
+    }
+  }, [workflow, id, setNodes, setEdges]);
+
+  const handleTemplateSelection = (template: any) => {
+    if (!template) {
+      // User chose to start from scratch
       setNodes([
         {
           id: "trigger-1",
@@ -134,8 +144,36 @@ export default function WorkflowBuilder() {
           data: { label: "When Quote Approved", triggerType: "quote_approved" },
         },
       ]);
+      setEdges([]);
+      setShowQuickStart(false);
+      return;
     }
-  }, [workflow, id, setNodes, setEdges]);
+
+    // Load template data
+    setWorkflowName(template.name);
+    setWorkflowDescription(template.description || "");
+    setTriggerType(template.trigger_type);
+
+    const templateNodes: Node[] = template.template_data.nodes.map((node: any) => ({
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: node.data,
+    }));
+
+    const templateEdges: Edge[] = template.template_data.connections.map((conn: any) => ({
+      id: conn.id,
+      source: conn.source,
+      target: conn.target,
+      sourceHandle: conn.sourceHandle,
+      targetHandle: conn.targetHandle,
+      label: conn.label,
+    }));
+
+    setNodes(templateNodes);
+    setEdges(templateEdges);
+    setShowQuickStart(false);
+  };
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -268,7 +306,11 @@ export default function WorkflowBuilder() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="border-b bg-background p-4">
+      {showQuickStart ? (
+        <QuickStartPanel onSelectTemplate={handleTemplateSelection} />
+      ) : (
+        <>
+          <div className="border-b bg-background p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/workflows")}>
@@ -360,6 +402,8 @@ export default function WorkflowBuilder() {
           </ReactFlow>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

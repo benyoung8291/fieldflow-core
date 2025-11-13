@@ -53,6 +53,7 @@ import UnassignedTransactions from "@/pages/UnassignedTransactions";
 import Contacts from "@/pages/Contacts";
 import Workflows from "@/pages/Workflows";
 import WorkflowBuilder from "@/pages/WorkflowBuilder";
+import WorkflowTemplateSelector from "@/pages/WorkflowTemplateSelector";
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
@@ -203,6 +204,7 @@ const App = () => {
             <Route path="/credit-card-reconciliation" element={isAuthenticated ? <CreditCardReconciliation /> : <Navigate to="/auth" replace />} />
             <Route path="/unassigned-transactions" element={isAuthenticated ? <UnassignedTransactions /> : <Navigate to="/auth" replace />} />
             <Route path="/workflows" element={isAuthenticated ? <Workflows /> : <Navigate to="/auth" replace />} />
+            <Route path="/workflows/templates" element={isAuthenticated ? <WorkflowTemplateSelector /> : <Navigate to="/auth" replace />} />
             <Route path="/workflows/:id" element={isAuthenticated ? <WorkflowBuilder /> : <Navigate to="/auth" replace />} />
             <Route path="/contacts" element={isAuthenticated ? <Contacts /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />

@@ -100,10 +100,16 @@ export default function Workflows() {
             Create automated workflows to streamline your business processes
           </p>
         </div>
-        <Button onClick={() => navigate("/workflows/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Workflow
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/workflows/templates")}>
+            <Zap className="h-4 w-4 mr-2" />
+            Use Template
+          </Button>
+          <Button onClick={() => navigate("/workflows/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Workflow
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -174,10 +180,16 @@ export default function Workflows() {
             <p className="text-muted-foreground mb-4">
               Create your first workflow to automate your business processes
             </p>
-            <Button onClick={() => navigate("/workflows/new")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Workflow
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => navigate("/workflows/templates")}>
+                <Zap className="h-4 w-4 mr-2" />
+                Use Template
+              </Button>
+              <Button onClick={() => navigate("/workflows/new")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create from Scratch
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

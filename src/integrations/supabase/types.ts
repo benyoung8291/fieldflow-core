@@ -5480,6 +5480,45 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_system_template: boolean
+          name: string
+          preview_image_url: string | null
+          template_data: Json
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system_template?: boolean
+          name: string
+          preview_image_url?: string | null
+          template_data?: Json
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system_template?: boolean
+          name?: string
+          preview_image_url?: string | null
+          template_data?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       workers: {
