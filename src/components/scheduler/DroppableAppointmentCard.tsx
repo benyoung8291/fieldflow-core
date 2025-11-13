@@ -96,6 +96,12 @@ export default function DroppableAppointmentCard({
       )}
 
       <div className="space-y-2">
+        {/* Duration badge - top right */}
+        <div className="absolute top-1 right-1 bg-muted/80 backdrop-blur-sm text-[10px] font-medium px-1.5 py-0.5 rounded text-muted-foreground z-20">
+          <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+          {calculateAppointmentHours(appointment)}h
+        </div>
+
         {/* Selection checkbox */}
         {onSelectionChange && (
           <div className="flex items-center gap-2" data-no-click>
