@@ -25,6 +25,12 @@ export default function CreditCardReconciliation() {
     expense_date: "",
     vendor_id: "",
     category_id: "",
+    notes: "",
+    reference_number: "",
+    account_code: "",
+    sub_account: "",
+    service_order_id: "",
+    project_id: "",
   });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -169,6 +175,12 @@ export default function CreditCardReconciliation() {
       expense_date: transaction.transaction_date || "",
       vendor_id: "",
       category_id: "",
+      notes: "",
+      reference_number: transaction.external_reference || "",
+      account_code: "",
+      sub_account: "",
+      service_order_id: "",
+      project_id: "",
     });
   };
 
@@ -247,6 +259,12 @@ export default function CreditCardReconciliation() {
           category_id: data.category_id || null,
           payment_method: "credit_card",
           status: "submitted",
+          notes: data.notes || null,
+          reference_number: data.reference_number || null,
+          account_code: data.account_code || null,
+          sub_account: data.sub_account || null,
+          service_order_id: data.service_order_id || null,
+          project_id: data.project_id || null,
         })
         .select()
         .single();
@@ -293,6 +311,12 @@ export default function CreditCardReconciliation() {
       expense_date: "",
       vendor_id: "",
       category_id: "",
+      notes: "",
+      reference_number: "",
+      account_code: "",
+      sub_account: "",
+      service_order_id: "",
+      project_id: "",
     });
   };
 
@@ -478,13 +502,13 @@ export default function CreditCardReconciliation() {
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <Label className="text-[11px] text-muted-foreground">Who</Label>
+                              <Label className="text-[11px] text-muted-foreground">Vendor *</Label>
                               <Select
                                 value={formData.vendor_id}
                                 onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
                               >
                                 <SelectTrigger className="h-8 text-xs mt-1">
-                                  <SelectValue placeholder="Name of the contact..." />
+                                  <SelectValue placeholder="Select vendor..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {vendors.map((vendor) => (
@@ -497,13 +521,13 @@ export default function CreditCardReconciliation() {
                             </div>
 
                             <div>
-                              <Label className="text-[11px] text-muted-foreground">What</Label>
+                              <Label className="text-[11px] text-muted-foreground">Category *</Label>
                               <Select
                                 value={formData.category_id}
                                 onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                               >
                                 <SelectTrigger className="h-8 text-xs mt-1">
-                                  <SelectValue placeholder="Choose the account..." />
+                                  <SelectValue placeholder="Select category..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {categories.map((category) => (
@@ -517,18 +541,18 @@ export default function CreditCardReconciliation() {
                           </div>
 
                           <div>
-                            <Label className="text-[11px] text-muted-foreground">Why</Label>
+                            <Label className="text-[11px] text-muted-foreground">Description *</Label>
                             <Textarea
                               value={formData.description}
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                              className="text-xs min-h-[60px] mt-1"
-                              placeholder="Enter a description..."
+                              className="text-xs min-h-[50px] mt-1"
+                              placeholder="Enter description..."
                             />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <Label className="text-[11px] text-muted-foreground">Date</Label>
+                              <Label className="text-[11px] text-muted-foreground">Date *</Label>
                               <Input
                                 type="date"
                                 value={formData.expense_date}
@@ -537,7 +561,7 @@ export default function CreditCardReconciliation() {
                               />
                             </div>
                             <div>
-                              <Label className="text-[11px] text-muted-foreground">Amount</Label>
+                              <Label className="text-[11px] text-muted-foreground">Amount *</Label>
                               <Input
                                 type="number"
                                 step="0.01"
@@ -546,15 +570,26 @@ export default function CreditCardReconciliation() {
                                 className="h-8 text-xs mt-1"
                               />
                             </div>
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">Reference #</Label>
+                              <Input
+                                type="text"
+                                value={formData.reference_number}
+                                onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
+                                className="h-8 text-xs mt-1"
+                                placeholder="Ref number..."
+                              />
+                            </div>
                           </div>
 
-                          <div className="text-right">
-                            <Button 
-                              variant="link" 
-                              className="text-blue-600 text-xs h-auto p-0 hover:underline"
-                            >
-                              Add details
-                            </Button>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Notes</Label>
+                            <Textarea
+                              value={formData.notes}
+                              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                              className="text-xs min-h-[40px] mt-1"
+                              placeholder="Additional notes..."
+                            />
                           </div>
 
                           <div className="pt-2 border-t">
@@ -579,7 +614,7 @@ export default function CreditCardReconciliation() {
                               <Button
                                 size="sm"
                                 onClick={() => handleCreateExpense(txn.id)}
-                                disabled={createExpenseMutation.isPending || !formData.description}
+                                disabled={createExpenseMutation.isPending || !formData.description || !formData.vendor_id || !formData.category_id}
                                 className="h-8 px-6 bg-blue-600 hover:bg-blue-700 font-semibold"
                               >
                                 OK
