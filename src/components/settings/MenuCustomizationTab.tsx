@@ -28,6 +28,7 @@ const defaultMenuItems = [
   { label: "Leads", icon: "Target", path: "/leads" },
   { label: "Workers", icon: "HardHat", path: "/workers" },
   { label: "Analytics", icon: "BarChart3", path: "/analytics" },
+  { label: "Financial Reconciliation", icon: "DollarSign", path: "/financial-reconciliation" },
   { label: "Settings", icon: "Settings", path: "/settings" },
 ];
 
