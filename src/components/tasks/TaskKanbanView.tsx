@@ -7,37 +7,52 @@ import { format, addDays, isWeekend, isSameDay, startOfDay, isPast } from "date-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DraggableTaskCard from "./DraggableTaskCard";
+import { useNavigate } from "react-router-dom";
 
 interface TaskKanbanViewProps {
   tasks: any[];
   onTaskClick: (task: any) => void;
-  onNavigateToLinked: (module: string, id: string) => void;
-  kanbanMode: string;
+  viewMode?: 'date' | 'status';
 }
 
 interface DroppableColumnProps {
-  date: Date;
+  id: string;
   title: string;
   tasks: any[];
   onTaskClick: (task: any) => void;
-  onNavigateToLinked: (module: string, id: string) => void;
   workersMap: Record<string, string>;
-  isToday: boolean;
+  isHighlighted?: boolean;
+  statusColor?: string;
 }
 
 function DroppableColumn({ 
-  date, 
+  id,
   title, 
   tasks, 
   onTaskClick, 
-  onNavigateToLinked,
   workersMap,
-  isToday 
+  isHighlighted,
+  statusColor
 }: DroppableColumnProps) {
-  const dateKey = format(date, 'yyyy-MM-dd');
   const { isOver, setNodeRef } = useDroppable({
-    id: dateKey,
+    id: id,
   });
+
+  const navigate = useNavigate();
+
+  const getModuleRoute = (module: string, recordId: string) => {
+    const routes: Record<string, string> = {
+      customer: `/customers/${recordId}`,
+      lead: `/leads/${recordId}`,
+      project: `/projects/${recordId}`,
+      quote: `/quotes/${recordId}`,
+      service_order: `/service-orders/${recordId}`,
+      appointment: `/appointments/${recordId}`,
+      invoice: `/invoices/${recordId}`,
+      contract: `/service-contracts/${recordId}`
+    };
+    return routes[module] || '#';
+  };
 
   // Sort tasks: overdue first, then by priority
   const sortedTasks = useMemo(() => {
@@ -58,36 +73,34 @@ function DroppableColumn({
   return (
     <Card
       className={cn(
-        "flex flex-col min-h-[500px]",
-        isToday && "ring-2 ring-primary shadow-lg"
+        "flex flex-col min-h-[500px] transition-all duration-200",
+        isHighlighted && "ring-2 ring-primary shadow-lg"
       )}
     >
       <CardHeader className={cn(
-        "pb-3",
-        isToday && "bg-primary/5 border-b border-primary/20"
+        "pb-3 transition-colors",
+        isHighlighted && "bg-primary/5 border-b border-primary/20",
+        statusColor && `border-l-4 ${statusColor}`
       )}>
         <div className="flex items-center justify-between">
           <CardTitle className={cn(
             "text-lg font-semibold",
-            isToday && "text-primary"
+            isHighlighted && "text-primary"
           )}>
             {title}
-            {isToday && <span className="ml-2 text-xs font-normal">(Featured)</span>}
+            {isHighlighted && <span className="ml-2 text-xs font-normal">(Today)</span>}
           </CardTitle>
-          <Badge variant={isToday ? "default" : "secondary"} className="shrink-0">
+          <Badge variant={isHighlighted ? "default" : "secondary"} className="shrink-0">
             {tasks.length}
           </Badge>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {format(date, 'EEE, MMM d')}
         </div>
       </CardHeader>
       
       <CardContent
         ref={setNodeRef}
         className={cn(
-          "flex-1 space-y-2 p-3 overflow-y-auto transition-colors",
-          isOver && "bg-primary/5"
+          "flex-1 space-y-2 p-3 overflow-y-auto transition-colors duration-200",
+          isOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset"
         )}
       >
         {sortedTasks.length === 0 ? (
@@ -100,8 +113,8 @@ function DroppableColumn({
               key={task.id}
               task={task}
               onTaskClick={onTaskClick}
-              onNavigateToLinked={onNavigateToLinked}
-              workerName={task.assigned_to ? workersMap[task.assigned_to] : undefined}
+              onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))}
+              workerName={workersMap[task.assigned_to]}
               subtaskCount={task.subtaskCount || 0}
               completedSubtaskCount={task.completedSubtaskCount || 0}
             />
@@ -112,124 +125,131 @@ function DroppableColumn({
   );
 }
 
-export default function TaskKanbanView({ 
-  tasks, 
-  onTaskClick, 
-  onNavigateToLinked,
-  kanbanMode 
-}: TaskKanbanViewProps) {
-  const today = startOfDay(new Date());
-
-  // Fetch workers for display names
+export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status' }: TaskKanbanViewProps) {
   const { data: workers = [] } = useQuery({
-    queryKey: ["workers-map"],
+    queryKey: ["workers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name");
+        .select("id, first_name, last_name")
+        .eq("is_active", true)
+        .order("first_name");
       if (error) throw error;
       return data || [];
     },
   });
 
   const workersMap = useMemo(() => {
-    return workers.reduce((acc: any, worker: any) => {
-      acc[worker.id] = `${worker.first_name} ${worker.last_name}`;
-      return acc;
-    }, {});
+    const map: Record<string, string> = {};
+    workers.forEach((worker: any) => {
+      if (worker.id) {
+        map[worker.id] = `${worker.first_name} ${worker.last_name}`;
+      }
+    });
+    return map;
   }, [workers]);
 
-  // Calculate the three days to display based on mode
-  const getDaysToDisplay = () => {
-    const days = [];
+  if (viewMode === 'status') {
+    // Status-based kanban view
+    const statusColumns = [
+      { id: 'pending', title: 'Pending', color: 'border-yellow-500' },
+      { id: 'in_progress', title: 'In Progress', color: 'border-blue-500' },
+      { id: 'completed', title: 'Completed', color: 'border-green-500' },
+      { id: 'cancelled', title: 'Cancelled', color: 'border-gray-500' },
+    ];
+
+    const tasksByStatus = useMemo(() => {
+      const groups: Record<string, any[]> = {
+        'pending': [],
+        'in_progress': [],
+        'completed': [],
+        'cancelled': []
+      };
+      tasks.forEach((task: any) => {
+        if (groups[task.status]) {
+          groups[task.status].push(task);
+        }
+      });
+      return groups;
+    }, [tasks]);
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {statusColumns.map((column) => (
+          <DroppableColumn
+            key={column.id}
+            id={column.id}
+            title={column.title}
+            tasks={tasksByStatus[column.id]}
+            onTaskClick={onTaskClick}
+            workersMap={workersMap}
+            statusColor={column.color}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Date-based kanban view (original behavior)
+  const today = startOfDay(new Date());
+  
+  const columns = useMemo(() => {
+    const cols: { date: Date; title: string; isToday: boolean }[] = [];
     let currentDate = today;
     let daysAdded = 0;
-
-    if (kanbanMode === 'consecutive_days') {
-      // Always show today, tomorrow, and the day after
-      days.push(today);
-      days.push(addDays(today, 1));
-      days.push(addDays(today, 2));
-    } else if (kanbanMode === 'include_weekends') {
-      // Show next 3 calendar days always
-      days.push(today);
-      days.push(addDays(today, 1));
-      days.push(addDays(today, 2));
-    } else {
-      // business_days: Skip weekends unless there are tasks
-      while (daysAdded < 3) {
-        if (!isWeekend(currentDate)) {
-          days.push(currentDate);
-          daysAdded++;
-        } else {
-          // Check if there are tasks on this weekend day
-          const hasTasksOnWeekend = tasks.some(task => {
-            if (!task.due_date) return false;
-            return isSameDay(new Date(task.due_date), currentDate);
-          });
-          if (hasTasksOnWeekend) {
-            days.push(currentDate);
-            daysAdded++;
-          }
-        }
-        currentDate = addDays(currentDate, 1);
-      }
-    }
-
-    return days;
-  };
-
-  const daysToDisplay = getDaysToDisplay();
-
-  // Group tasks by date
-  const tasksByDate = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
     
-    daysToDisplay.forEach(day => {
-      const dateKey = format(day, 'yyyy-MM-dd');
-      grouped[dateKey] = [];
+    while (daysAdded < 3) {
+      if (!isWeekend(currentDate) || tasks.some((t: any) => 
+        t.due_date && isSameDay(startOfDay(new Date(t.due_date)), currentDate)
+      )) {
+        const dayLabel = daysAdded === 0 ? 'Today' : daysAdded === 1 ? 'Tomorrow' : format(currentDate, 'EEEE');
+        cols.push({ 
+          date: currentDate, 
+          title: dayLabel,
+          isToday: daysAdded === 0
+        });
+        daysAdded++;
+      }
+      currentDate = addDays(currentDate, 1);
+    }
+    
+    return cols;
+  }, [today, tasks]);
+
+  const tasksByDate = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    
+    columns.forEach(col => {
+      const dateKey = format(col.date, 'yyyy-MM-dd');
+      groups[dateKey] = [];
     });
 
-    tasks.forEach(task => {
-      if (!task.due_date) return;
-      
-      const taskDate = startOfDay(new Date(task.due_date));
-      const dateKey = format(taskDate, 'yyyy-MM-dd');
-      
-      // Only include tasks that match one of our display days
-      if (grouped[dateKey]) {
-        grouped[dateKey].push(task);
+    tasks.forEach((task: any) => {
+      if (task.due_date) {
+        const taskDate = startOfDay(new Date(task.due_date));
+        const dateKey = format(taskDate, 'yyyy-MM-dd');
+        if (groups[dateKey]) {
+          groups[dateKey].push(task);
+        }
       }
     });
 
-    return grouped;
-  }, [tasks, daysToDisplay]);
-
-  const getColumnTitle = (date: Date, index: number) => {
-    if (isSameDay(date, today)) return 'Today';
-    if (isSameDay(date, addDays(today, 1))) return 'Tomorrow';
-    if (index === 2) return 'Day After';
-    return format(date, 'EEEE');
-  };
+    return groups;
+  }, [tasks, columns]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {daysToDisplay.map((date, index) => {
-        const dateKey = format(date, 'yyyy-MM-dd');
-        const isToday = isSameDay(date, today);
-        return (
-          <DroppableColumn
-            key={dateKey}
-            date={date}
-            title={getColumnTitle(date, index)}
-            tasks={tasksByDate[dateKey] || []}
-            onTaskClick={onTaskClick}
-            onNavigateToLinked={onNavigateToLinked}
-            workersMap={workersMap}
-            isToday={isToday}
-          />
-        );
-      })}
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {columns.map((column) => (
+        <DroppableColumn
+          key={format(column.date, 'yyyy-MM-dd')}
+          id={format(column.date, 'yyyy-MM-dd')}
+          title={`${column.title} - ${format(column.date, 'MMM d')}`}
+          tasks={tasksByDate[format(column.date, 'yyyy-MM-dd')]}
+          onTaskClick={onTaskClick}
+          workersMap={workersMap}
+          isHighlighted={column.isToday}
+        />
+      ))}
     </div>
   );
 }

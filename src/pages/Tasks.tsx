@@ -48,6 +48,7 @@ export default function Tasks() {
   const [activeTask, setActiveTask] = useState<any>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [groupMode, setGroupMode] = useState<'status' | 'tag' | 'document'>('status');
+  const [kanbanViewMode, setKanbanViewMode] = useState<'date' | 'status'>('status');
   const queryClient = useQueryClient();
 
   // Drag and drop sensors with mobile support
@@ -848,26 +849,50 @@ export default function Tasks() {
             
           </div>
           <div className="flex items-center gap-2">
-            {viewMode === 'list' && <div className="flex items-center border rounded-lg p-1 bg-muted/30">
-                <Button variant={groupMode === 'status' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('status')}>
-                  Status
+            {/* View Mode and Kanban Mode Toggle */}
+            <div className="flex gap-2">
+              {viewMode === 'kanban' && (
+                <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                  <Button
+                    variant={kanbanViewMode === 'status' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setKanbanViewMode('status')}
+                    className="h-8 text-xs"
+                  >
+                    Status
+                  </Button>
+                  <Button
+                    variant={kanbanViewMode === 'date' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setKanbanViewMode('date')}
+                    className="h-8 text-xs"
+                  >
+                    Date
+                  </Button>
+                </div>
+              )}
+              
+              {viewMode === 'list' && <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                  <Button variant={groupMode === 'status' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('status')} className="h-8 text-xs">
+                    Status
+                  </Button>
+                  <Button variant={groupMode === 'tag' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('tag')} className="h-8 text-xs">
+                    Tag
+                  </Button>
+                  <Button variant={groupMode === 'document' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('document')} className="h-8 text-xs">
+                    Document
+                  </Button>
+                </div>}
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => handleViewModeChange('list')} className="h-8 px-3 gap-1.5">
+                  <List className="h-4 w-4" />
+                  List
                 </Button>
-                <Button variant={groupMode === 'tag' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('tag')}>
-                  Tag
+                <Button variant={viewMode === 'kanban' ? 'default' : 'ghost'} size="sm" onClick={() => handleViewModeChange('kanban')} className="h-8 px-3 gap-1.5">
+                  <Kanban className="h-4 w-4" />
+                  Kanban
                 </Button>
-                <Button variant={groupMode === 'document' ? 'default' : 'ghost'} size="sm" onClick={() => setGroupMode('document')}>
-                  Document
-                </Button>
-              </div>}
-            <div className="flex items-center border rounded-lg p-1 bg-muted/30">
-              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => handleViewModeChange('list')} className="gap-2">
-                <List className="h-4 w-4" />
-                List
-              </Button>
-              <Button variant={viewMode === 'kanban' ? 'default' : 'ghost'} size="sm" onClick={() => handleViewModeChange('kanban')} className="gap-2">
-                <Kanban className="h-4 w-4" />
-                Kanban
-              </Button>
+              </div>
             </div>
             <Button onClick={() => {
             setSelectedTask(null);
@@ -877,25 +902,73 @@ export default function Tasks() {
               New Task
             </Button>
           </div>
-        </div>
 
         {/* Filters */}
         <Card>
           <CardContent className="py-3 px-4">
-            <div className="grid gap-2 md:grid-cols-6">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 h-8 text-sm" />
-              </div>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex gap-2 flex-1 min-w-[300px]">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 h-8 text-sm" />
+                </div>
 
-              <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-                <SelectTrigger className="h-8 text-sm">
-                  <User className="h-3.5 w-3.5 mr-1.5" />
+                <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+                  <SelectTrigger className="h-8 text-sm w-40">
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="my-tasks">My Tasks</SelectItem>
+                  <SelectItem value="all">All Tasks</SelectItem>
+                  {workers.filter(w => w.id && w.id.trim()).map(worker => <SelectItem key={worker.id} value={worker.id}>
+                        {worker.first_name} {worker.last_name}
+                      </SelectItem>)}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-8 text-sm w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="my-tasks">My Tasks</SelectItem>
-                  <SelectItem value="all">All Tasks</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger className="h-8 text-sm w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {allTags.length > 0 && (
+                <Select value={filterTag} onValueChange={setFilterTag}>
+                  <SelectTrigger className="h-8 text-sm w-40">
+                    <SelectValue placeholder="All Tags" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tags</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </CardContent>
+        </Card>
                   {workers.filter(w => w.id && w.id.trim()).map(worker => <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
                     </SelectItem>)}
@@ -952,13 +1025,31 @@ export default function Tasks() {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </div>
 
         {/* Tasks List or Kanban View */}
         {viewMode === 'kanban' ? <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <TaskKanbanView tasks={tasksWithUsers} onTaskClick={handleTaskClick} onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))} kanbanMode={userProfile?.task_kanban_mode || 'business_days'} />
-            <DragOverlay>
-              {activeTask ? <DraggableTaskCard task={activeTask} onTaskClick={() => {}} onNavigateToLinked={() => {}} subtaskCount={activeTask.subtaskCount} completedSubtaskCount={activeTask.completedSubtaskCount} /> : null}
+            <TaskKanbanView 
+              tasks={tasksWithUsers} 
+              onTaskClick={handleTaskClick} 
+              viewMode={kanbanViewMode}
+            />
+            <DragOverlay dropAnimation={{
+              duration: 200,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}>
+              {activeTask ? (
+                <div className="opacity-90 cursor-grabbing">
+                  <DraggableTaskCard 
+                    task={activeTask} 
+                    onTaskClick={() => {}} 
+                    onNavigateToLinked={() => {}} 
+                    workerName={activeTask.assigned_user ? `${activeTask.assigned_user.first_name} ${activeTask.assigned_user.last_name}` : undefined}
+                    subtaskCount={activeTask.subtaskCount || 0} 
+                    completedSubtaskCount={activeTask.completedSubtaskCount || 0} 
+                  />
+                </div>
+              ) : null}
             </DragOverlay>
           </DndContext> : isLoading ? <div className="space-y-3">
             {Array.from({
