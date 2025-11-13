@@ -1076,8 +1076,8 @@ export default function Scheduler() {
       )}
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
-        <div className="grid grid-cols-[1fr_300px] gap-3">
-          <div className="space-y-2">
+        <div className="grid grid-cols-[1fr_300px] gap-3 h-[calc(100vh-80px)] overflow-hidden">
+          <div className="space-y-2 flex flex-col min-h-0">
         {/* Compact Summary Cards */}
         <div className="grid grid-cols-3 gap-2">
           <Card className="shadow-sm">
@@ -1118,7 +1118,7 @@ export default function Scheduler() {
         </div>
 
         {/* Calendar Controls */}
-        <Card className="shadow-md flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
+        <Card className="shadow-md flex flex-col min-h-0 flex-1">
           <CardHeader className="p-3 flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">

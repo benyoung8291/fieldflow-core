@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import ResizableAppointmentCard from "./ResizableAppointmentCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import DroppableTimeSlot from "./DroppableTimeSlot";
 
 interface TimeGridWeekViewProps {
   currentDate: Date;
@@ -120,23 +121,28 @@ export default function TimeGridWeekView({
                     >
                       {/* Hour grid lines */}
                       {HOURS.map(hour => (
-                        <div
+                        <DroppableTimeSlot
                           key={hour}
+                          id={`timeslot-${worker.id || 'unassigned'}-${format(day, 'yyyy-MM-dd')}-${hour}`}
+                          date={day}
+                          workerId={worker.id}
+                          hour={hour}
                           className="border-b border-border/20 group relative"
-                          style={{ height: `${PIXELS_PER_HOUR}px` }}
                         >
-                          {/* Add appointment button on hover */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity h-full flex items-center justify-center">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => onCreateAppointment(worker.id, day, hour)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
+                          <div style={{ height: `${PIXELS_PER_HOUR}px` }}>
+                            {/* Add appointment button on hover */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity h-full flex items-center justify-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => onCreateAppointment(worker.id, day, hour)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
+                        </DroppableTimeSlot>
                       ))}
 
                       {/* Appointments positioned absolutely */}
