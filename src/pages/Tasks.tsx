@@ -9,11 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown, CheckSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown, CheckSquare, MessageSquare, Send } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import DraggableTaskCard from "@/components/tasks/DraggableTaskCard";
@@ -22,6 +26,9 @@ export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
@@ -138,6 +145,80 @@ export default function Tasks() {
       return data || [];
     }
   });
+
+  // Fetch task comments
+  const { data: comments = [] } = useQuery({
+    queryKey: ["task-comments", selectedTask?.id],
+    queryFn: async () => {
+      if (!selectedTask?.id) return [];
+      const { data, error } = await supabase
+        .from("task_comments" as any)
+        .select("*, author:created_by(first_name, last_name)")
+        .eq("task_id", selectedTask.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedTask?.id,
+  });
+
+  // Real-time subscription for comments
+  useEffect(() => {
+    if (!selectedTask?.id) return;
+    const channel = supabase
+      .channel('task-comments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'task_comments',
+          filter: `task_id=eq.${selectedTask.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["task-comments", selectedTask.id] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTask?.id, queryClient]);
+
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async (comment: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+      const { error } = await supabase.from("task_comments" as any).insert({
+        tenant_id: profile.tenant_id,
+        task_id: selectedTask.id,
+        comment,
+        created_by: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNewComment("");
+      queryClient.invalidateQueries({ queryKey: ["task-comments", selectedTask.id] });
+      toast.success("Comment added");
+    },
+    onError: () => {
+      toast.error("Failed to add comment");
+    },
+  });
+
+  const handleSubmitComment = () => {
+    if (!newComment.trim()) return;
+    createCommentMutation.mutate(newComment);
+  };
+
   const {
     data: tasks = [],
     isLoading
@@ -747,9 +828,9 @@ export default function Tasks() {
             </div>
 
             {/* Side Panel for Task Details */}
-            {sidePanelOpen && selectedTask && <div className="w-[40%] border-l border-border bg-background h-[calc(100vh-12rem)] overflow-y-auto sticky top-0">
+            {sidePanelOpen && selectedTask && <div className="w-[40%] border-l border-border bg-background h-[calc(100vh-12rem)] flex flex-col sticky top-0">
                 {/* Toolbar */}
-                <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 flex-shrink-0">
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -760,25 +841,54 @@ export default function Tasks() {
                     {selectedTask.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
                   </Button>
                   
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <LinkIcon className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <User className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0"
-                      onClick={() => setSidePanelOpen(false)}
-                    >
-                      <ExternalLink className="h-4 w-4 rotate-180" />
-                    </Button>
-                  </div>
+                  <TooltipProvider>
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => setLinkDialogOpen(true)}
+                          >
+                            <LinkIcon className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Link to document</TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => setAssignDialogOpen(true)}
+                          >
+                            <User className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Assign task</TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => setSidePanelOpen(false)}
+                          >
+                            <ExternalLink className="h-4 w-4 rotate-180" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Close panel</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </div>
 
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 overflow-y-auto flex-1">
                   {/* Task Title */}
                   <h2 className="text-xl font-semibold leading-tight">{selectedTask.title}</h2>
 
@@ -862,6 +972,68 @@ export default function Tasks() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Comments Section */}
+                <div className="border-t bg-muted/20 flex-shrink-0 flex flex-col max-h-[40%]">
+                  <div className="px-4 py-2 border-b bg-background/50 flex items-center gap-2">
+                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                    <h3 className="text-xs font-medium">Comments ({comments.length})</h3>
+                  </div>
+                  
+                  <div className="overflow-y-auto flex-1 p-3 space-y-2">
+                    {comments.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">No comments yet</p>
+                    ) : (
+                      comments.map((comment: any) => (
+                        <div key={comment.id} className="flex gap-2 text-xs">
+                          <Avatar className="h-6 w-6 flex-shrink-0">
+                            <AvatarFallback className="text-[10px]">
+                              {comment.author?.first_name?.[0]}{comment.author?.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 mb-0.5">
+                              <span className="font-medium text-foreground">
+                                {comment.author?.first_name} {comment.author?.last_name}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <p className="text-foreground/80 leading-snug whitespace-pre-wrap break-words">
+                              {comment.comment}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  <div className="p-2 border-t bg-background">
+                    <div className="flex gap-2">
+                      <Textarea 
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="min-h-[60px] text-xs resize-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            handleSubmitComment();
+                          }
+                        }}
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={handleSubmitComment}
+                        disabled={!newComment.trim() || createCommentMutation.isPending}
+                        className="h-[60px] px-3"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1 px-1">Cmd/Ctrl + Enter to send</p>
+                  </div>
+                </div>
               </div>}
           </div>}
       </div>
@@ -886,5 +1058,61 @@ export default function Tasks() {
       assigned_to: selectedTask.assigned_to || undefined,
       due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined
     } : undefined} linkedModule={selectedTask?.linked_module} linkedRecordId={selectedTask?.linked_record_id} linkedRecordName={selectedTask?.linked_record_name} workers={workers} />
+      
+      {/* Link Document Dialog */}
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Document to Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">This feature will be available soon. Use the main task dialog to link documents.</p>
+            <Button variant="outline" onClick={() => {
+              setLinkDialogOpen(false);
+              setIsDialogOpen(true);
+            }}>
+              Open Task Dialog
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign User Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assignee</label>
+              <Select 
+                value={selectedTask?.assigned_to || ""}
+                onValueChange={(value) => {
+                  if (selectedTask) {
+                    updateTaskMutation.mutate({
+                      id: selectedTask.id,
+                      data: { assigned_to: value } as any
+                    });
+                    setAssignDialogOpen(false);
+                    toast.success("Task assigned successfully");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workers.map((worker: any) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.first_name} {worker.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>;
 }
