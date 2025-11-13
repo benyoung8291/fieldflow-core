@@ -3,24 +3,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import Papa from "papaparse";
+import { Loader2, Upload, Check, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-interface ParsedContract {
-  customer: {
-    existingCustomerId?: string;
-    name: string;
-    email?: string;
-    abn?: string;
-  };
+interface ImportContractDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+interface ParsedLineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  recurrence_frequency: "weekly" | "monthly" | "quarterly" | "annually";
+  first_generation_date: string;
   location: {
     existingLocationId?: string;
     name: string;
@@ -29,498 +44,377 @@ interface ParsedContract {
     state?: string;
     postcode?: string;
   };
-  contract: {
-    title: string;
-    description?: string;
-    contract_type: "recurring" | "one_time";
-    start_date: string;
-    end_date?: string;
-    billing_frequency: "monthly" | "quarterly" | "annually";
-    service_frequency?: "weekly" | "monthly" | "quarterly" | "annually";
-    total_amount?: number;
-    auto_renew?: boolean;
-  };
-  lineItems: Array<{
-    description: string;
-    quantity: number;
-    unit_price: number;
-    frequency?: string;
-  }>;
 }
 
-interface ImportContractDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-}
-
-export default function ImportContractDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-}: ImportContractDialogProps) {
-  const [file, setFile] = useState<File | null>(null);
+export default function ImportContractDialog({ open, onOpenChange, onSuccess }: ImportContractDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [parsedContracts, setParsedContracts] = useState<ParsedContract[]>([]);
-  const [tenantId, setTenantId] = useState<string>("");
-  const [stage, setStage] = useState<"upload" | "review" | "importing">("upload");
-  const [editingContract, setEditingContract] = useState<number | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [customerId, setCustomerId] = useState<string>("");
+  const [contractTitle, setContractTitle] = useState("");
+  const [contractStartDate, setContractStartDate] = useState("");
+  const [billingFrequency, setBillingFrequency] = useState<"monthly" | "quarterly" | "annually">("monthly");
+  const [lineItems, setLineItems] = useState<ParsedLineItem[]>([]);
+  const [step, setStep] = useState<"upload" | "review">("upload");
+
+  // Fetch customers for selection
+  const { data: customers } = useQuery({
+    queryKey: ["customers-for-import"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
     }
   };
 
-  const parseSpreadsheet = async () => {
-    if (!file) {
-      toast.error("Please select a file");
+  const handleUpload = async () => {
+    if (!file || !customerId) {
+      toast.error("Please select a customer and upload a file");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Parse CSV/Excel file
-      const text = await file.text();
-      
-      Papa.parse(text, {
-        header: true,
+      // Parse CSV file
+      Papa.parse(file, {
         complete: async (results) => {
-          console.log("Parsed CSV:", results.data);
+          try {
+            // Call edge function to parse with AI
+            const { data: functionData, error: functionError } = await supabase.functions.invoke(
+              "parse-contract-spreadsheet",
+              {
+                body: {
+                  spreadsheetData: results.data,
+                  customerId: customerId,
+                },
+              }
+            );
 
-          // Send to AI for intelligent parsing
-          const { data, error } = await supabase.functions.invoke("parse-contract-spreadsheet", {
-            body: { spreadsheetData: results.data },
-          });
+            if (functionError) throw functionError;
 
-          if (error) throw error;
+            // Set parsed line items for review
+            setLineItems(functionData.lineItems || []);
+            setStep("review");
 
-          if (data.contracts && data.contracts.length > 0) {
-            setParsedContracts(data.contracts);
-            setTenantId(data.tenantId);
-            setStage("review");
-            toast.success(`Parsed ${data.contracts.length} contract(s) from spreadsheet`);
-          } else {
-            toast.error("No contracts found in spreadsheet");
+            toast.success(`Found ${functionData.lineItems?.length || 0} line items`);
+          } catch (error: any) {
+            console.error("Error parsing spreadsheet:", error);
+            toast.error(error.message || "Failed to parse spreadsheet");
+          } finally {
+            setIsProcessing(false);
           }
         },
         error: (error) => {
           console.error("CSV parse error:", error);
-          toast.error("Failed to parse spreadsheet");
+          toast.error("Failed to read CSV file");
+          setIsProcessing(false);
         },
       });
-    } catch (error) {
-      console.error("Error processing file:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to process spreadsheet");
-    } finally {
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error(error.message || "Failed to process file");
       setIsProcessing(false);
     }
   };
 
   const handleImport = async () => {
-    if (parsedContracts.length === 0) return;
+    if (!customerId || !contractTitle || !contractStartDate || lineItems.length === 0) {
+      toast.error("Please fill in all required contract details");
+      return;
+    }
 
-    setStage("importing");
+    setIsProcessing(true);
 
     try {
-      let successCount = 0;
-      let errorCount = 0;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      for (const contractData of parsedContracts) {
-        try {
-          let customerId = contractData.customer.existingCustomerId;
-          
-          // Create customer if doesn't exist
-          if (!customerId) {
-            const { data: newCustomer, error: customerError } = await supabase
-              .from("customers")
-              .insert({
-                tenant_id: tenantId,
-                name: contractData.customer.name,
-                email: contractData.customer.email,
-                abn: contractData.customer.abn,
-              })
-              .select()
-              .single();
+      // Get tenant_id from user profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
 
-            if (customerError) throw customerError;
-            customerId = newCustomer.id;
-          }
+      if (!profile) throw new Error("Unable to get tenant information");
 
-          let locationId = contractData.location.existingLocationId;
-          
-          // Create location if doesn't exist
-          if (!locationId) {
-            const { data: newLocation, error: locationError } = await supabase
-              .from("customer_locations")
-              .insert({
-                tenant_id: tenantId,
-                customer_id: customerId,
-                name: contractData.location.name,
-                address: contractData.location.address,
-                city: contractData.location.city,
-                state: contractData.location.state,
-                postcode: contractData.location.postcode,
-              })
-              .select()
-              .single();
+      // Get next contract number
+      const { data: lastContract } = await supabase
+        .from("service_contracts")
+        .select("contract_number")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
 
-            if (locationError) throw locationError;
-            locationId = newLocation.id;
-          }
+      const nextNumber = lastContract?.contract_number
+        ? parseInt(lastContract.contract_number.split("-")[1]) + 1
+        : 1;
+      const contractNumber = `SC-${String(nextNumber).padStart(5, "0")}`;
 
-          // Create service contract
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          // Generate contract number
-          const { data: latestContract } = await supabase
-            .from("service_contracts")
-            .select("contract_number")
-            .eq("tenant_id", tenantId)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      // Create locations that don't exist
+      const locationsToCreate = lineItems.filter(item => !item.location.existingLocationId);
+      const createdLocationMap = new Map<string, string>();
 
-          const lastNumber = latestContract?.contract_number?.match(/\d+$/)?.[0] || "0";
-          const newContractNumber = `SC-${String(parseInt(lastNumber) + 1).padStart(5, "0")}`;
-
-          const { data: contract, error: contractError } = await supabase
-            .from("service_contracts")
+      for (const item of locationsToCreate) {
+        const locationKey = `${item.location.name}-${item.location.address}`;
+        if (!createdLocationMap.has(locationKey)) {
+          const { data: newLocation, error: locationError } = await supabase
+            .from("customer_locations")
             .insert({
-              tenant_id: tenantId,
+              tenant_id: profile.tenant_id,
               customer_id: customerId,
-              contract_number: newContractNumber,
-              title: contractData.contract.title,
-              description: contractData.contract.description,
-              start_date: contractData.contract.start_date,
-              end_date: contractData.contract.end_date,
-              billing_frequency: contractData.contract.billing_frequency,
-              status: "draft",
-              auto_generate: contractData.contract.auto_renew || false,
-              total_contract_value: contractData.contract.total_amount || 0,
-              created_by: user?.id,
+              name: item.location.name,
+              address: item.location.address,
+              city: item.location.city,
+              state: item.location.state,
+              postcode: item.location.postcode,
             })
             .select()
             .single();
 
-          if (contractError) throw contractError;
-
-          // Create line items
-          if (contractData.lineItems && contractData.lineItems.length > 0) {
-            // Map frequency to correct enum value
-            const mapFrequency = (freq?: string): "monthly" | "quarterly" | "annually" | "weekly" | "bi_weekly" | "daily" | "semi_annually" | "one_time" => {
-              if (!freq) return "monthly";
-              const lowerFreq = freq.toLowerCase();
-              if (lowerFreq.includes("month")) return "monthly";
-              if (lowerFreq.includes("quarter")) return "quarterly";
-              if (lowerFreq.includes("annual") || lowerFreq.includes("year")) return "annually";
-              if (lowerFreq.includes("week")) return "weekly";
-              if (lowerFreq.includes("bi") && lowerFreq.includes("week")) return "bi_weekly";
-              if (lowerFreq.includes("daily") || lowerFreq.includes("day")) return "daily";
-              if (lowerFreq.includes("semi")) return "semi_annually";
-              return "monthly";
-            };
-
-            const lineItemsData = contractData.lineItems.map((item, index) => ({
-              contract_id: contract.id,
-              description: item.description,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              line_total: item.quantity * item.unit_price,
-              recurrence_frequency: mapFrequency(item.frequency || contractData.contract.billing_frequency),
-              first_generation_date: contractData.contract.start_date,
-              next_generation_date: contractData.contract.start_date,
-              location_id: locationId,
-              item_order: index,
-              is_active: true,
-            }));
-
-            const { error: lineItemsError } = await supabase
-              .from("service_contract_line_items")
-              .insert(lineItemsData);
-
-            if (lineItemsError) throw lineItemsError;
-          }
-
-          successCount++;
-        } catch (error) {
-          console.error("Error importing contract:", error);
-          errorCount++;
+          if (locationError) throw locationError;
+          createdLocationMap.set(locationKey, newLocation.id);
         }
       }
 
-      if (successCount > 0) {
-        toast.success(`Successfully imported ${successCount} contract(s)`);
-        onSuccess?.();
-        onOpenChange(false);
-        resetDialog();
-      }
+      // Create service contract
+      const { data: contract, error: contractError } = await supabase
+        .from("service_contracts")
+        .insert({
+          tenant_id: profile.tenant_id,
+          contract_number: contractNumber,
+          customer_id: customerId,
+          title: contractTitle,
+          start_date: contractStartDate,
+          billing_frequency: billingFrequency,
+          status: "active",
+          auto_generate: true,
+          created_by: user.id,
+          total_contract_value: lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+        })
+        .select()
+        .single();
 
-      if (errorCount > 0) {
-        toast.error(`Failed to import ${errorCount} contract(s)`);
-      }
-    } catch (error) {
+      if (contractError) throw contractError;
+
+      // Create line items
+      const lineItemsToInsert = lineItems.map((item, index) => {
+        const locationKey = `${item.location.name}-${item.location.address}`;
+        const locationId = item.location.existingLocationId || createdLocationMap.get(locationKey);
+
+        return {
+          contract_id: contract.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          line_total: item.quantity * item.unit_price,
+          recurrence_frequency: item.recurrence_frequency,
+          first_generation_date: item.first_generation_date,
+          next_generation_date: item.first_generation_date,
+          location_id: locationId,
+          item_order: index,
+          is_active: true,
+        };
+      });
+
+      const { error: lineItemsError } = await supabase
+        .from("service_contract_line_items")
+        .insert(lineItemsToInsert);
+
+      if (lineItemsError) throw lineItemsError;
+
+      toast.success("Service contract imported successfully");
+
+      onSuccess();
+      handleClose();
+    } catch (error: any) {
       console.error("Import error:", error);
-      toast.error("Failed to import contracts");
+      toast.error(error.message || "Failed to import contract");
     } finally {
-      setStage("review");
+      setIsProcessing(false);
     }
   };
 
-  const resetDialog = () => {
+  const handleClose = () => {
     setFile(null);
-    setParsedContracts([]);
-    setTenantId("");
-    setStage("upload");
-    setEditingContract(null);
-  };
-
-  const updateContract = (index: number, field: string, value: any) => {
-    setParsedContracts(prev => {
-      const updated = [...prev];
-      const keys = field.split('.');
-      let target: any = updated[index];
-      for (let i = 0; i < keys.length - 1; i++) {
-        target = target[keys[i]];
-      }
-      target[keys[keys.length - 1]] = value;
-      return updated;
-    });
-  };
-
-  const removeContract = (index: number) => {
-    setParsedContracts(prev => prev.filter((_, i) => i !== index));
-    toast.info("Contract removed from import queue");
+    setCustomerId("");
+    setContractTitle("");
+    setContractStartDate("");
+    setBillingFrequency("monthly");
+    setLineItems([]);
+    setStep("upload");
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh]">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5" />
-            Import Service Contracts from Spreadsheet
-          </DialogTitle>
+          <DialogTitle>Import Service Contract from Spreadsheet</DialogTitle>
         </DialogHeader>
 
-        {stage === "upload" && (
+        {step === "upload" && (
           <div className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Upload a CSV or Excel file containing service contract data. The AI will intelligently parse
-                and map your data to service contracts, customers, and locations.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer *</Label>
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers?.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-2">
-              <Label htmlFor="file-upload">Select Spreadsheet</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="file-upload"
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileChange}
-                  disabled={isProcessing}
-                />
-                <Button
-                  onClick={parseSpreadsheet}
-                  disabled={!file || isProcessing}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Parse
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Label htmlFor="file">Upload Spreadsheet (CSV) *</Label>
+              <Input
+                id="file"
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                disabled={isProcessing}
+              />
+              {file && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {file.name}
+                </p>
+              )}
             </div>
+
+            <Button
+              onClick={handleUpload}
+              disabled={!file || !customerId || isProcessing}
+              className="w-full"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Parse Spreadsheet
+                </>
+              )}
+            </Button>
           </div>
         )}
 
-        {stage === "review" && parsedContracts.length > 0 && (
+        {step === "review" && (
           <div className="space-y-4">
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Review the parsed data below. You can edit any field or remove contracts before importing.
-              </AlertDescription>
-            </Alert>
-
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-4">
-                {parsedContracts.map((contract, index) => (
-                  <Card key={index}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">
-                          Contract {index + 1}: {contract.contract.title}
-                        </CardTitle>
-                        <div className="flex gap-2">
-                          {contract.customer.existingCustomerId && (
-                            <Badge variant="outline">Existing Customer</Badge>
-                          )}
-                          {contract.location.existingLocationId && (
-                            <Badge variant="outline">Existing Location</Badge>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeContract(index)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Tabs defaultValue="contract">
-                        <TabsList className="grid w-full grid-cols-4">
-                          <TabsTrigger value="contract">Contract</TabsTrigger>
-                          <TabsTrigger value="customer">Customer</TabsTrigger>
-                          <TabsTrigger value="location">Location</TabsTrigger>
-                          <TabsTrigger value="items">Line Items</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="contract" className="space-y-2">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs">Title</Label>
-                              <Input
-                                value={contract.contract.title}
-                                onChange={(e) => updateContract(index, 'contract.title', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Type</Label>
-                              <Input
-                                value={contract.contract.contract_type}
-                                disabled
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Start Date</Label>
-                              <Input
-                                type="date"
-                                value={contract.contract.start_date}
-                                onChange={(e) => updateContract(index, 'contract.start_date', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Billing Frequency</Label>
-                              <Input
-                                value={contract.contract.billing_frequency}
-                                disabled
-                                className="text-sm"
-                              />
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="customer" className="space-y-2">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs">Name</Label>
-                              <Input
-                                value={contract.customer.name}
-                                onChange={(e) => updateContract(index, 'customer.name', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Email</Label>
-                              <Input
-                                value={contract.customer.email || ''}
-                                onChange={(e) => updateContract(index, 'customer.email', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="location" className="space-y-2">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs">Name</Label>
-                              <Input
-                                value={contract.location.name}
-                                onChange={(e) => updateContract(index, 'location.name', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Address</Label>
-                              <Input
-                                value={contract.location.address}
-                                onChange={(e) => updateContract(index, 'location.address', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">City</Label>
-                              <Input
-                                value={contract.location.city || ''}
-                                onChange={(e) => updateContract(index, 'location.city', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">State</Label>
-                              <Input
-                                value={contract.location.state || ''}
-                                onChange={(e) => updateContract(index, 'location.state', e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="items">
-                          <div className="space-y-2">
-                            {contract.lineItems.map((item, itemIndex) => (
-                              <div key={itemIndex} className="flex gap-2 items-center text-sm p-2 bg-muted rounded">
-                                <div className="flex-1">{item.description}</div>
-                                <div className="w-20">Qty: {item.quantity}</div>
-                                <div className="w-28">${item.unit_price.toFixed(2)}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    </CardContent>
-                  </Card>
-                ))}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Contract Title *</Label>
+                <Input
+                  id="title"
+                  value={contractTitle}
+                  onChange={(e) => setContractTitle(e.target.value)}
+                  placeholder="Enter contract title"
+                />
               </div>
-            </ScrollArea>
 
-            <Separator />
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={contractStartDate}
+                  onChange={(e) => setContractStartDate(e.target.value)}
+                />
+              </div>
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={resetDialog}>
-                Cancel
+              <div className="space-y-2">
+                <Label htmlFor="billing">Billing Frequency *</Label>
+                <Select value={billingFrequency} onValueChange={(value: any) => setBillingFrequency(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="annually">Annually</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Line Items ({lineItems.length})</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Frequency</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lineItems.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.description}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className="font-medium">{item.location.name}</div>
+                            <div className="text-muted-foreground">{item.location.address}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="capitalize">{item.recurrence_frequency}</TableCell>
+                        <TableCell>{item.first_generation_date}</TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          ${(item.quantity * item.unit_price).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setStep("upload")} disabled={isProcessing}>
+                <X className="mr-2 h-4 w-4" />
+                Back
               </Button>
-              <Button onClick={handleImport} disabled={parsedContracts.length === 0}>
-                Import {parsedContracts.length} Contract(s)
+              <Button onClick={handleImport} disabled={isProcessing}>
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Import Contract
+                  </>
+                )}
               </Button>
             </div>
-          </div>
-        )}
-
-        {stage === "importing" && (
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg font-medium">Importing contracts...</p>
-            <p className="text-sm text-muted-foreground">Please wait while we create your contracts</p>
           </div>
         )}
       </DialogContent>
