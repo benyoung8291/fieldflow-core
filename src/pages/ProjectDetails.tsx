@@ -1,7 +1,18 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Calendar, DollarSign, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2, Mail } from "lucide-react";
 import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import KeyInfoCard from "@/components/layout/KeyInfoCard";
@@ -24,6 +35,9 @@ import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimel
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -149,6 +163,48 @@ export default function ProjectDetails() {
     enabled: !!tasks?.length && !!project,
   });
 
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      // First check if this project was created from a quote
+      const { data: quoteData } = await supabase
+        .from("quotes")
+        .select("id")
+        .eq("converted_to_project_id", id)
+        .maybeSingle();
+
+      // Delete the project
+      const { error: deleteError } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) throw deleteError;
+
+      // If there was a linked quote, unlock it
+      if (quoteData) {
+        const { error: quoteError } = await supabase
+          .from("quotes")
+          .update({ converted_to_project_id: null })
+          .eq("id", quoteData.id);
+
+        if (quoteError) throw quoteError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast({ title: "Project deleted successfully" });
+      navigate("/projects");
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error deleting project", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Prepare tasks for Gantt chart - use project tasks with dependencies
   const ganttTasks = useMemo(() => {
     if (!tasks || tasks.length === 0) return [];
@@ -236,7 +292,7 @@ export default function ProjectDetails() {
     {
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
-      onClick: () => {/* Delete confirmation */},
+      onClick: () => setDeleteDialogOpen(true),
       destructive: true,
       separator: true,
     },
@@ -359,7 +415,8 @@ export default function ProjectDetails() {
   ];
 
   return (
-    <DocumentDetailLayout
+    <>
+      <DocumentDetailLayout
       title={project?.name || ""}
       subtitle={project?.customer?.name}
       backPath="/projects"
@@ -374,6 +431,28 @@ export default function ProjectDetails() {
       isLoading={isLoading}
       notFoundMessage={!project ? "Project not found" : undefined}
     />
-  );
+
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Project</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this project? This action cannot be undone.
+            All associated data including tasks, service orders, and change orders will remain but will no longer be linked to this project.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={() => deleteProjectMutation.mutate()}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
+);
 }
 

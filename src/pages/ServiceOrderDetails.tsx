@@ -65,6 +65,7 @@ export default function ServiceOrderDetails() {
   const [appointmentStartTime, setAppointmentStartTime] = useState("09:00");
   const [appointmentEndTime, setAppointmentEndTime] = useState("17:00");
   const [addToInvoiceDialogOpen, setAddToInvoiceDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Fetch project integration setting
   const { data: integrationSettings } = useQuery({
@@ -214,6 +215,52 @@ export default function ServiceOrderDetails() {
     },
     onError: (error: any) => {
       toast({ title: "Error creating appointment", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleDelete = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteServiceOrderMutation = useMutation({
+    mutationFn: async () => {
+      // First check if this service order was created from a quote
+      const { data: quoteData } = await supabase
+        .from("quotes")
+        .select("id")
+        .eq("converted_to_service_order_id", id)
+        .maybeSingle();
+
+      // Delete the service order
+      const { error: deleteError } = await supabase
+        .from("service_orders")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) throw deleteError;
+
+      // If there was a linked quote, unlock it
+      if (quoteData) {
+        const { error: quoteError } = await supabase
+          .from("quotes")
+          .update({ converted_to_service_order_id: null })
+          .eq("id", quoteData.id);
+
+        if (quoteError) throw quoteError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast({ title: "Service order deleted successfully" });
+      navigate("/service-orders");
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error deleting service order", 
+        description: error.message,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -384,7 +431,7 @@ export default function ServiceOrderDetails() {
     {
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
-      onClick: () => {/* Delete confirmation */},
+      onClick: handleDelete,
       destructive: true,
       separator: true,
     },
@@ -896,6 +943,27 @@ export default function ServiceOrderDetails() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => updateOrderStatusMutation.mutate("completed")}>
               Complete Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this service order? This action cannot be undone.
+              The original quote (if any) will be unlocked for editing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteServiceOrderMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

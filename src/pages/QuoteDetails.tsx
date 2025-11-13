@@ -442,9 +442,11 @@ export default function QuoteDetails() {
   ];
 
   const isDraft = quote?.status === "draft";
+  const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
+  const canEdit = isDraft && !isConverted;
 
-  // Primary actions - Save button for draft quotes
-  const primaryActions: DocumentAction[] = isDraft ? [
+  // Primary actions - Save button for draft quotes that haven't been converted
+  const primaryActions: DocumentAction[] = canEdit ? [
     {
       label: isSaving ? "Saving..." : "Save",
       icon: <Save className="h-4 w-4" />,
@@ -455,11 +457,11 @@ export default function QuoteDetails() {
 
   // File menu actions
   const fileMenuActions: FileMenuAction[] = [
-    {
+    ...(!isConverted ? [{
       label: "Edit Quote",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
-    },
+    }] : []),
     {
       label: "PDF / Email",
       icon: <Mail className="h-4 w-4" />,
@@ -504,28 +506,46 @@ export default function QuoteDetails() {
 
   // Key info section
   const keyInfoSection = quote && (
-    <div className="grid gap-4 md:grid-cols-4">
-      <KeyInfoCard
-        icon={User}
-        label="Customer"
-        value={quote.customer?.name || "N/A"}
-      />
-      <KeyInfoCard
-        icon={FileText}
-        label="Quote Number"
-        value={quote.quote_number}
-      />
-      <KeyInfoCard
-        icon={ListChecks}
-        label="Line Items"
-        value={lineItems?.length || 0}
-      />
-      <KeyInfoCard
-        icon={DollarSign}
-        label="Total Amount"
-        value={`$${quote.total_amount.toFixed(2)}`}
-      />
-    </div>
+    <>
+      <div className="grid gap-4 md:grid-cols-4">
+        <KeyInfoCard
+          icon={User}
+          label="Customer"
+          value={quote.customer?.name || "N/A"}
+        />
+        <KeyInfoCard
+          icon={FileText}
+          label="Quote Number"
+          value={quote.quote_number}
+        />
+        <KeyInfoCard
+          icon={ListChecks}
+          label="Line Items"
+          value={lineItems?.length || 0}
+        />
+        <KeyInfoCard
+          icon={DollarSign}
+          label="Total Amount"
+          value={`$${quote.total_amount.toFixed(2)}`}
+        />
+      </div>
+      
+      {isConverted && (
+        <div className="mt-4 p-4 bg-info/10 border border-info/20 rounded-lg flex items-start gap-3">
+          <Lock className="h-5 w-5 text-info mt-0.5" />
+          <div>
+            <p className="font-medium text-info">Quote Locked</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              This quote has been converted and cannot be edited. To modify this quote, delete the 
+              {quote?.converted_to_service_order_id && " service order"}
+              {quote?.converted_to_project_id && " project"}
+              {quote?.converted_to_contract_id && " contract"}
+              {" "}first.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 
   // Calculate totals
@@ -555,7 +575,7 @@ export default function QuoteDetails() {
             <InlineQuoteLineItems
               lineItems={editedLineItems}
               onChange={setEditedLineItems}
-              readOnly={!isDraft}
+              readOnly={!canEdit}
             />
 
             <div className="bg-muted p-4 rounded-lg space-y-2">
@@ -594,7 +614,7 @@ export default function QuoteDetails() {
           <CardContent className="space-y-6">
             <div>
               <Label className="text-sm font-medium">Title</Label>
-              {isDraft ? (
+              {canEdit ? (
                 <Input
                   value={editedFields.title}
                   onChange={(e) => setEditedFields(prev => ({ ...prev, title: e.target.value }))}
@@ -608,7 +628,7 @@ export default function QuoteDetails() {
 
             <div>
               <Label className="text-sm font-medium">Description</Label>
-              {isDraft ? (
+              {canEdit ? (
                 <Textarea
                   value={editedFields.description}
                   onChange={(e) => setEditedFields(prev => ({ ...prev, description: e.target.value }))}
@@ -623,7 +643,7 @@ export default function QuoteDetails() {
 
             <div>
               <Label className="text-sm font-medium">Notes</Label>
-              {isDraft ? (
+              {canEdit ? (
                 <Textarea
                   value={editedFields.notes}
                   onChange={(e) => setEditedFields(prev => ({ ...prev, notes: e.target.value }))}
@@ -640,7 +660,7 @@ export default function QuoteDetails() {
 
             <div>
               <Label className="text-sm font-medium">Terms & Conditions</Label>
-              {isDraft ? (
+              {canEdit ? (
                 <Textarea
                   value={editedFields.terms_conditions}
                   onChange={(e) => setEditedFields(prev => ({ ...prev, terms_conditions: e.target.value }))}
