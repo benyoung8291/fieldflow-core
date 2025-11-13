@@ -882,6 +882,150 @@ export type Database = {
           },
         ]
       }
+      expense_attachments: {
+        Row: {
+          expense_id: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          tenant_id: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          expense_id: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          tenant_id: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          expense_id?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          tenant_id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          account_code: string | null
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          category_id: string | null
+          created_at: string
+          description: string
+          expense_date: string
+          expense_number: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          project_id: string | null
+          reference_number: string | null
+          rejection_reason: string | null
+          service_order_id: string | null
+          status: string
+          sub_account: string | null
+          submitted_at: string | null
+          submitted_by: string
+          tenant_id: string
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          account_code?: string | null
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category_id?: string | null
+          created_at?: string
+          description: string
+          expense_date?: string
+          expense_number: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          project_id?: string | null
+          reference_number?: string | null
+          rejection_reason?: string | null
+          service_order_id?: string | null
+          status?: string
+          sub_account?: string | null
+          submitted_at?: string | null
+          submitted_by: string
+          tenant_id: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          account_code?: string | null
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          expense_date?: string
+          expense_number?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          project_id?: string | null
+          reference_number?: string | null
+          rejection_reason?: string | null
+          service_order_id?: string | null
+          status?: string
+          sub_account?: string | null
+          submitted_at?: string | null
+          submitted_by?: string
+          tenant_id?: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: []
+      }
       helpdesk_email_accounts: {
         Row: {
           created_at: string

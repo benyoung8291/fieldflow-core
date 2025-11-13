@@ -34,6 +34,7 @@ const moreNavItems: NavItem[] = [
   { icon: FileText, label: "Service Contracts", path: "/service-contracts" },
   { icon: Building2, label: "Vendors", path: "/vendors" },
   { icon: ShoppingCart, label: "Purchase Orders", path: "/purchase-orders" },
+  { icon: Receipt, label: "Expenses", path: "/expenses" },
 ];
 
 export const MobileBottomNav = () => {

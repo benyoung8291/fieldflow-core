@@ -46,6 +46,8 @@ import CRMHub from "./pages/CRMHub";
 import Vendors from "@/pages/Vendors";
 import PurchaseOrders from "@/pages/PurchaseOrders";
 import PurchaseOrderDetails from "@/pages/PurchaseOrderDetails";
+import Expenses from "@/pages/Expenses";
+import ExpenseDetails from "@/pages/ExpenseDetails";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
