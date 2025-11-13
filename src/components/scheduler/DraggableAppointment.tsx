@@ -76,6 +76,17 @@ export default function DraggableAppointment({
       {...attributes}
       onClick={handleClick}
     >
+      {/* Duration badge - top right */}
+      <div className="absolute top-1 right-1 bg-muted/80 backdrop-blur-sm text-[10px] font-medium px-1.5 py-0.5 rounded text-muted-foreground z-10 group-hover:opacity-0 transition-opacity">
+        <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+        {(() => {
+          const start = new Date(appointment.start_time);
+          const end = new Date(appointment.end_time);
+          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          return (Math.round(hours * 10) / 10).toFixed(1);
+        })()}h
+      </div>
+
       <div className="pointer-events-none relative">
         <div className={cn(!showFullDetails && "font-medium truncate", showFullDetails && "space-y-2")}>
           {showFullDetails ? (
