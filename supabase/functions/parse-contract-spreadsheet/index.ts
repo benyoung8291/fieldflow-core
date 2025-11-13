@@ -75,35 +75,47 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "system",
-            content: `You are an expert at parsing service contract spreadsheets. Extract line items for a single service contract.
+            content: `You are an expert at analyzing and parsing service contract spreadsheets of any format. Your job is to intelligently understand the data structure and extract service contract line items.
 
-CRITICAL MAPPING RULES:
-- Location name: Use the Suburb column value
-- Location address: Use the Address column value (include full street address)
-- Description: Use the Address column value
-- Frequency mapping: "6 Monthly" = "monthly", "Monthly" = "monthly", "Quarterly" = "quarterly", "Annually" = "annually", "Weekly" = "weekly"
-- Unit price: Extract from "TOTAL per clean ($)" column (remove $ and commas)
-- Quantity: Always 1
-- Start date: Convert Month 1 value to date format YYYY-MM-DD. Month names (Jul, Aug, Sep, etc.) should use 2025 as year. Jul=2025-07-01, Aug=2025-08-01, etc.
-- State: Use State column value
+ANALYSIS APPROACH:
+1. Examine the column headers and data to understand what information is available
+2. Identify which columns contain address/location information, pricing, frequency, dates, and service descriptions
+3. Extract meaningful data for each line item
 
-Match existing locations by comparing Suburb name and Address.`
+EXTRACTION GUIDELINES:
+- Description: Use the most descriptive field available (address, service description, or property identifier)
+- Location name: Preferably use suburb/city name if available, otherwise use a location identifier
+- Location address: Extract full street address
+- Quantity: Default to 1 unless a quantity field is clearly present
+- Unit price: Find pricing information (look for columns with $, price, cost, amount, rate, etc.) - remove currency symbols and commas, convert to number
+- Frequency: Identify service frequency - convert any format to one of: weekly, monthly, quarterly, annually (interpret "6 Monthly" as "monthly", "Bi-monthly" as "monthly", etc.)
+- Start date: Find start date, first service date, or month indicators - convert to YYYY-MM-DD format (use 2025 as default year if not specified)
+- State: Extract state/province code if available
+
+LOCATION MATCHING:
+- Compare extracted location names and addresses against existing customer locations
+- Match if the location name (suburb/city) and address are similar
+- Set existingLocationId if a match is found
+
+Be intelligent and flexible - spreadsheet formats vary widely. Focus on extracting the core information needed for service contracts.`
           },
           {
             role: "user",
-            content: `Parse this service contract spreadsheet into line items. Each row represents one location/service.
+            content: `Analyze and parse this service contract spreadsheet. Each row should become a line item.
 
-Sample data structure (first few rows):
-${JSON.stringify(limitedSpreadsheetData.slice(0, 5), null, 2)}
+Data preview (showing structure and first few rows):
+${JSON.stringify(limitedSpreadsheetData.slice(0, 3), null, 2)}
 
-Existing customer locations to match against:
+Total rows to process: ${limitedSpreadsheetData.length}
+
+Existing customer locations for matching:
 ${JSON.stringify(locations || [], null, 2)}
 
-Parse ALL ${limitedSpreadsheetData.length} rows into line items.`
+Analyze the data structure, identify the relevant columns, and extract all line items with their location information.`
           }
         ],
         tools: [
@@ -120,22 +132,22 @@ Parse ALL ${limitedSpreadsheetData.length} rows into line items.`
                     items: {
                       type: "object",
                       properties: {
-                        description: { type: "string", description: "Full street address from Address column" },
-                        quantity: { type: "number", description: "Always 1 for these service contracts" },
-                        unit_price: { type: "number", description: "Dollar amount from TOTAL per clean column (no $ or commas)" },
-                        recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Converted from Frequency column: 6 Monthly=monthly, Monthly=monthly, etc." },
-                        first_generation_date: { type: "string", description: "Start date from Month 1 column converted to YYYY-MM-DD (use 2025 as year)" },
+                        description: { type: "string", description: "Service description or address - use most descriptive field available" },
+                        quantity: { type: "number", description: "Service quantity (default 1 if not specified)" },
+                        unit_price: { type: "number", description: "Price per service as number (no currency symbols)" },
+                        recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Service frequency - standardized format" },
+                        first_generation_date: { type: "string", description: "First service date in YYYY-MM-DD format" },
                         location: {
                           type: "object",
                           properties: {
-                            existingLocationId: { type: "string", description: "ID if Suburb and Address match existing location" },
-                            name: { type: "string", description: "Suburb name from Suburb column" },
-                            address: { type: "string", description: "Full street address from Address column" },
-                            city: { type: "string", description: "Suburb value" },
-                            state: { type: "string", description: "State from State column (NSW, VIC, etc.)" },
-                            postcode: { type: "string", description: "Postcode if available" }
+                            existingLocationId: { type: "string", description: "ID if location matches existing location by name and address" },
+                            name: { type: "string", description: "Location name - preferably suburb/city name" },
+                            address: { type: "string", description: "Full street address" },
+                            city: { type: "string", description: "City/suburb name" },
+                            state: { type: "string", description: "State/province code" },
+                            postcode: { type: "string", description: "Postal/zip code if available" }
                           },
-                          required: ["name", "address", "state"]
+                          required: ["name", "address"]
                         }
                       },
                       required: ["description", "quantity", "unit_price", "recurrence_frequency", "first_generation_date", "location"]
