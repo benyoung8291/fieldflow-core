@@ -316,7 +316,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   {customers?.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name}
