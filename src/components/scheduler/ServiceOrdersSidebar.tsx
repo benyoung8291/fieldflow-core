@@ -92,17 +92,17 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
 
   return (
     <>
-      <Card className="h-full">
-        <CardHeader className="p-3">
-          <CardTitle className="text-sm">
+      <Card className="h-full flex flex-col min-h-0">
+        <CardHeader className="p-2 flex-shrink-0">
+          <CardTitle className="text-xs">
             Service Orders
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground">
             Drag to calendar or use AI
           </p>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-180px)] px-2 pb-2">
+        <CardContent className="p-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full px-2 pb-2">
             <div className="space-y-1.5">
               {ordersNeedingAppointments.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs">

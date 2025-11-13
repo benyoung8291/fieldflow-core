@@ -69,14 +69,14 @@ export default function DraggableAppointment({
         borderLeftColor: getBorderColor(),
       }}
       className={cn(
-        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none cursor-grab active:cursor-grabbing",
+        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none cursor-grab active:cursor-grabbing pointer-events-auto",
         isDragging && "opacity-50"
       )}
       {...listeners}
       {...attributes}
       onClick={handleClick}
     >
-      <div className="pointer-events-none">
+      <div className="pointer-events-none relative">
         <div className={cn(!showFullDetails && "font-medium truncate", showFullDetails && "space-y-2")}>
           {showFullDetails ? (
             <>

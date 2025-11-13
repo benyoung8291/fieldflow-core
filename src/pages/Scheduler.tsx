@@ -1086,63 +1086,25 @@ export default function Scheduler() {
       )}
 
       <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
-        <div className="grid grid-cols-[1fr_300px] gap-3 h-[calc(100vh-80px)] overflow-hidden">
-          <div className="space-y-2 flex flex-col min-h-0">
-        {/* Compact Summary Cards */}
-        <div className="grid grid-cols-3 gap-2">
-          <Card className="shadow-sm">
-            <CardContent className="p-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-[11px] text-muted-foreground">Today</p>
-                </div>
-                <p className="text-base font-bold">{todayAppointments.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm">
-            <CardContent className="p-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-[11px] text-muted-foreground">Workers</p>
-                </div>
-                <p className="text-base font-bold">{activeWorkers}</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm">
-            <CardContent className="p-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-[11px] text-muted-foreground">Active</p>
-                </div>
-                <p className="text-base font-bold">{checkedInAppointments.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
+        <div className="grid grid-cols-[1fr_280px] gap-3 h-[calc(100vh-64px)] overflow-hidden">
+          <div className="flex flex-col min-h-0">
+        
         {/* Calendar Controls */}
         <Card className="shadow-md flex flex-col min-h-0 flex-1">
-          <CardHeader className="p-3 flex-shrink-0">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
+          <CardHeader className="p-2 flex-shrink-0 border-b">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-7 w-7"
                   onClick={handlePrevious}
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <ChevronLeft className="h-3 w-3" />
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-8 text-xs px-3"
+                  className="h-7 text-[11px] px-2"
                   onClick={handleToday}
                 >
                   Today
@@ -1150,53 +1112,53 @@ export default function Scheduler() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-7 w-7"
                   onClick={handleNext}
                 >
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <ChevronRight className="h-3 w-3" />
                 </Button>
-                <h3 className="text-sm font-semibold ml-2">{getDateRangeLabel()}</h3>
+                <h3 className="text-xs font-semibold ml-1">{getDateRangeLabel()}</h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs"
+                  className="h-7 text-[10px] px-2"
                   onClick={handleUndo}
                   disabled={undoStack.length === 0}
                 >
-                  <Undo2 className="h-3.5 w-3.5 mr-1.5" />
+                  <Undo2 className="h-3 w-3 mr-1" />
                   Undo
                 </Button>
                 <Button
                   variant="default"
                   size="sm"
-                  className="h-8 text-xs"
+                  className="h-7 text-[10px] px-2"
                   onClick={handlePublishAllDraft}
                   disabled={!appointments.some(apt => apt.status === "draft")}
                 >
-                  <FileText className="h-3.5 w-3.5 mr-1.5" />
-                  Publish Drafts
+                  <FileText className="h-3 w-3 mr-1" />
+                  Publish
                 </Button>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <Switch 
                     id="service-order-view" 
                     checked={showServiceOrderView}
                     onCheckedChange={setShowServiceOrderView}
-                    className="scale-90"
+                    className="scale-75"
                   />
-                  <Label htmlFor="service-order-view" className="text-xs cursor-pointer">
-                    <List className="h-3.5 w-3.5 inline mr-1" />
-                    SO View
+                  <Label htmlFor="service-order-view" className="text-[10px] cursor-pointer">
+                    <List className="h-3 w-3 inline mr-0.5" />
+                    SO
                   </Label>
                 </div>
                 <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="day" className="text-xs px-2.5">Day</TabsTrigger>
-                    <TabsTrigger value="week" className="text-xs px-2.5">Week</TabsTrigger>
-                    <TabsTrigger value="timegrid" className="text-xs px-2.5">Time Grid</TabsTrigger>
-                    <TabsTrigger value="month" className="text-xs px-2.5">Month</TabsTrigger>
-                    <TabsTrigger value="kanban" className="text-xs px-2.5">Kanban</TabsTrigger>
+                  <TabsList className="h-7">
+                    <TabsTrigger value="day" className="text-[10px] px-2 py-0">Day</TabsTrigger>
+                    <TabsTrigger value="week" className="text-[10px] px-2 py-0">Week</TabsTrigger>
+                    <TabsTrigger value="timegrid" className="text-[10px] px-2 py-0">Grid</TabsTrigger>
+                    <TabsTrigger value="month" className="text-[10px] px-2 py-0">Month</TabsTrigger>
+                    <TabsTrigger value="kanban" className="text-[10px] px-2 py-0">Kanban</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -1322,19 +1284,19 @@ export default function Scheduler() {
 
           {/* Right Sidebar - Service Orders or Workers depending on view */}
           {!showServiceOrderView ? (
-            <div>
+            <div className="flex flex-col min-h-0">
               <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
             </div>
           ) : (
-            <Card className="h-full">
-              <CardHeader className="p-3">
-                <CardTitle className="text-sm">Available Workers</CardTitle>
-                <p className="text-xs text-muted-foreground">
+            <Card className="h-full flex flex-col min-h-0">
+              <CardHeader className="p-2 flex-shrink-0">
+                <CardTitle className="text-xs">Workers</CardTitle>
+                <p className="text-[10px] text-muted-foreground">
                   Drag to appointments
                 </p>
               </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-180px)] px-2 pb-2">
+              <CardContent className="p-0 flex-1 overflow-hidden">
+                <ScrollArea className="h-full px-2 pb-2">
                   <div className="space-y-2">
                     {workers.map(worker => (
                       <DraggableWorker key={worker.id} worker={worker} />
