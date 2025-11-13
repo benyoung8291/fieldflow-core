@@ -29,10 +29,14 @@ export default function CreditCardReconciliation() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading, error: transactionsError } = useQuery({
     queryKey: ['my-credit-card-transactions'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
       
       const { data, error } = await supabase
         .from('credit_card_transactions')
@@ -41,10 +45,13 @@ export default function CreditCardReconciliation() {
           company_credit_cards(card_name, card_provider, last_four_digits),
           expenses(expense_number, status)
         `)
-        .eq('assigned_to', user?.id)
+        .eq('assigned_to', user.id)
         .order('transaction_date', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Transaction fetch error:', error);
+        throw error;
+      }
       return data;
     },
   });
@@ -288,7 +295,56 @@ export default function CreditCardReconciliation() {
 
   const unreconciledCount = transactions?.filter(t => t.status === 'unreconciled').length || 0;
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <p className="text-muted-foreground">Loading transactions...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (transactionsError) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-4">
+          <h1 className="text-xl font-semibold">Reconcile</h1>
+          <Card className="p-6">
+            <div className="text-center space-y-2">
+              <p className="text-destructive">Error loading transactions</p>
+              <p className="text-sm text-muted-foreground">{transactionsError.message}</p>
+              <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['my-credit-card-transactions'] })}>
+                Try Again
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!transactions || transactions.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Reconcile (0)</h1>
+            <Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} size="sm" variant="outline">
+              <RefreshCw className="h-3 w-3 mr-2" />
+              Sync
+            </Button>
+          </div>
+          <Card className="p-6">
+            <div className="text-center space-y-2">
+              <p className="text-muted-foreground">No transactions found</p>
+              <p className="text-sm text-muted-foreground">Sync your credit card to see transactions</p>
+            </div>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
