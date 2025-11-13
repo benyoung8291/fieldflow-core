@@ -39,7 +39,7 @@ export default function Tasks() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTask, setActiveTask] = useState<any>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const [groupMode, setGroupMode] = useState<'status' | 'tag'>('status');
+  const [groupMode, setGroupMode] = useState<'status' | 'tag' | 'document'>('status');
   const queryClient = useQueryClient();
 
   // Drag and drop sensors with mobile support
@@ -338,11 +338,43 @@ export default function Tasks() {
     return groups;
   }, [tasksWithUsers]);
 
+  // Group tasks by document type
+  const groupedByDocument = useMemo(() => {
+    const groups: Record<string, any[]> = {
+      'no_link': []
+    };
+    
+    tasksWithUsers.forEach((task: any) => {
+      if (!task.document_type) {
+        groups['no_link'].push(task);
+      } else {
+        if (!groups[task.document_type]) {
+          groups[task.document_type] = [];
+        }
+        groups[task.document_type].push(task);
+      }
+    });
+    
+    return groups;
+  }, [tasksWithUsers]);
+
   const statusLabels: Record<string, string> = {
     'pending': 'Pending',
     'in_progress': 'In Progress',
     'completed': 'Complete',
     'cancelled': 'Cancelled'
+  };
+
+  const documentTypeLabels: Record<string, string> = {
+    'customer': 'Customer',
+    'lead': 'Lead',
+    'project': 'Project',
+    'quote': 'Quote',
+    'service_order': 'Service Order',
+    'appointment': 'Appointment',
+    'invoice': 'Invoice',
+    'contract': 'Contract',
+    'no_link': 'Not Linked'
   };
 
   const toggleSection = (status: string) => {
@@ -554,7 +586,6 @@ export default function Tasks() {
                   variant={groupMode === 'status' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setGroupMode('status')}
-                  className="gap-2"
                 >
                   Status
                 </Button>
@@ -562,9 +593,15 @@ export default function Tasks() {
                   variant={groupMode === 'tag' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setGroupMode('tag')}
-                  className="gap-2"
                 >
                   Tag
+                </Button>
+                <Button
+                  variant={groupMode === 'document' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setGroupMode('document')}
+                >
+                  Document
                 </Button>
               </div>
             )}
@@ -709,14 +746,22 @@ export default function Tasks() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupMode === 'status' ? groupedTasks : groupedByTag).map(([groupKey, groupTasks]) => {
+            {Object.entries(
+              groupMode === 'status' 
+                ? groupedTasks 
+                : groupMode === 'tag' 
+                  ? groupedByTag 
+                  : groupedByDocument
+            ).map(([groupKey, groupTasks]) => {
               if (groupTasks.length === 0) return null;
               
               const displayLabel = groupMode === 'status' 
                 ? statusLabels[groupKey] 
-                : groupKey === 'untagged' 
-                  ? 'Untagged' 
-                  : groupKey;
+                : groupMode === 'tag'
+                  ? groupKey === 'untagged' 
+                    ? 'Untagged' 
+                    : groupKey
+                  : documentTypeLabels[groupKey] || groupKey;
               
               return (
                 <div key={groupKey} className="space-y-2">
