@@ -41,6 +41,7 @@ const defaultNavigation = [
     children: [
       { name: "Invoices", href: "/invoices", icon: "Receipt", color: "#8b5cf6", isFolder: false },
       { name: "Recurring Invoices", href: "/recurring-invoices", icon: "RefreshCw", color: "#8b5cf6", isFolder: false },
+      { name: "Vendors", href: "/vendors", icon: "Building2", color: "#8b5cf6", isFolder: false },
     ]
   },
   { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899", isFolder: false },
