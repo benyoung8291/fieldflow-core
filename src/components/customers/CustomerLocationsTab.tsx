@@ -87,6 +87,12 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
                       )}
                     </div>
                     
+                    {location.customer_location_id && (
+                      <div className="text-xs text-muted-foreground mb-2">
+                        ID: {location.customer_location_id}
+                      </div>
+                    )}
+                    
                     <div className="space-y-2 text-sm">
                       {location.address && (
                         <div className="flex items-start gap-2">

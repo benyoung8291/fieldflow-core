@@ -240,6 +240,13 @@ export default function CustomerLocationDetails() {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-3">
+                {location.customer_location_id && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Customer Location ID</div>
+                    <div className="font-medium">{location.customer_location_id}</div>
+                  </div>
+                )}
+
                 {location.address && (
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
