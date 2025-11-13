@@ -145,6 +145,19 @@ export default function QuoteDetails() {
     },
   });
 
+  // Fetch default margin percentage
+  const { data: defaultMarginData } = useQuery({
+    queryKey: ["general-settings-default-margin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings" as any)
+        .select("default_margin_percentage")
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return (data as any)?.default_margin_percentage || 30;
+    },
+  });
+
   // Initialize edited fields when quote loads
   useEffect(() => {
     if (quote) {
@@ -253,6 +266,87 @@ export default function QuoteDetails() {
 
   const updateStatus = async (newStatus: string) => {
     try {
+      // Validate line items if changing status away from draft
+      if (quote?.status === "draft" && newStatus !== "draft") {
+        // Check if there are any line items
+        if (!lineItems || lineItems.length === 0) {
+          toast({
+            title: "Cannot change status",
+            description: "Please add at least one line item before changing status",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Validate all line items are complete
+        const incompleteItems: string[] = [];
+        
+        lineItems.forEach((item: any, index: number) => {
+          const issues: string[] = [];
+          
+          if (!item.description || item.description.trim() === "") {
+            issues.push("missing description");
+          }
+          
+          const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+          if (isNaN(qty) || qty <= 0) {
+            issues.push("invalid quantity");
+          }
+          
+          const cost = typeof item.cost_price === 'string' ? parseFloat(item.cost_price) : item.cost_price;
+          if (isNaN(cost) || cost < 0) {
+            issues.push("invalid cost");
+          }
+          
+          const sell = typeof item.sell_price === 'string' ? parseFloat(item.sell_price) : item.sell_price;
+          if (isNaN(sell) || sell <= 0) {
+            issues.push("invalid sell price");
+          }
+          
+          if (issues.length > 0) {
+            incompleteItems.push(`Line ${index + 1}: ${issues.join(", ")}`);
+          }
+        });
+
+        // Check for sub-items (nested line items with parent_line_item_id)
+        const subItems = lineItems.filter((item: any) => item.parent_line_item_id);
+        subItems.forEach((subItem: any, subIndex: number) => {
+          const subIssues: string[] = [];
+          
+          if (!subItem.description || subItem.description.trim() === "") {
+            subIssues.push("missing description");
+          }
+          
+          const subQty = typeof subItem.quantity === 'string' ? parseFloat(subItem.quantity) : subItem.quantity;
+          if (isNaN(subQty) || subQty <= 0) {
+            subIssues.push("invalid quantity");
+          }
+          
+          const subCost = typeof subItem.cost_price === 'string' ? parseFloat(subItem.cost_price) : subItem.cost_price;
+          if (isNaN(subCost) || subCost < 0) {
+            subIssues.push("invalid cost");
+          }
+          
+          const subSell = typeof subItem.sell_price === 'string' ? parseFloat(subItem.sell_price) : subItem.sell_price;
+          if (isNaN(subSell) || subSell <= 0) {
+            subIssues.push("invalid sell price");
+          }
+          
+          if (subIssues.length > 0) {
+            incompleteItems.push(`Sub-item ${subIndex + 1}: ${subIssues.join(", ")}`);
+          }
+        });
+
+        if (incompleteItems.length > 0) {
+          toast({
+            title: "Incomplete line items",
+            description: incompleteItems.slice(0, 3).join("; ") + (incompleteItems.length > 3 ? `... and ${incompleteItems.length - 3} more` : ""),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const updates: any = { status: newStatus };
 
       if (newStatus === "sent") updates.sent_at = new Date().toISOString();
@@ -622,6 +716,7 @@ export default function QuoteDetails() {
               lineItems={editedLineItems}
               onChange={setEditedLineItems}
               readOnly={!canEdit}
+              defaultMarginPercentage={defaultMarginData || 30}
             />
             
             <div className="mt-6 flex justify-end">

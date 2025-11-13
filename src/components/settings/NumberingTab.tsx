@@ -18,6 +18,7 @@ interface SequentialSetting {
 export default function NumberingTab() {
   const queryClient = useQueryClient();
   const [overheadPercentage, setOverheadPercentage] = useState<string>("20");
+  const [defaultMarginPercentage, setDefaultMarginPercentage] = useState<string>("30");
   const [settings, setSettings] = useState<Record<string, { prefix: string; next_number: number; number_length: number }>>({
     service_order: { prefix: "SO-", next_number: 1, number_length: 6 },
     quote: { prefix: "Q-", next_number: 1, number_length: 6 },
@@ -53,17 +54,22 @@ export default function NumberingTab() {
     },
   });
 
-  // Fetch overhead percentage
+  // Fetch overhead percentage and default margin
   const { data: generalSettings } = useQuery({
     queryKey: ["general-settings-overhead"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("general_settings" as any)
-        .select("overhead_percentage")
+        .select("overhead_percentage, default_margin_percentage")
         .single();
       if (error && error.code !== 'PGRST116') throw error;
-      if (data && (data as any).overhead_percentage) {
-        setOverheadPercentage((data as any).overhead_percentage.toString());
+      if (data) {
+        if ((data as any).overhead_percentage) {
+          setOverheadPercentage((data as any).overhead_percentage.toString());
+        }
+        if ((data as any).default_margin_percentage) {
+          setDefaultMarginPercentage((data as any).default_margin_percentage.toString());
+        }
       }
       return data;
     },
@@ -142,6 +148,39 @@ export default function NumberingTab() {
     },
   });
 
+  const saveDefaultMarginMutation = useMutation({
+    mutationFn: async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
+      const marginValue = parseFloat(defaultMarginPercentage);
+      if (isNaN(marginValue) || marginValue < 0 || marginValue > 1000) {
+        throw new Error("Default margin must be between 0 and 1000");
+      }
+
+      const { error } = await supabase
+        .from("general_settings" as any)
+        .upsert({
+          tenant_id: profile.tenant_id,
+          default_margin_percentage: marginValue,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["general-settings-overhead"] });
+      toast.success("Default margin percentage saved successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to save default margin percentage");
+    },
+  });
+
   const getPreview = (entityType: string) => {
     const setting = settings[entityType];
     return `${setting.prefix}${setting.next_number.toString().padStart(setting.number_length, '0')}`;
@@ -194,6 +233,43 @@ export default function NumberingTab() {
             disabled={saveOverheadMutation.isPending}
           >
             Save Overhead Setting
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Default Margin Percentage */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Default Margin Percentage</CardTitle>
+          <CardDescription>
+            Default margin percentage used when creating new quote line items
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="defaultMargin">Default Margin (%)</Label>
+              <Input
+                id="defaultMargin"
+                type="number"
+                min="0"
+                max="1000"
+                step="0.1"
+                value={defaultMarginPercentage}
+                onChange={(e) => setDefaultMarginPercentage(e.target.value)}
+                placeholder="30"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Example: $100 cost + 30% margin = $130 sell price
+              </p>
+            </div>
+          </div>
+          <Button 
+            size="sm" 
+            onClick={() => saveDefaultMarginMutation.mutate()}
+            disabled={saveDefaultMarginMutation.isPending}
+          >
+            Save Margin Setting
           </Button>
         </CardContent>
       </Card>

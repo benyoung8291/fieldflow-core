@@ -174,6 +174,19 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     },
   ]);
 
+  // Fetch default margin percentage
+  const { data: defaultMarginData } = useQuery({
+    queryKey: ["general-settings-default-margin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings" as any)
+        .select("default_margin_percentage")
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return (data as any)?.default_margin_percentage || 30;
+    },
+  });
+
   useEffect(() => {
     if (open) {
       fetchCustomersAndLeads();
@@ -349,11 +362,12 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       pipeline_id: "",
       stage_id: "",
     });
+    const defaultMargin = defaultMarginData?.toString() || "30";
     setLineItems([{ 
       description: "", 
       quantity: "1", 
       cost_price: "",
-      margin_percentage: "30",
+      margin_percentage: defaultMargin,
       sell_price: "",
       line_total: 0,
       subItems: [],
@@ -490,11 +504,12 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   };
 
   const addLineItem = () => {
+    const defaultMargin = defaultMarginData?.toString() || "30";
     setLineItems([...lineItems, {
       description: "",
       quantity: "1",
       cost_price: "",
-      margin_percentage: "30",
+      margin_percentage: defaultMargin,
       sell_price: "",
       line_total: 0,
       subItems: [],
@@ -503,6 +518,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   };
 
   const addSubItem = (parentIndex: number) => {
+    const defaultMargin = defaultMarginData?.toString() || "30";
     const updated = [...lineItems];
     if (!updated[parentIndex].subItems) {
       updated[parentIndex].subItems = [];
@@ -511,7 +527,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
       description: "",
       quantity: "1",
       cost_price: "",
-      margin_percentage: "30",
+      margin_percentage: defaultMargin,
       sell_price: "",
       line_total: 0,
     });
