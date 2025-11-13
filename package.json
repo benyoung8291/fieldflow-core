@@ -47,6 +47,7 @@
     "@supabase/supabase-js": "^2.80.0",
     "@tanstack/react-query": "^5.83.0",
     "@types/papaparse": "^5.5.0",
+    "@vitest/ui": "^4.0.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -73,6 +74,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "vite-plugin-pwa": "^1.1.0",
+    "vitest": "^4.0.8",
     "workbox-window": "^7.3.0",
     "zod": "^3.25.76"
   },
