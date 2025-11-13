@@ -15,7 +15,7 @@ export default function Dashboard() {
   const quickActions = [
     {
       name: "New Order",
-      description: "Create service order",
+      description: "Create order",
       icon: ClipboardList,
       color: "text-primary",
       bgColor: "bg-primary/10",
