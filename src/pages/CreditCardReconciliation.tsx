@@ -166,6 +166,52 @@ export default function CreditCardReconciliation() {
     },
   });
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .eq("tenant_id", profile.tenant_id)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: serviceOrders = [] } = useQuery({
+    queryKey: ["service-orders"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("id, work_order_number, purchase_order_number")
+        .eq("tenant_id", profile.tenant_id)
+        .order("work_order_number");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const handleSelectTransaction = (transaction: any) => {
     setSelectedTransaction(transaction);
     setCreatingExpenseForTxn(transaction.id);
@@ -580,6 +626,46 @@ export default function CreditCardReconciliation() {
                                 placeholder="Ref number..."
                               />
                             </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Project (Optional)</Label>
+                            <Select
+                              value={formData.project_id}
+                              onValueChange={(value) => setFormData({ ...formData, project_id: value, service_order_id: "" })}
+                            >
+                              <SelectTrigger className="h-8 text-xs mt-1">
+                                <SelectValue placeholder="Select project" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">None</SelectItem>
+                                {projects.map((project) => (
+                                  <SelectItem key={project.id} value={project.id}>
+                                    {project.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Service Order (Optional)</Label>
+                            <Select
+                              value={formData.service_order_id}
+                              onValueChange={(value) => setFormData({ ...formData, service_order_id: value, project_id: "" })}
+                            >
+                              <SelectTrigger className="h-8 text-xs mt-1">
+                                <SelectValue placeholder="Select service order" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">None</SelectItem>
+                                {serviceOrders.map((so) => (
+                                  <SelectItem key={so.id} value={so.id}>
+                                    {so.work_order_number} {so.purchase_order_number && `- PO: ${so.purchase_order_number}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
 
                           <div>
