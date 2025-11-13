@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
+import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 
 export default function GeneralSettingsTab() {
   const queryClient = useQueryClient();
@@ -298,11 +299,17 @@ export default function GeneralSettingsTab() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="address-line-1">Address Line 1</Label>
-            <Input
-              id="address-line-1"
-              placeholder="123 Main Street"
+            <AddressAutocomplete
               value={formData.addressLine1}
-              onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, addressLine1: value })}
+              onPlaceSelect={(place) => setFormData({
+                ...formData,
+                addressLine1: place.address,
+                city: place.city,
+                state: place.state,
+                postcode: place.postcode,
+              })}
+              placeholder="Start typing to search address..."
             />
           </div>
           <div className="space-y-2">

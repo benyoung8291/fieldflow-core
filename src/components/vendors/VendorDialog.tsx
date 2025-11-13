@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 
 interface VendorDialogProps {
   open: boolean;
@@ -331,11 +332,17 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
 
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  placeholder="Street address"
+                <AddressAutocomplete
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, address: value })}
+                  onPlaceSelect={(place) => setFormData({
+                    ...formData,
+                    address: place.address,
+                    city: place.city,
+                    state: place.state,
+                    postcode: place.postcode,
+                  })}
+                  placeholder="Start typing to search address..."
                 />
               </div>
 

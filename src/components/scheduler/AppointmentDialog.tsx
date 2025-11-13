@@ -20,6 +20,7 @@ import { generateRecurringInstances, checkRecurringConflicts } from "@/hooks/use
 import { Badge } from "@/components/ui/badge";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import WorkerSuggestions from "./WorkerSuggestions";
+import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 
 interface AppointmentDialogProps {
   open: boolean;
@@ -870,15 +871,22 @@ export default function AppointmentDialog({
             <FieldPresenceWrapper fieldName="location_address" onlineUsers={onlineUsers}>
               <div className="space-y-2">
                 <Label htmlFor="location_address">Address</Label>
-                <Input
-                  id="location_address"
+                <AddressAutocomplete
                   value={formData.location_address}
-                  onChange={(e) => setFormData({ ...formData, location_address: e.target.value })}
-                  onFocus={() => {
+                  onChange={(value) => {
+                    setFormData({ ...formData, location_address: value });
+                  }}
+                  onPlaceSelect={(place) => {
+                    setFormData({
+                      ...formData,
+                      location_address: place.address,
+                      location_lat: place.latitude.toString(),
+                      location_lng: place.longitude.toString(),
+                    });
                     setCurrentField("location_address");
                     updateField("location_address");
                   }}
-                  placeholder="Job site address"
+                  placeholder="Start typing to search address..."
                 />
               </div>
             </FieldPresenceWrapper>

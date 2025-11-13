@@ -22,6 +22,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import { cn } from "@/lib/utils";
+import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -51,6 +52,9 @@ export default function AppointmentDetails() {
   const isSupervisorOrAdmin = isAdmin || userRoles?.some((r) => r.role === "supervisor");
   const [isDragging, setIsDragging] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    location_address: "",
+  });
 
   // Fetch appointment details
   const { data: appointment, isLoading } = useQuery({
@@ -254,13 +258,13 @@ export default function AppointmentDetails() {
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const formDataFromEvent = new FormData(e.currentTarget);
     updateAppointmentMutation.mutate({
-      title: formData.get("title"),
-      description: formData.get("description"),
-      notes: formData.get("notes"),
-      status: formData.get("status"),
-      location_address: formData.get("location_address"),
+      title: formDataFromEvent.get("title"),
+      description: formDataFromEvent.get("description"),
+      notes: formDataFromEvent.get("notes"),
+      status: formDataFromEvent.get("status"),
+      location_address: formData.location_address || appointment?.location_address,
     });
   };
 
@@ -493,7 +497,15 @@ export default function AppointmentDetails() {
                     </div>
                     <div>
                       <Label htmlFor="location_address">Location</Label>
-                      <Input id="location_address" name="location_address" defaultValue={appointment.location_address || ""} />
+                      <AddressAutocomplete
+                        value={formData.location_address || appointment.location_address || ""}
+                        onChange={(value) => setFormData({ ...formData, location_address: value })}
+                        onPlaceSelect={(place) => setFormData({
+                          ...formData,
+                          location_address: place.address,
+                        })}
+                        placeholder="Start typing to search address..."
+                      />
                     </div>
                     <div>
                       <Label htmlFor="notes">Notes</Label>
