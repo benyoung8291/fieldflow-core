@@ -12,10 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { spreadsheetData } = await req.json();
+    const { spreadsheetData, customerId } = await req.json();
     
     if (!spreadsheetData || !Array.isArray(spreadsheetData) || spreadsheetData.length === 0) {
       throw new Error("Invalid spreadsheet data");
+    }
+
+    if (!customerId) {
+      throw new Error("Customer ID is required");
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -50,17 +54,12 @@ serve(async (req) => {
 
     const tenantId = profile.tenant_id;
 
-    // Fetch a limited sample of existing customers and locations for reference
-    const { data: customers } = await supabase
-      .from("customers")
-      .select("id, name, abn, email")
-      .eq("tenant_id", tenantId)
-      .limit(50);
-
+    // Fetch existing locations for this customer
     const { data: locations } = await supabase
       .from("customer_locations")
-      .select("id, name, customer_id, address, city, state, postcode")
+      .select("id, name, address, city, state, postcode")
       .eq("tenant_id", tenantId)
+      .eq("customer_id", customerId)
       .limit(50);
 
     console.log("Sending to AI for parsing...");
@@ -80,95 +79,61 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert at parsing service contract spreadsheets. Extract service contract information including customer details, contract terms, location information, and line items. Match existing customers and locations when possible.`
+            content: `You are an expert at parsing service contract spreadsheets. Extract line items for a single service contract. Each line item should have a description, location, frequency, start date, quantity, and unit price.`
           },
           {
             role: "user",
-            content: `Parse this spreadsheet data into service contracts. Match customers by name/ABN/email and locations by address when found in the reference lists.
+            content: `Parse this spreadsheet into service contract line items:
 
-Spreadsheet rows: ${limitedSpreadsheetData.length}
-Sample customers available: ${customers?.length || 0}
-Sample locations available: ${locations?.length || 0}
+Rows: ${limitedSpreadsheetData.length}
+Existing customer locations: ${JSON.stringify(locations || [], null, 2)}
 
-Extract all contracts with line items and locations.`
+Extract all line items with their details.`
           }
         ],
         tools: [
           {
             type: "function",
             function: {
-              name: "parse_contracts",
-              description: "Extract service contract data from spreadsheet",
+              name: "parse_line_items",
+              description: "Extract service contract line items from spreadsheet",
               parameters: {
                 type: "object",
                 properties: {
-                  contracts: {
+                  lineItems: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        customer: {
-                          type: "object",
-                          properties: {
-                            existingCustomerId: { type: "string", description: "ID if customer exists" },
-                            name: { type: "string" },
-                            email: { type: "string" },
-                            abn: { type: "string" }
-                          },
-                          required: ["name"]
-                        },
+                        description: { type: "string", description: "Line item description/name" },
+                        quantity: { type: "number", description: "Quantity" },
+                        unit_price: { type: "number", description: "Unit price" },
+                        recurrence_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"], description: "Service frequency" },
+                        first_generation_date: { type: "string", description: "Start date in YYYY-MM-DD format" },
                         location: {
                           type: "object",
                           properties: {
-                            existingLocationId: { type: "string", description: "ID if location exists" },
-                            name: { type: "string" },
-                            address: { type: "string" },
+                            existingLocationId: { type: "string", description: "ID if location exists in reference list" },
+                            name: { type: "string", description: "Location name" },
+                            address: { type: "string", description: "Street address" },
                             city: { type: "string" },
                             state: { type: "string" },
                             postcode: { type: "string" }
                           },
                           required: ["name", "address"]
-                        },
-                        contract: {
-                          type: "object",
-                          properties: {
-                            title: { type: "string" },
-                            description: { type: "string" },
-                            contract_type: { type: "string", enum: ["recurring", "one_time"] },
-                            start_date: { type: "string", description: "ISO date" },
-                            end_date: { type: "string", description: "ISO date" },
-                            billing_frequency: { type: "string", enum: ["monthly", "quarterly", "annually"] },
-                            service_frequency: { type: "string", enum: ["weekly", "monthly", "quarterly", "annually"] },
-                            total_amount: { type: "number" },
-                            auto_renew: { type: "boolean" }
-                          },
-                          required: ["title", "contract_type", "start_date", "billing_frequency"]
-                        },
-                        lineItems: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              description: { type: "string" },
-                              quantity: { type: "number" },
-                              unit_price: { type: "number" },
-                              frequency: { type: "string" }
-                            },
-                            required: ["description", "quantity", "unit_price"]
-                          }
                         }
                       },
-                      required: ["customer", "location", "contract", "lineItems"]
+                      required: ["description", "quantity", "unit_price", "recurrence_frequency", "first_generation_date", "location"]
                     }
                   }
                 },
-                required: ["contracts"],
+                required: ["lineItems"],
                 additionalProperties: false
               }
             }
           }
         ],
-        tool_choice: { type: "function", function: { name: "parse_contracts" } }
+        tool_choice: { type: "function", function: { name: "parse_line_items" } }
       }),
     });
 
@@ -198,13 +163,13 @@ Extract all contracts with line items and locations.`
       throw new Error("No structured output from AI");
     }
 
-    const parsedContracts = JSON.parse(toolCall.function.arguments);
-    console.log("Parsed contracts:", JSON.stringify(parsedContracts, null, 2));
+    const parsedData = JSON.parse(toolCall.function.arguments);
+    console.log("Parsed line items:", JSON.stringify(parsedData, null, 2));
 
     return new Response(
       JSON.stringify({
         success: true,
-        contracts: parsedContracts.contracts,
+        lineItems: parsedData.lineItems,
         tenantId
       }),
       {
