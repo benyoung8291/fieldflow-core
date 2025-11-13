@@ -95,12 +95,12 @@ serve(async (req) => {
     
     const cleanedData = cleanSpreadsheetData(spreadsheetData);
     
-    // For analysis, only need a few rows. For parsing, limit to 250 for optimal performance.
+    // For analysis, only need a few rows. For parsing, limit to 1,000.
     const limitedSpreadsheetData = processingMode === "analyze" 
       ? cleanedData.slice(0, 5) 
-      : cleanedData.slice(0, 250);
+      : cleanedData.slice(0, 1000);
     
-    const hasMoreRows = spreadsheetData.length > 250;
+    const hasMoreRows = spreadsheetData.length > 1000;
     
     // Validate data quality
     const dataIssues: string[] = [];

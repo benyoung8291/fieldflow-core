@@ -171,7 +171,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       // Show notification if rows were limited
       if (functionData.hasMoreRows) {
         toast.warning(
-          `Your spreadsheet has ${functionData.totalRows} rows. Only the first ${functionData.processedRows} rows were processed due to the 250 row limit for optimal performance.`
+          `Your spreadsheet has ${functionData.totalRows} rows. Only the first ${functionData.processedRows} rows were processed due to the 1,000 row limit.`
         );
       }
 
@@ -294,6 +294,28 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
       // Check database for existing locations with the same name and address
       if (uniqueLocationKeys.size > 0) {
+        // Detect duplicates within the spreadsheet itself
+        const locationKeyCount = new Map<string, number>();
+        const duplicateKeys = new Set<string>();
+        
+        for (const item of locationsToCreate) {
+          const locationKey = `${item.location.name}-${item.location.address}`;
+          const count = (locationKeyCount.get(locationKey) || 0) + 1;
+          locationKeyCount.set(locationKey, count);
+          
+          if (count > 1) {
+            duplicateKeys.add(locationKey);
+          }
+        }
+        
+        if (duplicateKeys.size > 0) {
+          console.log(`Found ${duplicateKeys.size} duplicate locations within spreadsheet:`, Array.from(duplicateKeys));
+          toast.warning(
+            `${duplicateKeys.size} duplicate location(s) detected in spreadsheet. Only one entry per unique address will be created.`,
+            { duration: 5000 }
+          );
+        }
+        
         const locationChecks = Array.from(uniqueLocationKeys).map(async (locationKey) => {
           const [name, address] = locationKey.split('-');
           const { data: existingLocation } = await supabase
@@ -673,120 +695,6 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                 </Select>
               </div>
             </div>
-
-            {failedGeocodingItems.length > 0 && (
-              <div className="rounded-lg border border-warning/50 bg-warning/10 p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <X className="h-5 w-5 text-warning mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-warning">Address Validation Failed</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {failedGeocodingItems.length} location{failedGeocodingItems.length > 1 ? 's' : ''} could not be validated. 
-                      Please review and correct the addresses below, then retry validation.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 mt-3">
-                  {failedGeocodingItems.map((itemIndex) => {
-                    const item = lineItems[itemIndex];
-                    const isEditing = editingAddressIndex === itemIndex;
-                    
-                    return (
-                      <div key={itemIndex} className="bg-background rounded border p-3 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.location.name}</p>
-                            {!isEditing ? (
-                              <p className="text-sm text-muted-foreground">
-                                {item.location.address}
-                                {item.location.city && `, ${item.location.city}`}
-                                {item.location.state && `, ${item.location.state}`}
-                                {item.location.postcode && ` ${item.location.postcode}`}
-                              </p>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                <Input
-                                  placeholder="Street Address"
-                                  value={item.location.address}
-                                  onChange={(e) => handleUpdateAddress(itemIndex, 'address', e.target.value)}
-                                  className="col-span-2"
-                                />
-                                <Input
-                                  placeholder="City/Suburb"
-                                  value={item.location.city || ''}
-                                  onChange={(e) => handleUpdateAddress(itemIndex, 'city', e.target.value)}
-                                />
-                                <Input
-                                  placeholder="State"
-                                  value={item.location.state || ''}
-                                  onChange={(e) => handleUpdateAddress(itemIndex, 'state', e.target.value)}
-                                />
-                                <Input
-                                  placeholder="Postcode"
-                                  value={item.location.postcode || ''}
-                                  onChange={(e) => handleUpdateAddress(itemIndex, 'postcode', e.target.value)}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-1 ml-2">
-                            {!isEditing ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingAddressIndex(itemIndex)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRetryGeocode(itemIndex)}
-                                  disabled={isRetryingGeocode}
-                                >
-                                  {isRetryingGeocode ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    "Retry"
-                                  )}
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    handleRetryGeocode(itemIndex);
-                                    setEditingAddressIndex(null);
-                                  }}
-                                  disabled={isRetryingGeocode}
-                                >
-                                  {isRetryingGeocode ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Check className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingAddressIndex(null)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             <div>
               <h3 className="font-semibold mb-2">Line Items ({lineItems.length})</h3>
