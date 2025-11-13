@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Papa from "papaparse";
-import { Loader2, Upload, Check, X } from "lucide-react";
+import { Loader2, Upload, Check, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ImportContractDialogProps {
   open: boolean;
@@ -62,14 +63,42 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
-  const [duplicateLocations, setDuplicateLocations] = useState<Set<number>>(new Set());
-  const [validationErrors, setValidationErrors] = useState<Map<number, string[]>>(new Map());
 
-  // Required fields for validation
-  const requiredFields = ['description', 'location_name', 'unit_price'];
+  const requiredFields = ['description', 'location_name', 'location_address', 'unit_price'];
   const missingRequiredFields = requiredFields.filter(field => !columnMappings[field]);
 
-  // Fetch customers for selection
+  const getValidationErrors = (item: ParsedLineItem): string[] => {
+    const errors: string[] = [];
+    if (!item.description?.trim()) errors.push('Description required');
+    if (!item.location?.name?.trim()) errors.push('Location name required');
+    if (!item.location?.address?.trim()) errors.push('Location address required');
+    if (!item.unit_price || item.unit_price <= 0) errors.push('Valid unit price required');
+    return errors;
+  };
+
+  const getDuplicateLocations = (): Set<number> => {
+    const duplicates = new Set<number>();
+    const locationMap = new Map<string, number[]>();
+
+    lineItems.forEach((item, index) => {
+      const key = `${item.location.name}|${item.location.address}`.toLowerCase();
+      if (!locationMap.has(key)) {
+        locationMap.set(key, []);
+      }
+      locationMap.get(key)!.push(index);
+    });
+
+    locationMap.forEach((indices) => {
+      if (indices.length > 1) {
+        indices.forEach(idx => duplicates.add(idx));
+      }
+    });
+
+    return duplicates;
+  };
+
+  const duplicateLocations = getDuplicateLocations();
+
   const { data: customers } = useQuery({
     queryKey: ["customers-for-import"],
     queryFn: async () => {
@@ -101,140 +130,106 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     setIsProcessing(true);
 
     try {
-      // Parse CSV file
       Papa.parse(file, {
         complete: async (results) => {
           try {
-            // Store spreadsheet data for later parsing
             setSpreadsheetData(results.data);
 
-            // Call edge function to analyze columns
             const { data: functionData, error: functionError } = await supabase.functions.invoke(
               "parse-contract-spreadsheet",
               {
                 body: {
                   spreadsheetData: results.data,
-                  customerId: customerId,
-                  mode: "analyze",
-                },
+                  analyzeOnly: true
+                }
               }
             );
 
             if (functionError) throw functionError;
 
-            // Set suggested mappings and available columns (filter out empty strings)
-            setColumnMappings(functionData.mappings || {});
-            setAvailableColumns((functionData.availableColumns || []).filter((col: string) => col && col.trim() !== ""));
-            setStep("mapping");
-
-            toast.success("Analyzed spreadsheet structure");
+            if (functionData.suggestedMappings) {
+              setColumnMappings(functionData.suggestedMappings);
+              setAvailableColumns(functionData.availableColumns);
+              setStep("mapping");
+            }
           } catch (error: any) {
-            console.error("Error parsing spreadsheet:", error);
-            toast.error(error.message || "Failed to parse spreadsheet");
+            console.error("Error analyzing spreadsheet:", error);
+            toast.error(error.message || "Failed to analyze spreadsheet");
           } finally {
             setIsProcessing(false);
           }
         },
         error: (error) => {
-          console.error("CSV parse error:", error);
-          toast.error("Failed to read CSV file");
+          toast.error(`Failed to parse file: ${error.message}`);
           setIsProcessing(false);
         },
+        header: true,
+        skipEmptyLines: true,
       });
     } catch (error: any) {
-      console.error("Upload error:", error);
-      toast.error(error.message || "Failed to process file");
+      toast.error(error.message || "Failed to upload file");
       setIsProcessing(false);
     }
   };
 
   const handleConfirmMappings = async () => {
+    if (missingRequiredFields.length > 0) {
+      toast.error(`Missing required fields: ${missingRequiredFields.join(', ')}`);
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // Parse with confirmed mappings
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         "parse-contract-spreadsheet",
         {
           body: {
-            spreadsheetData: spreadsheetData,
-            customerId: customerId,
-            mode: "parse",
-            columnMappings: columnMappings,
-          },
+            spreadsheetData,
+            columnMappings,
+            customerId
+          }
         }
       );
 
       if (functionError) throw functionError;
 
-      setLineItems(functionData.lineItems || []);
-      setStep("review");
-
-      // Show notification if rows were limited
-      if (functionData.hasMoreRows) {
-        toast.warning(
-          `Your spreadsheet has ${functionData.totalRows} rows. Only the first ${functionData.processedRows} rows were processed due to the 1,000 row limit.`
-        );
+      if (functionData.lineItems && functionData.lineItems.length > 0) {
+        setLineItems(functionData.lineItems);
+        setStep("review");
+        toast.success(`Parsed ${functionData.lineItems.length} line items`);
+      } else {
+        toast.error("No line items found in spreadsheet");
       }
-
-      // Show data quality issues if any
-      if (functionData.dataIssues && functionData.dataIssues.length > 0) {
-        toast.warning(
-          `Data quality issues detected: ${functionData.dataIssues.join(', ')}. Excel errors have been cleaned and defaulted to appropriate values.`,
-          { duration: 8000 }
-        );
-      }
-
-      toast.success(`Parsed ${functionData.lineItems?.length || 0} line items`);
     } catch (error: any) {
-      console.error("Error parsing with mappings:", error);
+      console.error("Error parsing spreadsheet:", error);
       toast.error(error.message || "Failed to parse spreadsheet");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleUpdateAddress = (itemIndex: number, field: string, value: string) => {
-    const updatedItems = [...lineItems];
-    (updatedItems[itemIndex].location as any)[field] = value;
-    setLineItems(updatedItems);
-  };
-
   const startEditing = (rowIndex: number, field: string, currentValue: any) => {
     setEditingCell({ rowIndex, field });
-    setEditValue(String(currentValue || ''));
+    setEditValue(currentValue?.toString() || "");
   };
 
   const cancelEditing = () => {
     setEditingCell(null);
-    setEditValue('');
+    setEditValue("");
   };
 
   const saveEdit = () => {
     if (!editingCell) return;
-    
+
     const { rowIndex, field } = editingCell;
     const updatedItems = [...lineItems];
     
-    // Handle different field types
-    if (field === 'description') {
-      updatedItems[rowIndex].description = editValue;
-    } else if (field === 'quantity') {
-      updatedItems[rowIndex].quantity = parseFloat(editValue) || 1;
-    } else if (field === 'unit_price') {
-      updatedItems[rowIndex].unit_price = parseFloat(editValue) || 0;
-    } else if (field === 'estimated_hours') {
-      updatedItems[rowIndex].estimated_hours = parseFloat(editValue) || 0;
-    } else if (field === 'first_generation_date') {
-      updatedItems[rowIndex].first_generation_date = editValue;
-    } else if (field === 'recurrence_frequency') {
-      updatedItems[rowIndex].recurrence_frequency = editValue as any;
-    } else if (field === 'location_name') {
-      updatedItems[rowIndex].location.name = editValue;
-    } else if (field === 'location_address') {
-      updatedItems[rowIndex].location.address = editValue;
-    } else if (field === 'customer_location_id') {
-      updatedItems[rowIndex].location.customer_location_id = editValue;
+    if (field.startsWith('location_')) {
+      const locationField = field.replace('location_', '');
+      updatedItems[rowIndex].location[locationField as keyof typeof updatedItems[0]['location']] = editValue as any;
+    } else {
+      (updatedItems[rowIndex] as any)[field] = editValue;
     }
     
     setLineItems(updatedItems);
@@ -250,168 +245,88 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   };
 
   const handleImport = async () => {
-    if (!customerId || !contractTitle || !contractStartDate || lineItems.length === 0) {
-      toast.error("Please fill in all required contract details");
+    if (!contractTitle || !contractStartDate || lineItems.length === 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const itemsWithErrors = lineItems.filter(item => getValidationErrors(item).length > 0);
+    if (itemsWithErrors.length > 0) {
+      toast.error(`${itemsWithErrors.length} line items have validation errors. Please fix them before importing.`);
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Get tenant_id from user profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile) throw new Error("Unable to get tenant information");
-
-      // Get next contract number
-      const { data: lastContract } = await supabase
-        .from("service_contracts")
-        .select("contract_number")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      const nextNumber = lastContract?.contract_number
-        ? parseInt(lastContract.contract_number.split("-")[1]) + 1
-        : 1;
-      const contractNumber = `SC-${String(nextNumber).padStart(5, "0")}`;
-
-      // Create locations that don't exist
-      const locationsToCreate = lineItems.filter(item => !item.location.existingLocationId);
-      const createdLocationMap = new Map<string, string>();
-
-      // Collect unique location keys to check for existing locations
-      const uniqueLocationKeys = new Set<string>();
-      for (const item of locationsToCreate) {
-        const locationKey = `${item.location.name}-${item.location.address}`;
-        uniqueLocationKeys.add(locationKey);
-      }
-
-      // Check database for existing locations with the same name and address
-      if (uniqueLocationKeys.size > 0) {
-        // Detect duplicates within the spreadsheet itself
-        const locationKeyCount = new Map<string, number>();
-        const duplicateKeys = new Set<string>();
-        
-        for (const item of locationsToCreate) {
-          const locationKey = `${item.location.name}-${item.location.address}`;
-          const count = (locationKeyCount.get(locationKey) || 0) + 1;
-          locationKeyCount.set(locationKey, count);
-          
-          if (count > 1) {
-            duplicateKeys.add(locationKey);
-          }
-        }
-        
-        if (duplicateKeys.size > 0) {
-          console.log(`Found ${duplicateKeys.size} duplicate locations within spreadsheet:`, Array.from(duplicateKeys));
-          toast.warning(
-            `${duplicateKeys.size} duplicate location(s) detected in spreadsheet. Only one entry per unique address will be created.`,
-            { duration: 5000 }
-          );
-        }
-        
-        const locationChecks = Array.from(uniqueLocationKeys).map(async (locationKey) => {
-          const [name, address] = locationKey.split('-');
-          const { data: existingLocation } = await supabase
-            .from("customer_locations")
-            .select("id, name, address")
-            .eq("tenant_id", profile.tenant_id)
-            .eq("customer_id", customerId)
-            .eq("name", name)
-            .eq("address", address)
-            .maybeSingle();
-          
-          return { locationKey, existingLocation };
-        });
-
-        const existingLocationsResults = await Promise.all(locationChecks);
-        
-        // Map existing locations
-        for (const { locationKey, existingLocation } of existingLocationsResults) {
-          if (existingLocation) {
-            createdLocationMap.set(locationKey, existingLocation.id);
-            console.log(`Using existing location for ${locationKey}: ${existingLocation.id}`);
-          }
-        }
-      }
-
-      // Create only locations that don't already exist
-      const locationIdsToGeocode: string[] = [];
-      
-      for (const item of locationsToCreate) {
-        const locationKey = `${item.location.name}-${item.location.address}`;
-        if (!createdLocationMap.has(locationKey)) {
-          const { data: newLocation, error: locationError } = await supabase
-            .from("customer_locations")
-            .insert({
-              tenant_id: profile.tenant_id,
-              customer_id: customerId,
-              name: item.location.name,
-              address: item.location.address,
-              city: item.location.city,
-              state: item.location.state,
-              postcode: item.location.postcode,
-              customer_location_id: item.location.customer_location_id || null,
-            })
-            .select()
-            .single();
-
-          if (locationError) throw locationError;
-          createdLocationMap.set(locationKey, newLocation.id);
-          locationIdsToGeocode.push(newLocation.id);
-          console.log(`Created new location for ${locationKey}: ${newLocation.id}`);
-        }
-      }
-
-      // Create service contract
       const { data: contract, error: contractError } = await supabase
         .from("service_contracts")
-        .insert({
-          tenant_id: profile.tenant_id,
-          contract_number: contractNumber,
+        .insert([{
           customer_id: customerId,
           title: contractTitle,
           start_date: contractStartDate,
           billing_frequency: billingFrequency,
           status: "active",
-          auto_generate: true,
-          created_by: user.id,
-          total_contract_value: lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
-        })
+        }] as any)
         .select()
         .single();
 
       if (contractError) throw contractError;
 
-      // Create line items
-      const lineItemsToInsert = lineItems.map((item, index) => {
-        const locationKey = `${item.location.name}-${item.location.address}`;
-        const locationId = item.location.existingLocationId || createdLocationMap.get(locationKey);
+      const locationMap = new Map<string, string>();
+      const lineItemsToInsert: any[] = [];
 
-        return {
-          contract_id: contract.id,
+      for (const item of lineItems) {
+        const locationKey = `${item.location.name}|${item.location.address}`.toLowerCase();
+        let locationId = locationMap.get(locationKey);
+
+        if (!locationId) {
+          const { data: existingLocation } = await supabase
+            .from("customer_locations")
+            .select("id")
+            .eq("customer_id", customerId)
+            .eq("name", item.location.name)
+            .eq("address", item.location.address)
+            .maybeSingle();
+
+          if (existingLocation) {
+            locationId = existingLocation.id;
+          } else {
+            const { data: newLocation, error: locationError } = await supabase
+              .from("customer_locations")
+              .insert([{
+                customer_id: customerId,
+                name: item.location.name,
+                address: item.location.address,
+                city: item.location.city,
+                state: item.location.state,
+                postcode: item.location.postcode,
+                customer_location_id: item.location.customer_location_id,
+                is_primary: false,
+                is_active: true,
+              }] as any)
+              .select()
+              .single();
+
+            if (locationError) throw locationError;
+            locationId = newLocation.id;
+          }
+
+          locationMap.set(locationKey, locationId);
+        }
+
+        lineItemsToInsert.push({
+          service_contract_id: contract.id,
+          customer_location_id: locationId,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
           line_total: item.quantity * item.unit_price,
           recurrence_frequency: item.recurrence_frequency,
           first_generation_date: item.first_generation_date,
-          next_generation_date: item.first_generation_date,
-          location_id: locationId,
           estimated_hours: item.estimated_hours || 0,
-          item_order: index,
-          is_active: true,
-          tenant_id: profile.tenant_id,
-        };
-      });
+        });
+      }
 
       const { error: lineItemsError } = await supabase
         .from("service_contract_line_items")
@@ -419,27 +334,14 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
       if (lineItemsError) throw lineItemsError;
 
-      toast.success("Service contract imported successfully");
-      
-      // Start background geocoding for new locations
-      if (locationIdsToGeocode.length > 0) {
-        console.log(`Starting background geocoding for ${locationIdsToGeocode.length} locations...`);
-        supabase.functions
-          .invoke("geocode-locations", {
-            body: { locationIds: locationIdsToGeocode }
-          })
-          .then(({ data, error }) => {
-            if (error) {
-              console.error("Background geocoding failed:", error);
-            } else {
-              console.log(`Background geocoding complete: ${data?.geocoded} locations geocoded`);
-              if (data?.geocoded > 0) {
-                toast.success(`Geocoded ${data.geocoded} locations`);
-              }
-            }
-          });
+      const newLocationIds = Array.from(new Set(lineItemsToInsert.map(item => item.customer_location_id)));
+      if (newLocationIds.length > 0) {
+        supabase.functions.invoke("geocode-locations", {
+          body: { locationIds: newLocationIds }
+        });
       }
 
+      toast.success("Contract imported successfully!");
       onSuccess();
       handleClose();
     } catch (error: any) {
@@ -457,29 +359,31 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     setContractStartDate("");
     setBillingFrequency("monthly");
     setLineItems([]);
+    setStep("upload");
     setColumnMappings({});
     setAvailableColumns([]);
     setSpreadsheetData([]);
-    setStep("upload");
+    setEditingCell(null);
+    setEditValue("");
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Import Service Contract from Spreadsheet</DialogTitle>
+          <DialogTitle>Import Service Contract</DialogTitle>
         </DialogHeader>
 
         {step === "upload" && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="customer">Customer *</Label>
+              <Label htmlFor="customer">Select Customer *</Label>
               <Select value={customerId} onValueChange={setCustomerId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
+                  <SelectValue placeholder="Select a customer" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
+                <SelectContent>
                   {customers?.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name}
@@ -490,14 +394,16 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="file">Upload Spreadsheet (CSV) *</Label>
-              <Input
-                id="file"
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                disabled={isProcessing}
-              />
+              <Label htmlFor="file">Upload Spreadsheet *</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="file"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileChange}
+                  disabled={!customerId}
+                />
+              </div>
               {file && (
                 <p className="text-sm text-muted-foreground">
                   Selected: {file.name}
@@ -505,148 +411,90 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               )}
             </div>
 
-            <Button
-              onClick={handleUpload}
-              disabled={!file || !customerId || isProcessing}
-              className="w-full"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Parse Spreadsheet
-                </>
-              )}
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpload} disabled={!file || !customerId || isProcessing}>
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Analyze Columns
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
 
         {step === "mapping" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold">Column Mapping</h3>
-              <p className="text-sm text-muted-foreground">
-                Review and adjust which columns contain each type of information. Example values are shown to help verify your selections.
+          <div className="space-y-4 overflow-y-auto flex-1">
+            <div>
+              <h3 className="font-semibold mb-2">Map Columns</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Review the AI's suggested column mappings. Fields marked with * are required.
               </p>
-            </div>
 
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Field Name</TableHead>
-                    <TableHead className="w-[250px]">Mapped Column</TableHead>
-                    <TableHead>Example Data</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.entries({
-                    description: "Description",
-                    location_name: "Location Name",
-                    location_address: "Location Address",
-                    location_city: "City",
-                    location_state: "State",
-                    location_postcode: "Postcode",
-                    customer_location_id: "Customer Location ID",
-                    unit_price: "Unit Price",
-                    quantity: "Quantity",
-                    estimated_hours: "Estimated Hours",
-                    frequency: "Frequency",
-                    start_date: "Start Date",
-                    }).map(([field, label]) => {
-                      const mappedColumn = columnMappings[field];
-                      const isRequired = requiredFields.includes(field);
-                      const isMissing = isRequired && !mappedColumn;
-                      let exampleValues = "";
-                    
-                    if (mappedColumn && spreadsheetData.length > 1) {
-                      // Get column index from header row
-                      const headerRow = spreadsheetData[0] as any[];
-                      const columnIndex = headerRow.indexOf(mappedColumn);
-                      
-                      if (columnIndex !== -1) {
-                        // Get first 2 non-empty values as examples
-                        const examples = spreadsheetData
-                          .slice(1, 6)
-                          .map((row: any) => row[columnIndex])
-                          .filter((val: any) => val !== null && val !== undefined && val !== "")
-                          .slice(0, 2);
-                        exampleValues = examples.join(", ");
-                      }
-                    }
+              {missingRequiredFields.length > 0 && (
+                <Alert className="mb-4 border-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Missing required fields: {missingRequiredFields.join(', ')}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-                    return (
-                      <TableRow 
-                        key={field}
-                        className={isMissing ? "border-l-4 border-l-destructive bg-destructive/5" : ""}
+              <div className="space-y-3">
+                {Object.entries({
+                  description: "Description *",
+                  location_name: "Location Name *",
+                  location_address: "Location Address *",
+                  customer_location_id: "Customer Location ID",
+                  recurrence_frequency: "Frequency",
+                  first_generation_date: "First Date",
+                  quantity: "Quantity",
+                  estimated_hours: "Est. Hours",
+                  unit_price: "Unit Price *",
+                }).map(([field, label]) => {
+                  const isRequired = requiredFields.includes(field);
+                  const isMissing = isRequired && !columnMappings[field];
+                  
+                  return (
+                    <div key={field} className={`grid grid-cols-2 gap-4 items-center p-3 rounded-lg border ${isMissing ? 'border-destructive bg-destructive/5' : 'border-border'}`}>
+                      <Label className={isMissing ? 'text-destructive' : ''}>
+                        {label}
+                        {isMissing && <span className="ml-2 text-xs">(Required)</span>}
+                      </Label>
+                      <Select
+                        value={columnMappings[field] || ""}
+                        onValueChange={(value) =>
+                          setColumnMappings({ ...columnMappings, [field]: value })
+                        }
                       >
-                        <TableCell className="font-medium">
-                          {label}
-                          {isRequired && (
-                            <span className="text-destructive ml-1" title="Required field">*</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={columnMappings[field] || "none"}
-                            onValueChange={(value) =>
-                              setColumnMappings((prev) => ({
-                                ...prev,
-                                [field]: value === "none" ? null : value,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className={isMissing ? "border-destructive" : ""}>
-                              <SelectValue placeholder="Select column" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {availableColumns.map((col) => (
-                                <SelectItem key={col} value={col}>
-                                  {col}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {exampleValues || <span className="italic">No data</span>}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        <SelectTrigger className={isMissing ? 'border-destructive' : ''}>
+                          <SelectValue placeholder="Select column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {availableColumns.map((col) => (
+                            <SelectItem key={col} value={col}>
+                              {col}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {missingRequiredFields.length > 0 && (
-              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                <div className="flex items-start gap-2">
-                  <X className="h-5 w-5 text-destructive mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-medium text-destructive">Required fields not mapped</p>
-                    <p className="text-sm text-muted-foreground">
-                      The following required fields must be mapped before proceeding:
-                    </p>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground">
-                      {missingRequiredFields.map(field => (
-                        <li key={field}>
-                          {field === 'description' && 'Description'}
-                          {field === 'location_name' && 'Location Name'}
-                          {field === 'unit_price' && 'Unit Price'}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-between pt-4">
+            <div className="flex justify-between pt-4 border-t">
               <Button variant="outline" onClick={() => setStep("upload")} disabled={isProcessing}>
                 Back
               </Button>
@@ -671,7 +519,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
         )}
 
         {step === "review" && (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-hidden flex flex-col flex-1">
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Contract Title *</Label>
@@ -708,10 +556,19 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-2">Line Items ({lineItems.length})</h3>
-              <div className="border rounded-lg overflow-hidden">
-                  <Table>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Line Items ({lineItems.length})</h3>
+                {duplicateLocations.size > 0 && (
+                  <Alert className="inline-flex items-center py-1 px-3 border-warning">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <span className="text-sm">{duplicateLocations.size} duplicate locations detected</span>
+                  </Alert>
+                )}
+              </div>
+              
+              <div className="border rounded-lg overflow-auto flex-1">
+                <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Description</TableHead>
@@ -728,223 +585,214 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                   <TableBody>
                     {lineItems.map((item, index) => {
                       const isDuplicate = duplicateLocations.has(index);
-                      const errors = validationErrors.get(index);
-                      const hasErrors = errors && errors.length > 0;
+                      const errors = getValidationErrors(item);
+                      const hasErrors = errors.length > 0;
                       
                       return (
                         <TableRow 
                           key={index}
-                          className={hasErrors ? "border-l-4 border-l-warning bg-warning/5" : ""}
+                          className={hasErrors ? "border-l-4 border-l-destructive bg-destructive/5" : ""}
+                          title={hasErrors ? errors.join(', ') : undefined}
                         >
-                        <TableCell 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'description', item.description)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'description' ? (
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              onBlur={saveEdit}
-                              autoFocus
-                              className="h-8"
-                            />
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span>{item.description}</span>
-                              {hasErrors && (
-                                <div className="flex items-center gap-1 text-xs text-warning">
-                                  <X className="h-3 w-3" />
-                                  <span className="hidden sm:inline">{errors.join(', ')}</span>
-                                </div>
-                              )}
+                          <TableCell 
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'description', item.description)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'description' ? (
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEdit}
+                                autoFocus
+                                className="h-8"
+                              />
+                            ) : (
+                              <span className={!item.description ? 'text-destructive' : ''}>
+                                {item.description || '(Required)'}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div 
+                                className="cursor-pointer hover:bg-muted/50 p-1 rounded"
+                                onClick={() => startEditing(index, 'location_name', item.location.name)}
+                              >
+                                {editingCell?.rowIndex === index && editingCell?.field === 'location_name' ? (
+                                  <Input
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    onBlur={saveEdit}
+                                    autoFocus
+                                    className="h-7 text-sm font-medium"
+                                  />
+                                ) : (
+                                  <span className={`text-sm font-medium ${isDuplicate ? 'text-warning' : ''} ${!item.location.name ? 'text-destructive' : ''}`}>
+                                    {item.location.name || '(Required)'}
+                                  </span>
+                                )}
+                              </div>
+                              <div 
+                                className="cursor-pointer hover:bg-muted/50 p-1 rounded"
+                                onClick={() => startEditing(index, 'location_address', item.location.address)}
+                              >
+                                {editingCell?.rowIndex === index && editingCell?.field === 'location_address' ? (
+                                  <Input
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    onBlur={saveEdit}
+                                    autoFocus
+                                    className="h-7 text-sm"
+                                  />
+                                ) : (
+                                  <span className={`text-xs text-muted-foreground ${!item.location.address ? 'text-destructive' : ''}`}>
+                                    {item.location.address || '(Required)'}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div 
-                              className={`font-medium cursor-pointer hover:bg-muted/50 rounded px-1 ${isDuplicate ? 'text-warning' : ''}`}
-                              onClick={() => startEditing(index, 'location_name', item.location.name)}
-                            >
-                              {editingCell?.rowIndex === index && editingCell?.field === 'location_name' ? (
-                                <Input
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  onBlur={saveEdit}
-                                  autoFocus
-                                  className="h-7 text-sm"
-                                />
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span>{item.location.name}</span>
-                                  {isDuplicate && (
-                                    <span className="text-xs text-warning" title="Duplicate location">⚠</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <div 
-                              className={`text-muted-foreground cursor-pointer hover:bg-muted/50 rounded px-1 ${isDuplicate ? 'text-warning/80' : ''}`}
-                              onClick={() => startEditing(index, 'location_address', item.location.address)}
-                            >
-                              {editingCell?.rowIndex === index && editingCell?.field === 'location_address' ? (
-                                <Input
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  onBlur={saveEdit}
-                                  autoFocus
-                                  className="h-7 text-sm"
-                                />
-                              ) : (
-                                item.location.address
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'customer_location_id', item.location.customer_location_id)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'customer_location_id' ? (
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              onBlur={saveEdit}
-                              autoFocus
-                              className="h-8"
-                            />
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {item.location.customer_location_id || '-'}
-                            </span>
-                          )}
+                          </TableCell>
+                          <TableCell
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'customer_location_id', item.location.customer_location_id)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'customer_location_id' ? (
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEdit}
+                                autoFocus
+                                className="h-8"
+                              />
+                            ) : (
+                              <span className="text-sm text-muted-foreground">
+                                {item.location.customer_location_id || '-'}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="capitalize cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'recurrence_frequency', item.recurrence_frequency)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'recurrence_frequency' ? (
+                              <Select 
+                                value={editValue} 
+                                onValueChange={(val) => { 
+                                  setEditValue(val);
+                                  setTimeout(() => {
+                                    const updatedItems = [...lineItems];
+                                    updatedItems[index].recurrence_frequency = val as any;
+                                    setLineItems(updatedItems);
+                                    cancelEditing();
+                                  }, 0);
+                                }}
+                              >
+                                <SelectTrigger className="h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="weekly">Weekly</SelectItem>
+                                  <SelectItem value="monthly">Monthly</SelectItem>
+                                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                                  <SelectItem value="annually">Annually</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              item.recurrence_frequency
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'first_generation_date', item.first_generation_date)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'first_generation_date' ? (
+                              <Input
+                                type="date"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEdit}
+                                autoFocus
+                                className="h-8"
+                              />
+                            ) : (
+                              new Date(item.first_generation_date).toLocaleDateString()
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="text-right cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'quantity', item.quantity)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'quantity' ? (
+                              <Input
+                                type="number"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEdit}
+                                autoFocus
+                                className="h-8 text-right"
+                              />
+                            ) : (
+                              item.quantity
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="text-right cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'estimated_hours', item.estimated_hours)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'estimated_hours' ? (
+                              <Input
+                                type="number"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEdit}
+                                autoFocus
+                                className="h-8 text-right"
+                              />
+                            ) : (
+                              item.estimated_hours || 0
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className="text-right cursor-pointer hover:bg-muted/50"
+                            onClick={() => startEditing(index, 'unit_price', item.unit_price)}
+                          >
+                            {editingCell?.rowIndex === index && editingCell?.field === 'unit_price' ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEdit}
+                                autoFocus
+                                className="h-8 text-right"
+                              />
+                            ) : (
+                              <span className={!item.unit_price || item.unit_price <= 0 ? 'text-destructive' : ''}>
+                                ${item.unit_price?.toFixed(2) || '(Required)'}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            ${(item.quantity * item.unit_price).toFixed(2)}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
-                        <TableCell
-                          className="capitalize cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'recurrence_frequency', item.recurrence_frequency)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'recurrence_frequency' ? (
-                            <Select 
-                              value={editValue} 
-                              onValueChange={(val) => { 
-                                setEditValue(val);
-                                // Auto-save after selection
-                                setTimeout(() => {
-                                  const updatedItems = [...lineItems];
-                                  updatedItems[index].recurrence_frequency = val as any;
-                                  setLineItems(updatedItems);
-                                  cancelEditing();
-                                }, 0);
-                              }}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="quarterly">Quarterly</SelectItem>
-                                <SelectItem value="annually">Annually</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            item.recurrence_frequency
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'first_generation_date', item.first_generation_date)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'first_generation_date' ? (
-                            <Input
-                              type="date"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              onBlur={saveEdit}
-                              autoFocus
-                              className="h-8"
-                            />
-                          ) : (
-                            item.first_generation_date
-                          )}
-                        </TableCell>
-                        <TableCell 
-                          className="text-right cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'quantity', item.quantity)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'quantity' ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              onBlur={saveEdit}
-                              autoFocus
-                              className="h-8 text-right"
-                            />
-                          ) : (
-                            item.quantity
-                          )}
-                        </TableCell>
-                        <TableCell 
-                          className="text-right cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'estimated_hours', item.estimated_hours)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'estimated_hours' ? (
-                            <Input
-                              type="number"
-                              step="0.5"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              onBlur={saveEdit}
-                              autoFocus
-                              className="h-8 text-right"
-                            />
-                          ) : (
-                            item.estimated_hours || 0
-                          )}
-                        </TableCell>
-                        <TableCell 
-                          className="text-right cursor-pointer hover:bg-muted/50"
-                          onClick={() => startEditing(index, 'unit_price', item.unit_price)}
-                        >
-                          {editingCell?.rowIndex === index && editingCell?.field === 'unit_price' ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              onBlur={saveEdit}
-                              autoFocus
-                              className="h-8 text-right"
-                            />
-                          ) : (
-                            `$${item.unit_price.toFixed(2)}`
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${(item.quantity * item.unit_price).toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
                   </TableBody>
                 </Table>
               </div>
             </div>
 
-            <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("upload")} disabled={isProcessing}>
-                <X className="mr-2 h-4 w-4" />
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={() => setStep("mapping")} disabled={isProcessing}>
                 Back
               </Button>
               <Button onClick={handleImport} disabled={isProcessing}>

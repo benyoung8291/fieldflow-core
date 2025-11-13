@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText, Trash2, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
@@ -26,6 +26,8 @@ export default function ServiceContractDetails() {
   const queryClient = useQueryClient();
   const [editingLineItem, setEditingLineItem] = useState<any>(null);
   const [editingContract, setEditingContract] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],
@@ -83,6 +85,24 @@ export default function ServiceContractDetails() {
     },
     onError: (error: any) => {
       toast.error(`Failed to update line item: ${error.message}`);
+    },
+  });
+
+  const deleteContractMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("service_contracts" as any)
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contract deleted successfully");
+      navigate("/service-contracts");
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete contract: ${error.message}`);
     },
   });
 
@@ -167,6 +187,13 @@ export default function ServiceContractDetails() {
             linkedRecordId={id!}
             variant="outline"
           />
+          <Button 
+            variant="destructive" 
+            size="icon"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
           <Badge variant={contract.status === "active" ? "default" : "secondary"}>
             {contract.status}
           </Badge>
@@ -562,6 +589,59 @@ export default function ServiceContractDetails() {
           <LinkedTasksList linkedModule="service_contract" linkedRecordId={id!} />
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Service Contract
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the contract and all associated line items.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Type <span className="font-mono font-semibold">delete</span> to confirm</Label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type delete to confirm"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeleteConfirmText("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirmText.toLowerCase() === "delete") {
+                  deleteContractMutation.mutate();
+                  setShowDeleteDialog(false);
+                  setDeleteConfirmText("");
+                } else {
+                  toast.error("Please type 'delete' to confirm");
+                }
+              }}
+              disabled={deleteConfirmText.toLowerCase() !== "delete"}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Contract
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
