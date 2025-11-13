@@ -59,6 +59,10 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
 
+  // Required fields for validation
+  const requiredFields = ['description', 'location_name', 'unit_price'];
+  const missingRequiredFields = requiredFields.filter(field => !columnMappings[field]);
+
   // Fetch customers for selection
   const { data: customers } = useQuery({
     queryKey: ["customers-for-import"],
@@ -448,12 +452,37 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
               </Table>
             </div>
 
+            {missingRequiredFields.length > 0 && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <div className="flex items-start gap-2">
+                  <X className="h-5 w-5 text-destructive mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-destructive">Required fields not mapped</p>
+                    <p className="text-sm text-muted-foreground">
+                      The following required fields must be mapped before proceeding:
+                    </p>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {missingRequiredFields.map(field => (
+                        <li key={field}>
+                          {field === 'description' && 'Description'}
+                          {field === 'location_name' && 'Location Name'}
+                          {field === 'unit_price' && 'Unit Price'}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("mapping")} disabled={isProcessing}>
-                <X className="mr-2 h-4 w-4" />
-                Back to Mapping
+              <Button variant="outline" onClick={() => setStep("upload")} disabled={isProcessing}>
+                Back
               </Button>
-              <Button onClick={handleConfirmMappings} disabled={isProcessing}>
+              <Button 
+                onClick={handleConfirmMappings} 
+                disabled={isProcessing || missingRequiredFields.length > 0}
+              >
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
