@@ -69,7 +69,7 @@ export default function DraggableAppointment({
         borderLeftColor: getBorderColor(),
       }}
       className={cn(
-        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4",
+        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none",
         isDragging && "opacity-50 cursor-grabbing"
       )}
     >
