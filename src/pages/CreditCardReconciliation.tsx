@@ -366,7 +366,7 @@ export default function CreditCardReconciliation() {
         </div>
 
         <ScrollArea className="h-[calc(100vh-200px)]">
-          <div className="space-y-2 p-3">
+          <div className="space-y-3 p-3">
             {unreconciledTransactions.length === 0 ? (
               <Card className="p-8">
                 <div className="text-center space-y-2">
@@ -382,24 +382,31 @@ export default function CreditCardReconciliation() {
                 return (
                   <div key={txn.id} className="grid grid-cols-2 gap-3">
                     {/* Left: Transaction Card */}
-                    <Card className="p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[11px] text-muted-foreground mb-0.5">
-                            {format(new Date(txn.transaction_date), 'MMM d, yyyy')}
-                          </div>
-                          <div className="font-semibold text-sm mb-0.5">
-                            {txn.merchant_name || 'Unknown Merchant'}
-                          </div>
-                          {txn.external_reference && (
-                            <div className="text-[11px] text-muted-foreground">
-                              {txn.external_reference}
+                    <Card className="p-4 hover:shadow-md transition-shadow">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="text-[11px] text-muted-foreground">
+                                {format(new Date(txn.transaction_date), 'dd MMM yyyy')}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-sm font-semibold">
-                            ${txn.amount.toFixed(2)}
+                            <div className="font-semibold text-base mb-1">
+                              {txn.merchant_name || 'Unknown Merchant'}
+                            </div>
+                            {txn.external_reference && (
+                              <div className="text-xs text-muted-foreground mb-2">
+                                {txn.external_reference}
+                              </div>
+                            )}
+                            <button className="text-[11px] text-blue-600 hover:underline">
+                              More details
+                            </button>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold">
+                              ${txn.amount.toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -407,69 +414,98 @@ export default function CreditCardReconciliation() {
 
                     {/* Right: Matching Card or Create Options */}
                     {hasMatch ? (
-                      <Card className="p-3 bg-emerald-50 border-emerald-300">
-                        <div className="space-y-2">
-                          {matches.map((match) => (
-                            <div key={match.id} className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-2 flex-1">
-                                <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <Card className="p-4 bg-emerald-50 border-emerald-300 hover:shadow-md transition-shadow">
+                        {matches.map((match, index) => (
+                          <div key={match.id}>
+                            {index > 0 && <div className="my-3 border-t border-emerald-200" />}
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center">
+                                    <Check className="h-3.5 w-3.5 text-white" />
+                                  </div>
+                                </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-[11px] text-muted-foreground mb-0.5">
-                                    {format(new Date(match.expense_date), 'MMM d, yyyy')}
+                                  <div className="text-[11px] text-muted-foreground mb-1">
+                                    {format(new Date(match.expense_date), 'dd MMM yyyy')}
                                   </div>
-                                  <div className="font-semibold text-sm mb-0.5">
-                                    {match.expense_number}
+                                  <div className="font-semibold text-base mb-1">
+                                    Expense: {match.expense_number}
                                   </div>
-                                  <div className="text-xs text-muted-foreground line-clamp-1">
-                                    {match.description}
+                                  <div className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                    {match.description || 'No description'}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold">
+                                    ${match.amount.toFixed(2)}
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="text-sm font-semibold">
-                                  ${match.amount.toFixed(2)}
+                              <div className="flex items-center justify-between pt-2 border-t border-emerald-200">
+                                <div className="flex gap-3">
+                                  <button className="text-[11px] text-blue-600 hover:underline font-medium">
+                                    Match
+                                  </button>
+                                  <button className="text-[11px] text-blue-600 hover:underline">
+                                    Create
+                                  </button>
+                                  <button className="text-[11px] text-blue-600 hover:underline">
+                                    Transfer
+                                  </button>
+                                  <button className="text-[11px] text-muted-foreground hover:underline">
+                                    Discuss
+                                  </button>
                                 </div>
                                 <Button
                                   size="sm"
                                   onClick={() => matchMutation.mutate({ transactionId: txn.id, expenseId: match.id })}
-                                  className="h-7 px-4 bg-emerald-600 hover:bg-emerald-700"
+                                  disabled={matchMutation.isPending}
+                                  className="h-8 px-6 bg-blue-600 hover:bg-blue-700 font-semibold"
                                 >
-                                  Match
+                                  OK
                                 </Button>
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
                       </Card>
                     ) : (
-                      <Card className="p-3">
-                        <div className="space-y-2">
-                          <div className="text-xs font-medium text-muted-foreground mb-2">
-                            Create or match expense
+                      <Card className="p-4 hover:shadow-md transition-shadow">
+                        <div className="space-y-3">
+                          <div className="text-sm text-muted-foreground italic">
+                            This is payment on a really old invoice so wasn't sure where to code it
                           </div>
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full justify-start"
-                              onClick={() => handleSelectTransaction(txn)}
-                            >
-                              Create Expense
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full justify-start"
-                            >
-                              Find & Match
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full justify-start"
-                            >
-                              Transfer
-                            </Button>
+                          <div className="text-[10px] text-muted-foreground italic">
+                            Ctrl + S at any time to save
+                          </div>
+                          <div className="pt-2 border-t">
+                            <div className="flex items-center justify-between">
+                              <div className="flex gap-3">
+                                <button className="text-[11px] text-blue-600 hover:underline">
+                                  Match
+                                </button>
+                                <button 
+                                  className="text-[11px] text-blue-600 hover:underline font-medium"
+                                  onClick={() => handleSelectTransaction(txn)}
+                                >
+                                  Create
+                                </button>
+                                <button className="text-[11px] text-blue-600 hover:underline">
+                                  Transfer
+                                </button>
+                                <button className="text-[11px] text-muted-foreground hover:underline">
+                                  Discuss
+                                </button>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="link"
+                                className="text-blue-600 text-[11px] h-auto p-0 hover:underline"
+                              >
+                                Find & Match
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </Card>
