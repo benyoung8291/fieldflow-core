@@ -67,10 +67,12 @@ serve(async (req) => {
 
     console.log(`Sending to AI for ${processingMode}...`);
     
-    // For analysis, only need a few rows. For parsing, limit to 100.
+    // For analysis, only need a few rows. For parsing, limit to 1,000.
     const limitedSpreadsheetData = processingMode === "analyze" 
       ? spreadsheetData.slice(0, 5) 
-      : spreadsheetData.slice(0, 100);
+      : spreadsheetData.slice(0, 1000);
+    
+    const hasMoreRows = spreadsheetData.length > 1000;
     
     // Use Lovable AI with structured output to parse the spreadsheet
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -397,7 +399,10 @@ Extract all line items using the provided mappings.`
           mode: "parse",
           lineItems: parsedData.lineItems,
           failedGeocodingItems,
-          tenantId
+          tenantId,
+          hasMoreRows,
+          totalRows: spreadsheetData.length,
+          processedRows: limitedSpreadsheetData.length
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
