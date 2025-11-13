@@ -46,6 +46,7 @@ interface ParsedLineItem {
     latitude?: number;
     longitude?: number;
     formatted_address?: string;
+    geocoding_status?: 'success' | 'failed';
   };
 }
 
@@ -61,6 +62,9 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [columnMappings, setColumnMappings] = useState<Record<string, string | null>>({});
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
+  const [failedGeocodingItems, setFailedGeocodingItems] = useState<number[]>([]);
+  const [editingAddressIndex, setEditingAddressIndex] = useState<number | null>(null);
+  const [isRetryingGeocode, setIsRetryingGeocode] = useState(false);
 
   // Required fields for validation
   const requiredFields = ['description', 'location_name', 'unit_price'];
@@ -165,6 +169,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       if (functionError) throw functionError;
 
       setLineItems(functionData.lineItems || []);
+      setFailedGeocodingItems(functionData.failedGeocodingItems || []);
       setStep("review");
 
       toast.success(`Parsed ${functionData.lineItems?.length || 0} line items`);
@@ -174,6 +179,56 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleRetryGeocode = async (itemIndex: number) => {
+    setIsRetryingGeocode(true);
+    
+    try {
+      const item = lineItems[itemIndex];
+      const addressString = `${item.location.address}, ${item.location.city || ''}, ${item.location.state || ''}, ${item.location.postcode || ''}`.trim();
+      
+      // Call Google Geocoding API directly
+      const { data: geocodeData, error: geocodeError } = await supabase.functions.invoke(
+        "places-details",
+        {
+          body: { address: addressString }
+        }
+      );
+      
+      if (geocodeError) throw geocodeError;
+      
+      if (geocodeData.latitude && geocodeData.longitude) {
+        // Update the line item with geocoded data
+        const updatedItems = [...lineItems];
+        updatedItems[itemIndex].location.latitude = geocodeData.latitude;
+        updatedItems[itemIndex].location.longitude = geocodeData.longitude;
+        updatedItems[itemIndex].location.geocoding_status = 'success';
+        if (geocodeData.formatted_address) {
+          updatedItems[itemIndex].location.formatted_address = geocodeData.formatted_address;
+        }
+        
+        setLineItems(updatedItems);
+        
+        // Remove from failed list
+        setFailedGeocodingItems(prev => prev.filter(i => i !== itemIndex));
+        
+        toast.success("Address validated successfully");
+      } else {
+        toast.error("Unable to validate this address");
+      }
+    } catch (error: any) {
+      console.error("Retry geocoding error:", error);
+      toast.error("Failed to validate address");
+    } finally {
+      setIsRetryingGeocode(false);
+    }
+  };
+
+  const handleUpdateAddress = (itemIndex: number, field: string, value: string) => {
+    const updatedItems = [...lineItems];
+    (updatedItems[itemIndex].location as any)[field] = value;
+    setLineItems(updatedItems);
   };
 
   const handleImport = async () => {
@@ -541,6 +596,120 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                 </Select>
               </div>
             </div>
+
+            {failedGeocodingItems.length > 0 && (
+              <div className="rounded-lg border border-warning/50 bg-warning/10 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <X className="h-5 w-5 text-warning mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-warning">Address Validation Failed</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {failedGeocodingItems.length} location{failedGeocodingItems.length > 1 ? 's' : ''} could not be validated. 
+                      Please review and correct the addresses below, then retry validation.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 mt-3">
+                  {failedGeocodingItems.map((itemIndex) => {
+                    const item = lineItems[itemIndex];
+                    const isEditing = editingAddressIndex === itemIndex;
+                    
+                    return (
+                      <div key={itemIndex} className="bg-background rounded border p-3 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.location.name}</p>
+                            {!isEditing ? (
+                              <p className="text-sm text-muted-foreground">
+                                {item.location.address}
+                                {item.location.city && `, ${item.location.city}`}
+                                {item.location.state && `, ${item.location.state}`}
+                                {item.location.postcode && ` ${item.location.postcode}`}
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                <Input
+                                  placeholder="Street Address"
+                                  value={item.location.address}
+                                  onChange={(e) => handleUpdateAddress(itemIndex, 'address', e.target.value)}
+                                  className="col-span-2"
+                                />
+                                <Input
+                                  placeholder="City/Suburb"
+                                  value={item.location.city || ''}
+                                  onChange={(e) => handleUpdateAddress(itemIndex, 'city', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="State"
+                                  value={item.location.state || ''}
+                                  onChange={(e) => handleUpdateAddress(itemIndex, 'state', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Postcode"
+                                  value={item.location.postcode || ''}
+                                  onChange={(e) => handleUpdateAddress(itemIndex, 'postcode', e.target.value)}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-1 ml-2">
+                            {!isEditing ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingAddressIndex(itemIndex)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRetryGeocode(itemIndex)}
+                                  disabled={isRetryingGeocode}
+                                >
+                                  {isRetryingGeocode ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    "Retry"
+                                  )}
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    handleRetryGeocode(itemIndex);
+                                    setEditingAddressIndex(null);
+                                  }}
+                                  disabled={isRetryingGeocode}
+                                >
+                                  {isRetryingGeocode ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingAddressIndex(null)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div>
               <h3 className="font-semibold mb-2">Line Items ({lineItems.length})</h3>
