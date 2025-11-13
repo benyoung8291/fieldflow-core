@@ -12,7 +12,7 @@ interface TriggerNodeProps {
 
 function TriggerNode({ data }: TriggerNodeProps) {
   return (
-    <Card className="p-4 min-w-[200px] border-2 border-primary shadow-lg">
+    <Card className="p-4 min-w-[200px] border-2 border-primary shadow-lg cursor-pointer hover:shadow-xl transition-shadow">
       <div className="flex items-center gap-2 mb-2">
         <Zap className="h-5 w-5 text-primary" />
         <div className="font-semibold text-sm">TRIGGER</div>

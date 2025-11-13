@@ -49,7 +49,7 @@ function ActionNode({ data }: ActionNodeProps) {
         position={Position.Top}
         className="w-3 h-3 !bg-muted-foreground"
       />
-      <Card className="p-4 min-w-[200px] border-2 shadow-md hover:shadow-lg transition-shadow">
+      <Card className="p-4 min-w-[200px] border-2 shadow-md hover:shadow-lg transition-shadow cursor-pointer">
         <div className="flex items-center gap-2 mb-2">
           <Icon className="h-4 w-4 text-muted-foreground" />
           <div className="font-semibold text-xs text-muted-foreground uppercase">ACTION</div>

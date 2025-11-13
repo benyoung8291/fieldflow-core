@@ -64,6 +64,7 @@ const actionTypes = [
 
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
 import QuickStartPanel from "@/components/workflows/QuickStartPanel";
+import NodeConfigPanel from "@/components/workflows/NodeConfigPanel";
 
 export default function WorkflowBuilder() {
   const { id } = useParams();
@@ -75,6 +76,7 @@ export default function WorkflowBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [showQuickStart, setShowQuickStart] = useState(true);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -193,6 +195,20 @@ export default function WorkflowBuilder() {
     };
     setNodes((nds) => nds.concat(newNode));
   };
+
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+  }, []);
+
+  const handleSaveNodeConfig = useCallback((nodeId: string, config: any) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, config } }
+          : node
+      )
+    );
+  }, [setNodes]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -386,13 +402,14 @@ export default function WorkflowBuilder() {
           ))}
         </Card>
 
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={handleNodeClick}
             nodeTypes={nodeTypes}
             fitView
           >
@@ -400,6 +417,11 @@ export default function WorkflowBuilder() {
             <Controls />
             <MiniMap />
           </ReactFlow>
+          <NodeConfigPanel
+            selectedNode={selectedNode}
+            onClose={() => setSelectedNode(null)}
+            onSave={handleSaveNodeConfig}
+          />
         </div>
       </div>
         </>
