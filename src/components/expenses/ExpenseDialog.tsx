@@ -17,10 +17,15 @@ interface ExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   expense?: any;
-  onSuccess: () => void;
+  defaultValues?: Partial<{
+    description: string;
+    amount: number;
+    expense_date: string;
+  }>;
+  onSuccess: (expenseId?: string) => void;
 }
 
-export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: ExpenseDialogProps) {
+export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSuccess }: ExpenseDialogProps) {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
@@ -62,8 +67,14 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
         sub_account: expense.sub_account || "",
         notes: expense.notes || "",
       });
+    } else if (defaultValues) {
+      setFormData(prev => ({
+        ...prev,
+        ...defaultValues,
+        amount: defaultValues.amount?.toString() || prev.amount,
+      }));
     }
-  }, [expense]);
+  }, [expense, defaultValues]);
 
   const { data: vendors = [] } = useQuery({
     queryKey: ["vendors"],
@@ -162,7 +173,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData & { expenseId?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -264,11 +275,13 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
           });
         }
       }
+
+      return { expenseId };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       toast.success(expense ? "Expense updated" : "Expense created");
-      onSuccess();
+      onSuccess(data?.expenseId);
       handleClose();
     },
     onError: (error) => {

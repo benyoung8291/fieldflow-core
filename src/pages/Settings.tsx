@@ -45,6 +45,7 @@ import UserProfileTab from "@/components/settings/UserProfileTab";
 import BrandColorsTab from "@/components/settings/BrandColorsTab";
 import { HelpDeskSettingsTab } from "@/components/settings/HelpDeskSettingsTab";
 import { ExpenseCategoriesTab } from "@/components/settings/ExpenseCategoriesTab";
+import { CreditCardsTab } from "@/components/settings/CreditCardsTab";
 import { ExpensePolicyTab } from "@/components/settings/ExpensePolicyTab";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck } from "lucide-react";

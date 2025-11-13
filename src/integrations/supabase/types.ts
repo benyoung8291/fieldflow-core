@@ -547,6 +547,120 @@ export type Database = {
           },
         ]
       }
+      company_credit_cards: {
+        Row: {
+          assigned_to: string | null
+          card_name: string
+          card_provider: string
+          created_at: string
+          full_card_number: string | null
+          id: string
+          is_active: boolean
+          last_four_digits: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          card_name: string
+          card_provider: string
+          created_at?: string
+          full_card_number?: string | null
+          id?: string
+          is_active?: boolean
+          last_four_digits: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          card_name?: string
+          card_provider?: string
+          created_at?: string
+          full_card_number?: string | null
+          id?: string
+          is_active?: boolean
+          last_four_digits?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_card_transactions: {
+        Row: {
+          amount: number
+          assigned_to: string | null
+          card_id: string | null
+          category: string | null
+          created_at: string
+          description: string
+          expense_id: string | null
+          external_id: string
+          external_reference: string | null
+          id: string
+          is_assigned: boolean
+          merchant_name: string | null
+          status: string
+          sync_source: string
+          tenant_id: string
+          transaction_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          assigned_to?: string | null
+          card_id?: string | null
+          category?: string | null
+          created_at?: string
+          description: string
+          expense_id?: string | null
+          external_id: string
+          external_reference?: string | null
+          id?: string
+          is_assigned?: boolean
+          merchant_name?: string | null
+          status?: string
+          sync_source: string
+          tenant_id: string
+          transaction_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          assigned_to?: string | null
+          card_id?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string
+          expense_id?: string | null
+          external_id?: string
+          external_reference?: string | null
+          id?: string
+          is_assigned?: boolean
+          merchant_name?: string | null
+          status?: string
+          sync_source?: string
+          tenant_id?: string
+          transaction_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_transactions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "company_credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_transactions_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_pipelines: {
         Row: {
           created_at: string | null

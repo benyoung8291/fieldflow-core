@@ -172,7 +172,7 @@ export default function Expenses() {
         <ExpenseDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
-          onSuccess={refetch}
+          onSuccess={() => refetch()}
         />
       </div>
     </DashboardLayout>
