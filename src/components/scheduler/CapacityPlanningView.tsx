@@ -172,6 +172,8 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
           order_number,
           title,
           estimated_hours, 
+          preferred_date,
+          preferred_date_range,
           appointments(id, start_time, end_time, status),
           customers!service_orders_customer_id_fkey(name),
           service_order_line_items(id)
@@ -185,6 +187,24 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
 
   const capacityData = useMemo(() => {
     if (!appointments || !serviceOrdersData) return [];
+
+    // First, calculate remaining hours for each service order
+    const serviceOrdersWithRemaining = serviceOrdersData.map(so => {
+      const estimatedHours = so.estimated_hours || 0;
+      const scheduledHours = (so.appointments || [])
+        .filter((apt: any) => apt.status !== 'cancelled')
+        .reduce((total: number, apt: any) => {
+          const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
+          return total + hours;
+        }, 0);
+      
+      const remainingHours = Math.max(0, estimatedHours - scheduledHours);
+      
+      return {
+        ...so,
+        remainingHours
+      };
+    }).filter(so => so.remainingHours > 0);
 
     const weeks = [];
     
@@ -218,19 +238,37 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
         totalAvailableHours += Math.max(0, standardHours - scheduledHours);
       });
 
-      // Calculate service order demand (estimated hours minus scheduled hours)
+      // Calculate weighted demand for this specific week
       let demandHours = 0;
-      serviceOrdersData.forEach(so => {
-        const estimatedHours = so.estimated_hours || 0;
-        const scheduledHours = (so.appointments || [])
-          .filter((apt: any) => apt.status !== 'cancelled')
-          .reduce((total: number, apt: any) => {
-            const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
-            return total + hours;
-          }, 0);
+      serviceOrdersWithRemaining.forEach(so => {
+        const preferredDate = so.preferred_date ? new Date(so.preferred_date) : null;
+        const preferredRange = so.preferred_date_range || 7; // Default 7 days if not specified
         
-        const remainingHours = Math.max(0, estimatedHours - scheduledHours);
-        demandHours += remainingHours;
+        if (preferredDate) {
+          // Calculate the range window around preferred date
+          const rangeStart = new Date(preferredDate);
+          rangeStart.setDate(rangeStart.getDate() - Math.floor(preferredRange / 2));
+          const rangeEnd = new Date(preferredDate);
+          rangeEnd.setDate(rangeEnd.getDate() + Math.ceil(preferredRange / 2));
+          
+          // Check if this week overlaps with the preferred date range
+          if (weekEnd >= rangeStart && weekStart <= rangeEnd) {
+            // Calculate overlap days
+            const overlapStart = weekStart > rangeStart ? weekStart : rangeStart;
+            const overlapEnd = weekEnd < rangeEnd ? weekEnd : rangeEnd;
+            const overlapDays = Math.max(0, (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24) + 1);
+            
+            // Calculate total days in the range
+            const totalRangeDays = (rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24) + 1;
+            
+            // Weight the demand proportionally based on overlap
+            const weight = overlapDays / totalRangeDays;
+            demandHours += so.remainingHours * weight;
+          }
+        } else {
+          // No preferred date: distribute evenly across all weeks
+          demandHours += so.remainingHours / numberOfWeeks;
+        }
       });
 
       weeks.push({
