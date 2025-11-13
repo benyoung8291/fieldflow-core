@@ -941,6 +941,15 @@ export default function Scheduler() {
       return;
     }
 
+    // Handle dropping a service order on capacity week
+    if (draggedItem?.type === "service-order" && dropTarget?.type === "capacity-week") {
+      const serviceOrder = draggedItem.serviceOrder;
+      const { weekStart, weekEnd } = dropTarget;
+      
+      handleScheduleServiceOrderInWeek(serviceOrder, weekStart, weekEnd);
+      return;
+    }
+
     if (dropTarget?.type !== "time-slot") return;
 
     const { date, workerId, hour } = dropTarget;
@@ -956,15 +965,6 @@ export default function Scheduler() {
     // For service orders, use 4 hour default, otherwise 2 hours
     const defaultDuration = draggedItem?.type === "service-order" ? 4 : 2;
     let endTime = addHours(startTime, defaultDuration);
-
-    // Handle dropping a service order on capacity week
-    if (draggedItem?.type === "service-order" && dropTarget?.type === "capacity-week") {
-      const serviceOrder = draggedItem.serviceOrder;
-      const { weekStart, weekEnd } = dropTarget;
-      
-      handleScheduleServiceOrderInWeek(serviceOrder, weekStart, weekEnd);
-      return;
-    }
 
     // Handle dropping a service order
     if (draggedItem?.type === "service-order") {
