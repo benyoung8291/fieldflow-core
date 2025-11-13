@@ -1801,6 +1801,72 @@ export type Database = {
           },
         ]
       }
+      po_receipt_line_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          po_line_item_id: string
+          quantity_received: number
+          receipt_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          po_line_item_id: string
+          quantity_received?: number
+          receipt_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          po_line_item_id?: string
+          quantity_received?: number
+          receipt_id?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      po_receipts: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          po_id: string
+          receipt_date: string
+          receipt_number: string
+          received_by: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          po_id: string
+          receipt_date?: string
+          receipt_number: string
+          received_by: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          po_id?: string
+          receipt_date?: string
+          receipt_number?: string
+          received_by?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       price_book_assemblies: {
         Row: {
           category: string | null
@@ -2611,6 +2677,129 @@ export type Database = {
           total_change_orders?: number | null
           updated_at?: string | null
           wip_total?: number | null
+        }
+        Relationships: []
+      }
+      purchase_order_line_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          is_from_price_book: boolean | null
+          item_order: number
+          line_total: number
+          notes: string | null
+          po_id: string
+          price_book_item_id: string | null
+          quantity: number
+          quantity_received: number
+          tenant_id: string
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          notes?: string | null
+          po_id: string
+          price_book_item_id?: string | null
+          quantity?: number
+          quantity_received?: number
+          tenant_id: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_from_price_book?: boolean | null
+          item_order?: number
+          line_total?: number
+          notes?: string | null
+          po_id?: string
+          price_book_item_id?: string | null
+          quantity?: number
+          quantity_received?: number
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      purchase_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string
+          expected_delivery_date: string | null
+          id: string
+          internal_notes: string | null
+          notes: string | null
+          payment_terms: number | null
+          po_date: string
+          po_number: string
+          project_id: string | null
+          service_order_id: string | null
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string | null
+          vendor_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by: string
+          expected_delivery_date?: string | null
+          id?: string
+          internal_notes?: string | null
+          notes?: string | null
+          payment_terms?: number | null
+          po_date?: string
+          po_number: string
+          project_id?: string | null
+          service_order_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string | null
+          vendor_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string
+          expected_delivery_date?: string | null
+          id?: string
+          internal_notes?: string | null
+          notes?: string | null
+          payment_terms?: number | null
+          po_date?: string
+          po_number?: string
+          project_id?: string | null
+          service_order_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string | null
+          vendor_id?: string
         }
         Relationships: []
       }
@@ -4442,6 +4631,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vendors: {
+        Row: {
+          abn: string | null
+          address: string | null
+          city: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          legal_company_name: string | null
+          mobile: string | null
+          name: string
+          notes: string | null
+          payment_terms: number | null
+          phone: string | null
+          postcode: string | null
+          state: string | null
+          tenant_id: string
+          trading_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          abn?: string | null
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          legal_company_name?: string | null
+          mobile?: string | null
+          name: string
+          notes?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          tenant_id: string
+          trading_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          abn?: string | null
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          legal_company_name?: string | null
+          mobile?: string | null
+          name?: string
+          notes?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          tenant_id?: string
+          trading_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       worker_certificates: {
         Row: {
