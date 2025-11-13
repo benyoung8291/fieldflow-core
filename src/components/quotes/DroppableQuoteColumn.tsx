@@ -1,7 +1,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface DroppableQuoteColumnProps {
   id: string;
@@ -42,12 +42,12 @@ export default function DroppableQuoteColumn({
           <div className="space-y-1">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Total:</span>
-              <span className="font-semibold">${totalAmount.toLocaleString()}</span>
+              <span className="font-semibold">{formatCurrency(totalAmount)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Weighted ({probabilityPercentage}%):</span>
               <span className="font-bold" style={{ color }}>
-                ${weightedAmount.toLocaleString()}
+                {formatCurrency(weightedAmount)}
               </span>
             </div>
           </div>

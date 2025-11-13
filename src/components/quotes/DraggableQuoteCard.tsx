@@ -2,7 +2,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { DollarSign, User, Calendar, ExternalLink, Eye } from "lucide-react";
 
@@ -63,7 +63,7 @@ export default function DraggableQuoteCard({ quote, onQuickView }: DraggableQuot
 
           <div className="flex items-center gap-1 text-lg font-bold text-primary">
             <DollarSign className="h-4 w-4" />
-            {quote.total_amount?.toLocaleString()}
+            {formatCurrency(quote.total_amount || 0)}
           </div>
 
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">

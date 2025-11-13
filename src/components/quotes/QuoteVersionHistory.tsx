@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Clock, User } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface QuoteVersionHistoryProps {
   quoteId: string;
@@ -68,7 +69,7 @@ export default function QuoteVersionHistory({ quoteId }: QuoteVersionHistoryProp
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground mt-2">
-                  Total: ${version.total_amount.toFixed(2)} • Type: {version.quote_type}
+                  Total: {formatCurrency(version.total_amount)} • Type: {version.quote_type}
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface LineItem {
   id?: string;
@@ -50,7 +51,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
     const sellNum = parseFloat(sell) || 0;
 
     if (field === "cost_price" || field === "margin_percentage") {
-      const newSell = (costNum * (1 + marginNum / 100)).toFixed(2);
+      const newSell = formatCurrency(costNum * (1 + marginNum / 100));
       return {
         cost_price: cost,
         margin_percentage: margin,
@@ -205,7 +206,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                     </TableCell>
                     <TableCell className="text-right">
                       {!itemHasSubItems && (
-                        <span className="text-sm">${parseFloat(item.cost_price).toFixed(2)}</span>
+                        <span className="text-sm">{formatCurrency(parseFloat(item.cost_price))}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -215,11 +216,11 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                     </TableCell>
                     <TableCell className="text-right">
                       {!itemHasSubItems && (
-                        <span className="text-sm">${parseFloat(item.sell_price).toFixed(2)}</span>
+                        <span className="text-sm">{formatCurrency(parseFloat(item.sell_price))}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${item.line_total.toFixed(2)}
+                      {formatCurrency(item.line_total)}
                     </TableCell>
                   </TableRow>
 
@@ -233,16 +234,16 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                         <span className="text-sm">{subItem.quantity}</span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="text-sm">${parseFloat(subItem.cost_price).toFixed(2)}</span>
+                        <span className="text-sm">{formatCurrency(parseFloat(subItem.cost_price))}</span>
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="text-sm">{parseFloat(subItem.margin_percentage).toFixed(2)}%</span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="text-sm">${parseFloat(subItem.sell_price).toFixed(2)}</span>
+                        <span className="text-sm">{formatCurrency(parseFloat(subItem.sell_price))}</span>
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        ${subItem.line_total.toFixed(2)}
+                        {formatCurrency(subItem.line_total)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -340,7 +341,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                     />
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    ${item.line_total.toFixed(2)}
+                    {formatCurrency(item.line_total)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
@@ -428,7 +429,7 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                         />
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        ${subItem.line_total.toFixed(2)}
+                        {formatCurrency(subItem.line_total)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button

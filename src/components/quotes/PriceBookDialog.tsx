@@ -11,6 +11,7 @@ import { Loader2, Plus, Trash2, Search, Package } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AssemblyDialog from "./AssemblyDialog";
+import { formatCurrency } from "@/lib/utils";
 
 interface PriceBookDialogProps {
   open: boolean;
@@ -114,7 +115,7 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSe
     if (field === "cost_price" || field === "margin_percentage") {
       // Calculate sell price from cost and margin
       const calculatedSell = cost * (1 + margin / 100);
-      newData.sell_price = calculatedSell.toFixed(2);
+      newData.sell_price = formatCurrency(calculatedSell);
     } else if (field === "sell_price") {
       // Calculate margin from cost and sell
       if (cost > 0) {
@@ -312,9 +313,9 @@ export default function PriceBookDialog({ open, onOpenChange, onSelectItem, onSe
                         <TableCell className="font-mono">{item.code}</TableCell>
                         <TableCell>{item.description}</TableCell>
                         <TableCell>{item.unit}</TableCell>
-                        <TableCell className="text-right">${item.cost_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(item.cost_price)}</TableCell>
                         <TableCell className="text-right">{item.margin_percentage.toFixed(2)}%</TableCell>
-                        <TableCell className="text-right font-medium">${item.sell_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(item.sell_price)}</TableCell>
                         <TableCell>{item.category}</TableCell>
                         <TableCell className="text-right space-x-2">
                           {onSelectItem && (

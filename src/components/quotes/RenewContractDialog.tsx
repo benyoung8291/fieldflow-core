@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { addMonths, addYears, format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface RenewContractDialogProps {
   open: boolean;
@@ -299,7 +300,7 @@ export default function RenewContractDialog({ open, onOpenChange, contract }: Re
               <div>
                 <span className="text-muted-foreground">Current Value:</span>
                 <span className="ml-2 font-medium">
-                  ${parseFloat(contract.total_contract_value).toFixed(2)}
+                  {formatCurrency(parseFloat(contract.total_contract_value))}
                 </span>
               </div>
               <div>
@@ -312,11 +313,10 @@ export default function RenewContractDialog({ open, onOpenChange, contract }: Re
                 <div>
                   <span className="text-muted-foreground">New Value:</span>
                   <span className="ml-2 font-medium">
-                    $
-                    {(
+                    {formatCurrency(
                       parseFloat(contract.total_contract_value) *
                       (1 + parseFloat(adjustmentPercentage) / 100)
-                    ).toFixed(2)}
+                    )}
                   </span>
                 </div>
               )}

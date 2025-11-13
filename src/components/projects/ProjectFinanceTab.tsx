@@ -369,7 +369,7 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
                                 <Label className="text-xs">Total</Label>
                                 <Input
                                   type="number"
-                                  value={item.line_total.toFixed(2)}
+                                  value={formatCurrency(item.line_total)}
                                   disabled
                                   className="font-semibold"
                                 />
@@ -451,9 +451,9 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
                                 </div>
                                 <div>
                                   <Label className="text-xs">Total</Label>
-                                  <Input
-                                    type="number"
-                                    value={subItem.line_total.toFixed(2)}
+                                    <Input
+                                      type="number"
+                                      value={formatCurrency(subItem.line_total)}
                                     disabled
                                     className="font-medium"
                                   />
