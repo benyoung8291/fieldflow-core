@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 
 interface VendorDialogProps {
@@ -32,6 +32,8 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
   const [abnValidated, setAbnValidated] = useState(false);
   const [gstRegistered, setGstRegistered] = useState<boolean | null>(null);
   const [availableTradingNames, setAvailableTradingNames] = useState<string[]>([]);
+  const [isDuplicateABN, setIsDuplicateABN] = useState(false);
+  const [duplicateVendorName, setDuplicateVendorName] = useState<string>("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -66,6 +68,8 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
     setFormData({ ...formData, abn: formatted });
     setAbnValidated(false);
     setGstRegistered(null);
+    setIsDuplicateABN(false);
+    setDuplicateVendorName("");
   };
 
   const handleValidateABN = async () => {
@@ -89,6 +93,38 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
         setAbnValidated(false);
         setGstRegistered(null);
         return;
+      }
+
+      // Check for duplicate ABN
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.tenant_id) {
+          let duplicateQuery = supabase
+            .from("vendors")
+            .select("id, name")
+            .eq("tenant_id", profile.tenant_id)
+            .eq("abn", formData.abn);
+
+          if (vendor) {
+            duplicateQuery = duplicateQuery.neq("id", vendor.id);
+          }
+
+          const { data: duplicateVendor } = await duplicateQuery.maybeSingle();
+
+          if (duplicateVendor) {
+            setIsDuplicateABN(true);
+            setDuplicateVendorName(duplicateVendor.name);
+          } else {
+            setIsDuplicateABN(false);
+            setDuplicateVendorName("");
+          }
+        }
       }
 
       setAbnValidated(true);
@@ -162,6 +198,8 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
       setAbnValidated(false);
       setGstRegistered(null);
       setAvailableTradingNames([]);
+      setIsDuplicateABN(false);
+      setDuplicateVendorName("");
     }
   }, [vendor, open]);
 
@@ -285,14 +323,19 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
                 <div className="space-y-2">
                   <Label htmlFor="abn">ABN *</Label>
                   <div className="flex gap-2">
-                    <Input
-                      id="abn"
-                      placeholder="12 345 678 901"
-                      value={formData.abn}
-                      onChange={(e) => handleABNChange(e.target.value)}
-                      className="flex-1"
-                      required
-                    />
+                    <div className="flex-1 relative">
+                      <Input
+                        id="abn"
+                        placeholder="12 345 678 901"
+                        value={formData.abn}
+                        onChange={(e) => handleABNChange(e.target.value)}
+                        className={isDuplicateABN ? "pr-10 border-amber-500" : ""}
+                        required
+                      />
+                      {isDuplicateABN && (
+                        <AlertTriangle className="h-4 w-4 text-amber-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                      )}
+                    </div>
                     <Button
                       type="button"
                       variant={abnValidated ? "default" : "outline"}
@@ -309,7 +352,13 @@ export default function VendorDialog({ open, onOpenChange, vendor }: VendorDialo
                       )}
                     </Button>
                   </div>
-                  {gstRegistered !== null && (
+                  {isDuplicateABN && (
+                    <p className="text-sm text-amber-600 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      This ABN is already used by: {duplicateVendorName}
+                    </p>
+                  )}
+                  {gstRegistered !== null && !isDuplicateABN && (
                     <p className={`text-sm ${gstRegistered ? 'text-green-600' : 'text-amber-600'}`}>
                       GST {gstRegistered ? 'Registered ✓' : 'Not Registered'}
                     </p>
