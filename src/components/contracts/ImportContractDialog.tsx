@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 import Papa from "papaparse";
 import { Loader2, Upload, Check, AlertCircle } from "lucide-react";
 import {
@@ -776,12 +777,12 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                               />
                             ) : (
                               <span className={!item.unit_price || item.unit_price <= 0 ? 'text-destructive' : ''}>
-                                ${item.unit_price?.toFixed(2) || '(Required)'}
+                                {item.unit_price ? formatCurrency(item.unit_price) : '(Required)'}
                               </span>
                             )}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ${(item.quantity * item.unit_price).toFixed(2)}
+                            {formatCurrency(item.quantity * item.unit_price)}
                           </TableCell>
                         </TableRow>
                       );

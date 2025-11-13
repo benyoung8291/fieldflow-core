@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatCurrency } from "@/lib/utils";
 
 interface AssemblyDialogProps {
   open: boolean;
@@ -108,7 +109,7 @@ export default function AssemblyDialog({ open, onOpenChange, assemblyId }: Assem
     const sellNum = parseFloat(sell) || 0;
 
     if (changedField === "cost_price" || changedField === "margin_percentage") {
-      return (costNum * (1 + marginNum / 100)).toFixed(2);
+      return formatCurrency(costNum * (1 + marginNum / 100));
     } else {
       return costNum > 0 ? (((sellNum - costNum) / costNum) * 100).toFixed(2) : "0";
     }

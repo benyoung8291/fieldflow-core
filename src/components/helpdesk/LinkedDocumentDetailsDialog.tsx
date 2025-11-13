@@ -4,6 +4,7 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { formatCurrency } from "@/lib/utils";
 
 interface LinkedDocumentDetailsDialogProps {
   open: boolean;
@@ -139,7 +140,7 @@ export function LinkedDocumentDetailsDialog({
             {(documentType === "quote" || documentType === "invoice") && document.total && (
               <div>
                 <div className="text-sm font-medium text-muted-foreground">Total</div>
-                <div className="text-base">${document.total.toFixed(2)}</div>
+                <div className="text-base">{formatCurrency(document.total)}</div>
               </div>
             )}
           </div>

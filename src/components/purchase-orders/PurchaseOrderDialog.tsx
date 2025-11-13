@@ -20,7 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   vendor_id: z.string().min(1, "Supplier is required"),
@@ -626,7 +626,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                             />
                           </TableCell>
                           <TableCell>
-                            ${item.line_total.toFixed(2)}
+                            {formatCurrency(item.line_total)}
                           </TableCell>
                           <TableCell>
                             <Switch
@@ -657,30 +657,30 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
               )}
 
               <div className="flex justify-end">
-                <div className="w-80 space-y-2">
+                  <div className="w-80 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>${totals.subtotal.toFixed(2)}</span>
+                    <span>{formatCurrency(totals.subtotal)}</span>
                   </div>
                   {totals.gstFreeAmount > 0 && (
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>GST Free Amount:</span>
-                      <span>${totals.gstFreeAmount.toFixed(2)}</span>
+                      <span>{formatCurrency(totals.gstFreeAmount)}</span>
                     </div>
                   )}
                   {totals.taxableAmount > 0 && (
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>Taxable Amount:</span>
-                      <span>${totals.taxableAmount.toFixed(2)}</span>
+                      <span>{formatCurrency(totals.taxableAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>GST ({form.watch("tax_rate")}%):</span>
-                    <span>${totals.taxAmount.toFixed(2)}</span>
+                    <span>{formatCurrency(totals.taxAmount)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-semibold pt-2 border-t">
                     <span>Total:</span>
-                    <span>${totals.total.toFixed(2)}</span>
+                    <span>{formatCurrency(totals.total)}</span>
                   </div>
                 </div>
               </div>

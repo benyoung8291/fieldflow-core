@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 interface AILineItemMatcherProps {
   open: boolean;
@@ -161,16 +162,14 @@ export default function AILineItemMatcher({
                         {item.quantity}
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Cost:</span> $
-                        {item.cost_price.toFixed(2)}
+                        <span className="text-muted-foreground">Cost:</span> {formatCurrency(item.cost_price)}
                       </div>
                       <div>
                         <span className="text-muted-foreground">Margin:</span>{" "}
                         {item.margin_percentage}%
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Sell:</span> $
-                        {item.sell_price.toFixed(2)}
+                        <span className="text-muted-foreground">Sell:</span> {formatCurrency(item.sell_price)}
                       </div>
                     </div>
                   </div>

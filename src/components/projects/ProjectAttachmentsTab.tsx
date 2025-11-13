@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -298,7 +299,7 @@ export default function ProjectChangeOrdersTab({ projectId }: ProjectChangeOrder
                     </div>
                     <div className="text-right">
                       <p className={`text-lg font-bold ${co.budget_impact >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {co.budget_impact >= 0 ? '+' : ''}${co.budget_impact.toLocaleString()}
+                        {co.budget_impact >= 0 ? '+' : ''}{formatCurrency(co.budget_impact)}
                       </p>
                       {co.schedule_impact_days !== 0 && (
                         <p className="text-sm text-muted-foreground">

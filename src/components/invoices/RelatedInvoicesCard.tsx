@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface RelatedInvoicesCardProps {
   sourceType: "project" | "service_order";
@@ -113,7 +114,7 @@ export default function RelatedInvoicesCard({ sourceType, sourceId }: RelatedInv
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  {format(new Date(invoice.invoice_date), "MMM dd, yyyy")} · {invoice.lineItemCount} line items · ${invoice.total_amount.toFixed(2)}
+                  {format(new Date(invoice.invoice_date), "MMM dd, yyyy")} · {invoice.lineItemCount} line items · {formatCurrency(invoice.total_amount)}
                 </div>
               </div>
               <Button
