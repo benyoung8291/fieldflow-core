@@ -54,7 +54,10 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [contractStartDate, setContractStartDate] = useState("");
   const [billingFrequency, setBillingFrequency] = useState<"monthly" | "quarterly" | "annually">("monthly");
   const [lineItems, setLineItems] = useState<ParsedLineItem[]>([]);
-  const [step, setStep] = useState<"upload" | "review">("upload");
+  const [step, setStep] = useState<"upload" | "mapping" | "review">("upload");
+  const [columnMappings, setColumnMappings] = useState<Record<string, string | null>>({});
+  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+  const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
 
   // Fetch customers for selection
   const { data: customers } = useQuery({
@@ -91,24 +94,29 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       Papa.parse(file, {
         complete: async (results) => {
           try {
-            // Call edge function to parse with AI
+            // Store spreadsheet data for later parsing
+            setSpreadsheetData(results.data);
+
+            // Call edge function to analyze columns
             const { data: functionData, error: functionError } = await supabase.functions.invoke(
               "parse-contract-spreadsheet",
               {
                 body: {
                   spreadsheetData: results.data,
                   customerId: customerId,
+                  mode: "analyze",
                 },
               }
             );
 
             if (functionError) throw functionError;
 
-            // Set parsed line items for review
-            setLineItems(functionData.lineItems || []);
-            setStep("review");
+            // Set suggested mappings and available columns
+            setColumnMappings(functionData.mappings || {});
+            setAvailableColumns(functionData.availableColumns || []);
+            setStep("mapping");
 
-            toast.success(`Found ${functionData.lineItems?.length || 0} line items`);
+            toast.success("Analyzed spreadsheet structure");
           } catch (error: any) {
             console.error("Error parsing spreadsheet:", error);
             toast.error(error.message || "Failed to parse spreadsheet");
@@ -125,6 +133,37 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     } catch (error: any) {
       console.error("Upload error:", error);
       toast.error(error.message || "Failed to process file");
+      setIsProcessing(false);
+    }
+  };
+
+  const handleConfirmMappings = async () => {
+    setIsProcessing(true);
+
+    try {
+      // Parse with confirmed mappings
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        "parse-contract-spreadsheet",
+        {
+          body: {
+            spreadsheetData: spreadsheetData,
+            customerId: customerId,
+            mode: "parse",
+            columnMappings: columnMappings,
+          },
+        }
+      );
+
+      if (functionError) throw functionError;
+
+      setLineItems(functionData.lineItems || []);
+      setStep("review");
+
+      toast.success(`Parsed ${functionData.lineItems?.length || 0} line items`);
+    } catch (error: any) {
+      console.error("Error parsing with mappings:", error);
+      toast.error(error.message || "Failed to parse spreadsheet");
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -254,6 +293,9 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     setContractStartDate("");
     setBillingFrequency("monthly");
     setLineItems([]);
+    setColumnMappings({});
+    setAvailableColumns([]);
+    setSpreadsheetData([]);
     setStep("upload");
     onOpenChange(false);
   };
@@ -316,6 +358,77 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                 </>
               )}
             </Button>
+          </div>
+        )}
+
+        {step === "mapping" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="font-semibold">Column Mapping</h3>
+              <p className="text-sm text-muted-foreground">
+                Review and adjust which columns contain each type of information
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries({
+                description: "Description",
+                location_name: "Location Name",
+                location_address: "Location Address",
+                location_city: "City",
+                location_state: "State",
+                location_postcode: "Postcode",
+                unit_price: "Unit Price",
+                quantity: "Quantity",
+                frequency: "Frequency",
+                start_date: "Start Date",
+              }).map(([field, label]) => (
+                <div key={field} className="space-y-2">
+                  <Label htmlFor={field}>{label}</Label>
+                  <Select
+                    value={columnMappings[field] || "none"}
+                    onValueChange={(value) =>
+                      setColumnMappings((prev) => ({
+                        ...prev,
+                        [field]: value === "none" ? null : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {availableColumns.map((col) => (
+                        <SelectItem key={col} value={col}>
+                          {col}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setStep("mapping")} disabled={isProcessing}>
+                <X className="mr-2 h-4 w-4" />
+                Back to Mapping
+              </Button>
+              <Button onClick={handleConfirmMappings} disabled={isProcessing}>
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Confirm & Parse
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
 
