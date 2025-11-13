@@ -948,6 +948,66 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_policy_rules: {
+        Row: {
+          applies_to: string
+          category_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          max_amount: number | null
+          rule_name: string
+          rule_type: string
+          tenant_id: string
+          updated_at: string
+          vendor_id: string | null
+          violation_action: string
+        }
+        Insert: {
+          applies_to?: string
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_amount?: number | null
+          rule_name: string
+          rule_type: string
+          tenant_id: string
+          updated_at?: string
+          vendor_id?: string | null
+          violation_action?: string
+        }
+        Update: {
+          applies_to?: string
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_amount?: number | null
+          rule_name?: string
+          rule_type?: string
+          tenant_id?: string
+          updated_at?: string
+          vendor_id?: string | null
+          violation_action?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_expense_policy_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_expense_policy_vendor"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           account_code: string | null
@@ -961,9 +1021,11 @@ export type Database = {
           expense_number: string
           external_reference: string | null
           id: string
+          is_policy_compliant: boolean | null
           last_synced_at: string | null
           notes: string | null
           payment_method: string | null
+          policy_violations: Json | null
           project_id: string | null
           reference_number: string | null
           rejection_reason: string | null
@@ -990,9 +1052,11 @@ export type Database = {
           expense_number: string
           external_reference?: string | null
           id?: string
+          is_policy_compliant?: boolean | null
           last_synced_at?: string | null
           notes?: string | null
           payment_method?: string | null
+          policy_violations?: Json | null
           project_id?: string | null
           reference_number?: string | null
           rejection_reason?: string | null
@@ -1019,9 +1083,11 @@ export type Database = {
           expense_number?: string
           external_reference?: string | null
           id?: string
+          is_policy_compliant?: boolean | null
           last_synced_at?: string | null
           notes?: string | null
           payment_method?: string | null
+          policy_violations?: Json | null
           project_id?: string | null
           reference_number?: string | null
           rejection_reason?: string | null
@@ -2908,10 +2974,12 @@ export type Database = {
           expected_delivery_date: string | null
           id: string
           internal_notes: string | null
+          is_policy_compliant: boolean | null
           notes: string | null
           payment_terms: number | null
           po_date: string
           po_number: string
+          policy_violations: Json | null
           project_id: string | null
           service_order_id: string | null
           status: string
@@ -2931,10 +2999,12 @@ export type Database = {
           expected_delivery_date?: string | null
           id?: string
           internal_notes?: string | null
+          is_policy_compliant?: boolean | null
           notes?: string | null
           payment_terms?: number | null
           po_date?: string
           po_number: string
+          policy_violations?: Json | null
           project_id?: string | null
           service_order_id?: string | null
           status?: string
@@ -2954,10 +3024,12 @@ export type Database = {
           expected_delivery_date?: string | null
           id?: string
           internal_notes?: string | null
+          is_policy_compliant?: boolean | null
           notes?: string | null
           payment_terms?: number | null
           po_date?: string
           po_number?: string
+          policy_violations?: Json | null
           project_id?: string | null
           service_order_id?: string | null
           status?: string

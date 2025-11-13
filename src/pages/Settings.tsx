@@ -45,8 +45,9 @@ import UserProfileTab from "@/components/settings/UserProfileTab";
 import BrandColorsTab from "@/components/settings/BrandColorsTab";
 import { HelpDeskSettingsTab } from "@/components/settings/HelpDeskSettingsTab";
 import { ExpenseCategoriesTab } from "@/components/settings/ExpenseCategoriesTab";
+import { ExpensePolicyTab } from "@/components/settings/ExpensePolicyTab";
 import { cn } from "@/lib/utils";
-import { Receipt } from "lucide-react";
+import { Receipt, Shield as ShieldCheck } from "lucide-react";
 
 interface PayRateCategory {
   id: string;
@@ -94,6 +95,7 @@ const settingsNavigation = [
       { title: "CRM Pipeline", value: "crm-statuses", icon: PieChart },
       { title: "Help Desk", value: "helpdesk", icon: Headphones },
       { title: "Expense Categories", value: "expense-categories", icon: Receipt },
+      { title: "Expense Policy", value: "expense-policy", icon: ShieldCheck },
     ]
   },
   {
@@ -472,6 +474,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <ExpenseCategoriesTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "expense-policy" && (
+              <Card>
+                <CardContent className="pt-6">
+                  <ExpensePolicyTab />
                 </CardContent>
               </Card>
             )}

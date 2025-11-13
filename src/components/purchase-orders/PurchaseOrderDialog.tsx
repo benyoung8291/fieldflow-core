@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { canApplyGST, isLineItemGSTFree, calculateDocumentTotals, getGSTWarning } from "@/lib/gstCompliance";
+import { useExpensePolicyCheck } from "@/hooks/useExpensePolicyCheck";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
@@ -262,9 +264,22 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
     selectedVendor
   );
 
+  const { data: policyCheck } = useExpensePolicyCheck({
+    amount: totals?.total,
+    vendor_id: form.watch("vendor_id") || undefined,
+    category_id: undefined,
+    document_type: "purchase_order",
+  });
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (lineItems.length === 0) {
       toast.error("Add at least one line item");
+      return;
+    }
+
+    // Check for blocking policy violations
+    if (policyCheck?.isBlocked) {
+      toast.error("Cannot submit purchase order due to policy violations");
       return;
     }
 
@@ -491,6 +506,24 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
               </div>
             )}
 
+            {policyCheck?.hasViolations && (
+              <Alert variant={policyCheck.isBlocked ? "destructive" : "default"}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <p className="font-semibold">
+                      {policyCheck.isBlocked ? "Policy Violations (Blocked)" : "Policy Warnings"}
+                    </p>
+                    {policyCheck.violations.map((v, idx) => (
+                      <p key={idx} className="text-sm">
+                        • {v.rule_name}: {v.message}
+                      </p>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Line Items</h3>
@@ -687,7 +720,10 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button 
+                type="submit" 
+                disabled={loading || policyCheck?.isBlocked}
+              >
                 {loading ? "Saving..." : purchaseOrder ? "Update" : "Create"} Purchase Order
               </Button>
             </div>

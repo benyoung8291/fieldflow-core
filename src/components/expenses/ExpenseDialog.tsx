@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
+import { Upload, X, AlertTriangle } from "lucide-react";
 import { ChartOfAccountsSelector } from "./ChartOfAccountsSelector";
+import { useExpensePolicyCheck } from "@/hooks/useExpensePolicyCheck";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ExpenseDialogProps {
   open: boolean;
@@ -36,6 +38,13 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const queryClient = useQueryClient();
+
+  const { data: policyCheck } = useExpensePolicyCheck({
+    amount: formData.amount ? parseFloat(formData.amount) : undefined,
+    vendor_id: formData.vendor_id || undefined,
+    category_id: formData.category_id || undefined,
+    document_type: "expense",
+  });
 
   useEffect(() => {
     if (expense) {
@@ -288,6 +297,13 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check for blocking policy violations
+    if (policyCheck?.isBlocked) {
+      toast.error("Cannot submit expense due to policy violations");
+      return;
+    }
+
     saveMutation.mutate(formData);
   };
 
@@ -298,6 +314,24 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
           <DialogTitle>{expense ? "Edit Expense" : "Create Expense"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {policyCheck?.hasViolations && (
+            <Alert variant={policyCheck.isBlocked ? "destructive" : "default"}>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-1">
+                  <p className="font-semibold">
+                    {policyCheck.isBlocked ? "Policy Violations (Blocked)" : "Policy Warnings"}
+                  </p>
+                  {policyCheck.violations.map((v, idx) => (
+                    <p key={idx} className="text-sm">
+                      • {v.rule_name}: {v.message}
+                    </p>
+                  ))}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label>Description *</Label>
@@ -496,7 +530,10 @@ export function ExpenseDialog({ open, onOpenChange, expense, onSuccess }: Expens
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
+            <Button 
+              type="submit" 
+              disabled={saveMutation.isPending || policyCheck?.isBlocked}
+            >
               {saveMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
