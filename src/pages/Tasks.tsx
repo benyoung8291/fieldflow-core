@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban } from "lucide-react";
+import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
   DndContext, 
   DragEndEvent, 
@@ -37,6 +38,7 @@ export default function Tasks() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTask, setActiveTask] = useState<any>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
 
   // Drag and drop sensors with mobile support
@@ -277,6 +279,38 @@ export default function Tasks() {
     });
     return Array.from(tagSet).sort();
   }, [tasks]);
+
+  // Group tasks by status
+  const groupedTasks = useMemo(() => {
+    const groups: Record<string, any[]> = {
+      'pending': [],
+      'in_progress': [],
+      'completed': [],
+      'cancelled': []
+    };
+    
+    tasksWithUsers.forEach((task: any) => {
+      if (groups[task.status]) {
+        groups[task.status].push(task);
+      }
+    });
+    
+    return groups;
+  }, [tasksWithUsers]);
+
+  const statusLabels: Record<string, string> = {
+    'pending': 'Pending',
+    'in_progress': 'In Progress',
+    'completed': 'Complete',
+    'cancelled': 'Cancelled'
+  };
+
+  const toggleSection = (status: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [status]: !prev[status]
+    }));
+  };
 
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: TaskFormData) => {
@@ -612,86 +646,112 @@ export default function Tasks() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {tasksWithUsers.map((task: any) => (
-              <Card
-                key={task.id}
-                className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  setSelectedTask(task);
-                  setIsDialogOpen(true);
-                }}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={task.status === "completed"}
-                      onCheckedChange={() => toggleTaskStatus(task)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <h3 className={`font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
-                          {task.title}
-                        </h3>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Badge className={getPriorityColor(task.priority)} variant="outline">
-                            {task.priority}
-                          </Badge>
-                          <Badge className={getStatusColor(task.status)}>
-                            {task.status.replace("_", " ")}
-                          </Badge>
-                        </div>
-                      </div>
-                      {task.description && (
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{task.description}</p>
+          <div className="space-y-6">
+            {Object.entries(groupedTasks).map(([status, statusTasks]) => {
+              if (statusTasks.length === 0) return null;
+              
+              return (
+                <div key={status} className="space-y-2">
+                  <button
+                    onClick={() => toggleSection(status)}
+                    className="flex items-center gap-2 w-full text-left group hover:text-foreground transition-colors"
+                  >
+                    <ChevronDown 
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        collapsedSections[status] && "-rotate-90"
                       )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                        {task.tags && task.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {task.tags.map((tag: string, index: number) => (
-                              <Badge 
-                                key={index} 
-                                variant="secondary"
-                                className="text-xs"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                    />
+                    <h3 className="text-sm font-semibold text-muted-foreground group-hover:text-foreground">
+                      {statusLabels[status]}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      {statusTasks.length}
+                    </span>
+                  </button>
+                  
+                  {!collapsedSections[status] && (
+                    <div className="space-y-1 pl-6">
+                      {statusTasks.map((task: any) => (
+                        <div
+                          key={task.id}
+                          className="group flex items-start gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <Checkbox
+                            checked={task.status === "completed"}
+                            onCheckedChange={() => toggleTaskStatus(task)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5"
+                          />
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-3 mb-1">
+                              <h4 className={cn(
+                                "text-sm font-medium",
+                                task.status === "completed" && "line-through text-muted-foreground"
+                              )}>
+                                {task.title}
+                              </h4>
+                              
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {task.tags && task.tags.length > 0 && task.tags.slice(0, 2).map((tag: string, index: number) => (
+                                  <Badge 
+                                    key={index} 
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn("text-xs", getPriorityColor(task.priority))}
+                                >
+                                  {task.priority}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                              {task.due_date && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{format(new Date(task.due_date), "MMM d")}</span>
+                                </div>
+                              )}
+                              
+                              {task.assigned_user && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  <span>{task.assigned_user.first_name}</span>
+                                </div>
+                              )}
+                              
+                              {task.linked_module && task.linked_record_name && (
+                                <div 
+                                  className="flex items-center gap-1 text-primary hover:underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(getModuleRoute(task.linked_module, task.linked_record_id));
+                                  }}
+                                >
+                                  <LinkIcon className="h-3 w-3" />
+                                  <span>{task.linked_record_name}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        {task.due_date && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(task.due_date), "MMM d, yyyy")}
-                          </div>
-                        )}
-                        {task.assigned_user && (
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {task.assigned_user.first_name} {task.assigned_user.last_name}
-                          </div>
-                        )}
-                        {task.linked_module && task.linked_record_name && (
-                          <div 
-                            className="flex items-center gap-1 text-primary hover:underline cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(getModuleRoute(task.linked_module, task.linked_record_id));
-                            }}
-                          >
-                            <LinkIcon className="h-3 w-3" />
-                            <span className="font-medium">{task.document_type}:</span>
-                            <span>{task.linked_record_name}</span>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
