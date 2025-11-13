@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,17 +18,28 @@ interface QuotePDFDialogProps {
   customerEmail?: string;
 }
 
-export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEmail }: QuotePDFDialogProps) {
+interface QuotePDFDialogPropsExtended extends QuotePDFDialogProps {
+  initialEmailMode?: boolean;
+}
+
+export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEmail, initialEmailMode }: QuotePDFDialogPropsExtended) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [showSubItems, setShowSubItems] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("default");
-  const [emailMode, setEmailMode] = useState(false);
+  const [emailMode, setEmailMode] = useState(initialEmailMode || false);
   const [emailData, setEmailData] = useState({
     to: customerEmail || "",
     subject: "Your Quotation",
     message: "Please find attached your quotation. If you have any questions, please don't hesitate to contact us.",
   });
+
+  // Update emailMode when initialEmailMode changes
+  useEffect(() => {
+    if (open && initialEmailMode !== undefined) {
+      setEmailMode(initialEmailMode);
+    }
+  }, [open, initialEmailMode]);
 
   const { data: templates = [] } = useQuery({
     queryKey: ["quote-templates"],

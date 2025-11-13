@@ -54,6 +54,7 @@ import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimel
 import QuoteVersionHistory from "@/components/quotes/QuoteVersionHistory";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +73,7 @@ export default function QuoteDetails() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [emailMode, setEmailMode] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -452,12 +454,12 @@ export default function QuoteDetails() {
     }] : []),
   ];
 
-  // Primary actions based on quote status
-  const primaryActions: DocumentAction[] = [];
-  
-  // Save button for editable drafts
+  // Action buttons based on quote status
+  const actionButtons: DocumentAction[] = [];
+
+  // Primary save/approve/convert actions based on status
   if (canEdit) {
-    primaryActions.push({
+    actionButtons.push({
       label: isSaving ? "Saving..." : "Save Changes",
       icon: <Save className="h-4 w-4" />,
       onClick: handleSaveInlineEdits,
@@ -465,9 +467,8 @@ export default function QuoteDetails() {
     });
   }
   
-  // Approve button for sent quotes
   if (isSent && !isConverted) {
-    primaryActions.push({
+    actionButtons.push({
       label: "Approve Quote",
       icon: <CheckCircle className="h-4 w-4" />,
       onClick: () => updateStatus("approved"),
@@ -475,9 +476,8 @@ export default function QuoteDetails() {
     });
   }
   
-  // Convert button for approved quotes
   if (isApproved && !isConverted) {
-    primaryActions.push({
+    actionButtons.push({
       label: "Convert to Service Order / Project",
       icon: <RefreshCw className="h-4 w-4" />,
       onClick: () => setConvertDialogOpen(true),
@@ -485,42 +485,42 @@ export default function QuoteDetails() {
     });
   }
 
-  // File menu actions
+  // Secondary action buttons (always available unless draft)
+  if (!isDraft) {
+    actionButtons.push({
+      label: "Download PDF",
+      icon: <Download className="h-4 w-4" />,
+      onClick: () => setPdfDialogOpen(true),
+      variant: "outline",
+    });
+    
+    actionButtons.push({
+      label: "Email to Customer",
+      icon: <Mail className="h-4 w-4" />,
+      onClick: () => {
+        setEmailMode(true);
+        setPdfDialogOpen(true);
+      },
+      variant: "outline",
+    });
+  }
+
+  // Change to Draft (if allowed and not converted)
+  if (!isDraft && !isConverted) {
+    actionButtons.push({
+      label: "Change to Draft",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => updateStatus("draft"),
+      variant: "outline",
+    });
+  }
+
+  // File menu actions (kept minimal for other operations)
   const fileMenuActions: FileMenuAction[] = [
     ...(!isConverted ? [{
       label: "Edit in Dialog",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
-    }] : []),
-    {
-      label: "PDF / Email",
-      icon: <Mail className="h-4 w-4" />,
-      onClick: () => setPdfDialogOpen(true),
-    },
-    ...(isDraft ? [{
-      label: "Mark as Sent",
-      icon: <Send className="h-4 w-4" />,
-      onClick: () => updateStatus("sent"),
-      separator: true,
-    }] : []),
-    ...(isSent ? [
-      {
-        label: "Approve Quote",
-        icon: <CheckCircle className="h-4 w-4" />,
-        onClick: () => updateStatus("approved"),
-        separator: true,
-      },
-      {
-        label: "Reject Quote",
-        icon: <XCircle className="h-4 w-4" />,
-        onClick: () => updateStatus("rejected"),
-      },
-    ] : []),
-    ...(isApproved && !isConverted ? [{
-      label: "Convert to Service Order / Project",
-      icon: <RefreshCw className="h-4 w-4" />,
-      onClick: () => setConvertDialogOpen(true),
-      separator: true,
     }] : []),
     ...(isDraft && !isConverted ? [{
       label: "Delete Quote",
@@ -553,7 +553,7 @@ export default function QuoteDetails() {
         <KeyInfoCard
           icon={DollarSign}
           label="Total Amount"
-          value={`$${quote.total_amount.toFixed(2)}`}
+          value={formatCurrency(quote.total_amount)}
         />
       </div>
       
@@ -945,7 +945,7 @@ export default function QuoteDetails() {
         subtitle={`${quote?.quote_number} • ${quote?.customer?.name}`}
         backPath="/quotes"
         statusBadges={statusBadges}
-        primaryActions={primaryActions}
+        primaryActions={actionButtons}
         fileMenuActions={fileMenuActions}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
@@ -960,9 +960,13 @@ export default function QuoteDetails() {
 
           <QuotePDFDialog 
             open={pdfDialogOpen} 
-            onOpenChange={setPdfDialogOpen} 
+            onOpenChange={(open) => {
+              setPdfDialogOpen(open);
+              if (!open) setEmailMode(false);
+            }}
             quoteId={id!}
             customerEmail={quote.customer?.email}
+            initialEmailMode={emailMode}
           />
 
           <ConvertQuoteDialog

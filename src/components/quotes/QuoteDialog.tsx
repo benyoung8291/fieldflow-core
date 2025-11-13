@@ -439,12 +439,12 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
   };
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { 
-      description: "", 
-      quantity: "1", 
-      cost_price: "0",
+    setLineItems([...lineItems, {
+      description: "",
+      quantity: "1",
+      cost_price: "",
       margin_percentage: "30",
-      sell_price: "0",
+      sell_price: "",
       line_total: 0,
       subItems: [],
       expanded: false
@@ -459,9 +459,9 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
     updated[parentIndex].subItems!.push({
       description: "",
       quantity: "1",
-      cost_price: "0",
+      cost_price: "",
       margin_percentage: "30",
-      sell_price: "0",
+      sell_price: "",
       line_total: 0,
     });
     updated[parentIndex].expanded = true;

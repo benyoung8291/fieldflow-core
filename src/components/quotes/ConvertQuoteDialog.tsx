@@ -127,6 +127,74 @@ export default function ConvertQuoteDialog({
       if (projectError) throw projectError;
       if (!project) throw new Error('Failed to create project');
 
+      // Create project line items from quote line items (including sub-items)
+      const flattenLineItems = (items: LineItem[], parentId?: string): any[] => {
+        const flattened: any[] = [];
+        items.forEach((item, index) => {
+          const projectLineItem = {
+            project_id: project.id,
+            tenant_id: profile.tenant_id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            line_total: item.line_total,
+            item_order: index,
+            parent_line_item_id: parentId,
+          };
+          flattened.push(projectLineItem);
+          
+          // Handle sub-items if they exist
+          if ((item as any).subItems && Array.isArray((item as any).subItems)) {
+            // We'll need to insert parent first to get its ID
+            // For now, mark sub-items with a temporary reference
+          }
+        });
+        return flattened;
+      };
+
+      // Insert parent line items first
+      const parentItems = lineItems.filter(item => !item.id || !(item as any).parent_line_item_id);
+      for (let i = 0; i < parentItems.length; i++) {
+        const item = parentItems[i];
+        const { data: insertedItem, error: lineError } = await supabase
+          .from('project_line_items')
+          .insert({
+            project_id: project.id,
+            tenant_id: profile.tenant_id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            line_total: item.line_total,
+            item_order: i,
+          })
+          .select()
+          .single();
+
+        if (lineError) throw lineError;
+
+        // Insert sub-items if they exist
+        if ((item as any).subItems && Array.isArray((item as any).subItems)) {
+          const subItems = (item as any).subItems;
+          for (let j = 0; j < subItems.length; j++) {
+            const subItem = subItems[j];
+            const { error: subLineError } = await supabase
+              .from('project_line_items')
+              .insert({
+                project_id: project.id,
+                tenant_id: profile.tenant_id,
+                description: subItem.description,
+                quantity: subItem.quantity,
+                unit_price: subItem.unit_price || subItem.sell_price,
+                line_total: subItem.line_total,
+                item_order: j,
+                parent_line_item_id: insertedItem.id,
+              });
+
+            if (subLineError) throw subLineError;
+          }
+        }
+      }
+
       // Update quote
       const { error: quoteError } = await supabase
         .from('quotes')
@@ -236,6 +304,50 @@ export default function ConvertQuoteDialog({
 
       if (soError) throw soError;
       if (!serviceOrder) throw new Error('Failed to create service order');
+
+      // Create service order line items from quote line items (including sub-items)
+      // Insert parent line items first
+      const parentItems = lineItems.filter(item => !item.id || !(item as any).parent_line_item_id);
+      for (let i = 0; i < parentItems.length; i++) {
+        const item = parentItems[i];
+        const { data: insertedItem, error: lineError } = await supabase
+          .from('service_order_line_items')
+          .insert({
+            service_order_id: serviceOrder.id,
+            tenant_id: profile.tenant_id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            line_total: item.line_total,
+            item_order: i,
+          })
+          .select()
+          .single();
+
+        if (lineError) throw lineError;
+
+        // Insert sub-items if they exist
+        if ((item as any).subItems && Array.isArray((item as any).subItems)) {
+          const subItems = (item as any).subItems;
+          for (let j = 0; j < subItems.length; j++) {
+            const subItem = subItems[j];
+            const { error: subLineError } = await supabase
+              .from('service_order_line_items')
+              .insert({
+                service_order_id: serviceOrder.id,
+                tenant_id: profile.tenant_id,
+                description: subItem.description,
+                quantity: subItem.quantity,
+                unit_price: subItem.unit_price || subItem.sell_price,
+                line_total: subItem.line_total,
+                item_order: j,
+                parent_line_item_id: insertedItem.id,
+              });
+
+            if (subLineError) throw subLineError;
+          }
+        }
+      }
 
       // Update quote
       const { error: quoteError } = await supabase
