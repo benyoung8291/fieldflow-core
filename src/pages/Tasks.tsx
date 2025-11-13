@@ -21,6 +21,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("my-tasks");
@@ -534,6 +535,15 @@ export default function Tasks() {
         return "bg-yellow-100 text-yellow-800";
     }
   };
+  const handleTaskClick = (task: any) => {
+    setSelectedTask(task);
+    if (viewMode === 'list') {
+      setSidePanelOpen(true);
+    } else {
+      setIsDialogOpen(true);
+    }
+  };
+
   return <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -650,10 +660,7 @@ export default function Tasks() {
 
         {/* Tasks List or Kanban View */}
         {viewMode === 'kanban' ? <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <TaskKanbanView tasks={tasksWithUsers} onTaskClick={task => {
-          setSelectedTask(task);
-          setIsDialogOpen(true);
-        }} onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))} kanbanMode={userProfile?.task_kanban_mode || 'business_days'} />
+            <TaskKanbanView tasks={tasksWithUsers} onTaskClick={handleTaskClick} onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))} kanbanMode={userProfile?.task_kanban_mode || 'business_days'} />
             <DragOverlay>
               {activeTask ? <DraggableTaskCard task={activeTask} onTaskClick={() => {}} onNavigateToLinked={() => {}} subtaskCount={activeTask.subtaskCount} completedSubtaskCount={activeTask.completedSubtaskCount} /> : null}
             </DragOverlay>
@@ -670,7 +677,9 @@ export default function Tasks() {
               <p className="text-muted-foreground">No tasks found</p>
               <p className="text-sm text-muted-foreground mt-1">Create your first task to get started</p>
             </CardContent>
-          </Card> : <div className="space-y-6">
+          </Card> : <div className={cn("flex gap-0", sidePanelOpen && "relative")}>
+            <div className={cn("transition-all duration-200", sidePanelOpen ? "w-[60%]" : "w-full")}>
+              <div className="space-y-6">
             {Object.entries(groupMode === 'status' ? groupedTasks : groupMode === 'tag' ? groupedByTag : groupedByDocument).map(([groupKey, groupTasks]) => {
           if (groupTasks.length === 0) return null;
           const displayLabel = groupMode === 'status' ? statusLabels[groupKey] : groupMode === 'tag' ? groupKey === 'untagged' ? 'Untagged' : groupKey : documentTypeLabels[groupKey] || groupKey;
@@ -686,10 +695,7 @@ export default function Tasks() {
                   </button>
                   
                   {!collapsedSections[groupKey] && <div className="space-y-0.5 pl-6">
-                      {groupTasks.map((task: any) => <div key={task.id} className="group flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
-                setSelectedTask(task);
-                setIsDialogOpen(true);
-              }}>
+                      {groupTasks.map((task: any) => <div key={task.id} className={cn("group flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer", selectedTask?.id === task.id && sidePanelOpen && "bg-muted")} onClick={() => handleTaskClick(task)}>
                           <Checkbox checked={task.status === "completed"} onCheckedChange={() => toggleTaskStatus(task)} onClick={e => e.stopPropagation()} className="mt-0.5 h-3.5 w-3.5" />
                           
                           <div className="flex-1 min-w-0">
@@ -735,8 +741,106 @@ export default function Tasks() {
                           </div>
                         </div>)}
                     </div>}
-                </div>;
+                </div>
         })}
+              </div>
+            </div>
+
+            {/* Side Panel for Task Details */}
+            {sidePanelOpen && selectedTask && <div className="w-[40%] border-l border-border bg-background h-[calc(100vh-12rem)] overflow-y-auto sticky top-0">
+                <div className="p-6 space-y-6">
+                  {/* Header with close button */}
+                  <div className="flex items-start justify-between">
+                    <h2 className="text-2xl font-semibold">{selectedTask.title}</h2>
+                    <Button variant="ghost" size="sm" onClick={() => setSidePanelOpen(false)}>
+                      <ExternalLink className="h-4 w-4 rotate-180" />
+                    </Button>
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn("text-xs", getStatusColor(selectedTask.status))}>
+                      {statusLabels[selectedTask.status]}
+                    </Badge>
+                    <Badge variant="outline" className={cn("text-xs", getPriorityColor(selectedTask.priority))}>
+                      {selectedTask.priority}
+                    </Badge>
+                  </div>
+
+                  {/* Key Details */}
+                  <div className="space-y-4">
+                    {/* Assignee */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground w-24">Assignee</span>
+                      <div className="flex items-center gap-2">
+                        {selectedTask.assigned_user ? <>
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{selectedTask.assigned_user.first_name} {selectedTask.assigned_user.last_name}</span>
+                          </> : <span className="text-sm text-muted-foreground">Unassigned</span>}
+                      </div>
+                    </div>
+
+                    {/* Due Date */}
+                    {selectedTask.due_date && <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground w-24">Due date</span>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{format(new Date(selectedTask.due_date), "MMM d, yyyy")}</span>
+                        </div>
+                      </div>}
+
+                    {/* Linked Document */}
+                    {selectedTask.linked_module && selectedTask.linked_record_name && <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground w-24">Project</span>
+                        <div className="flex items-center gap-2 text-primary cursor-pointer hover:underline" onClick={e => {
+                    e.stopPropagation();
+                    navigate(getModuleRoute(selectedTask.linked_module, selectedTask.linked_record_id));
+                  }}>
+                          <LinkIcon className="h-4 w-4" />
+                          <span className="text-sm">{selectedTask.linked_record_name}</span>
+                        </div>
+                      </div>}
+
+                    {/* Tags */}
+                    {selectedTask.tags && selectedTask.tags.length > 0 && <div className="flex items-start gap-3">
+                        <span className="text-sm text-muted-foreground w-24">Tags</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedTask.tags.map((tag: string, index: number) => <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>)}
+                        </div>
+                      </div>}
+                  </div>
+
+                  {/* Description */}
+                  {selectedTask.description && <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-muted-foreground">Description</h3>
+                      <p className="text-sm whitespace-pre-wrap">{selectedTask.description}</p>
+                    </div>}
+
+                  {/* Subtasks Count */}
+                  {selectedTask.subtaskCount > 0 && <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-muted-foreground">Subtasks</h3>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedTask.completedSubtaskCount} of {selectedTask.subtaskCount} completed</span>
+                      </div>
+                    </div>}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button variant="outline" size="sm" onClick={() => {
+                  setSidePanelOpen(false);
+                  setIsDialogOpen(true);
+                }} className="flex-1">
+                      Edit Task
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleTaskStatus(selectedTask)} className="flex-1">
+                      {selectedTask.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
+                    </Button>
+                  </div>
+                </div>
+              </div>}
           </div>}
       </div>
 
