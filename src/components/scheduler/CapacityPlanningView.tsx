@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { startOfWeek, endOfWeek, addWeeks, format } from "date-fns";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useDroppable } from "@dnd-kit/core";
+import { useDroppable, useDndMonitor } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Clock, Package } from "lucide-react";
 
 interface Worker {
   id: string;
@@ -45,9 +46,10 @@ interface DroppableWeekCardProps {
     utilization: number;
   };
   onDrop: () => void;
+  activeServiceOrder?: any;
 }
 
-function DroppableWeekCard({ week, onDrop }: DroppableWeekCardProps) {
+function DroppableWeekCard({ week, onDrop, activeServiceOrder }: DroppableWeekCardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `capacity-week-${week.weekStart.toISOString()}`,
     data: { 
@@ -91,6 +93,29 @@ function DroppableWeekCard({ week, onDrop }: DroppableWeekCardProps) {
             {week.utilization}%
           </span>
         </div>
+        
+        {isOver && activeServiceOrder && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <div className="text-xs font-medium text-primary mb-2 flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              Preview: Scheduling
+            </div>
+            <div className="bg-primary/10 rounded-md p-2 space-y-1">
+              <div className="text-xs font-medium truncate">
+                {activeServiceOrder.order_number}
+              </div>
+              <div className="text-[10px] text-muted-foreground line-clamp-2">
+                {activeServiceOrder.title}
+              </div>
+              {activeServiceOrder.estimated_hours && (
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {activeServiceOrder.estimated_hours}h estimated
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -98,6 +123,21 @@ function DroppableWeekCard({ week, onDrop }: DroppableWeekCardProps) {
 
 export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOrder }: CapacityPlanningViewProps) {
   const numberOfWeeks = 6;
+  const [activeServiceOrder, setActiveServiceOrder] = useState<any>(null);
+
+  useDndMonitor({
+    onDragStart: (event) => {
+      if (event.active.data.current?.type === 'service-order') {
+        setActiveServiceOrder(event.active.data.current.serviceOrder);
+      }
+    },
+    onDragEnd: () => {
+      setActiveServiceOrder(null);
+    },
+    onDragCancel: () => {
+      setActiveServiceOrder(null);
+    },
+  });
 
   // Fetch appointments for the next N weeks
   const { data: appointments, isLoading: appointmentsLoading } = useQuery({
@@ -272,6 +312,7 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
             key={week.week}
             week={week}
             onDrop={() => {}}
+            activeServiceOrder={activeServiceOrder}
           />
         ))}
       </div>
