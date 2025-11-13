@@ -45,6 +45,7 @@ import HelpDesk from "./pages/HelpDesk";
 import CRMHub from "./pages/CRMHub";
 import Vendors from "@/pages/Vendors";
 import PurchaseOrders from "@/pages/PurchaseOrders";
+import PurchaseOrderDetails from "@/pages/PurchaseOrderDetails";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
@@ -188,6 +189,7 @@ const App = () => {
             <Route path="/recurring-invoices/:id" element={isAuthenticated ? <RecurringInvoiceDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/vendors" element={isAuthenticated ? <Vendors /> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders" element={isAuthenticated ? <PurchaseOrders /> : <Navigate to="/auth" replace />} />
+            <Route path="/purchase-orders/:id" element={isAuthenticated ? <PurchaseOrderDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
             <Route path="/crm-hub" element={isAuthenticated ? <CRMHub /> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
