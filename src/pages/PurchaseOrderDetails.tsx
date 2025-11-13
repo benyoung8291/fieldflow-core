@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -154,17 +155,26 @@ export default function PurchaseOrderDetails() {
   const canReceive = ["approved", "sent", "partially_received"].includes(purchaseOrder?.status);
 
   if (loading) {
-    return <div className="container mx-auto py-6">Loading...</div>;
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto py-6">Loading...</div>
+      </DashboardLayout>
+    );
   }
 
   if (!purchaseOrder) {
-    return <div className="container mx-auto py-6">Purchase order not found</div>;
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto py-6">Purchase order not found</div>
+      </DashboardLayout>
+    );
   }
 
   const gstWarning = getGSTWarning(vendor);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <DashboardLayout>
+      <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -482,6 +492,7 @@ export default function PurchaseOrderDetails() {
         purchaseOrder={purchaseOrder}
         onSuccess={fetchPurchaseOrder}
       />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

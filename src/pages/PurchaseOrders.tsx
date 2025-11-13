@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -73,7 +74,8 @@ export default function PurchaseOrders() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <DashboardLayout>
+      <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Purchase Orders</h1>
@@ -174,6 +176,7 @@ export default function PurchaseOrders() {
         purchaseOrder={selectedPO}
         onSuccess={fetchPurchaseOrders}
       />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
