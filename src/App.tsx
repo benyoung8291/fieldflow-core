@@ -64,6 +64,7 @@ import SupervisorDashboard from "./pages/worker/supervisor/SupervisorDashboard";
 import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashboard";
 import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
 import SupervisorServiceOrders from "./pages/worker/supervisor/SupervisorServiceOrders";
+import FinancialReconciliation from "./pages/FinancialReconciliation";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
@@ -188,6 +189,7 @@ const App = () => {
             <Route path="/skills" element={isAuthenticated ? <Skills /> : <Navigate to="/auth" replace />} />
             <Route path="/training-matrix" element={isAuthenticated ? <TrainingMatrix /> : <Navigate to="/auth" replace />} />
             <Route path="/analytics" element={isAuthenticated ? <Analytics /> : <Navigate to="/auth" replace />} />
+            <Route path="/financial-reconciliation" element={isAuthenticated ? <FinancialReconciliation /> : <Navigate to="/auth" replace />} />
             <Route path="/pipeline" element={isAuthenticated ? <QuotePipeline /> : <Navigate to="/auth" replace />} />
             <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/auth" replace />} />
             <Route path="/tasks" element={isAuthenticated ? <Tasks /> : <Navigate to="/auth" replace />} />
