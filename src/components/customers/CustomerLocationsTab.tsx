@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Phone, Mail, Edit, Plus, ExternalLink } from "lucide-react";
+import { MapPin, Phone, Mail, Edit, Plus, ExternalLink, Navigation } from "lucide-react";
 import CustomerLocationDialog from "./CustomerLocationDialog";
+import { geocodeCustomerLocations } from "@/utils/geocodeCustomerLocations";
 
 interface CustomerLocationsTabProps {
   customerId: string;
@@ -15,8 +16,10 @@ interface CustomerLocationsTabProps {
 
 export default function CustomerLocationsTab({ customerId, tenantId }: CustomerLocationsTabProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [isGeocodingLocations, setIsGeocodingLocations] = useState(false);
 
   const { data: locations } = useQuery({
     queryKey: ["customer-locations", customerId],
@@ -41,14 +44,38 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
     setIsDialogOpen(true);
   };
 
+  const handleGeocodeLocations = async () => {
+    setIsGeocodingLocations(true);
+    try {
+      await geocodeCustomerLocations(customerId);
+      queryClient.invalidateQueries({ queryKey: ["customer-locations", customerId] });
+    } catch (error) {
+      // Error handling is done in the utility function
+    } finally {
+      setIsGeocodingLocations(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Locations</h3>
-        <Button onClick={handleAdd} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Location
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleGeocodeLocations} 
+            size="sm" 
+            variant="outline"
+            className="gap-2"
+            disabled={isGeocodingLocations}
+          >
+            <Navigation className="h-4 w-4" />
+            {isGeocodingLocations ? "Geocoding..." : "Geocode All"}
+          </Button>
+          <Button onClick={handleAdd} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Location
+          </Button>
+        </div>
       </div>
 
       {locations && locations.length === 0 ? (
