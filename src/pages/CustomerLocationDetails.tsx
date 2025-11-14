@@ -21,7 +21,7 @@ export default function CustomerLocationDetails() {
         .from("customer_locations")
         .select(`
           *,
-          customers!inner (
+          customers (
             id,
             name,
             email,
@@ -31,7 +31,10 @@ export default function CustomerLocationDetails() {
         .eq("id", id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching location:", error);
+        throw error;
+      }
       return data as any;
     },
   });
@@ -42,19 +45,22 @@ export default function CustomerLocationDetails() {
       const { data, error } = await supabase
         .from("service_orders")
         .select("*")
-        .eq("location_id", id)
+        .eq("customer_location_id", id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as any[] || [];
+      if (error) {
+        console.error("Error fetching service orders:", error);
+        return [];
+      }
+      return data || [];
     },
     enabled: !!id,
   });
 
-  const { data: contractLineItems } = useQuery({
+  const { data: contractLineItems } = useQuery<any[]>({
     queryKey: ["location-contract-items", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("service_contract_line_items")
         .select(`
           *,
@@ -66,11 +72,11 @@ export default function CustomerLocationDetails() {
             end_date
           )
         `)
-        .eq("location_id", id)
+        .eq("customer_location_id", id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as any[] || [];
+      return (data || []) as any[];
     },
     enabled: !!id,
   });
@@ -80,13 +86,27 @@ export default function CustomerLocationDetails() {
     queryFn: async () => {
       if (!id) return [];
       
+      // Appointments are linked to service orders, which are linked to locations
+      // First get service orders for this location
+      const { data: serviceOrdersData } = await (supabase as any)
+        .from("service_orders")
+        .select("id")
+        .eq("customer_location_id", id);
+      
+      if (!serviceOrdersData || serviceOrdersData.length === 0) return [];
+      
+      const serviceOrderIds = serviceOrdersData.map((so: any) => so.id);
+      
       const result = await (supabase as any)
         .from("appointments")
         .select("*")
-        .eq("location_id", id)
+        .in("service_order_id", serviceOrderIds)
         .order("start_time", { ascending: true });
 
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error("Error fetching appointments:", result.error);
+        return [];
+      }
       
       if (!result.data) return [];
 
