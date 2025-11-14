@@ -21,6 +21,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
 import AuditTimeline from "@/components/audit/AuditTimeline";
+import ThreeWayMatchingCard from "@/components/invoices/ThreeWayMatchingCard";
+import { Package } from "lucide-react";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -754,6 +756,13 @@ export default function InvoiceDetails() {
         </Card>
       ),
     },
+    // @ts-ignore - Types will update after migration
+    ...(invoice.invoice_type === 'AP' ? [{
+      value: "po-matching",
+      label: "PO Matching",
+      icon: <Package className="h-4 w-4" />,
+      content: <ThreeWayMatchingCard invoiceId={id!} />,
+    }] : []),
     {
       value: "customer",
       label: "Customer",
