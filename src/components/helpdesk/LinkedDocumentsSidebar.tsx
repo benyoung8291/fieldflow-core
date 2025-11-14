@@ -102,11 +102,16 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
 
   return (
     <div className="flex flex-col h-full border-l bg-background">
-      <div className="px-3 py-3 border-b">
-        <h3 className="font-semibold text-sm">Linked Documents</h3>
-      </div>
+      <Tabs defaultValue="documents" className="flex flex-col h-full">
+        <div className="px-3 py-3 border-b">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="documents" className="text-xs">Linked Documents</TabsTrigger>
+            <TabsTrigger value="actions" className="text-xs">Quick Actions</TabsTrigger>
+          </TabsList>
+        </div>
 
-      <ScrollArea className="flex-1 p-3">
+        <TabsContent value="documents" className="flex-1 mt-0 p-0">
+          <ScrollArea className="h-full p-3">
         <div className="space-y-3">
           {/* Customer & Contact Section */}
           <div className="space-y-2">
@@ -248,7 +253,13 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
             );
           })}
         </div>
-      </ScrollArea>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="actions" className="flex-1 mt-0 p-0">
+          <QuickActionsTab ticket={ticket} />
+        </TabsContent>
+      </Tabs>
 
       <LinkDocumentDialog
         ticketId={ticketId}
