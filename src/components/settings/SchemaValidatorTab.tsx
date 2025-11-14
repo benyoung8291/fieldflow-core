@@ -95,17 +95,47 @@ export function SchemaValidatorTab() {
       });
     });
 
-    // Create edges for relationships
+    // Create edges for relationships with different styles based on type
     schemaData.relationships.forEach((rel, index) => {
+      const edgeStyle = {
+        'foreign_key': { 
+          stroke: 'hsl(var(--primary))', 
+          strokeWidth: 2,
+          label: 'FK'
+        },
+        'logical': { 
+          stroke: 'hsl(var(--secondary))', 
+          strokeWidth: 1.5,
+          strokeDasharray: '5,5',
+          label: 'Logical'
+        },
+        'settings': { 
+          stroke: 'hsl(var(--accent))', 
+          strokeWidth: 1,
+          strokeDasharray: '3,3',
+          label: 'Settings'
+        },
+        'system': { 
+          stroke: 'hsl(var(--muted-foreground))', 
+          strokeWidth: 1,
+          strokeDasharray: '2,2',
+          label: 'System'
+        },
+      }[rel.type] || { stroke: 'hsl(var(--border))', strokeWidth: 1, label: '' };
+
       edges.push({
         id: `${rel.from}-${rel.to}-${index}`,
         source: rel.from,
         target: rel.to,
         type: 'smoothstep',
-        animated: true,
-        style: { stroke: 'hsl(var(--primary))' },
-        label: 'FK',
-        labelStyle: { fontSize: 10, fill: 'hsl(var(--muted-foreground))' },
+        animated: rel.type === 'foreign_key',
+        style: { 
+          stroke: edgeStyle.stroke, 
+          strokeWidth: edgeStyle.strokeWidth,
+          strokeDasharray: edgeStyle.strokeDasharray 
+        },
+        label: edgeStyle.label,
+        labelStyle: { fontSize: 9, fill: 'hsl(var(--muted-foreground))' },
       });
     });
 
@@ -250,7 +280,21 @@ export function SchemaValidatorTab() {
             <CardHeader className="flex-shrink-0">
               <CardTitle>Database Relationship Map</CardTitle>
               <CardDescription>
-                Visual representation of how tables are connected through foreign keys
+                Visual representation of table connections: 
+                <span className="inline-flex items-center gap-4 ml-4 text-xs">
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-0.5 bg-primary"></span> Foreign Keys
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-0.5 bg-secondary" style={{backgroundImage: 'repeating-linear-gradient(to right, hsl(var(--secondary)) 0, hsl(var(--secondary)) 3px, transparent 3px, transparent 6px)'}}></span> Logical
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-0.5 bg-accent" style={{backgroundImage: 'repeating-linear-gradient(to right, hsl(var(--accent)) 0, hsl(var(--accent)) 2px, transparent 2px, transparent 4px)'}}></span> Settings
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-0.5 bg-muted-foreground" style={{backgroundImage: 'repeating-linear-gradient(to right, hsl(var(--muted-foreground)) 0, hsl(var(--muted-foreground)) 1px, transparent 1px, transparent 3px)'}}></span> System
+                  </span>
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
