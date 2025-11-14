@@ -458,191 +458,146 @@ export default function WorkflowBuilder() {
           <QuickStartPanel onSelectTemplate={handleTemplateSelection} />
         ) : (
           <>
-          <div className="border-b bg-background p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4 flex-1">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/workflows")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div className="flex-1 max-w-md">
-              <Input
-                value={workflowName}
-                onChange={(e) => setWorkflowName(e.target.value)}
-                placeholder="Workflow Name"
-                className="text-lg font-semibold"
-              />
-            </div>
-            <div className="flex-1 max-w-md">
-              <Textarea
-                value={workflowDescription}
-                onChange={(e) => setWorkflowDescription(e.target.value)}
-                placeholder="Description (optional)"
-                rows={1}
-                className="resize-none"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={saveMutation.isPending}>
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-            <Button onClick={() => setShowTestDialog(true)} variant="outline">
-              <Play className="h-4 w-4 mr-2" />
-              Test
-            </Button>
-          </div>
-        </div>
-            </Button>
-            <Button variant="outline" onClick={() => setShowTestDialog(true)}>
-              <Play className="h-4 w-4 mr-2" />
-              Test Run
-            </Button>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <Label>Trigger</Label>
-            <Select value={triggerType} onValueChange={setTriggerType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="quote_created">Quote Created</SelectItem>
-                <SelectItem value="quote_approved">Quote Approved</SelectItem>
-                <SelectItem value="quote_sent">Quote Sent</SelectItem>
-                <SelectItem value="invoice_sent">Invoice Sent</SelectItem>
-                <SelectItem value="service_order_completed">Service Order Completed</SelectItem>
-                <SelectItem value="project_created">Project Created</SelectItem>
-                <SelectItem value="ticket_created">Ticket Created</SelectItem>
-                <SelectItem value="ticket_assigned">Ticket Assigned</SelectItem>
-                <SelectItem value="ticket_status_changed">Ticket Status Changed</SelectItem>
-                <SelectItem value="ticket_resolved">Ticket Resolved</SelectItem>
-                <SelectItem value="ticket_reopened">Ticket Reopened</SelectItem>
-                <SelectItem value="email_received">Email Received</SelectItem>
-                <SelectItem value="email_sent">Email Sent</SelectItem>
-                <SelectItem value="purchase_order_created">Purchase Order Created</SelectItem>
-                <SelectItem value="purchase_order_approved">Purchase Order Approved</SelectItem>
-                <SelectItem value="expense_submitted">Expense Submitted</SelectItem>
-                <SelectItem value="expense_approved">Expense Approved</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Description</Label>
-            <Textarea
-              value={workflowDescription}
-              onChange={(e) => setWorkflowDescription(e.target.value)}
-              placeholder="Describe what this workflow does..."
-              rows={1}
-            />
-          </div>
-        </div>
+            <div className="border-b bg-background p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4 flex-1">
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/workflows")}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <div className="flex-1 max-w-md">
+                    <Input
+                      value={workflowName}
+                      onChange={(e) => setWorkflowName(e.target.value)}
+                      placeholder="Workflow Name"
+                      className="text-lg font-semibold"
+                    />
+                  </div>
+                  <div className="flex-1 max-w-md">
+                    <Textarea
+                      value={workflowDescription}
+                      onChange={(e) => setWorkflowDescription(e.target.value)}
+                      placeholder="Description (optional)"
+                      rows={1}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSave} disabled={saveMutation.isPending}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                  <Button onClick={() => setShowTestDialog(true)} variant="outline">
+                    <Play className="h-4 w-4 mr-2" />
+                    Test
+                  </Button>
+                </div>
+              </div>
 
-        {id && id !== "new" && (
-          <WorkflowExecutionsList workflowId={id} />
+              {id && id !== "new" && (
+                <WorkflowExecutionsList workflowId={id} />
+              )}
+
+              {validationIssues.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  {validationIssues.filter(i => i.severity === "error").map((issue, idx) => (
+                    <Alert key={`error-${idx}`} variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Error</AlertTitle>
+                      <AlertDescription>{issue.message}</AlertDescription>
+                    </Alert>
+                  ))}
+                  {validationIssues.filter(i => i.severity === "warning").map((issue, idx) => (
+                    <Alert key={`warning-${idx}`}>
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>Warning</AlertTitle>
+                      <AlertDescription>{issue.message}</AlertDescription>
+                    </Alert>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-1">
+              <Card className="w-64 m-4 p-4 space-y-2 overflow-y-auto">
+                <h3 className="font-semibold mb-3">Add Nodes</h3>
+                <div className="space-y-1">
+                  {actionTypes.filter(a => a.type === "action").map((action) => (
+                    <Button
+                      key={action.value}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => addNode(action.value)}
+                    >
+                      <action.icon className="h-4 w-4 mr-2" />
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="text-xs text-muted-foreground uppercase mb-2 font-semibold">Logic</div>
+                  {actionTypes.filter(a => a.type === "condition").map((action) => (
+                    <Button
+                      key={action.value}
+                      variant="outline"
+                      className="w-full justify-start border-yellow-500/50 hover:border-yellow-500"
+                      onClick={() => addNode(action.value)}
+                    >
+                      <action.icon className="h-4 w-4 mr-2 text-yellow-600" />
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+
+              <div className="flex-1 relative" ref={reactFlowWrapper}>
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  onNodeClick={handleNodeClick}
+                  nodeTypes={nodeTypes}
+                  fitView
+                >
+                  <Background variant={BackgroundVariant.Dots} />
+                  <Controls />
+                  <MiniMap />
+                </ReactFlow>
+                <NodeConfigPanel
+                  selectedNode={selectedNode}
+                  onClose={() => setSelectedNode(null)}
+                  onSave={handleSaveNodeConfig}
+                  onDelete={handleDeleteNode}
+                  sampleData={sampleData}
+                />
+                {triggerType && (
+                  <SampleDataPanel
+                    triggerType={triggerType}
+                    sampleData={sampleData}
+                    onLoadSample={handleLoadSampleData}
+                  />
+                )}
+              </div>
+            </div>
+          </>
         )}
 
-        {validationIssues.length > 0 && (
-          <div className="space-y-2 mt-4">
-            {validationIssues.filter(i => i.severity === "error").map((issue, idx) => (
-              <Alert key={`error-${idx}`} variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{issue.message}</AlertDescription>
-              </Alert>
-            ))}
-            {validationIssues.filter(i => i.severity === "warning").map((issue, idx) => (
-              <Alert key={`warning-${idx}`}>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Warning</AlertTitle>
-                <AlertDescription>{issue.message}</AlertDescription>
-              </Alert>
-            ))}
-          </div>
-        )}
-      </div>
+        <WorkflowTestDialog
+          open={showTestDialog}
+          onOpenChange={setShowTestDialog}
+          workflowId={id && id !== "new" ? id : null}
+          triggerType={triggerType}
+        />
 
-      <div className="flex flex-1">
-        <Card className="w-64 m-4 p-4 space-y-2 overflow-y-auto">
-          <h3 className="font-semibold mb-3">Add Nodes</h3>
-          <div className="space-y-1">
-            {actionTypes.filter(a => a.type === "action").map((action) => (
-              <Button
-                key={action.value}
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => addNode(action.value)}
-              >
-                <action.icon className="h-4 w-4 mr-2" />
-                {action.label}
-              </Button>
-            ))}
-          </div>
-          <div className="border-t pt-2 mt-2">
-            <div className="text-xs text-muted-foreground uppercase mb-2 font-semibold">Logic</div>
-            {actionTypes.filter(a => a.type === "condition").map((action) => (
-              <Button
-                key={action.value}
-                variant="outline"
-                className="w-full justify-start border-yellow-500/50 hover:border-yellow-500"
-                onClick={() => addNode(action.value)}
-              >
-                <action.icon className="h-4 w-4 mr-2 text-yellow-600" />
-                {action.label}
-              </Button>
-            ))}
-          </div>
-        </Card>
-
-        <div className="flex-1 relative" ref={reactFlowWrapper}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={handleNodeClick}
-            nodeTypes={nodeTypes}
-            fitView
-          >
-            <Background variant={BackgroundVariant.Dots} />
-            <Controls />
-            <MiniMap />
-          </ReactFlow>
-          <NodeConfigPanel
-            selectedNode={selectedNode}
-            onClose={() => setSelectedNode(null)}
-            onSave={handleSaveNodeConfig}
-            onDelete={handleDeleteNode}
-            sampleData={sampleData}
-          />
-          {triggerType && (
-            <SampleDataPanel
-              triggerType={triggerType}
-              sampleData={sampleData}
-              onLoadSample={handleLoadSampleData}
-            />
-          )}
-        </div>
-        </div>
-        </>
-      )}
-
-      <WorkflowTestDialog
-        open={showTestDialog}
-        onOpenChange={setShowTestDialog}
-        workflowId={id && id !== "new" ? id : null}
-        triggerType={triggerType}
-      />
-
-      <TriggerSelectorDialog
-        open={showTriggerDialog}
-        onOpenChange={setShowTriggerDialog}
-        currentTrigger={triggerType}
-        onSelect={handleTriggerChange}
-      />
+        <TriggerSelectorDialog
+          open={showTriggerDialog}
+          onOpenChange={setShowTriggerDialog}
+          currentTrigger={triggerType}
+          onSelect={handleTriggerChange}
+        />
       </div>
     </DashboardLayout>
   );
