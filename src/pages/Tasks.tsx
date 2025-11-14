@@ -700,6 +700,22 @@ export default function Tasks() {
       id: string;
       data: Partial<TaskFormData>;
     }) => {
+      // Get current task and user info for notification
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: currentTask, error: fetchError } = await supabase
+        .from("tasks" as any)
+        .select("assigned_to, title, tenant_id")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !currentTask) throw fetchError || new Error("Task not found");
+      
+      const oldAssignedTo = (currentTask as any).assigned_to as string | null;
+      const taskTitle = (currentTask as any).title as string;
+      const tenantId = (currentTask as any).tenant_id as string;
+
       const {
         error
       } = await supabase.from("tasks" as any).update({
@@ -717,6 +733,32 @@ export default function Tasks() {
         completed_at: data.status === "completed" ? new Date().toISOString() : null
       }).eq("id", id);
       if (error) throw error;
+
+      // Create notification if assigned user changed
+      if (data.assigned_to && data.assigned_to !== oldAssignedTo && data.assigned_to !== user.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", user.id)
+          .single();
+
+        const assignerName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : 'Someone';
+        const finalTaskTitle = data.title || taskTitle;
+
+        await supabase.from("notifications" as any).insert({
+          tenant_id: tenantId,
+          user_id: data.assigned_to,
+          type: 'task_assigned',
+          title: 'Task Assigned to You',
+          message: `${assignerName} assigned you the task: ${finalTaskTitle}`,
+          link: `/tasks`,
+          metadata: {
+            task_id: id,
+            assigner_id: user.id,
+            assigner_name: assignerName,
+          },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

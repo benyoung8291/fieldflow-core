@@ -340,27 +340,55 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       // Create notifications for mentioned users
       if (taskData.mentions && taskData.mentions.length > 0) {
-        const notificationsToCreate = taskData.mentions.map((mentionedUserId: string) => ({
-          tenant_id: profile.tenant_id,
-          user_id: mentionedUserId,
-          type: 'mention' as const,
-          title: 'You were mentioned in a task',
-          message: `${profile.first_name} ${profile.last_name} mentioned you in task: ${taskData.title}`,
-          link: `/tasks`,
-          metadata: {
-            task_id: task.id,
-            ticket_id: ticketId,
-            mentioned_by: user.id,
-            context: 'helpdesk_task'
-          }
-        }));
+        const notificationsToCreate = taskData.mentions
+          .filter((mentionedUserId: string) => mentionedUserId !== user.id && mentionedUserId !== taskData.assigned_to)
+          .map((mentionedUserId: string) => ({
+            tenant_id: profile.tenant_id,
+            user_id: mentionedUserId,
+            type: 'mention' as const,
+            title: 'You were mentioned in a task',
+            message: `${profile.first_name} ${profile.last_name} mentioned you in task: ${taskData.title}`,
+            link: `/tasks`,
+            metadata: {
+              task_id: task.id,
+              ticket_id: ticketId,
+              mentioned_by: user.id,
+              context: 'helpdesk_task'
+            }
+          }));
 
+        if (notificationsToCreate.length > 0) {
+          // @ts-ignore - Types will update after migration
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notificationsToCreate);
+
+          if (notifError) console.error('Failed to create notifications:', notifError);
+        }
+      }
+
+      // Create notification for assigned user (if different from creator and not in mentions)
+      if (taskData.assigned_to && taskData.assigned_to !== user.id) {
+        const assignerName = `${profile.first_name} ${profile.last_name}`.trim();
         // @ts-ignore - Types will update after migration
-        const { error: notifError } = await supabase
+        const { error: assignNotifError } = await supabase
           .from('notifications')
-          .insert(notificationsToCreate);
+          .insert({
+            tenant_id: profile.tenant_id,
+            user_id: taskData.assigned_to,
+            type: 'task_assigned',
+            title: 'New Task Assigned',
+            message: `${assignerName} assigned you the task: ${taskData.title}`,
+            link: `/tasks`,
+            metadata: {
+              task_id: task.id,
+              ticket_id: ticketId,
+              assigner_id: user.id,
+              assigner_name: assignerName,
+            },
+          });
 
-        if (notifError) console.error('Failed to create notifications:', notifError);
+        if (assignNotifError) console.error('Failed to create assignment notification:', assignNotifError);
       }
     },
     onSuccess: () => {

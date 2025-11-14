@@ -73,7 +73,7 @@ export default function CreateTaskButton({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, first_name, last_name")
         .eq("id", user.id)
         .single();
 
@@ -98,6 +98,24 @@ export default function CreateTaskButton({
 
       if (error) throw error;
       
+      // Create notification for assigned user
+      if (taskData.assigned_to && taskData.assigned_to !== user.id) {
+        const assignerName = `${profile.first_name} ${profile.last_name}`.trim();
+        await supabase.from("notifications" as any).insert({
+          tenant_id: profile.tenant_id,
+          user_id: taskData.assigned_to,
+          type: 'task_assigned',
+          title: 'New Task Assigned',
+          message: `${assignerName} assigned you the task: ${taskData.title}`,
+          link: `/tasks`,
+          metadata: {
+            task_id: (newTask as any).id,
+            assigner_id: user.id,
+            assigner_name: assignerName,
+          },
+        });
+      }
+
       // Apply checklist items if provided
       const checklistItems = (taskData as any)._checklistItems;
       if (checklistItems && checklistItems.length > 0 && newTask) {
