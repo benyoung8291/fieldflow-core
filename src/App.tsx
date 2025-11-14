@@ -55,6 +55,7 @@ import Workflows from "@/pages/Workflows";
 import WorkflowBuilder from "@/pages/WorkflowBuilder";
 import WorkflowTemplateSelector from "@/pages/WorkflowTemplateSelector";
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
+import APInvoices from "@/pages/APInvoices";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
@@ -198,6 +199,7 @@ const App = () => {
             <Route path="/invoices" element={isAuthenticated ? <InvoicesList /> : <Navigate to="/auth" replace />} />
             <Route path="/invoices/create" element={isAuthenticated ? <Invoices /> : <Navigate to="/auth" replace />} />
             <Route path="/invoices/:id" element={isAuthenticated ? <InvoiceDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/ap-invoices" element={isAuthenticated ? <APInvoices /> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices" element={isAuthenticated ? <RecurringInvoices /> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices/:id" element={isAuthenticated ? <RecurringInvoiceDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/suppliers" element={isAuthenticated ? <Suppliers /> : <Navigate to="/auth" replace />} />
