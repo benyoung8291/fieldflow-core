@@ -50,7 +50,7 @@ const tableLabels: Record<string, string> = {
   appointment_templates: "Appointment Template",
   price_book_items: "Price Book Item",
   price_book_assemblies: "Assembly",
-  customer_contacts: "Contact",
+  contacts: "Contact",
   customer_locations: "Location",
   lead_contacts: "Lead Contact",
   lead_activities: "Lead Activity",

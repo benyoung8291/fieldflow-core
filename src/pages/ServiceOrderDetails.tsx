@@ -93,7 +93,7 @@ export default function ServiceOrderDetails() {
           *,
           customers!service_orders_customer_id_fkey(name, email, phone),
           customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
-          customer_contacts(first_name, last_name, email, phone),
+          contacts!service_orders_contact_id_fkey(first_name, last_name, email, phone),
           projects(id, name)
         `)
         .eq("id", id)
@@ -788,22 +788,25 @@ export default function ServiceOrderDetails() {
                       </div>
                     </>
                   )}
-                  {order.customer_contacts && (
+                  {(order as any).contacts && (
                     <div>
-                      <div className="text-xs text-muted-foreground mb-1">Site Contact</div>
-                      <div className="text-sm font-medium">
-                        {order.customer_contacts.first_name} {order.customer_contacts.last_name}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <User className="h-3 w-3" />
+                        Contact
                       </div>
-                      {order.customer_contacts.email && (
+                      <div className="text-sm font-medium">
+                        {(order as any).contacts.first_name} {(order as any).contacts.last_name}
+                      </div>
+                      {(order as any).contacts.email && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Mail className="h-3 w-3" />
-                          {order.customer_contacts.email}
+                          {(order as any).contacts.email}
                         </div>
                       )}
-                      {order.customer_contacts.phone && (
+                      {(order as any).contacts.phone && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Phone className="h-3 w-3" />
-                          {order.customer_contacts.phone}
+                          {(order as any).contacts.phone}
                         </div>
                       )}
                     </div>

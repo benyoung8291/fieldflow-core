@@ -177,7 +177,7 @@ export default function ServiceOrderDialog({
 
     // Fetch contacts
     const { data: contactsData, error: conError } = await supabase
-      .from("customer_contacts")
+      .from("contacts")
       .select("id, first_name, last_name, email, phone")
       .eq("customer_id", customerId)
       .order("first_name");

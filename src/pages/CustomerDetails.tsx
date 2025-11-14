@@ -83,7 +83,7 @@ export default function CustomerDetails() {
     queryKey: ["customer-contacts", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("customer_contacts")
+        .from("contacts")
         .select("*")
         .eq("customer_id", id)
         .order("is_primary", { ascending: false });

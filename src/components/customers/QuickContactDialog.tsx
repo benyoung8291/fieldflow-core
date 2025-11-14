@@ -48,7 +48,7 @@ export default function QuickContactDialog({
         .single();
 
       const { data, error } = await supabase
-        .from("customer_contacts")
+        .from("contacts")
         .insert({
           tenant_id: profile?.tenant_id,
           customer_id: customerId,

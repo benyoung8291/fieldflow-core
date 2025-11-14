@@ -914,69 +914,6 @@ export type Database = {
           },
         ]
       }
-      customer_contacts: {
-        Row: {
-          created_at: string | null
-          customer_id: string
-          email: string | null
-          first_name: string
-          id: string
-          is_primary: boolean | null
-          last_name: string
-          mobile: string | null
-          notes: string | null
-          phone: string | null
-          position: string | null
-          tenant_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          customer_id: string
-          email?: string | null
-          first_name: string
-          id?: string
-          is_primary?: boolean | null
-          last_name: string
-          mobile?: string | null
-          notes?: string | null
-          phone?: string | null
-          position?: string | null
-          tenant_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          customer_id?: string
-          email?: string | null
-          first_name?: string
-          id?: string
-          is_primary?: boolean | null
-          last_name?: string
-          mobile?: string | null
-          notes?: string | null
-          phone?: string | null
-          position?: string | null
-          tenant_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_contacts_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customer_locations: {
         Row: {
           address: string | null
@@ -1841,13 +1778,6 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "helpdesk_tickets_contact_id_fkey"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "customer_contacts"
             referencedColumns: ["id"]
           },
           {
@@ -4821,13 +4751,6 @@ export type Database = {
           work_order_number?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "service_orders_customer_contact_id_fkey"
-            columns: ["customer_contact_id"]
-            isOneToOne: false
-            referencedRelation: "customer_contacts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "service_orders_customer_id_fkey"
             columns: ["customer_id"]
