@@ -476,7 +476,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                         setShowDocLinks({ ...showDocLinks, [docType.type]: false });
                         queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
                       }}
-                      onCustomerContactLinked={async (customerId, contactId) => {
+                      onCustomerContactLinked={(customerId, contactId) => {
                         // Only update if we don't already have these links set
                         if (customerId && !ticket?.customer_id) {
                           updateTicketLinkMutation.mutate({ 
@@ -485,26 +485,14 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                           });
                         }
                         
-                        // Validate contact exists before trying to link
+                        // Only link contact if it was validated and exists
                         if (contactId && !ticket?.contact_id) {
-                          try {
-                            const { data: contactExists } = await supabase
-                              .from("contacts")
-                              .select("id")
-                              .eq("id", contactId)
-                              .maybeSingle();
-                            
-                            if (contactExists) {
-                              setTimeout(() => {
-                                updateTicketLinkMutation.mutate({ 
-                                  field: "contact_id", 
-                                  value: contactId 
-                                });
-                              }, 200);
-                            }
-                          } catch (error) {
-                            console.error("Error validating contact:", error);
-                          }
+                          setTimeout(() => {
+                            updateTicketLinkMutation.mutate({ 
+                              field: "contact_id", 
+                              value: contactId 
+                            });
+                          }, 200);
                         }
                       }}
                     />
