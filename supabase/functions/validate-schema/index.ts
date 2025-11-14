@@ -36,18 +36,33 @@ serve(async (req) => {
     const relationships: Array<{from: string, to: string, type: string}> = [];
     const columnsByTable: Record<string, any[]> = {};
 
-    // Check which tables exist by trying to query them
+    // Check which tables exist and get their columns by querying them
     const existingTables: string[] = [];
     
     for (const tableName of knownTables) {
       try {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from(tableName)
           .select('*')
-          .limit(0);
+          .limit(1);
         
         if (!error) {
           existingTables.push(tableName);
+          
+          // Extract column names from the data structure
+          if (data && data.length > 0) {
+            const columns = Object.keys(data[0]).map(columnName => ({
+              column_name: columnName,
+              data_type: typeof data[0][columnName] === 'number' ? 'numeric' : 
+                         typeof data[0][columnName] === 'boolean' ? 'boolean' :
+                         data[0][columnName] === null ? 'unknown' : 'text',
+              is_nullable: 'YES',
+            }));
+            columnsByTable[tableName] = columns;
+          } else {
+            // Table exists but is empty, try to infer from a failed select
+            columnsByTable[tableName] = [];
+          }
         }
       } catch (e) {
         // Table doesn't exist or can't be accessed
@@ -94,6 +109,8 @@ serve(async (req) => {
 
     console.log(`Analysis complete. ${recommendations.length} recommendations generated.`);
 
+    const totalColumns = Object.values(columnsByTable).reduce((sum, cols) => sum + cols.length, 0);
+
     return new Response(
       JSON.stringify({
         tables: existingTables,
@@ -104,7 +121,7 @@ serve(async (req) => {
         recommendations,
         stats: {
           totalTables: existingTables.length,
-          totalColumns: 0,
+          totalColumns,
           totalForeignKeys: knownRelationships.length,
           totalIndexes: 0,
         }
