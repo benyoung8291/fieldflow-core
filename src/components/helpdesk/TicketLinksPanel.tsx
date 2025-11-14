@@ -59,12 +59,12 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
 
   const loadData = async () => {
     const [contactsRes, customersRes, leadsRes, contractsRes, posRes, suppliersRes] = await Promise.all([
-      supabase.from("contacts").select("id, first_name, last_name, email, customer_id").order("first_name"),
+      supabase.from("customer_contacts" as any).select("id, first_name, last_name, email, customer_id").order("first_name"),
       supabase.from("customers").select("id, name").order("name"),
-      supabase.from("leads").select("id, company_name, contact_name").order("company_name"),
-      supabase.from("service_contracts").select("id, contract_number, customer:customers(name)").order("contract_number"),
-      supabase.from("purchase_orders").select("id, po_number").order("po_number"),
-      supabase.from("suppliers").select("id, name").order("name"),
+      supabase.from("leads" as any).select("id, company_name, contact_name").order("company_name"),
+      supabase.from("service_contracts" as any).select("id, contract_number, customer:customers(name)").order("contract_number"),
+      supabase.from("purchase_orders" as any).select("id, po_number").order("po_number"),
+      supabase.from("suppliers" as any).select("id, name").order("name"),
     ]);
 
     if (contactsRes.data) setContacts(contactsRes.data);
@@ -110,7 +110,7 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
       }
 
       const { error } = await supabase
-        .from("helpdesk_tickets")
+        .from("helpdesk_tickets" as any)
         .update(updates)
         .eq("id", ticket.id);
 

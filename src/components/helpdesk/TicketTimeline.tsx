@@ -564,6 +564,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         defaultTo={ticket?.sender_email || ticket?.external_email || ""}
         defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
         isSending={sendReplyMutation.isPending}
+        ticketId={ticketId}
       />
 
       <AddTimelineItemDialog

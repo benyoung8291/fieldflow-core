@@ -22,9 +22,10 @@ import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 interface DashboardLayoutProps {
   children: ReactNode;
   showRightSidebar?: boolean;
+  disablePresence?: boolean;
 }
 
-export default function DashboardLayout({ children, showRightSidebar = false }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, showRightSidebar = false, disablePresence = false }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
@@ -190,8 +191,8 @@ export default function DashboardLayout({ children, showRightSidebar = false }: 
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Remote Cursors Overlay */}
-      <RemoteCursors />
+      {/* Remote Cursors Overlay - Disabled on certain pages */}
+      {!disablePresence && <RemoteCursors />}
       
       {/* Sidebar - Desktop only, completely hidden in mobile view */}
       {!isMobile && (

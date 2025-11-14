@@ -53,7 +53,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
         .select(`
           *,
           customer:customers(name),
-          contact:contacts(first_name, last_name),
+          contact:customer_contacts(first_name, last_name),
           pipeline:helpdesk_pipelines(name, color),
           assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
           email_account:helpdesk_email_accounts(id, email_address)
@@ -176,12 +176,19 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                   {ticket.subject}
                 </h3>
 
-                {/* Sender - Single line */}
-                <p className="text-xs text-muted-foreground truncate">
-                  {ticket.customer?.name || 
-                   (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
-                   ticket.external_email || "Unknown")}
-                </p>
+                {/* Sender and Assignment - Single line */}
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="truncate">
+                    {ticket.customer?.name || 
+                     (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
+                     ticket.external_email || "Unknown")}
+                  </span>
+                  {ticket.assigned_user && (
+                    <span className="shrink-0 text-xs font-medium">
+                      → {ticket.assigned_user.first_name}
+                    </span>
+                  )}
+                </div>
 
                 {/* Footer - Tags and Time */}
                 <div className="flex items-center justify-between gap-2 w-full">
