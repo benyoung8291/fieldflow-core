@@ -6,6 +6,8 @@ interface PresenceUser {
   userId: string;
   userName: string;
   currentField?: string;
+  isTyping?: boolean;
+  typingInField?: string;
 }
 
 interface FieldPresenceWrapperProps {
@@ -38,14 +40,43 @@ export default function FieldPresenceWrapper({
     (user) => user.currentField === fieldName
   );
 
+  const usersTypingInThisField = onlineUsers.filter(
+    (user) => user.isTyping && user.typingInField === fieldName
+  );
+
   const hasActiveUsers = usersEditingThisField.length > 0;
+  const hasTypingUsers = usersTypingInThisField.length > 0;
   const primaryUser = usersEditingThisField[0];
+  const typingUser = usersTypingInThisField[0];
   const colors = primaryUser ? getUserColor(primaryUser.userId) : userColors[0];
+  const typingColors = typingUser ? getUserColor(typingUser.userId) : userColors[0];
 
   return (
     <div className={cn("relative", className)}>
       {children}
-      {hasActiveUsers && (
+      
+      {/* Typing indicator - shown when user is actively typing */}
+      {hasTypingUsers && (
+        <div className="absolute -top-7 left-0 z-20">
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-xs font-medium shadow-sm",
+              typingColors.border,
+              typingColors.bg,
+              typingColors.text
+            )}
+          >
+            {usersTypingInThisField.length === 1 
+              ? `${typingUser.userName.split(" ")[0]} is typing...`
+              : `${usersTypingInThisField.length} users typing...`
+            }
+          </Badge>
+        </div>
+      )}
+
+      {/* Viewing indicator - shown when user is viewing but not typing */}
+      {hasActiveUsers && !hasTypingUsers && (
         <div className="absolute -top-2 -right-2 z-10">
           <Badge
             variant="outline"
@@ -63,11 +94,14 @@ export default function FieldPresenceWrapper({
           </Badge>
         </div>
       )}
-      {hasActiveUsers && (
+      
+      {/* Border highlight */}
+      {(hasActiveUsers || hasTypingUsers) && (
         <div
           className={cn(
-            "absolute inset-0 pointer-events-none rounded-md border-2 animate-pulse",
-            colors.border
+            "absolute inset-0 pointer-events-none rounded-md border-2",
+            hasTypingUsers ? "animate-pulse" : "",
+            hasTypingUsers ? typingColors.border : colors.border
           )}
         />
       )}
