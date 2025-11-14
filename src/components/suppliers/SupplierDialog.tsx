@@ -108,7 +108,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
 
         if (profile?.tenant_id) {
           let duplicateQuery = supabase
-            .from("vendors")
+            .from("suppliers")
             .select("id, name")
             .eq("tenant_id", profile.tenant_id)
             .eq("abn", formData.abn);
@@ -258,7 +258,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
       if (formData.abn) {
         const cleanABN = formData.abn.replace(/\s/g, '');
         let duplicateQuery = supabase
-          .from("vendors")
+          .from("suppliers")
           .select("id, name")
           .eq("tenant_id", profile.tenant_id)
           .eq("abn", formData.abn);
@@ -299,7 +299,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
 
       if (vendor) {
         const { error } = await supabase
-          .from("vendors")
+          .from("suppliers")
           .update(vendorData)
           .eq("id", vendor.id);
 
@@ -307,14 +307,14 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         toast.success("Supplier updated successfully");
       } else {
         const { error } = await supabase
-          .from("vendors")
+          .from("suppliers")
           .insert(vendorData);
 
         if (error) throw error;
         toast.success("Supplier created successfully");
       }
 
-      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error saving supplier:", error);

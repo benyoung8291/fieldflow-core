@@ -399,7 +399,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Supplier *</FormLabel>
-                    <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
+                    <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -411,7 +411,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                             )}
                           >
                             {field.value
-                              ? vendors.find((v) => v.id === field.value)?.name
+                              ? suppliers.find((v) => v.id === field.value)?.name
                               : "Select supplier"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -422,24 +422,24 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                           <CommandInput placeholder="Search suppliers..." />
                           <CommandEmpty>No supplier found.</CommandEmpty>
                           <CommandGroup>
-                            {vendors.map((vendor) => (
+                            {suppliers.map((supplier) => (
                               <CommandItem
-                                key={vendor.id}
-                                value={vendor.name}
+                                key={supplier.id}
+                                value={supplier.name}
                                 onSelect={() => {
-                                  handleVendorChange(vendor.id);
-                                  setVendorOpen(false);
+                                  handleSupplierChange(supplier.id);
+                                  setSupplierOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    vendor.id === field.value ? "opacity-100" : "opacity-0"
+                                    supplier.id === field.value ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 <div className="flex items-center gap-2">
-                                  {vendor.name}
-                                  {vendor.gst_registered && (
+                                  {supplier.name}
+                                  {supplier.gst_registered && (
                                     <Badge variant="outline" className="text-xs">GST Reg</Badge>
                                   )}
                                 </div>

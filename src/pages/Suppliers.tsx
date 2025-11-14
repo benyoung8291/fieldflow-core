@@ -30,7 +30,7 @@ export default function Suppliers() {
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
       const { data, error } = await supabase
-        .from("vendors")
+        .from("suppliers")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
