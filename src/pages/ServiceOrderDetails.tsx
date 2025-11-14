@@ -661,6 +661,18 @@ export default function ServiceOrderDetails() {
               </CardContent>
             </Card>
           )}
+
+          {/* Profit & Loss Card */}
+          <div className="lg:col-span-2">
+            <ServiceOrderProfitLossCard
+              totalRevenue={totalRevenue}
+              actualCost={(order as any)?.actual_cost || 0}
+              costOfMaterials={(order as any)?.cost_of_materials || 0}
+              costOfLabor={(order as any)?.cost_of_labor || 0}
+              otherCosts={(order as any)?.other_costs || 0}
+              profitMargin={(order as any)?.profit_margin || 0}
+            />
+          </div>
     </div>
   );
 
@@ -884,6 +896,12 @@ export default function ServiceOrderDetails() {
       label: "Invoices",
       icon: <Receipt className="h-4 w-4" />,
       content: <RelatedInvoicesCard sourceType="service_order" sourceId={id!} />,
+    },
+    {
+      value: "purchase-orders",
+      label: "Purchase Orders",
+      icon: <ShoppingCart className="h-4 w-4" />,
+      content: <ServiceOrderPurchaseOrdersTab serviceOrderId={id!} onCreatePO={() => setPurchaseOrderDialogOpen(true)} />,
     },
     {
       value: "tasks",

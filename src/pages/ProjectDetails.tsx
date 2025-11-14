@@ -31,6 +31,7 @@ import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
+import ServiceOrderProfitLossCard from "@/components/service-orders/ServiceOrderProfitLossCard";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -371,6 +372,16 @@ export default function ProjectDetails() {
     },
   ];
 
+  // Calculate project profit & loss from service orders
+  const projectTotalRevenue = serviceOrders?.reduce((sum, so) => sum + (so.total_amount || 0), 0) || 0;
+  const projectActualCost = serviceOrders?.reduce((sum, so) => sum + (so.actual_cost || 0), 0) || 0;
+  const projectCostOfMaterials = serviceOrders?.reduce((sum, so) => sum + (so.cost_of_materials || 0), 0) || 0;
+  const projectCostOfLabor = serviceOrders?.reduce((sum, so) => sum + (so.cost_of_labor || 0), 0) || 0;
+  const projectOtherCosts = serviceOrders?.reduce((sum, so) => sum + (so.other_costs || 0), 0) || 0;
+  const projectProfitMargin = projectTotalRevenue > 0 
+    ? ((projectTotalRevenue - projectActualCost) / projectTotalRevenue) * 100 
+    : 0;
+
   // Key information cards
   const keyInfoSection = (
     <div className="grid gap-4 md:grid-cols-3">
@@ -457,6 +468,40 @@ export default function ProjectDetails() {
       label: "Invoices",
       icon: <DollarSign className="h-4 w-4" />,
       content: <RelatedInvoicesCard sourceType="project" sourceId={id!} />,
+    },
+    {
+      value: "purchase-orders",
+      label: "Purchase Orders",
+      icon: <Receipt className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Purchase Orders from Service Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">
+              View purchase orders in individual service order details.
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: "profit-loss",
+      label: "Profit & Loss",
+      icon: <DollarSign className="h-4 w-4" />,
+      content: (
+        <div className="max-w-2xl">
+          <ServiceOrderProfitLossCard
+            totalRevenue={projectTotalRevenue}
+            actualCost={projectActualCost}
+            costOfMaterials={projectCostOfMaterials}
+            costOfLabor={projectCostOfLabor}
+            otherCosts={projectOtherCosts}
+            profitMargin={projectProfitMargin}
+          />
+        </div>
+      ),
     },
     {
       value: "helpdesk",
