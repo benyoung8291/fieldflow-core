@@ -3,8 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 
 export interface CursorPosition {
-  x: number; // percentage of viewport width (0-100)
-  y: number; // percentage of viewport height (0-100)
+  x: number; // percentage of document width (0-100)
+  y: number; // percentage of document height (0-100)
+  scrollX: number; // scroll position X
+  scrollY: number; // scroll position Y
+  viewportWidth: number; // viewport width for normalization
+  viewportHeight: number; // viewport height for normalization
+  zoom: number; // browser zoom level (1 = 100%)
   user_id: string;
   user_name: string;
   color: string;
@@ -62,18 +67,63 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
     let lastUpdateTime = 0;
     const THROTTLE_MS = 50; // Send updates max every 50ms
 
+    // Get browser zoom level
+    const getZoomLevel = (): number => {
+      return window.devicePixelRatio || 1;
+    };
+
+    // Get document dimensions
+    const getDocumentDimensions = () => {
+      const body = document.body;
+      const html = document.documentElement;
+      
+      const width = Math.max(
+        body.scrollWidth,
+        body.offsetWidth,
+        html.clientWidth,
+        html.scrollWidth,
+        html.offsetWidth
+      );
+      
+      const height = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        html.clientHeight,
+        html.scrollHeight,
+        html.offsetHeight
+      );
+      
+      return { width, height };
+    };
+
     const updateCursor = (x: number, y: number) => {
       const now = Date.now();
       if (now - lastUpdateTime < THROTTLE_MS) return;
       lastUpdateTime = now;
 
-      // Convert absolute pixels to viewport percentages
-      const xPercent = (x / window.innerWidth) * 100;
-      const yPercent = (y / window.innerHeight) * 100;
+      // Get scroll position
+      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+      
+      // Get document dimensions
+      const docDimensions = getDocumentDimensions();
+      
+      // Convert to document coordinates (accounting for scroll)
+      const docX = x + scrollX;
+      const docY = y + scrollY;
+      
+      // Convert to normalized percentages relative to document size
+      const xPercent = (docX / docDimensions.width) * 100;
+      const yPercent = (docY / docDimensions.height) * 100;
 
       channel.track({
         x: xPercent,
         y: yPercent,
+        scrollX,
+        scrollY,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        zoom: getZoomLevel(),
         user_id: userId,
         user_name: userName,
         color: getUserColor(userId),
@@ -109,9 +159,17 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           // Track initial cursor position (center of viewport)
+          const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+          const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+          
           await channel.track({
             x: 50,
             y: 50,
+            scrollX,
+            scrollY,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            zoom: window.devicePixelRatio || 1,
             user_id: userId,
             user_name: userName,
             color: getUserColor(userId),
