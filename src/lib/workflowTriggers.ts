@@ -71,6 +71,42 @@ export async function triggerWorkflows(params: TriggerWorkflowParams): Promise<v
  * Helper functions for common trigger scenarios
  */
 
+export async function triggerQuoteCreatedWorkflow(
+  quoteId: string,
+  customerId: string,
+  projectId?: string
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  // Fetch quote details for additional context
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("created_by, status, total_amount")
+    .eq("id", quoteId)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "quote_created",
+    triggerData: {
+      sourceType: "quote",
+      sourceId: quoteId,
+      quoteId,
+      customerId,
+      projectId,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+      created_by: quote?.created_by,
+      status: quote?.status,
+      total_amount: quote?.total_amount,
+    },
+  });
+}
+
 export async function triggerQuoteApprovedWorkflow(quoteId: string, customerId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
@@ -183,6 +219,13 @@ export async function triggerTicketCreatedWorkflow(
     .eq("id", user?.id)
     .maybeSingle();
 
+  // Fetch ticket details for additional context
+  const { data: ticket } = await supabase
+    .from("helpdesk_tickets")
+    .select("assigned_to, status, priority")
+    .eq("id", ticketId)
+    .single();
+
   await triggerWorkflows({
     triggerType: "ticket_created",
     triggerData: {
@@ -193,6 +236,9 @@ export async function triggerTicketCreatedWorkflow(
       contactId,
       userId: user?.id,
       tenantId: profile?.tenant_id,
+      assigned_to: ticket?.assigned_to,
+      status: ticket?.status,
+      priority: ticket?.priority,
     },
   });
 }

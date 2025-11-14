@@ -60,48 +60,78 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
       return (
         <div className="space-y-4">
           <div>
-            <Label>Condition Field</Label>
+            <Label>Condition Type</Label>
             <Select
-              value={config.field || ""}
-              onValueChange={(value) => setConfig({ ...config, field: value })}
+              value={config.conditionType || "field_comparison"}
+              onValueChange={(value) => setConfig({ ...config, conditionType: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select field to check" />
+                <SelectValue placeholder="Select condition type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="status">Status</SelectItem>
-                <SelectItem value="total">Total Amount</SelectItem>
-                <SelectItem value="customer">Customer</SelectItem>
-                <SelectItem value="assigned_to">Assigned To</SelectItem>
+                <SelectItem value="field_comparison">Field Comparison</SelectItem>
+                <SelectItem value="is_assigned_to_current_user">Is Assigned to Current User</SelectItem>
+                <SelectItem value="is_created_by_current_user">Is Created by Current User</SelectItem>
+                <SelectItem value="has_customer">Has Customer</SelectItem>
+                <SelectItem value="has_project">Has Project Link</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label>Operator</Label>
-            <Select
-              value={config.operator || "equals"}
-              onValueChange={(value) => setConfig({ ...config, operator: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="equals">Equals</SelectItem>
-                <SelectItem value="not_equals">Not Equals</SelectItem>
-                <SelectItem value="greater_than">Greater Than</SelectItem>
-                <SelectItem value="less_than">Less Than</SelectItem>
-                <SelectItem value="contains">Contains</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Value</Label>
-            <Input
-              value={config.value || ""}
-              onChange={(e) => setConfig({ ...config, value: e.target.value })}
-              placeholder="Enter comparison value"
-            />
-          </div>
+
+          {config.conditionType === "field_comparison" && (
+            <>
+              <div>
+                <Label>Condition Field</Label>
+                <Select
+                  value={config.field || ""}
+                  onValueChange={(value) => setConfig({ ...config, field: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select field to check" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="total_amount">Total Amount</SelectItem>
+                    <SelectItem value="customer_id">Customer</SelectItem>
+                    <SelectItem value="assigned_to">Assigned To</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Operator</Label>
+                <Select
+                  value={config.operator || "equals"}
+                  onValueChange={(value) => setConfig({ ...config, operator: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="equals">Equals</SelectItem>
+                    <SelectItem value="not_equals">Not Equals</SelectItem>
+                    <SelectItem value="greater_than">Greater Than</SelectItem>
+                    <SelectItem value="less_than">Less Than</SelectItem>
+                    <SelectItem value="contains">Contains</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Value</Label>
+                <Input
+                  value={config.value || ""}
+                  onChange={(e) => setConfig({ ...config, value: e.target.value })}
+                  placeholder="Enter comparison value"
+                />
+              </div>
+            </>
+          )}
+
+          {config.conditionType && config.conditionType !== "field_comparison" && (
+            <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
+              This condition will check the relationship between the current user and the triggered document.
+            </div>
+          )}
         </div>
       );
     }
