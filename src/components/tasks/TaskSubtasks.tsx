@@ -22,7 +22,7 @@ interface TaskSubtasksProps {
 export default function TaskSubtasks({ taskId, parentTaskId }: TaskSubtasksProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
-  const [selectedAssignee, setSelectedAssignee] = useState<string>("");
+  const [selectedAssignee, setSelectedAssignee] = useState<string>("unassigned");
   const [selectedDueDate, setSelectedDueDate] = useState<Date>();
   const queryClient = useQueryClient();
 
@@ -95,7 +95,7 @@ export default function TaskSubtasks({ taskId, parentTaskId }: TaskSubtasksProps
         priority: "medium",
         parent_task_id: taskId || parentTaskId,
         depth_level: parentDepth + 1,
-        assigned_to: selectedAssignee || null,
+        assigned_to: (selectedAssignee && selectedAssignee !== "unassigned") ? selectedAssignee : null,
         due_date: selectedDueDate?.toISOString() || null,
         created_by: user.id,
       });
@@ -107,7 +107,7 @@ export default function TaskSubtasks({ taskId, parentTaskId }: TaskSubtasksProps
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Subtask created");
       setNewSubtaskTitle("");
-      setSelectedAssignee("");
+      setSelectedAssignee("unassigned");
       setSelectedDueDate(undefined);
       setIsAdding(false);
     },
@@ -218,7 +218,7 @@ export default function TaskSubtasks({ taskId, parentTaskId }: TaskSubtasksProps
                     <SelectValue placeholder="Unassigned" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {workers.map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.first_name} {worker.last_name}

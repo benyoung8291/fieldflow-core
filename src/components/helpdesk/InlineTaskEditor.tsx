@@ -24,7 +24,7 @@ export function InlineTaskEditor({ onSave, onCancel, isSaving }: InlineTaskEdito
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("medium");
-  const [assignedTo, setAssignedTo] = useState<string>("");
+  const [assignedTo, setAssignedTo] = useState<string>("unassigned");
   const [dueDate, setDueDate] = useState("");
 
   const { data: users } = useQuery({
@@ -47,14 +47,14 @@ export function InlineTaskEditor({ onSave, onCancel, isSaving }: InlineTaskEdito
       title,
       description,
       priority,
-      assigned_to: assignedTo || undefined,
+      assigned_to: (assignedTo && assignedTo !== "unassigned") ? assignedTo : undefined,
       due_date: dueDate || undefined,
     });
     
     setTitle("");
     setDescription("");
     setPriority("medium");
-    setAssignedTo("");
+    setAssignedTo("unassigned");
     setDueDate("");
   };
 
@@ -109,7 +109,7 @@ export function InlineTaskEditor({ onSave, onCancel, isSaving }: InlineTaskEdito
                 <SelectValue placeholder="Unassigned" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {users?.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.first_name} {user.last_name}

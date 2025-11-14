@@ -510,16 +510,16 @@ export default function ContactManagementDialog({
               <div className="space-y-2">
                 <Label htmlFor="customerId">Link to Customer</Label>
                 <Select
-                  value={formData.customerId}
+                  value={formData.customerId || "none"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, customerId: value })
+                    setFormData({ ...formData, customerId: value === "none" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {customers?.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
@@ -532,16 +532,16 @@ export default function ContactManagementDialog({
               <div className="space-y-2">
                 <Label htmlFor="supplierId">Link to Supplier</Label>
                 <Select
-                  value={formData.supplierId}
+                  value={formData.supplierId || "none"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, supplierId: value })
+                    setFormData({ ...formData, supplierId: value === "none" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select supplier" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {suppliers?.map((supplier) => (
                       <SelectItem key={supplier.id} value={supplier.id}>
                         {supplier.name}
@@ -554,16 +554,16 @@ export default function ContactManagementDialog({
               <div className="space-y-2">
                 <Label htmlFor="leadId">Link to Lead</Label>
                 <Select
-                  value={formData.leadId}
+                  value={formData.leadId || "none"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, leadId: value })
+                    setFormData({ ...formData, leadId: value === "none" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select lead" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {leads?.map((lead) => (
                       <SelectItem key={lead.id} value={lead.id}>
                         {lead.name}
@@ -576,16 +576,16 @@ export default function ContactManagementDialog({
               <div className="space-y-2">
                 <Label htmlFor="assignedTo">Assign To</Label>
                 <Select
-                  value={formData.assignedTo}
+                  value={formData.assignedTo || "unassigned"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, assignedTo: value })
+                    setFormData({ ...formData, assignedTo: value === "unassigned" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {users?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name}
