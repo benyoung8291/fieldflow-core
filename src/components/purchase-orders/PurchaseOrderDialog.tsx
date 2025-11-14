@@ -54,7 +54,7 @@ interface PurchaseOrderDialogProps {
 export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSuccess }: PurchaseOrderDialogProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -76,7 +76,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
 
   useEffect(() => {
     if (open) {
-      fetchVendors();
+      fetchSuppliers();
       fetchServiceOrders();
       fetchProjects();
     }
@@ -98,7 +98,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
     }
   }, [purchaseOrder]);
 
-  const fetchVendors = async () => {
+  const fetchSuppliers = async () => {
     const { data, error } = await supabase
       .from("suppliers")
       .select("*")
@@ -148,7 +148,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       toast.error("Failed to load supplier details");
       return;
     }
-    setSelectedVendor(data);
+    setSelectedSupplier(data);
     
     const warning = getGSTWarning(data);
     if (warning) {
@@ -399,7 +399,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Supplier *</FormLabel>
-                    <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
+                    <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -411,7 +411,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                             )}
                           >
                             {field.value
-                              ? vendors.find((v) => v.id === field.value)?.name
+                              ? suppliers.find((v) => v.id === field.value)?.name
                               : "Select supplier"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -422,13 +422,13 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                           <CommandInput placeholder="Search suppliers..." />
                           <CommandEmpty>No supplier found.</CommandEmpty>
                           <CommandGroup>
-                            {vendors.map((vendor) => (
+                            {suppliers.map((supplier) => (
                               <CommandItem
-                                key={vendor.id}
-                                value={vendor.name}
+                                key={supplier.id}
+                                value={supplier.name}
                                 onSelect={() => {
-                                  handleVendorChange(vendor.id);
-                                  setVendorOpen(false);
+                                  handleSupplierChange(supplier.id);
+                                  setSupplierOpen(false);
                                 }}
                               >
                                 <Check
