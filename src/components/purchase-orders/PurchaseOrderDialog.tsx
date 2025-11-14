@@ -187,7 +187,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
     }
 
     // Enforce GST-free if supplier is not registered
-    if (field === "is_gst_free" && !canApplyGST(selectedVendor)) {
+    if (field === "is_gst_free" && !canApplyGST(selectedSupplier)) {
       updated[index].is_gst_free = true;
       toast.warning("This supplier is not GST registered and cannot charge GST");
     }
@@ -216,7 +216,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       quantity: item.quantity,
       unit_price: item.unit_price || 0,
       line_total: item.line_total || 0,
-      is_gst_free: !canApplyGST(selectedVendor),
+      is_gst_free: !canApplyGST(selectedSupplier),
       notes: item.notes || "",
       source_type: "service_order",
       source_id: serviceOrderId,
@@ -244,7 +244,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       quantity: item.quantity,
       unit_price: item.cost_price || item.unit_price || 0,
       line_total: item.line_total || 0,
-      is_gst_free: !canApplyGST(selectedVendor),
+      is_gst_free: !canApplyGST(selectedSupplier),
       notes: item.notes || "",
       source_type: "project",
       source_id: projectId,
@@ -261,7 +261,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       is_gst_free: item.is_gst_free,
     })),
     form.watch("tax_rate"),
-    selectedVendor
+    selectedSupplier
   );
 
   const { data: policyCheck } = useExpensePolicyCheck({
@@ -434,12 +434,12 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    vendor.id === field.value ? "opacity-100" : "opacity-0"
+                                    supplier.id === field.value ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 <div className="flex items-center gap-2">
-                                  {vendor.name}
-                                  {vendor.gst_registered && (
+                                  {supplier.name}
+                                  {supplier.gst_registered && (
                                     <Badge variant="outline" className="text-xs">GST Reg</Badge>
                                   )}
                                 </div>
@@ -497,7 +497,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
               />
             </div>
 
-            {selectedVendor && !canApplyGST(selectedVendor) && (
+            {selectedSupplier && !canApplyGST(selectedSupplier) && (
               <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning rounded-md">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 <span className="text-sm text-warning">
@@ -632,7 +632,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
                             <Switch
                               checked={item.is_gst_free}
                               onCheckedChange={(checked) => updateLineItem(index, "is_gst_free", checked)}
-                              disabled={!canApplyGST(selectedVendor)}
+                              disabled={!canApplyGST(selectedSupplier)}
                             />
                           </TableCell>
                           <TableCell>
