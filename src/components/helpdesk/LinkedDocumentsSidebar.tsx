@@ -206,14 +206,14 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
               
               {showCustomerLink ? (
                 <Select
-                  value={ticket?.customer_id || ""}
-                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "customer_id", value: value || null })}
+                  value={ticket?.customer_id || "none"}
+                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "customer_id", value: value === "none" ? null : value })}
                 >
                   <SelectTrigger className="h-7 text-xs">
                     <SelectValue placeholder="Select customer..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {customers?.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
@@ -260,14 +260,14 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
               
               {showContactLink ? (
                 <Select
-                  value={ticket?.contact_id || ""}
-                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "contact_id", value: value || null })}
+                  value={ticket?.contact_id || "none"}
+                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "contact_id", value: value === "none" ? null : value })}
                 >
                   <SelectTrigger className="h-7 text-xs">
                     <SelectValue placeholder="Select contact..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {contacts?.map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.first_name} {contact.last_name} {contact.email && `(${contact.email})`}
