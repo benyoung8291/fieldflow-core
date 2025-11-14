@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
@@ -42,6 +43,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
   const [selectedDocType, setSelectedDocType] = useState<string | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; id: string } | null>(null);
+  const [showCustomerLink, setShowCustomerLink] = useState(false);
+  const [showContactLink, setShowContactLink] = useState(false);
 
   const { data: linkedDocs } = useQuery({
     queryKey: ["helpdesk-linked-docs", ticketId],
@@ -69,6 +72,72 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
       toast({ title: "Document unlinked successfully" });
     },
+  });
+
+  const updateTicketLinkMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: string | null }) => {
+      const updates: any = { [field]: value };
+      
+      // If linking a contact, automatically link their customer
+      if (field === "contact_id" && value) {
+        const { data: contact } = await supabase
+          .from("contacts")
+          .select("customer_id")
+          .eq("id", value)
+          .single();
+        
+        if (contact?.customer_id) {
+          updates.customer_id = contact.customer_id;
+        }
+      }
+
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update(updates)
+        .eq("id", ticketId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
+      toast({ title: "Link updated successfully" });
+      setShowCustomerLink(false);
+      setShowContactLink(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update link",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { data: customers } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: showCustomerLink,
+  });
+
+  const { data: contacts } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, email, customer_id")
+        .order("first_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: showContactLink,
   });
 
   const groupedDocs = linkedDocs?.reduce((acc, doc) => {
@@ -124,13 +193,46 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                   <Users className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Customer</span>
                 </div>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowCustomerLink(!showCustomerLink)}
+                >
                   <Plus className="h-3 w-3 mr-1" />
-                  Link
+                  {showCustomerLink ? "Cancel" : "Link"}
                 </Button>
               </div>
-              {ticket?.customer ? (
-                <p className="text-xs text-muted-foreground">{ticket.customer.name}</p>
+              
+              {showCustomerLink ? (
+                <Select
+                  value={ticket?.customer_id || ""}
+                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "customer_id", value: value || null })}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Select customer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {customers?.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : ticket?.customer ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">{ticket.customer.name}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => updateTicketLinkMutation.mutate({ field: "customer_id", value: null })}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground italic">No customer linked</p>
               )}
@@ -145,15 +247,48 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                   <User className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Contact</span>
                 </div>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowContactLink(!showContactLink)}
+                >
                   <Plus className="h-3 w-3 mr-1" />
-                  Link
+                  {showContactLink ? "Cancel" : "Link"}
                 </Button>
               </div>
-              {ticket?.contact ? (
-                <p className="text-xs text-muted-foreground">
-                  {ticket.contact.first_name} {ticket.contact.last_name}
-                </p>
+              
+              {showContactLink ? (
+                <Select
+                  value={ticket?.contact_id || ""}
+                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "contact_id", value: value || null })}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Select contact..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {contacts?.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.first_name} {contact.last_name} {contact.email && `(${contact.email})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : ticket?.contact ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {ticket.contact.first_name} {ticket.contact.last_name}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => updateTicketLinkMutation.mutate({ field: "contact_id", value: null })}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground italic">No contact linked</p>
               )}
