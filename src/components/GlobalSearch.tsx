@@ -120,8 +120,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Static navigation items
-  const navigationItems: SearchResult[] = [
+  // Static navigation items - memoize to prevent recreation
+  const navigationItems: SearchResult[] = useMemo(() => [
     { id: "home", title: "Dashboard", type: "page", route: "/", icon: Home },
     { id: "customers", title: "Customers", type: "page", route: "/customers", icon: Users },
     { id: "quotes", title: "Quotes", type: "page", route: "/quotes", icon: FileText },
@@ -137,7 +137,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     { id: "suppliers", title: "Suppliers", type: "page", route: "/suppliers", icon: Package },
     { id: "analytics", title: "Analytics", type: "page", route: "/analytics", icon: BarChart3 },
     { id: "settings", title: "Settings", type: "page", route: "/settings", icon: Settings },
-  ];
+  ], []);
 
   // Fetch documents from database with increased limits
   const { data: customers } = useQuery({
@@ -469,6 +469,15 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   const allResults: SearchResult[] = useMemo(() => {
     const results: SearchResult[] = [...navigationItems];
 
+    console.log('Building search results:', {
+      customersCount: customers?.length || 0,
+      quotesCount: quotes?.length || 0,
+      invoicesCount: invoices?.length || 0,
+      projectsCount: projects?.length || 0,
+      locationsCount: locations?.length || 0,
+      helpdeskCount: helpdeskTickets?.length || 0
+    });
+
     // Add customers
     customers?.forEach((customer) => {
       results.push({
@@ -660,6 +669,17 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     return results;
   }, [customers, quotes, invoices, projects, serviceOrders, locations, appointments, workers, purchaseOrders, leads, contacts, suppliers, tasks, contracts, helpdeskTickets, navigationItems]);
 
+  // Debug log when allResults changes
+  useEffect(() => {
+    console.log('Search allResults updated:', {
+      totalCount: allResults.length,
+      byType: allResults.reduce((acc, result) => {
+        acc[result.type] = (acc[result.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
+  }, [allResults]);
+
   const handleSelect = (result: SearchResult) => {
     // Track access
     const now = Date.now();
@@ -726,6 +746,16 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     }
     
     const fuseResults = fuse.search(searchQuery);
+    console.log('Fuse search results for query "' + searchQuery + '":', {
+      inputCount: allResults.length,
+      matchCount: fuseResults.length,
+      matches: fuseResults.slice(0, 10).map(r => ({ 
+        title: r.item.title, 
+        type: r.item.type, 
+        score: r.score 
+      }))
+    });
+    
     // Sort by score (lower score = better match) and return items
     return fuseResults
       .sort((a, b) => (a.score || 0) - (b.score || 0))
