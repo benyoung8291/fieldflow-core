@@ -137,10 +137,11 @@ ${ticket?.description || ""}
 
   // Extract email content for pre-filling
   const emailContent = ticket?.description || "";
-  const senderEmail = ticket?.contact?.email || ticket?.from_email || "";
-  const senderName = ticket?.contact?.first_name && ticket?.contact?.last_name
-    ? `${ticket.contact.first_name} ${ticket.contact.last_name}`
-    : ticket?.from_name || "Unknown Sender";
+  const senderEmail = ticket?.sender_email || ticket?.contact?.email || ticket?.email_account?.email_address || "";
+  const senderName = ticket?.sender_name || 
+    (ticket?.contact?.first_name && ticket?.contact?.last_name
+      ? `${ticket.contact.first_name} ${ticket.contact.last_name}`
+      : "") || "Unknown Sender";
 
   return (
     <div className="flex flex-col h-full">
