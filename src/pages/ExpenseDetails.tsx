@@ -46,10 +46,10 @@ export default function ExpenseDetails() {
       if (error) throw error;
 
       // Fetch related data
-      const vendor = data.vendor_id ? await supabase
-        .from("vendors")
+      const supplier = data.supplier_id ? await supabase
+        .from("suppliers")
         .select("name")
-        .eq("id", data.vendor_id)
+        .eq("id", data.supplier_id)
         .single() : null;
 
       const category = data.category_id ? await supabase
@@ -84,7 +84,7 @@ export default function ExpenseDetails() {
 
       return {
         ...data,
-        vendor: vendor?.data,
+        supplier: supplier?.data,
         category: category?.data,
         service_order: service_order?.data,
         project: project?.data,
@@ -350,10 +350,10 @@ export default function ExpenseDetails() {
                     <p className="font-medium text-xs">{expense.external_reference}</p>
                   </div>
                 )}
-                {expense.vendor && (
+                {expense.supplier && (
                   <div>
                     <p className="text-sm text-muted-foreground">Supplier</p>
-                    <p className="font-medium">{expense.vendor.name}</p>
+                    <p className="font-medium">{expense.supplier.name}</p>
                   </div>
                 )}
                 {expense.category && (

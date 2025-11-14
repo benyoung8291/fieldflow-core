@@ -36,7 +36,7 @@ export default function PurchaseOrderDetails() {
   const [purchaseOrder, setPurchaseOrder] = useState<any>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
-  const [vendor, setVendor] = useState<any>(null);
+  const [supplier, setSupplier] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function PurchaseOrderDetails() {
         .from("purchase_orders")
         .select(`
           *,
-          vendors(*)
+          suppliers(*)
         `)
         .eq("id", id)
         .single();
@@ -61,7 +61,7 @@ export default function PurchaseOrderDetails() {
       if (poError) throw poError;
 
       setPurchaseOrder(po);
-      setVendor(po.vendors);
+      setSupplier(po.suppliers);
 
       // Fetch line items
       const { data: items, error: itemsError } = await supabase

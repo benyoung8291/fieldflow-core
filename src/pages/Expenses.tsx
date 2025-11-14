@@ -42,7 +42,7 @@ export default function Expenses() {
         .from("expenses")
         .select(`
           *,
-          vendor:vendors(name),
+          supplier:suppliers(name),
           category:expense_categories(name),
           service_order:service_orders(work_order_number),
           project:projects(name),
