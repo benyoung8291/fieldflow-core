@@ -5,7 +5,6 @@ import { Plus, Briefcase, Calendar, FileText, Receipt, FolderKanban, CheckSquare
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { LinkDocumentDialog } from "./LinkDocumentDialog";
 import { LinkedDocumentDetailsDialog } from "./LinkedDocumentDetailsDialog";
 import { QuickActionsTab } from "./QuickActionsTab";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectWithSearch } from "@/components/ui/select-with-search";
+import { DocumentLinkSearch } from "./DocumentLinkSearch";
 
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
@@ -40,13 +40,13 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [selectedDocType, setSelectedDocType] = useState<string | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; id: string } | null>(null);
   const [showCustomerLink, setShowCustomerLink] = useState(false);
   const [showContactLink, setShowContactLink] = useState(false);
   const [showSupplierLink, setShowSupplierLink] = useState(false);
   const [showLeadLink, setShowLeadLink] = useState(false);
+  const [showDocLinks, setShowDocLinks] = useState<Record<string, boolean>>({});
 
   const { data: linkedDocs } = useQuery({
     queryKey: ["helpdesk-linked-docs", ticketId],
@@ -235,22 +235,21 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
               </div>
               
               {showCustomerLink ? (
-                <Select
-                  value={ticket?.customer_id || "none"}
-                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "customer_id", value: value === "none" ? null : value })}
-                >
-                  <SelectTrigger className="h-7 text-xs">
-                    <SelectValue placeholder="Select customer..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {customers?.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={ticket?.customer_id || ""}
+                  onValueChange={(value) => {
+                    updateTicketLinkMutation.mutate({ field: "customer_id", value: value || null });
+                  }}
+                  options={[
+                    { value: "", label: "None" },
+                    ...(customers?.map((customer) => ({
+                      value: customer.id,
+                      label: customer.name,
+                    })) || [])
+                  ]}
+                  placeholder="Select customer..."
+                  searchPlaceholder="Search customers..."
+                />
               ) : ticket?.customer ? (
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">{ticket.customer.name}</p>
@@ -289,22 +288,21 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
               </div>
               
               {showContactLink ? (
-                <Select
-                  value={ticket?.contact_id || "none"}
-                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "contact_id", value: value === "none" ? null : value })}
-                >
-                  <SelectTrigger className="h-7 text-xs">
-                    <SelectValue placeholder="Select contact..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {contacts?.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.first_name} {contact.last_name} {contact.email && `(${contact.email})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={ticket?.contact_id || ""}
+                  onValueChange={(value) => {
+                    updateTicketLinkMutation.mutate({ field: "contact_id", value: value || null });
+                  }}
+                  options={[
+                    { value: "", label: "None" },
+                    ...(contacts?.map((contact) => ({
+                      value: contact.id,
+                      label: `${contact.first_name} ${contact.last_name}${contact.email ? ` (${contact.email})` : ''}`,
+                    })) || [])
+                  ]}
+                  placeholder="Select contact..."
+                  searchPlaceholder="Search contacts..."
+                />
               ) : ticket?.contact ? (
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
@@ -345,22 +343,21 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
               </div>
               
               {showSupplierLink ? (
-                <Select
-                  value={ticket?.supplier_id || "none"}
-                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "supplier_id", value: value === "none" ? null : value })}
-                >
-                  <SelectTrigger className="h-7 text-xs">
-                    <SelectValue placeholder="Select supplier..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {suppliers?.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={ticket?.supplier_id || ""}
+                  onValueChange={(value) => {
+                    updateTicketLinkMutation.mutate({ field: "supplier_id", value: value || null });
+                  }}
+                  options={[
+                    { value: "", label: "None" },
+                    ...(suppliers?.map((supplier) => ({
+                      value: supplier.id,
+                      label: supplier.name,
+                    })) || [])
+                  ]}
+                  placeholder="Select supplier..."
+                  searchPlaceholder="Search suppliers..."
+                />
               ) : ticket?.supplier ? (
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">{ticket.supplier.name}</p>
@@ -399,22 +396,21 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
               </div>
               
               {showLeadLink ? (
-                <Select
-                  value={ticket?.lead_id || "none"}
-                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "lead_id", value: value === "none" ? null : value })}
-                >
-                  <SelectTrigger className="h-7 text-xs">
-                    <SelectValue placeholder="Select lead..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {leads?.map((lead) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.company_name} {lead.name && `- ${lead.name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={ticket?.lead_id || ""}
+                  onValueChange={(value) => {
+                    updateTicketLinkMutation.mutate({ field: "lead_id", value: value || null });
+                  }}
+                  options={[
+                    { value: "", label: "None" },
+                    ...(leads?.map((lead) => ({
+                      value: lead.id,
+                      label: `${lead.company_name}${lead.name ? ` - ${lead.name}` : ''}`,
+                    })) || [])
+                  ]}
+                  placeholder="Select lead..."
+                  searchPlaceholder="Search leads..."
+                />
               ) : ticket?.lead ? (
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
@@ -464,12 +460,25 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    onClick={() => setSelectedDocType(docType.type)}
+                    onClick={() => setShowDocLinks({ ...showDocLinks, [docType.type]: !showDocLinks[docType.type] })}
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Link
+                    {showDocLinks[docType.type] ? "Cancel" : "Link"}
                   </Button>
                 </div>
+
+                {showDocLinks[docType.type] && (
+                  <div className="mt-2">
+                    <DocumentLinkSearch
+                      docType={docType.type}
+                      ticketId={ticketId}
+                      onLinked={() => {
+                        setShowDocLinks({ ...showDocLinks, [docType.type]: false });
+                        queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
+                      }}
+                    />
+                  </div>
+                )}
 
                 {hasLinkedDocs ? (
                   <div className="space-y-1.5 mt-2">
@@ -535,13 +544,6 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
           <QuickActionsTab ticket={ticket} />
         </TabsContent>
       </Tabs>
-
-      <LinkDocumentDialog
-        ticketId={ticketId}
-        open={!!selectedDocType}
-        onOpenChange={(open) => !open && setSelectedDocType(null)}
-        initialDocumentType={selectedDocType || undefined}
-      />
 
       {selectedDocument && (
         <LinkedDocumentDetailsDialog
