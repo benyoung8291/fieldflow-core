@@ -30,7 +30,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
     description: "",
     amount: "",
     expense_date: new Date().toISOString().split("T")[0],
-    vendor_id: "",
+    supplier_id: "",
     category_id: "",
     service_order_id: "",
     project_id: "",
@@ -46,7 +46,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
 
   const { data: policyCheck } = useExpensePolicyCheck({
     amount: formData.amount ? parseFloat(formData.amount) : undefined,
-    vendor_id: formData.vendor_id || undefined,
+    supplier_id: formData.supplier_id || undefined,
     category_id: formData.category_id || undefined,
     document_type: "expense",
   });
@@ -57,7 +57,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
         description: expense.description || "",
         amount: expense.amount || "",
         expense_date: expense.expense_date || new Date().toISOString().split("T")[0],
-        vendor_id: expense.vendor_id || "",
+        supplier_id: expense.supplier_id || "",
         category_id: expense.category_id || "",
         service_order_id: expense.service_order_id || "",
         project_id: expense.project_id || "",
@@ -76,8 +76,8 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
     }
   }, [expense, defaultValues]);
 
-  const { data: vendors = [] } = useQuery({
-    queryKey: ["vendors"],
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -89,7 +89,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
         .single();
 
       const { data, error } = await supabase
-        .from("vendors")
+        .from("suppliers")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .eq("is_active", true)
@@ -193,7 +193,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
           .update({
             ...data,
             amount: parseFloat(data.amount),
-            vendor_id: data.vendor_id || null,
+            supplier_id: data.supplier_id || null,
             category_id: data.category_id || null,
             service_order_id: data.service_order_id || null,
             project_id: data.project_id || null,
@@ -237,7 +237,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
             expense_number: expenseNumber,
             amount: parseFloat(data.amount),
             submitted_by: user.id,
-            vendor_id: data.vendor_id || null,
+            supplier_id: data.supplier_id || null,
             category_id: data.category_id || null,
             service_order_id: data.service_order_id || null,
             project_id: data.project_id || null,
@@ -294,7 +294,7 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
       description: "",
       amount: "",
       expense_date: new Date().toISOString().split("T")[0],
-      vendor_id: "",
+      supplier_id: "",
       category_id: "",
       service_order_id: "",
       project_id: "",
@@ -379,16 +379,18 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
             <div>
               <Label>Supplier</Label>
               <Select
-                value={formData.vendor_id}
-                onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
+                value={formData.supplier_id}
+                onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier..." />
-                </SelectTrigger>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
-                  {vendors.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
+                  {suppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

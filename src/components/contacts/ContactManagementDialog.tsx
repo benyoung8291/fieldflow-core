@@ -82,7 +82,7 @@ export default function ContactManagementDialog({
     queryKey: ["suppliers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("vendors")
+        .from("suppliers")
         .select("id, name")
         .eq("is_active", true)
         .order("name");

@@ -23,7 +23,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
-  vendor_id: z.string().min(1, "Supplier is required"),
+  supplier_id: z.string().min(1, "Supplier is required"),
   po_number: z.string().min(1, "PO number is required"),
   po_date: z.string(),
   expected_delivery_date: z.string().optional(),
@@ -53,10 +53,10 @@ interface PurchaseOrderDialogProps {
 
 export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSuccess }: PurchaseOrderDialogProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [vendorOpen, setVendorOpen] = useState(false);
+  const [supplierOpen, setSupplierOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [serviceOrders, setServiceOrders] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -64,7 +64,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      vendor_id: "",
+      supplier_id: "",
       po_number: "PO-",
       po_date: new Date().toISOString().split("T")[0],
       expected_delivery_date: "",
@@ -85,7 +85,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
   useEffect(() => {
     if (purchaseOrder) {
       form.reset({
-        vendor_id: purchaseOrder.vendor_id,
+        supplier_id: purchaseOrder.supplier_id,
         po_number: purchaseOrder.po_number,
         po_date: purchaseOrder.po_date,
         expected_delivery_date: purchaseOrder.expected_delivery_date || "",
@@ -93,14 +93,14 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
         internal_notes: purchaseOrder.internal_notes || "",
         tax_rate: purchaseOrder.tax_rate || 10,
       });
-      fetchVendorDetails(purchaseOrder.vendor_id);
+      fetchSupplierDetails(purchaseOrder.supplier_id);
       // Load line items if editing
     }
   }, [purchaseOrder]);
 
   const fetchVendors = async () => {
     const { data, error } = await supabase
-      .from("vendors")
+      .from("suppliers")
       .select("*")
       .eq("is_active", true)
       .order("name");
@@ -109,7 +109,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       toast.error("Failed to load suppliers");
       return;
     }
-    setVendors(data || []);
+    setSuppliers(data || []);
   };
 
   const fetchServiceOrders = async () => {
@@ -137,11 +137,11 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
     }
   };
 
-  const fetchVendorDetails = async (vendorId: string) => {
+  const fetchSupplierDetails = async (supplierId: string) => {
     const { data, error } = await supabase
-      .from("vendors")
-      .select("*")
-      .eq("id", vendorId)
+      .from("suppliers")
+      .select("gst_registered")
+      .eq("id", supplierId)
       .single();
 
     if (error) {
@@ -155,15 +155,15 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       toast.warning(warning);
     }
 
-    // Update all line items to GST-free if vendor is not GST registered
+    // Update all line items to GST-free if supplier is not GST registered
     if (!canApplyGST(data)) {
       setLineItems(prev => prev.map(item => ({ ...item, is_gst_free: true })));
     }
   };
 
-  const handleVendorChange = (vendorId: string) => {
-    form.setValue("vendor_id", vendorId);
-    fetchVendorDetails(vendorId);
+  const handleSupplierChange = (supplierId: string) => {
+    form.setValue("supplier_id", supplierId);
+    fetchSupplierDetails(supplierId);
   };
 
   const addLineItem = () => {
@@ -186,7 +186,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       updated[index].line_total = updated[index].quantity * updated[index].unit_price;
     }
 
-    // Enforce GST-free if vendor is not registered
+    // Enforce GST-free if supplier is not registered
     if (field === "is_gst_free" && !canApplyGST(selectedVendor)) {
       updated[index].is_gst_free = true;
       toast.warning("This supplier is not GST registered and cannot charge GST");
@@ -266,7 +266,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
 
   const { data: policyCheck } = useExpensePolicyCheck({
     amount: totals?.total,
-    vendor_id: form.watch("vendor_id") || undefined,
+    supplier_id: form.watch("supplier_id") || undefined,
     category_id: undefined,
     document_type: "purchase_order",
   });
@@ -308,7 +308,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       const { error } = await supabase
         .from("purchase_orders")
         .update({
-          vendor_id: poData.vendor_id,
+          supplier_id: poData.supplier_id,
           po_number: poData.po_number,
           po_date: poData.po_date,
           expected_delivery_date: poData.expected_delivery_date,
@@ -333,7 +333,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
         const { data, error } = await supabase
           .from("purchase_orders")
           .insert({
-            vendor_id: poData.vendor_id,
+            supplier_id: poData.supplier_id,
             po_number: poData.po_number,
             po_date: poData.po_date,
             expected_delivery_date: poData.expected_delivery_date,
@@ -395,7 +395,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="vendor_id"
+                name="supplier_id"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Supplier *</FormLabel>
@@ -501,7 +501,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
               <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning rounded-md">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 <span className="text-sm text-warning">
-                  This vendor is not GST registered. All line items will be GST-free.
+                  This supplier is not GST registered. All line items will be GST-free.
                 </span>
               </div>
             )}

@@ -35,7 +35,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
   const [validatingABN, setValidatingABN] = useState(false);
   const [abnValidated, setAbnValidated] = useState(false);
   const [availableTradingNames, setAvailableTradingNames] = useState<string[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [linkedVendorId, setLinkedVendorId] = useState<string | null>(null);
   const [currentField, setCurrentField] = useState<string>("");
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
@@ -143,7 +143,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
   };
 
   useEffect(() => {
-    const fetchVendors = async () => {
+    const fetchSuppliers = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -157,21 +157,20 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         if (!profile?.tenant_id) return;
 
         const { data, error } = await supabase
-          .from("vendors")
-          .select("id, name, trading_name")
+          .from("suppliers")
+          .select("*")
           .eq("tenant_id", profile.tenant_id)
-          .eq("is_active", true)
           .order("name");
 
         if (error) throw error;
-        setVendors(data || []);
+        setSuppliers(data || []);
       } catch (error) {
-        console.error("Error fetching vendors:", error);
+        console.error("Error fetching suppliers:", error);
       }
     };
 
     if (open) {
-      fetchVendors();
+      fetchSuppliers();
     }
 
     if (customer) {
@@ -195,7 +194,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         isActive: customer.is_active ?? true,
         notes: customer.notes || "",
       });
-      setLinkedVendorId(customer.vendor_id || null);
+      setLinkedVendorId(customer.supplier_id || null);
       setAbnValidated(false);
       setAvailableTradingNames([]);
     } else {
@@ -265,7 +264,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         notes: formData.notes || null,
         tenant_id: profile.tenant_id,
         parent_customer_id: parentCustomerId || null,
-        vendor_id: linkedVendorId || null,
+        supplier_id: linkedVendorId || null,
       };
 
       if (customer) {
@@ -643,9 +642,9 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
                   </SelectTrigger>
                   <SelectContent className="bg-background z-50">
                     <SelectItem value="none">Not linked to a supplier</SelectItem>
-                    {vendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.trading_name || vendor.name}
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.trading_name || supplier.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
