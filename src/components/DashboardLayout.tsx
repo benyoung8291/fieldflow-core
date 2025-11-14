@@ -16,6 +16,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import PresencePanel from "@/components/presence/PresencePanel";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -271,6 +272,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <GlobalSearch />
               <div className="flex-1" />
               <PresencePanel />
+              <NotificationCenter />
               <ViewModeToggle />
               <ThemeToggle />
               <Button
