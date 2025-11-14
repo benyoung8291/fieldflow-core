@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import Fuse from "fuse.js";
 import {
   CommandDialog,
   CommandEmpty,
@@ -43,6 +44,7 @@ interface SearchResult {
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
   // Keyboard shortcut
@@ -243,6 +245,31 @@ export function GlobalSearch() {
     navigate(result.route);
   };
 
+  // Initialize Fuse.js for fuzzy search
+  const fuse = useMemo(() => {
+    return new Fuse(allResults, {
+      keys: [
+        { name: "title", weight: 2 },
+        { name: "subtitle", weight: 1 },
+        { name: "type", weight: 0.5 },
+      ],
+      threshold: 0.4, // Lower = more strict, higher = more fuzzy (0-1)
+      distance: 100,
+      minMatchCharLength: 2,
+      includeScore: true,
+    });
+  }, [allResults]);
+
+  // Filter results using fuzzy search
+  const filteredResults = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allResults;
+    }
+    
+    const fuseResults = fuse.search(searchQuery);
+    return fuseResults.map(result => result.item);
+  }, [searchQuery, fuse, allResults]);
+
   // Group results by type
   const groupedResults = useMemo(() => {
     const groups: Record<string, SearchResult[]> = {
@@ -255,7 +282,7 @@ export function GlobalSearch() {
       locations: [],
     };
 
-    allResults.forEach((result) => {
+    filteredResults.forEach((result) => {
       if (result.type === "page") {
         groups.pages.push(result);
       } else if (groups[result.type]) {
@@ -264,11 +291,15 @@ export function GlobalSearch() {
     });
 
     return groups;
-  }, [allResults]);
+  }, [filteredResults]);
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Search pages and documents..." />
+      <CommandInput 
+        placeholder="Search pages and documents..." 
+        value={searchQuery}
+        onValueChange={setSearchQuery}
+      />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
