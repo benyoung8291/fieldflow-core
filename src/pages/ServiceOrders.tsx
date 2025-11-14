@@ -29,7 +29,6 @@ import {
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -186,7 +185,6 @@ export default function ServiceOrders() {
           pullDistance={pullDistance}
           threshold={threshold}
         />
-        <RemoteCursors users={onlineUsers} />
       
       {selectedOrder && (
         <AuditDrawer 

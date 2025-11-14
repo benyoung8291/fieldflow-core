@@ -14,7 +14,6 @@ import WorkerCertificatesTab from "@/components/workers/WorkerCertificatesTab";
 import WorkerLicensesTab from "@/components/workers/WorkerLicensesTab";
 import WorkerTrainingTab from "@/components/workers/WorkerTrainingTab";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -162,7 +161,6 @@ export default function WorkerDetails() {
 
   return (
     <DashboardLayout>
-      <RemoteCursors users={onlineUsers} />
 
       <div className="space-y-6" onMouseMove={updateCursor}>
         <div className="flex items-center justify-between">

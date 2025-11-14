@@ -11,7 +11,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, MapPin, Repeat } from "lucide-react";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import RecurrenceDialog from "./RecurrenceDialog";
 import RecurringEditDialog from "./RecurringEditDialog";
@@ -505,7 +504,6 @@ export default function AppointmentDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <RemoteCursors users={onlineUsers} />
         <DialogHeader>
           <div className="flex items-center gap-2">
             <DialogTitle>{appointmentId ? "Edit" : "Create"} Appointment</DialogTitle>
