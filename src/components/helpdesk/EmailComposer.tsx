@@ -75,7 +75,7 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
   };
 
   return (
-    <div className="sticky bottom-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
+    <div className="sticky bottom-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 shrink-0">
       {/* Collapsed Header - More Prominent */}
       {!isExpanded && (
         <div 
