@@ -7,15 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Trash2 } from "lucide-react";
 import { Node } from "reactflow";
+import FieldMapper from "./FieldMapper";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { SelectWithSearch } from "@/components/ui/select-with-search";
 
 interface NodeConfigPanelProps {
   selectedNode: Node | null;
   onClose: () => void;
   onSave: (nodeId: string, config: any) => void;
   onDelete: (nodeId: string) => void;
+  sampleData?: Record<string, any> | null;
 }
 
-export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelete }: NodeConfigPanelProps) {
+export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelete, sampleData }: NodeConfigPanelProps) {
   const [config, setConfig] = useState<any>({});
 
   useEffect(() => {
@@ -239,23 +244,20 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
         case "create_task":
           return (
             <div className="space-y-4">
-              <div>
-                <Label>Task Title</Label>
-                <Input
-                  value={config.title || ""}
-                  onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                  placeholder="Enter task title"
-                />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea
-                  value={config.description || ""}
-                  onChange={(e) => setConfig({ ...config, description: e.target.value })}
-                  placeholder="Enter task description"
-                  rows={4}
-                />
-              </div>
+              <FieldMapper
+                label="Task Title"
+                value={config.title || ""}
+                onChange={(value) => setConfig({ ...config, title: value })}
+                availableFields={sampleData || {}}
+                placeholder="Enter task title or map from trigger data"
+              />
+              <FieldMapper
+                label="Description"
+                value={config.description || ""}
+                onChange={(value) => setConfig({ ...config, description: value })}
+                availableFields={sampleData || {}}
+                placeholder="Enter description or map from trigger data"
+              />
               <div>
                 <Label>Priority</Label>
                 <Select
@@ -278,14 +280,13 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
         case "create_checklist":
           return (
             <div className="space-y-4">
-              <div>
-                <Label>Checklist Title</Label>
-                <Input
-                  value={config.title || ""}
-                  onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                  placeholder="Enter checklist title"
-                />
-              </div>
+              <FieldMapper
+                label="Checklist Title"
+                value={config.title || ""}
+                onChange={(value) => setConfig({ ...config, title: value })}
+                availableFields={sampleData || {}}
+                placeholder="Enter checklist title or map from trigger data"
+              />
               <div>
                 <Label>Checklist Items (one per line)</Label>
                 <Textarea
@@ -320,15 +321,13 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
         case "create_note":
           return (
             <div className="space-y-4">
-              <div>
-                <Label>Note Content</Label>
-                <Textarea
-                  value={config.content || ""}
-                  onChange={(e) => setConfig({ ...config, content: e.target.value })}
-                  placeholder="Enter note content"
-                  rows={6}
-                />
-              </div>
+              <FieldMapper
+                label="Note Content"
+                value={config.content || ""}
+                onChange={(value) => setConfig({ ...config, content: value })}
+                availableFields={sampleData || {}}
+                placeholder="Enter note content or map from trigger data"
+              />
             </div>
           );
 
@@ -391,31 +390,27 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
         case "send_helpdesk_email":
           return (
             <div className="space-y-4">
-              <div>
-                <Label>Email Subject</Label>
-                <Input
-                  value={config.subject || ""}
-                  onChange={(e) => setConfig({ ...config, subject: e.target.value })}
-                  placeholder="Enter email subject"
-                />
-              </div>
-              <div>
-                <Label>Email Body</Label>
-                <Textarea
-                  value={config.body || ""}
-                  onChange={(e) => setConfig({ ...config, body: e.target.value })}
-                  placeholder="Enter email content"
-                  rows={6}
-                />
-              </div>
-              <div>
-                <Label>To Email (optional - uses ticket contact)</Label>
-                <Input
-                  value={config.toEmail || ""}
-                  onChange={(e) => setConfig({ ...config, toEmail: e.target.value })}
-                  placeholder="Leave blank to use ticket contact email"
-                />
-              </div>
+              <FieldMapper
+                label="Email Subject"
+                value={config.subject || ""}
+                onChange={(value) => setConfig({ ...config, subject: value })}
+                availableFields={sampleData || {}}
+                placeholder="Enter email subject or map from trigger data"
+              />
+              <FieldMapper
+                label="Email Body"
+                value={config.body || ""}
+                onChange={(value) => setConfig({ ...config, body: value })}
+                availableFields={sampleData || {}}
+                placeholder="Enter email content or map from trigger data"
+              />
+              <FieldMapper
+                label="To Email (optional - uses ticket contact)"
+                value={config.toEmail || ""}
+                onChange={(value) => setConfig({ ...config, toEmail: value })}
+                availableFields={sampleData || {}}
+                placeholder="Leave blank to use ticket contact email"
+              />
             </div>
           );
 

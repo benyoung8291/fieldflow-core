@@ -77,6 +77,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Info } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import WorkflowTestDialog from "@/components/workflows/WorkflowTestDialog";
+import TriggerSelectorDialog from "@/components/workflows/TriggerSelectorDialog";
+import SampleDataPanel from "@/components/workflows/SampleDataPanel";
+import { getSampleDataForTrigger } from "@/lib/workflowSampleData";
 
 export default function WorkflowBuilder() {
   const { id } = useParams();
@@ -93,6 +96,8 @@ export default function WorkflowBuilder() {
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const { toast: toastHook } = useToast();
   const [showTestDialog, setShowTestDialog] = useState(false);
+  const [showTriggerDialog, setShowTriggerDialog] = useState(false);
+  const [sampleData, setSampleData] = useState<Record<string, any> | null>(null);
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -233,6 +238,26 @@ export default function WorkflowBuilder() {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId));
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
   }, [setNodes, setEdges]);
+
+  const handleTriggerClick = () => {
+    setShowTriggerDialog(true);
+  };
+
+  const handleTriggerChange = (newTriggerType: string) => {
+    setTriggerType(newTriggerType);
+    setShowTriggerDialog(false);
+    setSampleData(getSampleDataForTrigger(newTriggerType as any));
+  };
+
+  const handleLoadSampleData = () => {
+    if (triggerType) {
+      setSampleData(getSampleDataForTrigger(triggerType as any));
+      toastHook({
+        title: "Sample data loaded",
+        description: "You can now see example data from this trigger",
+      });
+    }
+  };
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -550,7 +575,15 @@ export default function WorkflowBuilder() {
             onClose={() => setSelectedNode(null)}
             onSave={handleSaveNodeConfig}
             onDelete={handleDeleteNode}
+            sampleData={sampleData}
           />
+          {triggerType && (
+            <SampleDataPanel
+              triggerType={triggerType}
+              sampleData={sampleData}
+              onLoadSample={handleLoadSampleData}
+            />
+          )}
         </div>
         </div>
         </>
@@ -561,6 +594,13 @@ export default function WorkflowBuilder() {
         onOpenChange={setShowTestDialog}
         workflowId={id && id !== "new" ? id : null}
         triggerType={triggerType}
+      />
+
+      <TriggerSelectorDialog
+        open={showTriggerDialog}
+        onOpenChange={setShowTriggerDialog}
+        currentTrigger={triggerType}
+        onSelect={handleTriggerChange}
       />
       </div>
     </DashboardLayout>
