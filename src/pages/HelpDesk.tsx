@@ -231,7 +231,7 @@ export default function HelpDesk() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-full -m-6 -mb-3 lg:-mb-10">
+      <div className="flex flex-col h-full -mx-3 sm:-mx-6 lg:-mx-8">
         {/* Header with Pipeline Selector and Sync */}
         <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background shrink-0">
           <div className="flex items-center gap-3">
