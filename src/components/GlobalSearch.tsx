@@ -402,7 +402,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[var(--radix-popover-trigger-width)] p-0" 
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-50 bg-popover" 
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
