@@ -10,6 +10,11 @@ export interface CursorPosition {
   viewportWidth: number; // viewport width for normalization
   viewportHeight: number; // viewport height for normalization
   zoom: number; // browser zoom level (1 = 100%)
+  // Element anchoring (when hovering over interactive elements)
+  elementId?: string; // stable element identifier
+  elementX?: number; // X position relative to element (0-100%)
+  elementY?: number; // Y position relative to element (0-100%)
+  elementType?: string; // type of element (button, input, etc.)
   user_id: string;
   user_name: string;
   color: string;
@@ -96,7 +101,82 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
       return { width, height };
     };
 
-    const updateCursor = (x: number, y: number) => {
+    // Generate stable element identifier
+    const generateElementId = (element: Element): string => {
+      // Try to use existing ID
+      if (element.id) return `id:${element.id}`;
+      
+      // Build path using data attributes, classes, and tag names
+      const parts: string[] = [];
+      let current: Element | null = element;
+      let depth = 0;
+      
+      while (current && depth < 5) {
+        const tag = current.tagName.toLowerCase();
+        const dataId = current.getAttribute('data-element-id');
+        const ariaLabel = current.getAttribute('aria-label');
+        
+        if (dataId) {
+          parts.unshift(`[data-id="${dataId}"]`);
+          break;
+        } else if (ariaLabel) {
+          parts.unshift(`${tag}[aria="${ariaLabel}"]`);
+          break;
+        } else {
+          // Use first unique class if available
+          const classes = Array.from(current.classList);
+          const uniqueClass = classes.find(c => 
+            !c.startsWith('hover:') && 
+            !c.startsWith('focus:') &&
+            !c.includes('transition')
+          );
+          
+          if (uniqueClass) {
+            parts.unshift(`${tag}.${uniqueClass}`);
+          } else {
+            parts.unshift(tag);
+          }
+        }
+        
+        current = current.parentElement;
+        depth++;
+      }
+      
+      return parts.join('>');
+    };
+
+    // Find element by generated ID
+    const findElementById = (elementId: string): Element | null => {
+      if (elementId.startsWith('id:')) {
+        return document.getElementById(elementId.substring(3));
+      }
+      
+      try {
+        return document.querySelector(elementId);
+      } catch {
+        return null;
+      }
+    };
+
+    // Check if element is interactive
+    const isInteractiveElement = (element: Element): boolean => {
+      const tag = element.tagName.toLowerCase();
+      const role = element.getAttribute('role');
+      
+      return (
+        tag === 'button' ||
+        tag === 'input' ||
+        tag === 'select' ||
+        tag === 'textarea' ||
+        tag === 'a' ||
+        role === 'button' ||
+        role === 'link' ||
+        element.classList.contains('cursor-pointer') ||
+        element.hasAttribute('data-anchor-cursor')
+      );
+    };
+
+    const updateCursor = (x: number, y: number, event?: MouseEvent) => {
       const now = Date.now();
       if (now - lastUpdateTime < THROTTLE_MS) return;
       lastUpdateTime = now;
@@ -116,6 +196,41 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
       const xPercent = (docX / docDimensions.width) * 100;
       const yPercent = (docY / docDimensions.height) * 100;
 
+      // Check for element anchoring
+      let elementData: {
+        elementId?: string;
+        elementX?: number;
+        elementY?: number;
+        elementType?: string;
+      } = {};
+
+      if (event?.target instanceof Element) {
+        let target = event.target;
+        
+        // Walk up the tree to find an interactive element
+        let depth = 0;
+        while (target && depth < 5) {
+          if (isInteractiveElement(target)) {
+            const rect = target.getBoundingClientRect();
+            
+            // Calculate position relative to element (0-100%)
+            const relX = ((x - rect.left) / rect.width) * 100;
+            const relY = ((y - rect.top) / rect.height) * 100;
+            
+            elementData = {
+              elementId: generateElementId(target),
+              elementX: Math.max(0, Math.min(100, relX)),
+              elementY: Math.max(0, Math.min(100, relY)),
+              elementType: target.tagName.toLowerCase(),
+            };
+            break;
+          }
+          
+          target = target.parentElement;
+          depth++;
+        }
+      }
+
       channel.track({
         x: xPercent,
         y: yPercent,
@@ -124,6 +239,7 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         zoom: getZoomLevel(),
+        ...elementData,
         user_id: userId,
         user_name: userName,
         color: getUserColor(userId),
@@ -182,7 +298,7 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
     // Mouse move handler
     const handleMouseMove = (e: MouseEvent) => {
       if (!isEnabled) return;
-      updateCursor(e.clientX, e.clientY);
+      updateCursor(e.clientX, e.clientY, e);
     };
 
     // Mouse move listener
