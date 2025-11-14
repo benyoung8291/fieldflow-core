@@ -101,111 +101,84 @@ export function TodaysTasks() {
 
   if (isLoading) {
     return (
-      <Card className="shadow-lg border-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5" />
-            My Tasks
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+        ))}
+      </div>
     );
   }
 
   return (
-    <Card className="shadow-lg border-2 border-primary/20">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-        <CardTitle className="flex items-center gap-2">
-          <CheckSquare className="h-6 w-6 text-primary" />
-          My Tasks
-          <div className="ml-auto flex gap-2">
-            {overdueTasks.length > 0 && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {overdueTasks.length} overdue
-              </Badge>
-            )}
-            <Badge variant="secondary">
-              {todayTasks.length} today
-            </Badge>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-6">
-        {tasks.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <CheckCircle2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No pending tasks</p>
-            <p className="text-xs mt-1">You're all caught up!</p>
-          </div>
-        ) : (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
-              {tasks.map((task) => {
-                const taskIsOverdue = isOverdue(task.due_date);
-                
-                return (
-                  <div
-                    key={task.id}
-                    onClick={() => handleTaskClick(task)}
-                    className={`flex items-start gap-3 p-4 rounded-lg hover:bg-muted transition-colors cursor-pointer ${
-                      taskIsOverdue 
-                        ? 'bg-destructive/5 border-2 border-destructive' 
-                        : 'bg-muted/50 border border-border'
-                    }`}
-                  >
-                    <div className="mt-1">
-                      {task.status === "completed" ? (
-                        <CheckCircle2 className="h-5 w-5 text-success" />
-                      ) : taskIsOverdue ? (
-                        <AlertCircle className="h-5 w-5 text-destructive" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
+    <div>
+      {overdueTasks.length > 0 && (
+        <div className="flex gap-1.5 mb-2">
+          <Badge variant="destructive" className="text-[10px] gap-0.5">
+            <AlertCircle className="h-2.5 w-2.5" />
+            {overdueTasks.length} overdue
+          </Badge>
+          <Badge variant="secondary" className="text-[10px]">
+            {todayTasks.length} today
+          </Badge>
+        </div>
+      )}
+      {tasks.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground text-xs">
+          <CheckCircle2 className="h-8 w-8 mx-auto mb-1 opacity-50" />
+          <p>No pending tasks</p>
+        </div>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-200px)]">
+          <div className="space-y-2 pr-2">
+            {tasks.map((task) => {
+              const taskIsOverdue = isOverdue(task.due_date);
+              
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => handleTaskClick(task)}
+                  className={`flex items-start gap-2 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer ${
+                    taskIsOverdue 
+                      ? 'bg-destructive/5 border border-destructive' 
+                      : 'bg-muted/50 border border-border'
+                  }`}
+                >
+                  <div className="mt-0.5 flex-shrink-0">
+                    {task.status === "completed" ? (
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    ) : taskIsOverdue ? (
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <Circle className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-medium truncate ${taskIsOverdue ? 'text-destructive' : ''}`}>
+                      {task.title}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <Badge
+                        variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {task.priority}
+                      </Badge>
+                      {taskIsOverdue && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                          Overdue
+                        </Badge>
                       )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${taskIsOverdue ? 'text-destructive' : ''}`}>
-                        {task.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <Badge
-                          variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
-                          className="text-xs"
-                        >
-                          {task.priority}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {task.status.replace("_", " ")}
-                        </Badge>
-                        {taskIsOverdue && (
-                          <Badge variant="destructive" className="text-xs">
-                            Overdue
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          Due: {format(new Date(task.due_date), "MMM d")}
-                        </span>
-                        {task.linked_module && (
-                          <span className="text-xs text-muted-foreground">
-                            • {task.linked_module.replace("_", " ")}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(new Date(task.due_date), "MMM d")}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        )}
-      </CardContent>
-    </Card>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
   );
 }

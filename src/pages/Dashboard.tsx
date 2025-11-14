@@ -1,14 +1,13 @@
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Users, Calendar, TrendingUp, Plus, FileText, Briefcase, DollarSign, CheckSquare } from "lucide-react";
+import { ClipboardList, Users, Calendar, FileText, Briefcase, DollarSign, CheckSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, startOfMonth } from "date-fns";
+import { startOfDay, endOfDay, startOfMonth, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
-import { ActiveUsers } from "@/components/dashboard/ActiveUsers";
 import { TodaysTasks } from "@/components/dashboard/TodaysTasks";
+import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -165,7 +164,7 @@ export default function Dashboard() {
   });
 
   return (
-    <DashboardLayout>
+    <DashboardLayout showRightSidebar={true}>
       <div className="space-y-3">
         {/* Quick Actions - Compact */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
@@ -226,14 +225,14 @@ export default function Dashboard() {
         </div>
 
         {/* Content Grid - Optimized */}
-        <div className="grid gap-3 lg:grid-cols-3">
-          {/* Recent Orders - 2 columns on large screens */}
-          <Card className="lg:col-span-2">
+        <div className="grid gap-3 lg:grid-cols-2">
+          {/* Recent Orders */}
+          <Card>
             <CardContent className="p-3">
               <h3 className="text-sm font-semibold mb-2">Recent Orders</h3>
               {ordersLoading ? (
                 <div className="space-y-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="h-12 bg-muted animate-pulse rounded" />
                   ))}
                 </div>
@@ -270,13 +269,13 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Today's Schedule - 1 column */}
+          {/* Today's Schedule */}
           <Card>
             <CardContent className="p-3">
               <h3 className="text-sm font-semibold mb-2">Today's Schedule</h3>
               {scheduleLoading ? (
                 <div className="space-y-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="h-12 bg-muted animate-pulse rounded" />
                   ))}
                 </div>
@@ -305,31 +304,15 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
-
-          {/* Recent Activity - 2 columns */}
-          <Card className="lg:col-span-2">
-            <CardContent className="p-3">
-              <h3 className="text-sm font-semibold mb-2">Recent Activity</h3>
-              <RecentActivityFeed />
-            </CardContent>
-          </Card>
-
-          {/* Today's Tasks - 1 column */}
-          <Card>
-            <CardContent className="p-3">
-              <h3 className="text-sm font-semibold mb-2">Today's Tasks</h3>
-              <TodaysTasks />
-            </CardContent>
-          </Card>
-
-          {/* Active Users - Full width */}
-          <Card className="lg:col-span-3">
-            <CardContent className="p-3">
-              <h3 className="text-sm font-semibold mb-2">Active Users</h3>
-              <ActiveUsers />
-            </CardContent>
-          </Card>
         </div>
+
+        {/* Today's Tasks - Full Width */}
+        <Card>
+          <CardContent className="p-3">
+            <h3 className="text-sm font-semibold mb-2">Today's Tasks</h3>
+            <TodaysTasks />
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
