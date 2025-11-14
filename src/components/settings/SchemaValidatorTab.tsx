@@ -61,38 +61,74 @@ export function SchemaValidatorTab() {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Create nodes for each table
-    schemaData.tables.forEach((table, index) => {
-      const angle = (index / schemaData.tables.length) * 2 * Math.PI;
-      const radius = 400;
-      const x = Math.cos(angle) * radius + 500;
-      const y = Math.sin(angle) * radius + 400;
+    // Group tables by type for better organization
+    const tableGroups = {
+      core: ['customers', 'profiles', 'service_orders', 'appointments', 'projects'],
+      financial: ['invoices', 'quotes', 'expenses', 'credit_card_transactions', 'company_credit_cards'],
+      settings: ['brand_colors', 'general_settings', 'crm_status_settings', 'crm_pipelines', 'expense_categories', 'expense_policy_rules'],
+      helpdesk: ['helpdesk_tickets', 'helpdesk_messages', 'helpdesk_linked_documents', 'helpdesk_email_accounts', 'helpdesk_pipelines'],
+      supporting: [], // Everything else
+    };
 
-      const columnCount = schemaData.columns[table]?.length || 0;
-      const fkCount = schemaData.foreignKeys.filter((fk: any) => fk.table_name === table).length;
+    // Categorize tables
+    schemaData.tables.forEach(table => {
+      let found = false;
+      for (const [group, tables] of Object.entries(tableGroups)) {
+        if (tables.includes(table)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        tableGroups.supporting.push(table);
+      }
+    });
 
-      nodes.push({
-        id: table,
-        type: 'default',
-        position: { x, y },
-        data: {
-          label: (
-            <div className="text-xs">
-              <div className="font-bold mb-1">{table}</div>
-              <div className="text-muted-foreground">
-                {columnCount} columns · {fkCount} FKs
+    // Create nodes with hierarchical layout
+    let yOffset = 0;
+    const groupSpacing = 250;
+    const nodeSpacing = { x: 280, y: 100 };
+
+    Object.entries(tableGroups).forEach(([groupName, tables]) => {
+      if (tables.length === 0) return;
+      
+      tables.forEach((table, index) => {
+        const columnCount = schemaData.columns[table]?.length || 0;
+        const fkCount = schemaData.relationships.filter((rel: any) => 
+          rel.from === table || rel.to === table
+        ).length;
+
+        const row = Math.floor(index / 4);
+        const col = index % 4;
+
+        nodes.push({
+          id: table,
+          type: 'default',
+          position: { 
+            x: col * nodeSpacing.x, 
+            y: yOffset + (row * nodeSpacing.y) 
+          },
+          data: {
+            label: (
+              <div className="text-xs">
+                <div className="font-bold mb-1">{table}</div>
+                <div className="text-muted-foreground">
+                  {columnCount} cols · {fkCount} links
+                </div>
               </div>
-            </div>
-          ),
-        },
-        style: {
-          background: 'hsl(var(--card))',
-          border: '2px solid hsl(var(--border))',
-          borderRadius: '8px',
-          padding: '12px',
-          minWidth: '150px',
-        },
+            ),
+          },
+          style: {
+            background: 'hsl(var(--card))',
+            border: '2px solid hsl(var(--border))',
+            borderRadius: '8px',
+            padding: '12px',
+            minWidth: '150px',
+          },
+        });
       });
+
+      yOffset += Math.ceil(tables.length / 4) * nodeSpacing.y + groupSpacing;
     });
 
     // Create edges for relationships with different styles based on type
@@ -325,9 +361,16 @@ export function SchemaValidatorTab() {
               <Card key={table}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>{table}</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      {table}
+                      <Badge variant="outline" className="text-xs">
+                        {schemaData.columns[table]?.length || 0} columns
+                      </Badge>
+                    </CardTitle>
                     <Badge variant="secondary">
-                      {schemaData.columns[table]?.length || 0} columns
+                      {schemaData.relationships.filter((rel: any) => 
+                        rel.from === table || rel.to === table
+                      ).length} relationships
                     </Badge>
                   </div>
                 </CardHeader>
