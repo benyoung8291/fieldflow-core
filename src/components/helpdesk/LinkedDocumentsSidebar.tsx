@@ -109,12 +109,23 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       setShowSupplierLink(false);
       setShowLeadLink(false);
     },
-    onError: (error) => {
-      toast({
-        title: "Failed to update link",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      console.error("Update link error:", error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.message?.includes("contact_id_fkey") || error.message?.includes("foreign key constraint")) {
+        toast({
+          title: "Cannot link contact",
+          description: "The contact from this document no longer exists. Please select a different contact.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed to update link",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -477,7 +488,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                         queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
                       }}
                       onCustomerContactLinked={(customerId, contactId) => {
-                        // Only update if we don't already have these links set
+                        // Only update customer if we don't already have one and it's provided
                         if (customerId && !ticket?.customer_id) {
                           updateTicketLinkMutation.mutate({ 
                             field: "customer_id", 
@@ -485,14 +496,15 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                           });
                         }
                         
-                        // Only link contact if it was validated and exists
+                        // Only update contact if we don't already have one and it was validated to exist
+                        // The contactId here has already been validated in DocumentLinkSearch
                         if (contactId && !ticket?.contact_id) {
                           setTimeout(() => {
                             updateTicketLinkMutation.mutate({ 
                               field: "contact_id", 
                               value: contactId 
                             });
-                          }, 200);
+                          }, 300);
                         }
                       }}
                     />
