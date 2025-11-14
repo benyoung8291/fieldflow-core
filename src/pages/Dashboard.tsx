@@ -15,48 +15,42 @@ export default function Dashboard() {
 
   const quickActions = [
     {
-      name: "New Order",
-      description: "Create order",
+      name: "Order",
       icon: ClipboardList,
       color: "text-primary",
       bgColor: "bg-primary/10",
       onClick: () => navigate("/service-orders"),
     },
     {
-      name: "New Appointment",
-      description: "Schedule appointment",
+      name: "Appointment",
       icon: Calendar,
       color: "text-warning",
       bgColor: "bg-warning/10",
       onClick: () => navigate("/scheduler"),
     },
     {
-      name: "New Quote",
-      description: "Create quote",
+      name: "Quote",
       icon: FileText,
       color: "text-info",
       bgColor: "bg-info/10",
       onClick: () => navigate("/quotes"),
     },
     {
-      name: "New Project",
-      description: "Start project",
+      name: "Project",
       icon: Briefcase,
       color: "text-success",
       bgColor: "bg-success/10",
       onClick: () => navigate("/projects"),
     },
     {
-      name: "New Invoice",
-      description: "Create invoice",
+      name: "Invoice",
       icon: DollarSign,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
       onClick: () => navigate("/invoices"),
     },
     {
-      name: "New Task",
-      description: "Add to-do",
+      name: "Task",
       icon: CheckSquare,
       color: "text-secondary",
       bgColor: "bg-secondary/10",
@@ -172,60 +166,41 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome back! Here's an overview of your operations.
-          </p>
+      <div className="space-y-3">
+        {/* Quick Actions - Compact */}
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Button
+                key={action.name}
+                variant="outline"
+                className="h-auto flex flex-col items-center gap-1.5 p-2 hover:shadow-sm transition-all"
+                onClick={action.onClick}
+              >
+                <div className={`p-1.5 rounded ${action.bgColor}`}>
+                  <Icon className={`h-4 w-4 ${action.color}`} />
+                </div>
+                <p className="text-xs font-medium">{action.name}</p>
+              </Button>
+            );
+          })}
         </div>
 
-        {/* Quick Actions */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {quickActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Button
-                    key={action.name}
-                    variant="outline"
-                    className="h-auto flex flex-col items-center gap-2 p-4 hover:shadow-md transition-all"
-                    onClick={action.onClick}
-                  >
-                    <div className={`p-3 rounded-lg ${action.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${action.color}`} />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-medium text-sm">{action.name}</p>
-                      <p className="text-xs text-muted-foreground">{action.description}</p>
-                    </div>
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Stats Grid - Compact */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {statsLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                  <div className="h-5 w-5 bg-muted animate-pulse rounded" />
-                </CardHeader>
-                <CardContent>
-                  <div className="h-8 w-16 bg-muted animate-pulse rounded mb-1" />
-                  <div className="h-3 w-12 bg-muted animate-pulse rounded" />
+              <Card key={i}>
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                      <div className="h-6 w-12 bg-muted animate-pulse rounded" />
+                      <div className="h-2 w-16 bg-muted animate-pulse rounded" />
+                    </div>
+                    <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+                  </div>
                 </CardContent>
               </Card>
             ))
@@ -233,18 +208,16 @@ export default function Dashboard() {
             stats.map((stat) => {
               const Icon = stat.icon;
               return (
-                <Card key={stat.name} className="shadow-md hover:shadow-lg transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {stat.name}
-                    </CardTitle>
-                    <Icon className={`h-5 w-5 ${stat.color}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {stat.change}
-                    </p>
+                <Card key={stat.name} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5 flex-1">
+                        <p className="text-xs text-muted-foreground">{stat.name}</p>
+                        <p className="text-xl font-bold">{stat.value}</p>
+                        <p className="text-[10px] text-muted-foreground">{stat.change}</p>
+                      </div>
+                      <Icon className={`h-8 w-8 ${stat.color} opacity-80`} />
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -252,41 +225,44 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Recent Activity */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Recent Service Orders</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Content Grid - Optimized */}
+        <div className="grid gap-3 lg:grid-cols-3">
+          {/* Recent Orders - 2 columns on large screens */}
+          <Card className="lg:col-span-2">
+            <CardContent className="p-3">
+              <h3 className="text-sm font-semibold mb-2">Recent Orders</h3>
               {ordersLoading ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
+                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
                   ))}
                 </div>
               ) : recentOrders.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No service orders yet</p>
-                  <p className="text-sm">Create your first order to get started</p>
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  No service orders yet
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {recentOrders.map((order: any) => (
                     <div 
                       key={order.id} 
                       onClick={() => navigate(`/service-orders/${order.id}`)}
-                      className="flex items-center justify-between p-4 bg-card border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-2 bg-muted/40 border rounded hover:bg-muted cursor-pointer transition-colors"
                     >
-                      <div>
-                        <p className="font-medium">{order.order_number}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {order.customers?.name || "Unknown Customer"}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{order.order_number}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {order.customers?.name || "Unknown"}
                         </p>
                       </div>
-                      <span className="px-3 py-1 text-xs font-medium rounded-full bg-primary text-primary-foreground capitalize">
-                        {order.status}
-                      </span>
+                      <div className="ml-2 flex-shrink-0">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium capitalize
+                          ${order.status === 'completed' ? 'bg-success/10 text-success' : 
+                            order.status === 'in_progress' ? 'bg-warning/10 text-warning' : 
+                            'bg-muted text-muted-foreground'}`}>
+                          {order.status.replace('_', ' ')}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -294,36 +270,34 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Today's Schedule</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Today's Schedule - 1 column */}
+          <Card>
+            <CardContent className="p-3">
+              <h3 className="text-sm font-semibold mb-2">Today's Schedule</h3>
               {scheduleLoading ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
+                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
                   ))}
                 </div>
               ) : todaySchedule.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No appointments today</p>
-                  <p className="text-sm">Schedule is clear</p>
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  No appointments today
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {todaySchedule.map((appointment: any) => (
                     <div 
                       key={appointment.id} 
                       onClick={() => navigate(`/scheduler?appointment=${appointment.id}`)}
-                      className="flex items-center gap-4 p-4 bg-card border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center gap-2 p-2 bg-muted/40 border rounded hover:bg-muted cursor-pointer transition-colors"
                     >
-                      <div className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded">
+                      <div className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded flex-shrink-0">
                         {format(new Date(appointment.start_time), "hh:mm a")}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{appointment.title}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{appointment.status}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{appointment.title}</p>
+                        <p className="text-[10px] text-muted-foreground capitalize">{appointment.status}</p>
                       </div>
                     </div>
                   ))}
@@ -331,17 +305,30 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Real-time Activity Feed, Today's Tasks and Active Users */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1 lg:order-1">
-            <TodaysTasks />
-          </div>
-          <div className="lg:col-span-2 lg:order-2 space-y-6">
-            <RecentActivityFeed />
-            <ActiveUsers />
-          </div>
+          {/* Recent Activity - 2 columns */}
+          <Card className="lg:col-span-2">
+            <CardContent className="p-3">
+              <h3 className="text-sm font-semibold mb-2">Recent Activity</h3>
+              <RecentActivityFeed />
+            </CardContent>
+          </Card>
+
+          {/* Today's Tasks - 1 column */}
+          <Card>
+            <CardContent className="p-3">
+              <h3 className="text-sm font-semibold mb-2">Today's Tasks</h3>
+              <TodaysTasks />
+            </CardContent>
+          </Card>
+
+          {/* Active Users - Full width */}
+          <Card className="lg:col-span-3">
+            <CardContent className="p-3">
+              <h3 className="text-sm font-semibold mb-2">Active Users</h3>
+              <ActiveUsers />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </DashboardLayout>
