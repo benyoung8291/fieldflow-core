@@ -426,6 +426,161 @@ async function executeAction(supabase: any, node: any, context: any): Promise<an
       return { emailSent: false, reason: "Not implemented" };
     }
 
+    case "create_checklist": {
+      // Create a task with multiple checklist items
+      const taskData = {
+        tenant_id: tenantId,
+        title: config.title || `Checklist from ${triggerData.sourceType || "workflow"}`,
+        description: config.description || "",
+        status: config.status || "pending",
+        priority: config.priority || "medium",
+        due_date: config.dueDate || null,
+        assigned_to: config.assignedTo || triggerData.userId || null,
+        linked_module: triggerData.sourceType === "helpdesk_ticket" ? "helpdesk" : config.linkedModule,
+        linked_record_id: triggerData.ticketId || triggerData.sourceId || config.linkedRecordId,
+        created_by: triggerData.userId || null,
+      };
+
+      const { data: task, error: taskError } = await supabase
+        .from("tasks")
+        .insert(taskData)
+        .select()
+        .single();
+
+      if (taskError) throw taskError;
+
+      // Create checklist items
+      const items = config.items || [];
+      if (items.length > 0) {
+        const checklistItems = items.map((item: string, index: number) => ({
+          task_id: task.id,
+          title: item,
+          is_completed: false,
+          item_order: index,
+        }));
+
+        const { error: checklistError } = await supabase
+          .from("task_checklist_items")
+          .insert(checklistItems);
+
+        if (checklistError) throw checklistError;
+
+        // If this is for a helpdesk ticket, also create a timeline message
+        if (triggerData.ticketId) {
+          await supabase
+            .from("helpdesk_messages")
+            .insert({
+              ticket_id: triggerData.ticketId,
+              message_type: "checklist",
+              body: "Checklist",
+              tenant_id: tenantId,
+              task_id: task.id,
+              created_by: triggerData.userId,
+            });
+        }
+      }
+
+      createdDocuments.checklist = task;
+      return { taskId: task.id, task, itemCount: items.length };
+    }
+
+    case "create_note": {
+      // Create internal note in helpdesk ticket
+      if (!triggerData.ticketId) {
+        throw new Error("No ticket ID provided for note creation");
+      }
+
+      const { error } = await supabase
+        .from("helpdesk_messages")
+        .insert({
+          ticket_id: triggerData.ticketId,
+          message_type: "internal_note",
+          body: config.content || config.body || "Automated note from workflow",
+          tenant_id: tenantId,
+          created_by: triggerData.userId,
+        });
+
+      if (error) throw error;
+      
+      return { noteCreated: true };
+    }
+
+    case "update_ticket_status": {
+      if (!triggerData.ticketId) {
+        throw new Error("No ticket ID provided for status update");
+      }
+
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update({ 
+          status: config.newStatus || config.status,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", triggerData.ticketId);
+
+      if (error) throw error;
+      
+      return { statusUpdated: true, newStatus: config.newStatus || config.status };
+    }
+
+    case "assign_ticket": {
+      if (!triggerData.ticketId) {
+        throw new Error("No ticket ID provided for assignment");
+      }
+
+      const assigneeId = config.assignedTo || config.userId;
+      if (!assigneeId) {
+        throw new Error("No user ID provided for assignment");
+      }
+
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update({ 
+          assigned_to: assigneeId,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", triggerData.ticketId);
+
+      if (error) throw error;
+      
+      return { assigned: true, assignedTo: assigneeId };
+    }
+
+    case "send_helpdesk_email": {
+      // This would call the helpdesk-send-email edge function
+      if (!triggerData.ticketId) {
+        throw new Error("No ticket ID provided for email");
+      }
+
+      const emailData = {
+        ticketId: triggerData.ticketId,
+        to: config.toEmail || triggerData.contactEmail,
+        subject: config.subject || "Update on your ticket",
+        body: config.body || config.content || "",
+        tenantId: tenantId,
+      };
+
+      // Call the helpdesk-send-email function
+      const response = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/helpdesk-send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify(emailData),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to send email: ${error}`);
+      }
+
+      return { emailSent: true };
+    }
+
     default:
       throw new Error(`Unknown action type: ${action_type}`);
   }

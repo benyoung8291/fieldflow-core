@@ -25,14 +25,19 @@ const getIcon = (actionType?: string) => {
     case "create_invoice":
       return FileText;
     case "send_email":
+    case "send_helpdesk_email":
       return Mail;
     case "assign_user":
+    case "assign_ticket":
       return User;
     case "create_task":
+    case "create_checklist":
+    case "create_note":
       return CheckSquare;
     case "delay":
       return Clock;
     case "update_status":
+    case "update_ticket_status":
       return GitBranch;
     default:
       return FileText;

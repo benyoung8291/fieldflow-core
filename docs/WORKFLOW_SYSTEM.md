@@ -14,6 +14,17 @@ Events that start workflow execution:
 - `invoice_sent` - When an invoice is sent
 - `service_order_completed` - When a service order is marked complete
 - `project_created` - When a new project is created
+- `ticket_created` - When a helpdesk ticket is created
+- `ticket_assigned` - When a ticket is assigned to a user
+- `ticket_status_changed` - When a ticket status changes
+- `ticket_resolved` - When a ticket is resolved
+- `ticket_reopened` - When a closed ticket is reopened
+- `email_received` - When an email is received in helpdesk
+- `email_sent` - When an email is sent from helpdesk
+- `purchase_order_created` - When a purchase order is created
+- `purchase_order_approved` - When a purchase order is approved
+- `expense_submitted` - When an expense is submitted
+- `expense_approved` - When an expense is approved
 
 ### Actions
 Operations performed by the workflow:
@@ -21,10 +32,15 @@ Operations performed by the workflow:
 - `create_service_order` - Create a new service order
 - `create_invoice` - Create a new invoice
 - `create_task` - Create a new task
+- `create_checklist` - Create a checklist with multiple items
+- `create_note` - Create an internal note in helpdesk timeline
 - `update_status` - Update document status
+- `update_ticket_status` - Update helpdesk ticket status
 - `assign_user` - Assign document to user
+- `assign_ticket` - Assign helpdesk ticket to user
+- `send_email` - Send email
+- `send_helpdesk_email` - Send email from helpdesk ticket
 - `delay` - Wait before continuing
-- `send_email` - Send email (coming soon)
 
 ### Conditions
 Branching logic based on data:

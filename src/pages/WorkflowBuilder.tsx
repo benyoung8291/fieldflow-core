@@ -57,8 +57,13 @@ const actionTypes = [
   { value: "create_service_order", label: "Create Service Order", icon: FileText, type: "action" },
   { value: "create_invoice", label: "Create Invoice", icon: FileText, type: "action" },
   { value: "create_task", label: "Create Task", icon: CheckSquare, type: "action" },
+  { value: "create_checklist", label: "Create Checklist", icon: CheckSquare, type: "action" },
+  { value: "create_note", label: "Create Internal Note", icon: CheckSquare, type: "action" },
   { value: "update_status", label: "Update Status", icon: GitBranch, type: "action" },
+  { value: "update_ticket_status", label: "Update Ticket Status", icon: GitBranch, type: "action" },
+  { value: "assign_ticket", label: "Assign Ticket", icon: User, type: "action" },
   { value: "send_email", label: "Send Email", icon: Mail, type: "action" },
+  { value: "send_helpdesk_email", label: "Send Helpdesk Email", icon: Mail, type: "action" },
   { value: "assign_user", label: "Assign User", icon: User, type: "action" },
   { value: "delay", label: "Delay", icon: Clock, type: "action" },
   { value: "condition", label: "Add Condition", icon: GitBranch, type: "condition" },
@@ -444,6 +449,17 @@ export default function WorkflowBuilder() {
                 <SelectItem value="invoice_sent">Invoice Sent</SelectItem>
                 <SelectItem value="service_order_completed">Service Order Completed</SelectItem>
                 <SelectItem value="project_created">Project Created</SelectItem>
+                <SelectItem value="ticket_created">Ticket Created</SelectItem>
+                <SelectItem value="ticket_assigned">Ticket Assigned</SelectItem>
+                <SelectItem value="ticket_status_changed">Ticket Status Changed</SelectItem>
+                <SelectItem value="ticket_resolved">Ticket Resolved</SelectItem>
+                <SelectItem value="ticket_reopened">Ticket Reopened</SelectItem>
+                <SelectItem value="email_received">Email Received</SelectItem>
+                <SelectItem value="email_sent">Email Sent</SelectItem>
+                <SelectItem value="purchase_order_created">Purchase Order Created</SelectItem>
+                <SelectItem value="purchase_order_approved">Purchase Order Approved</SelectItem>
+                <SelectItem value="expense_submitted">Expense Submitted</SelectItem>
+                <SelectItem value="expense_approved">Expense Approved</SelectItem>
               </SelectContent>
             </Select>
           </div>

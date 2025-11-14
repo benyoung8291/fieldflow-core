@@ -6,7 +6,18 @@ export type WorkflowTriggerType =
   | "quote_sent"
   | "invoice_sent"
   | "service_order_completed"
-  | "project_created";
+  | "project_created"
+  | "ticket_created"
+  | "ticket_assigned"
+  | "ticket_status_changed"
+  | "ticket_resolved"
+  | "ticket_reopened"
+  | "email_received"
+  | "email_sent"
+  | "purchase_order_created"
+  | "purchase_order_approved"
+  | "expense_submitted"
+  | "expense_approved";
 
 interface TriggerWorkflowParams {
   triggerType: WorkflowTriggerType;
@@ -18,8 +29,14 @@ interface TriggerWorkflowParams {
     serviceOrderId?: string;
     quoteId?: string;
     invoiceId?: string;
+    ticketId?: string;
+    emailMessageId?: string;
+    purchaseOrderId?: string;
+    expenseId?: string;
     userId?: string;
     tenantId?: string;
+    oldStatus?: string;
+    newStatus?: string;
     [key: string]: any;
   };
 }
@@ -144,6 +161,170 @@ export async function triggerInvoiceSentWorkflow(
       customerId,
       projectId,
       serviceOrderId,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+    },
+  });
+}
+
+/**
+ * Helpdesk trigger functions
+ */
+
+export async function triggerTicketCreatedWorkflow(
+  ticketId: string,
+  customerId?: string,
+  contactId?: string
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "ticket_created",
+    triggerData: {
+      sourceType: "helpdesk_ticket",
+      sourceId: ticketId,
+      ticketId,
+      customerId,
+      contactId,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+    },
+  });
+}
+
+export async function triggerTicketStatusChangedWorkflow(
+  ticketId: string,
+  oldStatus: string,
+  newStatus: string,
+  customerId?: string
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "ticket_status_changed",
+    triggerData: {
+      sourceType: "helpdesk_ticket",
+      sourceId: ticketId,
+      ticketId,
+      customerId,
+      oldStatus,
+      newStatus,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+    },
+  });
+}
+
+export async function triggerTicketAssignedWorkflow(
+  ticketId: string,
+  assignedToId: string,
+  customerId?: string
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "ticket_assigned",
+    triggerData: {
+      sourceType: "helpdesk_ticket",
+      sourceId: ticketId,
+      ticketId,
+      customerId,
+      assignedToId,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+    },
+  });
+}
+
+export async function triggerEmailReceivedWorkflow(
+  ticketId: string,
+  messageId: string,
+  fromEmail: string
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "email_received",
+    triggerData: {
+      sourceType: "helpdesk_message",
+      sourceId: messageId,
+      ticketId,
+      emailMessageId: messageId,
+      fromEmail,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+    },
+  });
+}
+
+export async function triggerPurchaseOrderCreatedWorkflow(
+  purchaseOrderId: string,
+  supplierId?: string,
+  serviceOrderId?: string,
+  projectId?: string
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "purchase_order_created",
+    triggerData: {
+      sourceType: "purchase_order",
+      sourceId: purchaseOrderId,
+      purchaseOrderId,
+      supplierId,
+      serviceOrderId,
+      projectId,
+      userId: user?.id,
+      tenantId: profile?.tenant_id,
+    },
+  });
+}
+
+export async function triggerExpenseSubmittedWorkflow(
+  expenseId: string,
+  submittedBy: string,
+  amount: number
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
+
+  await triggerWorkflows({
+    triggerType: "expense_submitted",
+    triggerData: {
+      sourceType: "expense",
+      sourceId: expenseId,
+      expenseId,
+      submittedBy,
+      amount,
       userId: user?.id,
       tenantId: profile?.tenant_id,
     },

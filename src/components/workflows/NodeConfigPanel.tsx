@@ -245,6 +245,150 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
             </div>
           );
 
+        case "create_checklist":
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label>Checklist Title</Label>
+                <Input
+                  value={config.title || ""}
+                  onChange={(e) => setConfig({ ...config, title: e.target.value })}
+                  placeholder="Enter checklist title"
+                />
+              </div>
+              <div>
+                <Label>Checklist Items (one per line)</Label>
+                <Textarea
+                  value={(config.items || []).join('\n')}
+                  onChange={(e) => setConfig({ 
+                    ...config, 
+                    items: e.target.value.split('\n').filter(line => line.trim()) 
+                  })}
+                  placeholder="Enter checklist items, one per line"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label>Priority</Label>
+                <Select
+                  value={config.priority || "medium"}
+                  onValueChange={(value) => setConfig({ ...config, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          );
+
+        case "create_note":
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label>Note Content</Label>
+                <Textarea
+                  value={config.content || ""}
+                  onChange={(e) => setConfig({ ...config, content: e.target.value })}
+                  placeholder="Enter note content"
+                  rows={6}
+                />
+              </div>
+            </div>
+          );
+
+        case "update_ticket_status":
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label>New Status</Label>
+                <Select
+                  value={config.newStatus || ""}
+                  onValueChange={(value) => setConfig({ ...config, newStatus: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="waiting_customer">Waiting on Customer</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          );
+
+        case "assign_ticket":
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label>Assignment Type</Label>
+                <Select
+                  value={config.assignmentType || "current_user"}
+                  onValueChange={(value) => setConfig({ ...config, assignmentType: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current_user">Current User</SelectItem>
+                    <SelectItem value="specific_user">Specific User</SelectItem>
+                    <SelectItem value="round_robin">Round Robin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {config.assignmentType === "specific_user" && (
+                <div>
+                  <Label>User ID</Label>
+                  <Input
+                    value={config.assignedTo || ""}
+                    onChange={(e) => setConfig({ ...config, assignedTo: e.target.value })}
+                    placeholder="Enter user ID"
+                  />
+                </div>
+              )}
+            </div>
+          );
+
+        case "send_helpdesk_email":
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label>Email Subject</Label>
+                <Input
+                  value={config.subject || ""}
+                  onChange={(e) => setConfig({ ...config, subject: e.target.value })}
+                  placeholder="Enter email subject"
+                />
+              </div>
+              <div>
+                <Label>Email Body</Label>
+                <Textarea
+                  value={config.body || ""}
+                  onChange={(e) => setConfig({ ...config, body: e.target.value })}
+                  placeholder="Enter email content"
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label>To Email (optional - uses ticket contact)</Label>
+                <Input
+                  value={config.toEmail || ""}
+                  onChange={(e) => setConfig({ ...config, toEmail: e.target.value })}
+                  placeholder="Leave blank to use ticket contact email"
+                />
+              </div>
+            </div>
+          );
+
         case "assign_user":
           return (
             <div className="space-y-4">
