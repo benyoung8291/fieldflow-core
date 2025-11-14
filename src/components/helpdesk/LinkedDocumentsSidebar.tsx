@@ -82,9 +82,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       
       // If linking a contact, automatically link their customer
       if (field === "contact_id" && value) {
-        // Try customer_contacts first (helpdesk uses this table)
         const { data: contact } = await supabase
-          .from("customer_contacts")
+          .from("contacts")
           .select("customer_id")
           .eq("id", value)
           .maybeSingle();
@@ -117,7 +116,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       if (error.message?.includes("contact_id") || error.message?.includes("foreign key constraint")) {
         toast({
           title: "Cannot link contact",
-          description: "This contact is from a different contacts table and cannot be linked. The document's contact uses a different system.",
+          description: "The contact no longer exists. Please select a different contact.",
           variant: "destructive",
         });
       } else {
@@ -497,9 +496,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                           });
                         }
                         
-                        // Skip contact linking - there's a mismatch between contacts tables
-                        // Service orders/appointments use 'contacts' table but helpdesk uses 'customer_contacts'
-                        // User will need to manually select contact from the correct table
+                        // Contact linking now handled automatically via onCustomerContactLinked callback
                       }}
                     />
                   </div>

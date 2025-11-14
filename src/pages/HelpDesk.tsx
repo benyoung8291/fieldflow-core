@@ -95,7 +95,7 @@ export default function HelpDesk() {
         .select(`
           *,
           customer:customers(id, name),
-          contact:customer_contacts(id, first_name, last_name, email),
+          contact:contacts(id, first_name, last_name, email),
           assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
           email_account:helpdesk_email_accounts(id, email_address)
         `)

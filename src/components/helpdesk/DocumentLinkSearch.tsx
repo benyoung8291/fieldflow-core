@@ -74,7 +74,6 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
         const contactId = (linkedDoc as any).contact_id;
         
         // Pass through the IDs - let the database handle validation
-        // Note: contact_id might reference a different table (contacts vs customer_contacts)
         if (customerId || contactId) {
           onCustomerContactLinked(customerId, contactId);
         }

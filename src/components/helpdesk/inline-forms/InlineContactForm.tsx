@@ -31,7 +31,7 @@ export function InlineContactForm({ parsedData, ticket, onSuccess, onCancel }: I
 
     try {
       const { data, error } = await supabase
-        .from('customer_contacts' as any)
+        .from('contacts' as any)
         .insert({
           first_name: formData.first_name,
           last_name: formData.last_name,
