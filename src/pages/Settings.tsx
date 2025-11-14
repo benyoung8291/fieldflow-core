@@ -29,7 +29,8 @@ import {
   Headphones,
   Activity,
   ScrollText,
-  CreditCard
+  CreditCard,
+  Database
 } from "lucide-react";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
@@ -48,8 +49,10 @@ import { HelpDeskSettingsTab } from "@/components/settings/HelpDeskSettingsTab";
 import { ExpenseCategoriesTab } from "@/components/settings/ExpenseCategoriesTab";
 import { CreditCardsTab } from "@/components/settings/CreditCardsTab";
 import { ExpensePolicyTab } from "@/components/settings/ExpensePolicyTab";
+import { SchemaValidatorTab } from "@/components/settings/SchemaValidatorTab";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface PayRateCategory {
   id: string;
@@ -59,7 +62,19 @@ interface PayRateCategory {
   is_active: boolean;
 }
 
-const settingsNavigation = [
+interface SettingsNavItem {
+  title: string;
+  value: string;
+  icon: any;
+  adminOnly?: boolean;
+}
+
+interface SettingsNavGroup {
+  group: string;
+  items: SettingsNavItem[];
+}
+
+const settingsNavigation: SettingsNavGroup[] = [
   {
     group: "Personal",
     items: [
@@ -106,12 +121,14 @@ const settingsNavigation = [
     items: [
       { title: "Activity Log", value: "activity-log", icon: Activity },
       { title: "Change Log", value: "changelog", icon: ScrollText },
+      { title: "Schema Validator", value: "schema-validator", icon: Database, adminOnly: true },
     ]
   }
 ];
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
+  const { isAdmin } = usePermissions();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PayRateCategory | null>(null);
   const [formData, setFormData] = useState({
@@ -247,31 +264,40 @@ export default function Settings() {
           </div>
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="p-2">
-              {settingsNavigation.map((group) => (
-                <div key={group.group} className="mb-4">
-                  <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {group.group}
-                  </h3>
-                  <div className="space-y-1">
-                    {group.items.map((item) => (
-                      <button
-                        key={item.value}
-                        onClick={() => setActiveTab(item.value)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                          activeTab === item.value
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted"
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span className="flex-1 text-left">{item.title}</span>
-                        {activeTab === item.value && <ChevronRight className="h-4 w-4" />}
-                      </button>
-                    ))}
+              {settingsNavigation.map((group) => {
+                // Filter out admin-only items if user is not admin
+                const filteredItems = group.items.filter(item => 
+                  !item.adminOnly || isAdmin
+                );
+                
+                if (filteredItems.length === 0) return null;
+                
+                return (
+                  <div key={group.group} className="mb-4">
+                    <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {group.group}
+                    </h3>
+                    <div className="space-y-1">
+                      {filteredItems.map((item) => (
+                        <button
+                          key={item.value}
+                          onClick={() => setActiveTab(item.value)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                            activeTab === item.value
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-muted"
+                          )}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span className="flex-1 text-left">{item.title}</span>
+                          {activeTab === item.value && <ChevronRight className="h-4 w-4" />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         </aside>
@@ -509,6 +535,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <ChangeLogTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "schema-validator" && isAdmin && (
+              <Card>
+                <CardContent className="pt-6">
+                  <SchemaValidatorTab />
                 </CardContent>
               </Card>
             )}
