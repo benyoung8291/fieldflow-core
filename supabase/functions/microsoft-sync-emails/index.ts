@@ -294,12 +294,12 @@ serve(async (req) => {
             console.error("Error creating reply message:", messageError);
             errorCount++;
           } else {
-            // Update ticket's last_message_at
+            // Update ticket's last_message_at and sync read status from Microsoft
             await supabase
               .from("helpdesk_tickets")
               .update({ 
                 last_message_at: message.receivedDateTime,
-                is_read: false 
+                is_read: message.isRead || false
               })
               .eq("id", existingTicket.id);
             
@@ -347,6 +347,7 @@ serve(async (req) => {
               microsoft_message_id: message.id,
               microsoft_conversation_id: message.conversationId,
               last_message_at: message.receivedDateTime,
+              is_read: message.isRead || false,
             })
             .select()
             .single();
