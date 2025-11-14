@@ -93,9 +93,12 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['ap-invoice-matching', invoiceId] });
-      toast.success('Approval request sent to managers');
+      const message = data?.task_id 
+        ? 'Approval requested and task assigned to document owner'
+        : 'Approval request sent to managers';
+      toast.success(message);
       setRequestNotes("");
     },
     onError: (error: any) => {
