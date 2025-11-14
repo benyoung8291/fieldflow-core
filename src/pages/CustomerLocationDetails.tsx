@@ -17,25 +17,36 @@ export default function CustomerLocationDetails() {
   const { data: location, isLoading: locationLoading } = useQuery({
     queryKey: ["customer-location", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: locationData, error: locationError } = await supabase
         .from("customer_locations")
-        .select(`
-          *,
-          customers (
-            id,
-            name,
-            email,
-            phone
-          )
-        `)
+        .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching location:", error);
-        throw error;
+      if (locationError) {
+        console.error("Error fetching location:", locationError);
+        throw locationError;
       }
-      return data as any;
+
+      if (!locationData) {
+        return null;
+      }
+
+      // Fetch customer data separately
+      const { data: customerData, error: customerError } = await supabase
+        .from("customers")
+        .select("id, name, email, phone")
+        .eq("id", locationData.customer_id)
+        .maybeSingle();
+
+      if (customerError) {
+        console.error("Error fetching customer:", customerError);
+      }
+
+      return {
+        ...locationData,
+        customers: customerData
+      } as any;
     },
   });
 
