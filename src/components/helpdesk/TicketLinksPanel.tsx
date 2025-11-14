@@ -59,7 +59,7 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
 
   const loadData = async () => {
     const [contactsRes, customersRes, leadsRes, contractsRes, posRes, suppliersRes] = await Promise.all([
-      supabase.from("customer_contacts" as any).select("id, first_name, last_name, email, customer_id").order("first_name"),
+      supabase.from("contacts").select("id, first_name, last_name, email, customer_id").order("first_name"),
       supabase.from("customers").select("id, name").order("name"),
       supabase.from("leads" as any).select("id, company_name, contact_name").order("company_name"),
       supabase.from("service_contracts" as any).select("id, contract_number, customer:customers(name)").order("contract_number"),
