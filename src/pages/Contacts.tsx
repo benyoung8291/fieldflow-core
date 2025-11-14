@@ -27,7 +27,7 @@ export default function Contacts() {
         .select(`
           *,
           customer:customers(name),
-          supplier:vendors(name),
+          supplier:suppliers(name),
           assigned_user:profiles!contacts_assigned_to_fkey(id, first_name, last_name)
         `)
         .order("created_at", { ascending: false });

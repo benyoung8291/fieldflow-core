@@ -18,11 +18,11 @@ interface PolicyRule {
   rule_type: string;
   is_active: boolean;
   max_amount: number | null;
-  vendor_id: string | null;
+  supplier_id: string | null;
   category_id: string | null;
   applies_to: string;
   violation_action: string;
-  vendor?: { name: string };
+  supplier?: { name: string };
   category?: { name: string };
 }
 
@@ -33,7 +33,7 @@ export function ExpensePolicyTab() {
     rule_name: "",
     rule_type: "max_amount",
     max_amount: "",
-    vendor_id: "",
+    supplier_id: "",
     category_id: "",
     applies_to: "both",
     violation_action: "flag",
@@ -49,7 +49,7 @@ export function ExpensePolicyTab() {
         .from("expense_policy_rules")
         .select(`
           *,
-          vendor:vendors(name),
+          supplier:suppliers(name),
           category:expense_categories(name)
         `)
         .order("created_at", { ascending: false });
@@ -59,11 +59,11 @@ export function ExpensePolicyTab() {
     },
   });
 
-  const { data: vendors = [] } = useQuery({
-    queryKey: ["vendors-for-policy"],
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers-for-policy"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("vendors")
+        .from("suppliers")
         .select("id, name")
         .eq("is_active", true)
         .order("name");
@@ -103,7 +103,7 @@ export function ExpensePolicyTab() {
         rule_name: data.rule_name,
         rule_type: data.rule_type,
         max_amount: data.rule_type === "max_amount" ? parseFloat(data.max_amount) : null,
-        vendor_id: data.rule_type === "restricted_vendor" ? data.vendor_id : null,
+        supplier_id: data.rule_type === "restricted_vendor" ? data.supplier_id : null,
         category_id: data.rule_type === "prohibited_category" ? data.category_id : null,
         applies_to: data.applies_to,
         violation_action: data.violation_action,
@@ -160,7 +160,7 @@ export function ExpensePolicyTab() {
       rule_name: "",
       rule_type: "max_amount",
       max_amount: "",
-      vendor_id: "",
+      supplier_id: "",
       category_id: "",
       applies_to: "both",
       violation_action: "flag",
@@ -174,7 +174,7 @@ export function ExpensePolicyTab() {
       rule_name: rule.rule_name,
       rule_type: rule.rule_type,
       max_amount: rule.max_amount?.toString() || "",
-      vendor_id: rule.vendor_id || "",
+      supplier_id: rule.supplier_id || "",
       category_id: rule.category_id || "",
       applies_to: rule.applies_to,
       violation_action: rule.violation_action,
@@ -247,7 +247,7 @@ export function ExpensePolicyTab() {
                 <TableCell>{getRuleTypeLabel(rule.rule_type)}</TableCell>
                 <TableCell>
                   {rule.rule_type === "max_amount" && `$${rule.max_amount}`}
-                  {rule.rule_type === "restricted_vendor" && rule.vendor?.name}
+                  {rule.rule_type === "restricted_vendor" && rule.supplier?.name}
                   {rule.rule_type === "prohibited_category" && rule.category?.name}
                 </TableCell>
                 <TableCell>{getAppliesToLabel(rule.applies_to)}</TableCell>
@@ -340,16 +340,16 @@ export function ExpensePolicyTab() {
               <div>
                 <Label>Supplier *</Label>
                 <Select
-                  value={formData.vendor_id}
-                  onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
+                  value={formData.supplier_id}
+                  onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select supplier..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {vendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.name}
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

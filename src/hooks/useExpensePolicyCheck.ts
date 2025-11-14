@@ -11,7 +11,7 @@ interface PolicyViolation {
 
 interface PolicyCheckParams {
   amount?: number;
-  vendor_id?: string;
+  supplier_id?: string;
   category_id?: string;
   document_type: "expense" | "purchase_order";
 }
@@ -24,7 +24,7 @@ export function useExpensePolicyCheck(params: PolicyCheckParams) {
         .from("expense_policy_rules")
         .select(`
           *,
-          vendor:vendors(name),
+          supplier:suppliers(name),
           category:expense_categories(name)
         `)
         .eq("is_active", true)
@@ -48,9 +48,9 @@ export function useExpensePolicyCheck(params: PolicyCheckParams) {
             break;
 
           case "restricted_vendor":
-            if (params.vendor_id && rule.vendor_id === params.vendor_id) {
+            if (params.supplier_id && rule.supplier_id === params.supplier_id) {
               violated = true;
-              message = `Vendor "${rule.vendor?.name}" is restricted by policy`;
+              message = `Supplier "${rule.supplier?.name}" is restricted by policy`;
             }
             break;
 
@@ -87,6 +87,6 @@ export function useExpensePolicyCheck(params: PolicyCheckParams) {
         isPolicyCompliant: violations.length === 0,
       };
     },
-    enabled: !!(params.amount || params.vendor_id || params.category_id),
+    enabled: !!(params.amount || params.supplier_id || params.category_id),
   });
 }

@@ -23,7 +23,7 @@ export default function CreditCardReconciliation() {
     description: "",
     amount: "",
     expense_date: "",
-    vendor_id: "",
+    supplier_id: "",
     category_id: "",
     notes: "",
     reference_number: "",
@@ -118,8 +118,8 @@ export default function CreditCardReconciliation() {
     },
   });
 
-  const { data: vendors = [] } = useQuery({
-    queryKey: ["vendors"],
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -131,7 +131,7 @@ export default function CreditCardReconciliation() {
         .single();
 
       const { data, error } = await supabase
-        .from("vendors")
+        .from("suppliers")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .eq("is_active", true)
@@ -219,7 +219,7 @@ export default function CreditCardReconciliation() {
       description: transaction.merchant_name || "",
       amount: transaction.amount?.toString() || "",
       expense_date: transaction.transaction_date || "",
-      vendor_id: "",
+      supplier_id: "",
       category_id: "",
       notes: "",
       reference_number: transaction.external_reference || "",
@@ -301,7 +301,7 @@ export default function CreditCardReconciliation() {
           amount: parseFloat(data.amount),
           expense_date: data.expense_date,
           submitted_by: user.id,
-          vendor_id: data.vendor_id || null,
+          supplier_id: data.supplier_id || null,
           category_id: data.category_id || null,
           payment_method: "credit_card",
           status: "submitted",
@@ -355,7 +355,7 @@ export default function CreditCardReconciliation() {
       description: "",
       amount: "",
       expense_date: "",
-      vendor_id: "",
+      supplier_id: "",
       category_id: "",
       notes: "",
       reference_number: "",
@@ -550,16 +550,16 @@ export default function CreditCardReconciliation() {
                             <div>
                               <Label className="text-[11px] text-muted-foreground">Supplier *</Label>
                               <Select
-                                value={formData.vendor_id}
-                                onValueChange={(value) => setFormData({ ...formData, vendor_id: value })}
+                                value={formData.supplier_id}
+                                onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
                               >
                                 <SelectTrigger className="h-8 text-xs mt-1">
                                   <SelectValue placeholder="Select supplier..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {vendors.map((vendor) => (
-                                    <SelectItem key={vendor.id} value={vendor.id} className="text-xs">
-                                      {vendor.name}
+                                  {suppliers.map((supplier) => (
+                                    <SelectItem key={supplier.id} value={supplier.id} className="text-xs">
+                                      {supplier.name}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -700,7 +700,7 @@ export default function CreditCardReconciliation() {
                               <Button
                                 size="sm"
                                 onClick={() => handleCreateExpense(txn.id)}
-                                disabled={createExpenseMutation.isPending || !formData.description || !formData.vendor_id || !formData.category_id}
+                                disabled={createExpenseMutation.isPending || !formData.description || !formData.supplier_id || !formData.category_id}
                                 className="h-8 px-6 bg-blue-600 hover:bg-blue-700 font-semibold"
                               >
                                 OK

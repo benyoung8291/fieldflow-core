@@ -14,34 +14,34 @@ export interface LineItemWithGST {
   line_total?: number;
 }
 
-export interface Vendor {
+export interface Supplier {
   gst_registered?: boolean;
   name?: string;
 }
 
 /**
- * Validates if GST can be applied to a line item based on vendor GST registration
- * @param vendor The vendor/supplier
- * @returns true if vendor is GST registered and can charge GST
+ * Validates if GST can be applied to a line item based on supplier GST registration
+ * @param supplier The supplier
+ * @returns true if supplier is GST registered and can charge GST
  */
-export function canApplyGST(vendor: Vendor | null): boolean {
-  return vendor?.gst_registered === true;
+export function canApplyGST(supplier: Supplier | null): boolean {
+  return supplier?.gst_registered === true;
 }
 
 /**
  * Determines if a line item should be GST-free
  * @param lineItem The line item
- * @param vendor The vendor (for purchase orders)
+ * @param supplier The supplier (for purchase orders)
  * @returns true if the line item should not have GST applied
  */
-export function isLineItemGSTFree(lineItem: LineItemWithGST, vendor?: Vendor | null): boolean {
+export function isLineItemGSTFree(lineItem: LineItemWithGST, supplier?: Supplier | null): boolean {
   // If explicitly marked as GST-free, respect that
   if (lineItem.is_gst_free === true) {
     return true;
   }
   
-  // For purchase orders: if vendor is not GST registered, line item MUST be GST-free
-  if (vendor && !canApplyGST(vendor)) {
+  // For purchase orders: if supplier is not GST registered, line item MUST be GST-free
+  if (supplier && !canApplyGST(supplier)) {
     return true;
   }
   
@@ -52,15 +52,15 @@ export function isLineItemGSTFree(lineItem: LineItemWithGST, vendor?: Vendor | n
  * Calculates GST amount for a line item, respecting GST-free status
  * @param lineItem The line item
  * @param taxRate The tax rate (as percentage, e.g., 10 for 10%)
- * @param vendor The vendor (for purchase orders)
+ * @param supplier The supplier (for purchase orders)
  * @returns The GST amount, or 0 if GST-free
  */
 export function calculateLineItemGST(
   lineItem: LineItemWithGST,
   taxRate: number,
-  vendor?: Vendor | null
+  supplier?: Supplier | null
 ): number {
-  if (isLineItemGSTFree(lineItem, vendor)) {
+  if (isLineItemGSTFree(lineItem, supplier)) {
     return 0;
   }
   
@@ -72,13 +72,13 @@ export function calculateLineItemGST(
  * Calculates totals for a collection of line items with GST compliance
  * @param lineItems Array of line items
  * @param taxRate The tax rate (as percentage)
- * @param vendor The vendor (for purchase orders)
+ * @param supplier The supplier (for purchase orders)
  * @returns Object with subtotal, taxAmount, and total
  */
 export function calculateDocumentTotals(
   lineItems: LineItemWithGST[],
   taxRate: number,
-  vendor?: Vendor | null
+  supplier?: Supplier | null
 ): {
   subtotal: number;
   taxAmount: number;
@@ -94,7 +94,7 @@ export function calculateDocumentTotals(
     const lineTotal = item.line_total || 0;
     subtotal += lineTotal;
     
-    if (isLineItemGSTFree(item, vendor)) {
+    if (isLineItemGSTFree(item, supplier)) {
       gstFreeAmount += lineTotal;
     } else {
       taxableAmount += lineTotal;
@@ -114,13 +114,13 @@ export function calculateDocumentTotals(
 }
 
 /**
- * Gets a warning message if trying to apply GST to a non-GST registered vendor
- * @param vendor The vendor
+ * Gets a warning message if trying to apply GST to a non-GST registered supplier
+ * @param supplier The supplier
  * @returns Warning message or null
  */
-export function getGSTWarning(vendor: Vendor | null): string | null {
-  if (vendor && !canApplyGST(vendor)) {
-    return `${vendor.name || 'This vendor'} is not GST registered and cannot charge GST. All line items will be GST-free.`;
+export function getGSTWarning(supplier: Supplier | null): string | null {
+  if (supplier && !canApplyGST(supplier)) {
+    return `${supplier.name || 'This supplier'} is not GST registered and cannot charge GST. All line items will be GST-free.`;
   }
   return null;
 }
