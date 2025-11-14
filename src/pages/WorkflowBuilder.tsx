@@ -37,6 +37,7 @@ import {
 import TriggerNode from "@/components/workflows/TriggerNode";
 import ActionNode from "@/components/workflows/ActionNode";
 import ConditionNode from "@/components/workflows/ConditionNode";
+import TriggerSelectorDialog from "@/components/workflows/TriggerSelectorDialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -89,10 +90,60 @@ export default function WorkflowBuilder() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [showQuickStart, setShowQuickStart] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [showTriggerDialog, setShowTriggerDialog] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const { toast: toastHook } = useToast();
   const [showTestDialog, setShowTestDialog] = useState(false);
+
+  // Helper to get trigger label from type
+  const getTriggerLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      quote_created: "Quote Created",
+      quote_approved: "Quote Approved",
+      quote_sent: "Quote Sent",
+      invoice_sent: "Invoice Sent",
+      service_order_completed: "Service Order Completed",
+      project_created: "Project Created",
+      ticket_created: "Ticket Created",
+      ticket_assigned: "Ticket Assigned",
+      ticket_status_changed: "Ticket Status Changed",
+      ticket_resolved: "Ticket Resolved",
+      ticket_reopened: "Ticket Reopened",
+      email_received: "Email Received",
+      email_sent: "Email Sent",
+      purchase_order_created: "Purchase Order Created",
+      purchase_order_approved: "Purchase Order Approved",
+      expense_submitted: "Expense Submitted",
+      expense_approved: "Expense Approved",
+    };
+    return labels[type] || type;
+  };
+
+  const handleTriggerClick = useCallback(() => {
+    setShowTriggerDialog(true);
+  }, []);
+
+  const handleTriggerChange = useCallback((newTriggerType: string) => {
+    setTriggerType(newTriggerType);
+    
+    // Update the trigger node
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.type === "trigger"
+          ? { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                triggerType: newTriggerType,
+                label: `When ${getTriggerLabel(newTriggerType)}`,
+                onTriggerClick: handleTriggerClick
+              } 
+            }
+          : node
+      )
+    );
+  }, [setNodes, handleTriggerClick]);
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -159,7 +210,11 @@ export default function WorkflowBuilder() {
           id: "trigger-1",
           type: "trigger",
           position: { x: 250, y: 50 },
-          data: { label: "When Quote Approved", triggerType: "quote_approved" },
+          data: { 
+            label: `When ${getTriggerLabel(triggerType)}`, 
+            triggerType: triggerType,
+            onTriggerClick: handleTriggerClick
+          },
         },
       ]);
       setEdges([]);
@@ -176,7 +231,10 @@ export default function WorkflowBuilder() {
       id: node.id,
       type: node.type,
       position: node.position,
-      data: node.data,
+      data: {
+        ...node.data,
+        onTriggerClick: node.type === "trigger" ? handleTriggerClick : undefined,
+      },
     }));
 
     const templateEdges: Edge[] = template.template_data.connections.map((conn: any) => ({
