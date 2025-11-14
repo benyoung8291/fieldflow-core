@@ -280,7 +280,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {isMobile ? (
         <MobileHeader />
       ) : (
-        <div className="fixed top-0 left-0 right-0 z-30 bg-background border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
           <div className="flex items-center px-4 py-3 gap-4">
             <GlobalSearch />
             <div className="flex-1" />
