@@ -572,11 +572,12 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                     {docs.map((doc) => {
                       // Extract details from the fetched data
                       const docData = doc.details;
+                      
                       const getDocumentDetails = () => {
                         switch (docType.type) {
                           case 'service_order':
                             return {
-                              title: docData?.work_order_number || 'Untitled',
+                              title: docData?.work_order_number || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.service_date,
                               amount: docData?.total_amount,
@@ -586,7 +587,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                             };
                           case 'appointment':
                             return {
-                              title: docData?.title || 'Untitled',
+                              title: docData?.title || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.start_time,
                               time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null,
@@ -595,7 +596,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                             };
                           case 'quote':
                             return {
-                              title: docData?.quote_number || 'Untitled',
+                              title: docData?.quote_number || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.quote_date,
                               amount: docData?.total,
@@ -604,7 +605,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                             };
                           case 'invoice':
                             return {
-                              title: docData?.invoice_number || 'Untitled',
+                              title: docData?.invoice_number || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.invoice_date,
                               amount: docData?.total_amount,
@@ -613,7 +614,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                             };
                           case 'project':
                             return {
-                              title: docData?.project_number || docData?.name || 'Untitled',
+                              title: docData?.project_number || docData?.name || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.start_date,
                               amount: docData?.budget,
@@ -622,7 +623,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                             };
                           case 'task':
                             return {
-                              title: docData?.title || 'Untitled',
+                              title: docData?.title || doc.document_number || 'Untitled',
                               status: docData?.status,
                               priority: docData?.priority,
                               date: docData?.due_date,

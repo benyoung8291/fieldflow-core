@@ -12,6 +12,7 @@ import { EmailComposer, EmailComposerRef } from "./EmailComposer";
 import { ChecklistRenderer } from "./ChecklistRenderer";
 import { InlineNoteEditor } from "./InlineNoteEditor";
 import { InlineTaskEditor } from "./InlineTaskEditor";
+import { InlineCheckboxEditor } from "./InlineCheckboxEditor";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
@@ -29,6 +30,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [showTaskEditor, setShowTaskEditor] = useState(false);
+  const [showCheckboxEditor, setShowCheckboxEditor] = useState(false);
   const navigate = useNavigate();
 
   const { data: messages, isLoading } = useQuery({
@@ -242,7 +244,8 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       if (!profile?.tenant_id) throw new Error("Tenant not found");
 
-      const { error } = await supabase
+      // Create the task
+      const { data: task, error: taskError } = await supabase
         .from("tasks")
         .insert({
           ...taskData,
@@ -251,8 +254,24 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           linked_module: "helpdesk",
           linked_record_id: ticketId,
           status: "pending",
+        })
+        .select()
+        .single();
+      
+      if (taskError) throw taskError;
+
+      // Also add a message to the timeline
+      const { error: messageError } = await supabase
+        .from("helpdesk_messages")
+        .insert({
+          ticket_id: ticketId,
+          message_type: "task",
+          body: `Task created: ${taskData.title}`,
+          tenant_id: profile.tenant_id,
+          metadata: { task_id: task.id }
         });
-      if (error) throw error;
+      
+      if (messageError) throw messageError;
     },
     onSuccess: () => {
       toast({ title: "Task created successfully" });
@@ -262,6 +281,76 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     onError: (error) => {
       toast({
         title: "Failed to create task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createCheckboxMutation = useMutation({
+    mutationFn: async (checkboxData: { title: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get tenant_id and ticket owner from profiles and ticket
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
+      // Get ticket owner
+      const { data: ticketData } = await supabase
+        .from("helpdesk_tickets")
+        .select("assigned_to")
+        .eq("id", ticketId)
+        .single();
+
+      const today = new Date().toISOString().split('T')[0];
+
+      // Create the task as a checkbox
+      const { data: task, error: taskError } = await supabase
+        .from("tasks")
+        .insert({
+          title: checkboxData.title,
+          description: "",
+          priority: "medium",
+          assigned_to: ticketData?.assigned_to || user.id,
+          due_date: today,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+          linked_module: "helpdesk",
+          linked_record_id: ticketId,
+          status: "pending",
+        })
+        .select()
+        .single();
+      
+      if (taskError) throw taskError;
+
+      // Also add a message to the timeline
+      const { error: messageError } = await supabase
+        .from("helpdesk_messages")
+        .insert({
+          ticket_id: ticketId,
+          message_type: "checklist",
+          body: `☐ ${checkboxData.title}`,
+          tenant_id: profile.tenant_id,
+          metadata: { task_id: task.id, is_checkbox: true }
+        });
+      
+      if (messageError) throw messageError;
+    },
+    onSuccess: () => {
+      toast({ title: "Checkbox created successfully" });
+      setShowCheckboxEditor(false);
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to create checkbox",
         description: error.message,
         variant: "destructive",
       });
@@ -596,7 +685,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                 </div>
                 
                 {/* Action Buttons */}
-                {!showNoteEditor && !showTaskEditor && (
+                {!showNoteEditor && !showTaskEditor && !showCheckboxEditor && (
                   <div className="relative flex items-center gap-1 bg-background px-2 justify-center">
                     <Button
                       variant="ghost"
@@ -616,6 +705,16 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                     >
                       <CheckSquare className="h-4 w-4" />
                       <span className="text-xs">Add Task</span>
+                    </Button>
+                    <div className="h-4 w-px bg-border/50" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCheckboxEditor(true)}
+                      className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      <span className="text-xs">Add Checkbox</span>
                     </Button>
                   </div>
                 )}
@@ -642,6 +741,18 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                       }}
                       onCancel={() => setShowTaskEditor(false)}
                       isSaving={createTaskMutation.isPending}
+                    />
+                  </div>
+                )}
+
+                {showCheckboxEditor && (
+                  <div className="relative z-10 px-2">
+                    <InlineCheckboxEditor
+                      onSave={async (checkboxData) => {
+                        await createCheckboxMutation.mutateAsync(checkboxData);
+                      }}
+                      onCancel={() => setShowCheckboxEditor(false)}
+                      isSaving={createCheckboxMutation.isPending}
                     />
                   </div>
                 )}
