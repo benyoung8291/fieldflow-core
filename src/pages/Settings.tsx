@@ -50,6 +50,7 @@ import { ExpenseCategoriesTab } from "@/components/settings/ExpenseCategoriesTab
 import { CreditCardsTab } from "@/components/settings/CreditCardsTab";
 import { ExpensePolicyTab } from "@/components/settings/ExpensePolicyTab";
 import { SchemaValidatorTab } from "@/components/settings/SchemaValidatorTab";
+import { PerformanceMonitorTab } from "@/components/settings/PerformanceMonitorTab";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -122,6 +123,7 @@ const settingsNavigation: SettingsNavGroup[] = [
       { title: "Activity Log", value: "activity-log", icon: Activity },
       { title: "Change Log", value: "changelog", icon: ScrollText },
       { title: "Schema Validator", value: "schema-validator", icon: Database, adminOnly: true },
+      { title: "Performance Monitor", value: "performance-monitor", icon: Activity, adminOnly: true },
     ]
   }
 ];
@@ -543,6 +545,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <SchemaValidatorTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "performance-monitor" && isAdmin && (
+              <Card>
+                <CardContent className="pt-6">
+                  <PerformanceMonitorTab />
                 </CardContent>
               </Card>
             )}
