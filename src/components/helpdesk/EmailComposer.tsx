@@ -39,6 +39,7 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isLargeComposer, setIsLargeComposer] = useState(false);
   
   // Live collaboration
   const { typingUsers, updateTypingStatus } = useEmailCollaboration(ticketId || "");
@@ -62,6 +63,7 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
       setShowCc(false);
       setShowBcc(false);
       setIsExpanded(false);
+      setIsLargeComposer(false);
     }
   }));
 
@@ -107,7 +109,10 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
 
       {/* Expanded Composer */}
       {isExpanded && (
-        <div className="space-y-3 p-4 max-h-[500px] overflow-y-auto">
+        <div className={cn(
+          "space-y-3 p-4 overflow-y-auto",
+          isLargeComposer ? "max-h-[80vh]" : "max-h-[500px]"
+        )}>
           {/* Header with collapse button */}
           <div className="flex items-center justify-between pb-2 border-b">
             <div className="flex items-center gap-2">
@@ -122,15 +127,25 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
                 </Badge>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2"
-              onClick={() => setIsExpanded(false)}
-            >
-              <ChevronDown className="h-4 w-4" />
-              <span className="ml-1 text-xs">Minimize</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setIsLargeComposer(!isLargeComposer)}
+                title={isLargeComposer ? "Compact view" : "Larger composer"}
+              >
+                <ChevronUp className={cn("h-4 w-4 transition-transform", isLargeComposer && "rotate-180")} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setIsExpanded(false)}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* To Field */}
@@ -260,7 +275,10 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
             }}
             onBlur={() => ticketId && updateTypingStatus(false)}
             placeholder="Type your message..."
-            className="min-h-[120px] text-sm resize-none"
+            className={cn(
+              "text-sm resize-none",
+              isLargeComposer ? "min-h-[400px]" : "min-h-[120px]"
+            )}
           />
 
           {/* Actions */}

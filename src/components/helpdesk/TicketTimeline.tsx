@@ -9,8 +9,9 @@ import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { EmailComposer, EmailComposerRef } from "./EmailComposer";
-import { AddTimelineItemDialog } from "./AddTimelineItemDialog";
 import { ChecklistRenderer } from "./ChecklistRenderer";
+import { InlineNoteEditor } from "./InlineNoteEditor";
+import { InlineTaskEditor } from "./InlineTaskEditor";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
@@ -25,8 +26,9 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const queryClient = useQueryClient();
   const composerRef = useRef<EmailComposerRef>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+  const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [showTaskEditor, setShowTaskEditor] = useState(false);
   const navigate = useNavigate();
 
   const { data: messages, isLoading } = useQuery({
@@ -194,6 +196,60 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     onError: (error: any) => {
       toast({
         title: "Failed to send reply",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const { error } = await supabase
+        .from("helpdesk_messages")
+        .insert({
+          ticket_id: ticketId,
+          message_type: "internal_note",
+          body: content,
+          tenant_id: (await supabase.auth.getUser()).data.user?.user_metadata?.tenant_id,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Note added successfully" });
+      setShowNoteEditor(false);
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add note",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      const user = (await supabase.auth.getUser()).data.user;
+      const { error } = await supabase
+        .from("tasks")
+        .insert({
+          ...taskData,
+          tenant_id: user?.user_metadata?.tenant_id,
+          linked_module: "helpdesk",
+          linked_record_id: ticketId,
+          status: "pending",
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Task created successfully" });
+      setShowTaskEditor(false);
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to create task",
         description: error.message,
         variant: "destructive",
       });
@@ -520,35 +576,62 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                 );
               })}
               
-              {/* Add Item Button - Inline in timeline */}
-              <div className="relative flex items-center justify-center py-4">
+              {/* Add Item Buttons - Inline in timeline */}
+              <div className="relative flex flex-col gap-2 py-4">
                 {/* Center line */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-px h-full bg-border/30" />
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="relative flex items-center gap-1 bg-background px-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAddItemDialogOpen(true)}
-                    className="h-8 gap-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="text-xs">Note</span>
-                  </Button>
-                  <div className="h-4 w-px bg-border/50" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAddItemDialogOpen(true)}
-                    className="h-8 gap-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                    <span className="text-xs">Task</span>
-                  </Button>
-                </div>
+                {!showNoteEditor && !showTaskEditor && (
+                  <div className="relative flex items-center gap-1 bg-background px-2 justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNoteEditor(true)}
+                      className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="text-xs">Add Note</span>
+                    </Button>
+                    <div className="h-4 w-px bg-border/50" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowTaskEditor(true)}
+                      className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      <span className="text-xs">Add Task</span>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Inline Editors */}
+                {showNoteEditor && (
+                  <div className="relative z-10 px-2">
+                    <InlineNoteEditor
+                      onSave={async (content) => {
+                        await createNoteMutation.mutateAsync(content);
+                      }}
+                      onCancel={() => setShowNoteEditor(false)}
+                      isSaving={createNoteMutation.isPending}
+                    />
+                  </div>
+                )}
+
+                {showTaskEditor && (
+                  <div className="relative z-10 px-2">
+                    <InlineTaskEditor
+                      onSave={async (taskData) => {
+                        await createTaskMutation.mutateAsync(taskData);
+                      }}
+                      onCancel={() => setShowTaskEditor(false)}
+                      isSaving={createTaskMutation.isPending}
+                    />
+                  </div>
+                )}
               </div>
               
               <div ref={scrollRef} />
@@ -564,12 +647,6 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         defaultTo={ticket?.sender_email || ticket?.external_email || ""}
         defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
         isSending={sendReplyMutation.isPending}
-        ticketId={ticketId}
-      />
-
-      <AddTimelineItemDialog
-        open={addItemDialogOpen}
-        onOpenChange={setAddItemDialogOpen}
         ticketId={ticketId}
       />
     </div>
