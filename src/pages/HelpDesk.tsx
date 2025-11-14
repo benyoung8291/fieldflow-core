@@ -29,7 +29,22 @@ export default function HelpDesk() {
   useEffect(() => {
     const ticketId = searchParams.get("ticket");
     if (ticketId && ticketId !== selectedTicketId) {
-      handleSelectTicket(ticketId);
+      // Check if the ticket is archived and enable filter if needed
+      const checkAndSelectTicket = async () => {
+        const { data: ticketData } = await supabase
+          .from("helpdesk_tickets")
+          .select("is_archived")
+          .eq("id", ticketId)
+          .single();
+        
+        if (ticketData?.is_archived) {
+          setFilterArchived(true);
+        }
+        
+        handleSelectTicket(ticketId);
+      };
+      
+      checkAndSelectTicket();
       // Clear the URL param after selecting
       setSearchParams({}, { replace: true });
     }

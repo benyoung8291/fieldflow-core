@@ -183,10 +183,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name, customers(name)")
+        .select("id, name, customer_id")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch customer names separately
+      if (data && data.length > 0) {
+        const customerIds = [...new Set(data.map(p => p.customer_id).filter(Boolean))];
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("id, name")
+          .in("id", customerIds);
+        
+        const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+        return data.map(proj => ({
+          ...proj,
+          customer_name: proj.customer_id ? customerMap.get(proj.customer_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -209,9 +224,24 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("customer_locations")
-        .select("id, name, address, customers(name)")
+        .select("id, name, address, customer_id")
         .limit(200);
       if (error) throw error;
+      
+      // Fetch customer names separately
+      if (data && data.length > 0) {
+        const customerIds = [...new Set(data.map(l => l.customer_id).filter(Boolean))];
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("id, name")
+          .in("id", customerIds);
+        
+        const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+        return data.map(loc => ({
+          ...loc,
+          customer_name: loc.customer_id ? customerMap.get(loc.customer_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -221,10 +251,38 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("id, title, start_time, customers(name)")
+        .select("id, title, start_time, service_order_id")
         .order("start_time", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch service order and customer info
+      if (data && data.length > 0) {
+        const soIds = [...new Set(data.map(a => a.service_order_id).filter(Boolean))];
+        if (soIds.length > 0) {
+          const { data: soData } = await supabase
+            .from("service_orders")
+            .select("id, customer_id")
+            .in("id", soIds);
+          
+          const customerIds = [...new Set(soData?.map(so => so.customer_id).filter(Boolean) || [])];
+          const { data: customersData } = await supabase
+            .from("customers")
+            .select("id, name")
+            .in("id", customerIds);
+          
+          const soMap = new Map(soData?.map(so => [so.id, so.customer_id]));
+          const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+          
+          return data.map(apt => {
+            const customerId = apt.service_order_id ? soMap.get(apt.service_order_id) : null;
+            return {
+              ...apt,
+              customer_name: customerId ? customerMap.get(customerId) : null
+            };
+          });
+        }
+      }
       return data || [];
     },
   });
@@ -376,7 +434,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add projects
     projects?.forEach((project) => {
-      const customerName = (project.customers as any)?.name;
+      const customerName = (project as any).customer_name;
       results.push({
         id: project.id,
         title: project.name || "Project",
@@ -402,7 +460,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add locations
     locations?.forEach((location) => {
-      const customerName = (location.customers as any)?.name;
+      const customerName = (location as any).customer_name;
       results.push({
         id: location.id,
         title: location.name || location.address || "Location",
@@ -415,7 +473,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add appointments
     appointments?.forEach((appointment) => {
-      const customerName = (appointment.customers as any)?.name;
+      const customerName = (appointment as any).customer_name;
       results.push({
         id: appointment.id,
         title: appointment.title || "Appointment",
@@ -463,26 +521,26 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       });
     });
 
-    // Add contacts
+    // Add contacts (contacts page doesn't have detail views, just go to main page)
     contacts?.forEach((contact) => {
       results.push({
         id: contact.id,
         title: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.company_name || "Contact",
         subtitle: contact.email,
         type: "contact",
-        route: `/contacts/${contact.id}`,
+        route: `/contacts`,
         icon: Users,
       });
     });
 
-    // Add suppliers
+    // Add suppliers (suppliers page doesn't have detail views for individual suppliers, go to main page)
     suppliers?.forEach((supplier) => {
       results.push({
         id: supplier.id,
         title: supplier.name || "Supplier",
         subtitle: supplier.email,
         type: "supplier",
-        route: `/suppliers/${supplier.id}`,
+        route: `/suppliers`,
         icon: Package,
       });
     });
