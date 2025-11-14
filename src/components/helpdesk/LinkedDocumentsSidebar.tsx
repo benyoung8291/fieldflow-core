@@ -82,11 +82,12 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       
       // If linking a contact, automatically link their customer
       if (field === "contact_id" && value) {
+        // Try customer_contacts first (helpdesk uses this table)
         const { data: contact } = await supabase
-          .from("contacts")
+          .from("customer_contacts")
           .select("customer_id")
           .eq("id", value)
-          .single();
+          .maybeSingle();
         
         if (contact?.customer_id) {
           updates.customer_id = contact.customer_id;
@@ -112,11 +113,11 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
     onError: (error: any) => {
       console.error("Update link error:", error);
       
-      // Check if it's a foreign key constraint error
-      if (error.message?.includes("contact_id_fkey") || error.message?.includes("foreign key constraint")) {
+      // Check if it's a foreign key constraint error for contact
+      if (error.message?.includes("contact_id") || error.message?.includes("foreign key constraint")) {
         toast({
           title: "Cannot link contact",
-          description: "The contact from this document no longer exists. Please select a different contact.",
+          description: "This contact is from a different contacts table and cannot be linked. The document's contact uses a different system.",
           variant: "destructive",
         });
       } else {
@@ -496,16 +497,9 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                           });
                         }
                         
-                        // Only update contact if we don't already have one and it was validated to exist
-                        // The contactId here has already been validated in DocumentLinkSearch
-                        if (contactId && !ticket?.contact_id) {
-                          setTimeout(() => {
-                            updateTicketLinkMutation.mutate({ 
-                              field: "contact_id", 
-                              value: contactId 
-                            });
-                          }, 300);
-                        }
+                        // Skip contact linking - there's a mismatch between contacts tables
+                        // Service orders/appointments use 'contacts' table but helpdesk uses 'customer_contacts'
+                        // User will need to manually select contact from the correct table
                       }}
                     />
                   </div>
