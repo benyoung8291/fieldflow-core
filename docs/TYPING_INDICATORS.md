@@ -99,9 +99,16 @@ export default function MyForm() {
 
 ## Visual Indicators
 
-1. **Typing Indicator**: Shows "[User] is typing..." above the field
-2. **Viewing Indicator**: Shows user's first name in top-right when viewing but not typing
-3. **Border Highlight**: Colored border around the field (pulses when typing)
+1. **Colored Border Glow**: When a user is typing, a colored glow appears around the field matching their avatar color from the presence panel
+2. **Typing Indicator Badge**: Shows "[User] is typing..." above the field with their color
+3. **Viewing Indicator**: Shows user's first name in top-right when viewing but not typing
+4. **Pulsing Animation**: The colored glow pulses to draw attention to active editing
+
+The colors are consistent across:
+- Remote cursor tracking
+- Presence panel avatars
+- Field typing indicators
+- Click animations
 
 ## Implementation Notes
 

@@ -14,12 +14,35 @@ interface PresenceUser {
   cursorY?: number;
   isTyping?: boolean;
   typingInField?: string;
+  color?: string;
 }
 
 interface UsePresenceOptions {
   page: string;
   field?: string;
 }
+
+const USER_COLORS = [
+  "#3B82F6", // blue
+  "#10B981", // green
+  "#F59E0B", // amber
+  "#EF4444", // red
+  "#8B5CF6", // purple
+  "#EC4899", // pink
+  "#14B8A6", // teal
+  "#F97316", // orange
+];
+
+let userColorMap: { [key: string]: string } = {};
+let colorIndex = 0;
+
+const getUserColor = (userId: string): string => {
+  if (!userColorMap[userId]) {
+    userColorMap[userId] = USER_COLORS[colorIndex % USER_COLORS.length];
+    colorIndex++;
+  }
+  return userColorMap[userId];
+};
 
 export function usePresence({ page, field }: UsePresenceOptions) {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
@@ -44,6 +67,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         lastSeen: new Date().toISOString(),
         currentPage: page,
         currentField: field,
+        color: getUserColor(user.id),
       };
 
       setCurrentUser(userData);
