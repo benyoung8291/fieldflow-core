@@ -689,16 +689,18 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   const fuse = useMemo(() => {
     return new Fuse(allResults, {
       keys: [
-        { name: "title", weight: 3 },
-        { name: "subtitle", weight: 1.5 },
-        { name: "type", weight: 0.3 },
+        { name: "title", weight: 2 },
+        { name: "subtitle", weight: 2 }, // Increased weight for customer names
+        { name: "type", weight: 0.5 },
       ],
-      threshold: 0.5, // More lenient for short queries like "ISS" or "ANZ"
-      distance: 200,
+      threshold: 0.6, // Very lenient for short queries like "ISS" or "ANZ"
+      distance: 300,
       minMatchCharLength: 1, // Allow matching single characters
       includeScore: true,
       ignoreLocation: true, // Don't penalize matches based on position
       useExtendedSearch: true,
+      shouldSort: true, // Enable sorting by score
+      findAllMatches: true, // Find all matches, not just the first
     });
   }, [allResults]);
 
