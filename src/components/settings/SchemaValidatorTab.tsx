@@ -253,8 +253,8 @@ export function SchemaValidatorTab() {
                 Visual representation of how tables are connected through foreign keys
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-hidden">
-              <div className="h-full border rounded-lg bg-muted/20">
+            <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
+              <div className="h-full w-full border-t bg-muted/20">
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
