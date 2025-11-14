@@ -477,6 +477,33 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     },
   });
 
+  const toggleCheckboxMutation = useMutation({
+    mutationFn: async ({ messageId, currentBody }: { messageId: string; currentBody: string }) => {
+      // Toggle the checkbox symbol
+      const isCurrentlyChecked = currentBody.startsWith('☑');
+      const newBody = isCurrentlyChecked 
+        ? currentBody.replace('☑', '☐')
+        : currentBody.replace('☐', '☑');
+
+      const { error } = await supabase
+        .from("helpdesk_messages")
+        .update({ body: newBody })
+        .eq("id", messageId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to toggle checkbox",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getMessageIcon = (type: string) => {
     switch (type) {
       case "email": return <Mail className="h-4 w-4" />;
@@ -809,14 +836,23 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                               return (
                                 <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
                                   <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors shrink-0",
-                                      isCompleted 
-                                        ? 'bg-green-500 border-green-500' 
-                                        : 'border-green-400'
-                                    )}>
+                                    <button
+                                      onClick={() => toggleCheckboxMutation.mutate({ 
+                                        messageId: message.id, 
+                                        currentBody: message.body 
+                                      })}
+                                      disabled={toggleCheckboxMutation.isPending}
+                                      className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 cursor-pointer",
+                                        "hover:scale-110 active:scale-95",
+                                        isCompleted 
+                                          ? 'bg-green-500 border-green-500 hover:bg-green-600' 
+                                          : 'border-green-400 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/30',
+                                        toggleCheckboxMutation.isPending && 'opacity-50 cursor-not-allowed'
+                                      )}
+                                    >
                                       {isCompleted && <CheckSquare className="h-4 w-4 text-white fill-white" />}
-                                    </div>
+                                    </button>
                                     <span className={cn(
                                       "text-sm font-medium",
                                       isCompleted && 'line-through text-muted-foreground'
