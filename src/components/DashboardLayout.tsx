@@ -302,25 +302,10 @@ export default function DashboardLayout({ children, showRightSidebar = false }: 
           </div>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-hidden flex">
-            <div className={cn(
-              "px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto",
-              showRightSidebar ? "flex-1" : "w-full"
-            )}>
+          <main className="flex-1 overflow-hidden">
+            <div className="px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto w-full">
               {children}
             </div>
-
-            {/* Right Sidebar */}
-            {showRightSidebar && !isMobile && (
-              <aside className="w-80 border-l bg-card/50 flex flex-col">
-                <div className="p-4 border-b">
-                  <h2 className="text-sm font-semibold">Team Activity</h2>
-                </div>
-                <div className="flex-1 overflow-hidden p-4">
-                  <ActivityAndUsers />
-                </div>
-              </aside>
-            )}
           </main>
         </div>
       )}
