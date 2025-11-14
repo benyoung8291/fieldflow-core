@@ -31,8 +31,8 @@ export default function HelpDesk() {
     if (lastFilter && (lastFilter === 'all' || lastFilter === 'unassigned' || lastFilter === 'assigned_to_me')) {
       setFilterAssignment(lastFilter as any);
     } else {
-      // Default to "assigned_to_me"
-      setFilterAssignment('assigned_to_me');
+      // Default to "all" to show all tickets initially
+      setFilterAssignment('all');
     }
   }, []);
 
