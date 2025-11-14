@@ -620,6 +620,13 @@ export default function WorkflowBuilder() {
         workflowId={id && id !== "new" ? id : null}
         triggerType={triggerType}
       />
+      
+      <TriggerSelectorDialog
+        open={showTriggerDialog}
+        onOpenChange={setShowTriggerDialog}
+        onSelect={handleTriggerChange}
+        currentTrigger={triggerType}
+      />
       </div>
     </DashboardLayout>
   );
