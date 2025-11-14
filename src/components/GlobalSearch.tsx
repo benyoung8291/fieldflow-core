@@ -324,7 +324,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("helpdesk_tickets")
-        .select("id, ticket_number, subject, sender_name")
+        .select("id, ticket_number, subject, sender_name, is_archived")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;

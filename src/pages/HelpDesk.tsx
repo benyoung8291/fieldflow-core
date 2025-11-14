@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { TicketList } from "@/components/helpdesk/TicketList";
 import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
@@ -17,11 +18,22 @@ import { Switch } from "@/components/ui/switch";
 export default function HelpDesk() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("all");
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
+
+  // Handle ticket selection from URL params (e.g., from search)
+  useEffect(() => {
+    const ticketId = searchParams.get("ticket");
+    if (ticketId && ticketId !== selectedTicketId) {
+      handleSelectTicket(ticketId);
+      // Clear the URL param after selecting
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   const { data: pipelines } = useQuery({
     queryKey: ["helpdesk-pipelines"],
