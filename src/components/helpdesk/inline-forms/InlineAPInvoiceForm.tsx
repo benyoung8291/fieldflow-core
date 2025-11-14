@@ -33,7 +33,7 @@ export function InlineAPInvoiceForm({ parsedData, ticket, onSuccess, onCancel }:
 
     try {
       const { data, error } = await supabase
-        .from('ap_invoices')
+        .from('ap_invoices' as any)
         .insert({
           invoice_number: formData.invoice_number,
           invoice_date: formData.invoice_date,
@@ -52,7 +52,7 @@ export function InlineAPInvoiceForm({ parsedData, ticket, onSuccess, onCancel }:
         description: "AP Invoice has been created successfully.",
       });
 
-      onSuccess(data.id);
+      onSuccess((data as any).id);
     } catch (error) {
       console.error("Error creating invoice:", error);
       toast({

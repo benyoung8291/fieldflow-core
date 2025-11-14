@@ -97,7 +97,7 @@ ${ticket?.description || ""}
   const handleDocumentCreated = async (documentType: string, documentId: string) => {
     // Link the document to the ticket
     try {
-      await supabase.from('helpdesk_linked_documents').insert({
+      await supabase.from('helpdesk_linked_documents' as any).insert({
         ticket_id: ticket.id,
         document_type: documentType,
         document_id: documentId,

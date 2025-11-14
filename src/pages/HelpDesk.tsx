@@ -231,9 +231,9 @@ export default function HelpDesk() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-screen -m-6 pb-0">
+      <div className="flex flex-col h-full -m-6">
         {/* Header with Pipeline Selector and Sync */}
-        <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background">
+        <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold">Help Desk</h1>
             <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
@@ -290,7 +290,7 @@ export default function HelpDesk() {
           </Button>
         </div>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
         {/* Left: Ticket List */}
         <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
           <TicketList 

@@ -32,7 +32,7 @@ export function InlinePurchaseOrderForm({ parsedData, ticket, onSuccess, onCance
 
     try {
       const { data, error } = await supabase
-        .from('purchase_orders')
+        .from('purchase_orders' as any)
         .insert({
           po_number: formData.po_number,
           order_date: formData.order_date,
@@ -50,7 +50,7 @@ export function InlinePurchaseOrderForm({ parsedData, ticket, onSuccess, onCance
         description: "PO has been created successfully.",
       });
 
-      onSuccess(data.id);
+      onSuccess((data as any).id);
     } catch (error) {
       console.error("Error creating PO:", error);
       toast({
