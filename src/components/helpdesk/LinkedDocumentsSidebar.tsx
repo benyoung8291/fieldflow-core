@@ -209,8 +209,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
           </TabsList>
         </div>
 
-        <TabsContent value="documents" className="flex-1 mt-0 p-0">
-          <ScrollArea className="h-full p-3">
+        <TabsContent value="documents" className="flex-1 mt-0 p-0 overflow-hidden">
+          <ScrollArea className="h-[calc(100vh-12rem)] p-3">
         <div className="space-y-3">
           {/* Customer & Contact Section */}
           <div className="space-y-2">
@@ -475,6 +475,28 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                       onLinked={() => {
                         setShowDocLinks({ ...showDocLinks, [docType.type]: false });
                         queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
+                      }}
+                      onCustomerContactLinked={(customerId, contactId) => {
+                        // Automatically link customer and contact from the document
+                        const updates: any = {};
+                        if (customerId) updates.customer_id = customerId;
+                        if (contactId) updates.contact_id = contactId;
+                        
+                        if (Object.keys(updates).length > 0) {
+                          updateTicketLinkMutation.mutate({ 
+                            field: "customer_id", 
+                            value: customerId || null 
+                          });
+                          
+                          if (contactId) {
+                            setTimeout(() => {
+                              updateTicketLinkMutation.mutate({ 
+                                field: "contact_id", 
+                                value: contactId 
+                              });
+                            }, 100);
+                          }
+                        }
                       }}
                     />
                   </div>
