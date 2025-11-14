@@ -13,6 +13,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -286,6 +287,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </div>
       )}
+
+      <GlobalSearch />
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
