@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeCursor } from "@/hooks/useRealtimeCursor";
@@ -29,6 +30,52 @@ export default function RemoteCursors() {
     currentUser?.name || "",
     currentUser?.id || ""
   );
+
+  // Apply highlights to elements being hovered by remote users
+  useEffect(() => {
+    const highlightedElements = new Map<string, { element: Element; cleanup: () => void }>();
+
+    cursors.forEach((cursor) => {
+      if (cursor.elementId) {
+        const element = findElementById(cursor.elementId);
+        
+        if (element && !highlightedElements.has(cursor.elementId)) {
+          // Store original styles
+          const originalOutline = (element as HTMLElement).style.outline;
+          const originalBoxShadow = (element as HTMLElement).style.boxShadow;
+          
+          // Apply highlight
+          (element as HTMLElement).style.outline = `2px solid ${cursor.color}`;
+          (element as HTMLElement).style.boxShadow = `0 0 8px ${cursor.color}40`;
+          (element as HTMLElement).style.transition = 'outline 0.2s ease, box-shadow 0.2s ease';
+          
+          highlightedElements.set(cursor.elementId, {
+            element,
+            cleanup: () => {
+              (element as HTMLElement).style.outline = originalOutline;
+              (element as HTMLElement).style.boxShadow = originalBoxShadow;
+            }
+          });
+        }
+      }
+    });
+
+    // Cleanup highlights for cursors that moved away
+    const currentElementIds = new Set(
+      cursors.filter(c => c.elementId).map(c => c.elementId)
+    );
+    
+    highlightedElements.forEach((data, elementId) => {
+      if (!currentElementIds.has(elementId)) {
+        data.cleanup();
+        highlightedElements.delete(elementId);
+      }
+    });
+
+    return () => {
+      highlightedElements.forEach(data => data.cleanup());
+    };
+  }, [cursors]);
 
   // Find element by generated ID
   const findElementById = (elementId: string): Element | null => {
