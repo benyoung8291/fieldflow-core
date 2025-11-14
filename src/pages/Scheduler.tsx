@@ -98,7 +98,7 @@ export default function Scheduler() {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments", stateFilter],
     queryFn: async () => {
-      // First, fetch appointments with customer location data for filtering
+      // First, fetch appointments with service order data
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
@@ -106,23 +106,40 @@ export default function Scheduler() {
           service_orders(
             order_number, 
             title,
-            customers(
-              name,
-              customer_locations(state)
-            )
+            customer_id,
+            customer_location_id,
+            customers(name)
           )
         `)
         .order("start_time", { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
 
-      // Filter by state if selected
+      // If state filter is applied, fetch customer locations and filter
       let filteredAppointments = appointmentsData || [];
       if (stateFilter !== "all") {
-        filteredAppointments = filteredAppointments.filter((apt: any) => {
-          const customerLocations = apt.service_orders?.customers?.customer_locations || [];
-          return customerLocations.some((loc: any) => loc.state === stateFilter);
-        });
+        const customerLocationIds = filteredAppointments
+          .map((apt: any) => apt.service_orders?.customer_location_id)
+          .filter(Boolean);
+        
+        if (customerLocationIds.length > 0) {
+          const { data: locations } = await supabase
+            .from("customer_locations")
+            .select("id, state")
+            .in("id", customerLocationIds);
+          
+          const locationStateMap = (locations || []).reduce((acc: any, loc: any) => {
+            acc[loc.id] = loc.state;
+            return acc;
+          }, {});
+          
+          filteredAppointments = filteredAppointments.filter((apt: any) => {
+            const locationId = apt.service_orders?.customer_location_id;
+            return locationId && locationStateMap[locationId] === stateFilter;
+          });
+        } else {
+          filteredAppointments = [];
+        }
       }
       
       // Then fetch all appointment_workers with profiles
