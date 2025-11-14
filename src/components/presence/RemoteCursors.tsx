@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeCursor } from "@/hooks/useRealtimeCursor";
 import { MousePointer2 } from "lucide-react";
+import ScrollIndicators from "./ScrollIndicators";
 
 export default function RemoteCursors() {
   const { data: currentUser } = useQuery({
@@ -148,6 +149,9 @@ export default function RemoteCursors() {
 
   return (
     <>
+      {/* Scroll indicators */}
+      <ScrollIndicators cursors={cursors} />
+      
       {/* Render text selections */}
       {cursors.map((cursor) => {
         if (!cursor.selection) return null;
