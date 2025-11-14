@@ -42,3 +42,6 @@ verify_jwt = true
 [functions.geocode-locations]
 verify_jwt = true
 
+[functions.parse-email-content]
+verify_jwt = true
+

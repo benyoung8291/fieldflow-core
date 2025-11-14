@@ -40,17 +40,24 @@ export function QuickActionsTab({ ticket }: QuickActionsTabProps) {
     try {
       const emailContent = `
 Subject: ${ticket?.subject || "No subject"}
-From: ${senderName} <${senderEmail}>
+From: ${senderName} <${senderEmail || "no-email@example.com"}>
 ${ticket?.customer ? `Customer: ${ticket.customer.name}` : ""}
 
 ${ticket?.description || ""}
       `.trim();
 
+      console.log("Parsing email with content:", emailContent);
+
       const { data, error } = await supabase.functions.invoke("parse-email-content", {
         body: { emailContent, extractionType },
       });
 
-      if (error) throw error;
+      console.log("Parse response:", { data, error });
+
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw error;
+      }
 
       if (data?.success) {
         setParsedData((prev) => ({ ...prev, [extractionType]: data.data }));
@@ -65,7 +72,7 @@ ${ticket?.description || ""}
       console.error("Error parsing email:", error);
       toast({
         title: "Parsing failed",
-        description: "Could not extract data from email. You can still fill the form manually.",
+        description: error instanceof Error ? error.message : "Could not extract data from email. You can still fill the form manually.",
         variant: "destructive",
       });
     } finally {
@@ -130,10 +137,10 @@ ${ticket?.description || ""}
 
   // Extract email content for pre-filling
   const emailContent = ticket?.description || "";
-  const senderEmail = ticket?.contact?.email || ticket?.from_email;
+  const senderEmail = ticket?.contact?.email || ticket?.from_email || "";
   const senderName = ticket?.contact?.first_name && ticket?.contact?.last_name
     ? `${ticket.contact.first_name} ${ticket.contact.last_name}`
-    : ticket?.from_name || "";
+    : ticket?.from_name || "Unknown Sender";
 
   return (
     <div className="flex flex-col h-full">
