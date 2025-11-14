@@ -8,6 +8,7 @@ import { format, startOfDay, endOfDay, startOfMonth } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
 import { ActiveUsers } from "@/components/dashboard/ActiveUsers";
+import { TodaysTasks } from "@/components/dashboard/TodaysTasks";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -272,7 +273,11 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {recentOrders.map((order: any) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 bg-card border rounded-lg">
+                    <div 
+                      key={order.id} 
+                      onClick={() => navigate(`/service-orders/${order.id}`)}
+                      className="flex items-center justify-between p-4 bg-card border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                    >
                       <div>
                         <p className="font-medium">{order.order_number}</p>
                         <p className="text-sm text-muted-foreground">
@@ -308,7 +313,11 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {todaySchedule.map((appointment: any) => (
-                    <div key={appointment.id} className="flex items-center gap-4 p-4 bg-card border rounded-lg">
+                    <div 
+                      key={appointment.id} 
+                      onClick={() => navigate(`/scheduler?appointment=${appointment.id}`)}
+                      className="flex items-center gap-4 p-4 bg-card border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                    >
                       <div className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded">
                         {format(new Date(appointment.start_time), "hh:mm a")}
                       </div>
@@ -324,12 +333,13 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Real-time Activity Feed and Active Users */}
+        {/* Real-time Activity Feed, Today's Tasks and Active Users */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <RecentActivityFeed />
           </div>
-          <div>
+          <div className="space-y-6">
+            <TodaysTasks />
             <ActiveUsers />
           </div>
         </div>

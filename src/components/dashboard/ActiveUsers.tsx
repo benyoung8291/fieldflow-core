@@ -3,13 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users } from "lucide-react";
+import { Users, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface UserPresence {
   user_id: string;
   user_name: string;
   current_page: string;
+  current_path: string;
   online_at: string;
 }
 
@@ -17,8 +20,16 @@ interface PresenceState {
   [key: string]: UserPresence[];
 }
 
+interface GroupedUser {
+  user_id: string;
+  user_name: string;
+  pages: Array<{ page: string; path: string }>;
+  online_at: string;
+}
+
 export function ActiveUsers() {
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
+  const navigate = useNavigate();
 
   // Get current user info
   const { data: currentUser } = useQuery({
@@ -77,6 +88,7 @@ export function ActiveUsers() {
             user_id: currentUser.id,
             user_name: currentUser.name,
             current_page: getPageName(currentPath),
+            current_path: currentPath,
             online_at: new Date().toISOString(),
           });
         }
@@ -89,6 +101,7 @@ export function ActiveUsers() {
         user_id: currentUser.id,
         user_name: currentUser.name,
         current_page: getPageName(currentPath),
+        current_path: currentPath,
         online_at: new Date().toISOString(),
       });
     };
@@ -134,6 +147,31 @@ export function ActiveUsers() {
       .slice(0, 2);
   };
 
+  // Group users by user_id and collect all their pages
+  const groupedUsers: GroupedUser[] = activeUsers.reduce((acc, user) => {
+    const existingUser = acc.find(u => u.user_id === user.user_id);
+    
+    if (existingUser) {
+      // Check if this page is already in the list
+      const pageExists = existingUser.pages.some(p => p.path === user.current_path);
+      if (!pageExists) {
+        existingUser.pages.push({ 
+          page: user.current_page, 
+          path: user.current_path 
+        });
+      }
+    } else {
+      acc.push({
+        user_id: user.user_id,
+        user_name: user.user_name,
+        pages: [{ page: user.current_page, path: user.current_path }],
+        online_at: user.online_at,
+      });
+    }
+    
+    return acc;
+  }, [] as GroupedUser[]);
+
   return (
     <Card className="shadow-md">
       <CardHeader>
@@ -141,18 +179,18 @@ export function ActiveUsers() {
           <Users className="h-5 w-5" />
           Active Users
           <Badge variant="secondary" className="ml-auto">
-            {activeUsers.length} online
+            {groupedUsers.length} online
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {activeUsers.length === 0 ? (
+        {groupedUsers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <p>No active users</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {activeUsers.map((user) => (
+            {groupedUsers.map((user) => (
               <div
                 key={user.user_id}
                 className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
@@ -168,9 +206,24 @@ export function ActiveUsers() {
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.current_page}
-                    </p>
+                    <div className="flex-1 flex flex-wrap items-center gap-1">
+                      {user.pages.map((pageInfo, index) => (
+                        <span key={index} className="inline-flex items-center">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => navigate(pageInfo.path)}
+                            className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
+                          >
+                            {pageInfo.page}
+                            <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
+                          {index < user.pages.length - 1 && (
+                            <span className="text-xs text-muted-foreground mx-1">,</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
