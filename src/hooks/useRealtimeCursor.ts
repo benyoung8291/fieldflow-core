@@ -12,6 +12,16 @@ export interface CursorPosition {
   timestamp: number;
 }
 
+export interface ClickPosition {
+  x: number;
+  y: number;
+  user_id: string;
+  user_name: string;
+  color: string;
+  timestamp: number;
+  id: string;
+}
+
 interface PresenceState {
   [key: string]: CursorPosition[];
 }
@@ -40,6 +50,7 @@ const getUserColor = (userId: string): string => {
 
 export const useRealtimeCursor = (userName: string, userId: string) => {
   const [cursors, setCursors] = useState<CursorPosition[]>([]);
+  const [clicks, setClicks] = useState<ClickPosition[]>([]);
   const [isEnabled, setIsEnabled] = useState(true);
   const location = useLocation();
   const currentPath = location.pathname;
@@ -112,17 +123,59 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
       updateCursor(e.clientX, e.clientY);
     };
 
-    // Add mouse move listener
+    // Mouse move listener
     window.addEventListener("mousemove", handleMouseMove);
+
+    // Click listener
+    const handleClick = (e: MouseEvent) => {
+      if (!isEnabled) return;
+      
+      const clickData = {
+        type: "click" as const,
+        x: e.clientX,
+        y: e.clientY,
+        user_id: userId,
+        user_name: userName,
+        color: getUserColor(userId),
+        page_path: currentPath,
+        timestamp: Date.now(),
+        id: `${userId}-${Date.now()}`,
+      };
+
+      // Broadcast click event
+      channel.send({
+        type: "broadcast",
+        event: "click",
+        payload: clickData,
+      });
+    };
+
+    window.addEventListener("click", handleClick);
+
+    // Listen for click broadcasts
+    const clickChannel = supabase.channel("click-events");
+    clickChannel
+      .on("broadcast", { event: "click" }, ({ payload }) => {
+        if (payload.user_id !== userId && payload.page_path === currentPath) {
+          setClicks((prev) => [...prev, payload]);
+          // Remove click after animation duration
+          setTimeout(() => {
+            setClicks((prev) => prev.filter((c) => c.id !== payload.id));
+          }, 1000);
+        }
+      })
+      .subscribe();
 
     // Update cursor when path changes
     updateCursor(0, 0);
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("click", handleClick);
       supabase.removeChannel(channel);
+      supabase.removeChannel(clickChannel);
     };
   }, [userId, userName, currentPath, isEnabled]);
 
-  return { cursors, isEnabled, setIsEnabled };
+  return { cursors, clicks, isEnabled, setIsEnabled };
 };

@@ -25,13 +25,14 @@ export default function RemoteCursors() {
     },
   });
 
-  const { cursors } = useRealtimeCursor(
+  const { cursors, clicks } = useRealtimeCursor(
     currentUser?.name || "",
     currentUser?.id || ""
   );
 
   return (
     <>
+      {/* Render cursors */}
       {cursors.map((cursor) => (
         <div
           key={cursor.user_id}
@@ -55,6 +56,37 @@ export default function RemoteCursors() {
           >
             {cursor.user_name}
           </div>
+        </div>
+      ))}
+      
+      {/* Render click animations */}
+      {clicks.map((click) => (
+        <div
+          key={click.id}
+          className="fixed pointer-events-none z-[9999]"
+          style={{
+            left: `${click.x}px`,
+            top: `${click.y}px`,
+          }}
+        >
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full animate-ping"
+            style={{
+              width: "40px",
+              height: "40px",
+              backgroundColor: click.color,
+              opacity: 0.6,
+            }}
+          />
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full animate-pulse"
+            style={{
+              width: "20px",
+              height: "20px",
+              backgroundColor: click.color,
+              opacity: 0.8,
+            }}
+          />
         </div>
       ))}
     </>
