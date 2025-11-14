@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, User, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon, Search } from "lucide-react";
+import { LogOut, User, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
@@ -33,8 +33,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const [openPopover, setOpenPopover] = useState<string | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   useEffect(() => {
     localStorage.setItem('expandedMenuFolders', JSON.stringify(Array.from(expandedFolders)));
@@ -283,26 +281,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <MobileHeader />
       ) : (
         <div className="fixed top-0 left-0 right-0 z-30 bg-background border-b border-border">
-          <div className="flex items-center justify-end px-4 py-3 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSearchOpen(true)}
-              className="gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Search</span>
-              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                <span className="text-xs">{isMac ? '⌘' : 'Ctrl'}</span>K
-              </kbd>
-            </Button>
+          <div className="flex items-center px-4 py-3 gap-4">
+            <GlobalSearch />
+            <div className="flex-1" />
             <ViewModeToggle />
             <ThemeToggle />
           </div>
         </div>
       )}
-
-      <GlobalSearch open={searchOpen} setOpen={setSearchOpen} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
