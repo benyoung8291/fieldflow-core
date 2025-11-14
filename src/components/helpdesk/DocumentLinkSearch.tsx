@@ -7,9 +7,10 @@ interface DocumentLinkSearchProps {
   docType: string;
   ticketId: string;
   onLinked: () => void;
+  onCustomerContactLinked?: (customerId?: string, contactId?: string) => void;
 }
 
-export function DocumentLinkSearch({ docType, ticketId, onLinked }: DocumentLinkSearchProps) {
+export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerContactLinked }: DocumentLinkSearchProps) {
   const { toast } = useToast();
 
   const { data: documents, isLoading } = useQuery({
@@ -20,23 +21,23 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked }: DocumentLink
       
       switch (docType) {
         case "service_order":
-          selectFields = "id, order_number";
+          selectFields = "id, order_number, customer_id, contact_id";
           query = supabase.from("service_orders" as any).select(selectFields).order("order_number", { ascending: false });
           break;
         case "appointment":
-          selectFields = "id, title";
+          selectFields = "id, title, customer_id, contact_id";
           query = supabase.from("appointments").select(selectFields).order("created_at", { ascending: false });
           break;
         case "quote":
-          selectFields = "id, quote_number";
+          selectFields = "id, quote_number, customer_id, contact_id";
           query = supabase.from("quotes" as any).select(selectFields).order("quote_number", { ascending: false });
           break;
         case "invoice":
-          selectFields = "id, invoice_number";
+          selectFields = "id, invoice_number, customer_id, contact_id";
           query = supabase.from("invoices" as any).select(selectFields).eq("invoice_type", "AR").order("invoice_number", { ascending: false });
           break;
         case "project":
-          selectFields = "id, name";
+          selectFields = "id, name, customer_id, contact_id";
           query = supabase.from("projects" as any).select(selectFields).order("name");
           break;
         case "task":
@@ -55,6 +56,7 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked }: DocumentLink
 
   const linkMutation = useMutation({
     mutationFn: async (documentId: string) => {
+      // Link the document
       const { error } = await supabase
         .from("helpdesk_linked_documents" as any)
         .insert({
@@ -64,6 +66,17 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked }: DocumentLink
         });
       
       if (error) throw error;
+
+      // Get customer_id and contact_id from the linked document
+      const linkedDoc = documents?.find((doc) => doc.id === documentId);
+      if (linkedDoc && onCustomerContactLinked) {
+        const customerId = (linkedDoc as any).customer_id;
+        const contactId = (linkedDoc as any).contact_id;
+        
+        if (customerId || contactId) {
+          onCustomerContactLinked(customerId, contactId);
+        }
+      }
     },
     onSuccess: () => {
       toast({ title: "Document linked successfully" });
