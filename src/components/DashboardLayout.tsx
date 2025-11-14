@@ -213,40 +213,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
           
-          {/* User dropdown moved here for better visibility */}
-          {!sidebarCollapsed && (
-            <div className="flex-shrink-0 px-6 pb-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1 justify-start">
-                      <User className="h-4 w-4 mr-2" />
-                      Account
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 z-[9999]">
-                    <DropdownMenuItem onClick={() => navigate("/settings")}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        await supabase.auth.signOut();
-                        navigate("/auth");
-                        toast.success("Signed out successfully");
-                      }}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <ThemeToggle />
-              </div>
-            </div>
-          )}
-          
           <nav className="flex-1 flex flex-col gap-2 px-6 overflow-y-auto">
             {renderMenuContent()}
           </nav>
@@ -300,6 +266,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <GlobalSearch />
               <div className="flex-1" />
               <ViewModeToggle />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate("/auth");
+                  toast.success("Signed out successfully");
+                }}
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
               <ThemeToggle />
             </div>
           </div>
