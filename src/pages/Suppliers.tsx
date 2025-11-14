@@ -6,14 +6,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Search, Phone, Mail, MapPin, ArrowUpDown, Filter } from "lucide-react";
 import SupplierDialog from "@/components/suppliers/SupplierDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+type SortField = "name" | "abn" | "created_at" | "payment_terms";
+type SortOrder = "asc" | "desc";
 
 export default function Suppliers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [gstFilter, setGstFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const { data: vendors, isLoading } = useQuery({
     queryKey: ["vendors"],
@@ -40,16 +70,43 @@ export default function Suppliers() {
     },
   });
 
-  const filteredVendors = vendors?.filter((vendor) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      vendor.name?.toLowerCase().includes(query) ||
-      vendor.trading_name?.toLowerCase().includes(query) ||
-      vendor.legal_company_name?.toLowerCase().includes(query) ||
-      vendor.abn?.includes(query) ||
-      vendor.email?.toLowerCase().includes(query)
-    );
-  });
+  const filteredAndSortedVendors = vendors
+    ?.filter((vendor) => {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        vendor.name?.toLowerCase().includes(query) ||
+        vendor.trading_name?.toLowerCase().includes(query) ||
+        vendor.legal_company_name?.toLowerCase().includes(query) ||
+        vendor.abn?.includes(query) ||
+        vendor.email?.toLowerCase().includes(query);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && vendor.is_active) ||
+        (statusFilter === "inactive" && !vendor.is_active);
+
+      const matchesGst =
+        gstFilter === "all" ||
+        (gstFilter === "registered" && vendor.gst_registered) ||
+        (gstFilter === "not_registered" && !vendor.gst_registered);
+
+      return matchesSearch && matchesStatus && matchesGst;
+    })
+    .sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      // Convert to strings for comparison
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
+
+      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const handleCreateVendor = () => {
     setSelectedVendor(null);
@@ -60,6 +117,27 @@ export default function Suppliers() {
     setSelectedVendor(vendor);
     setDialogOpen(true);
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8 data-[state=open]:bg-accent"
+      onClick={() => handleSort(field)}
+    >
+      {children}
+      <ArrowUpDown className="ml-2 h-4 w-4" />
+    </Button>
+  );
 
   return (
     <DashboardLayout>
@@ -76,100 +154,151 @@ export default function Suppliers() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search suppliers by name, ABN, or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search suppliers by name, ABN, or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={gstFilter} onValueChange={setGstFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="GST Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All GST</SelectItem>
+                    <SelectItem value="registered">GST Registered</SelectItem>
+                    <SelectItem value="not_registered">Not Registered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Vendors Grid */}
+        {/* Suppliers Table */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredVendors && filteredVendors.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredVendors.map((vendor) => (
-              <Card
-                key={vendor.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => handleEditVendor(vendor)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">
-                        {vendor.trading_name || vendor.name}
-                      </CardTitle>
-                      {vendor.legal_company_name && vendor.legal_company_name !== vendor.trading_name && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {vendor.legal_company_name}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant={vendor.is_active ? "default" : "secondary"}>
-                      {vendor.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {vendor.abn && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium">ABN:</span>
-                      <span className="text-muted-foreground">{vendor.abn}</span>
-                      {vendor.gst_registered && (
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          GST Registered
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredAndSortedVendors && filteredAndSortedVendors.length > 0 ? (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <SortButton field="name">Supplier Name</SortButton>
+                    </TableHead>
+                    <TableHead>
+                      <SortButton field="abn">ABN</SortButton>
+                    </TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>
+                      <SortButton field="payment_terms">Payment Terms</SortButton>
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedVendors.map((vendor) => (
+                    <TableRow
+                      key={vendor.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleEditVendor(vendor)}
+                    >
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {vendor.trading_name || vendor.name}
+                          </div>
+                          {vendor.legal_company_name && 
+                           vendor.legal_company_name !== vendor.trading_name && (
+                            <div className="text-sm text-muted-foreground">
+                              {vendor.legal_company_name}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {vendor.abn && (
+                            <span className="text-sm">{vendor.abn}</span>
+                          )}
+                          {vendor.gst_registered && (
+                            <Badge variant="outline" className="w-fit text-xs border-green-600 text-green-600">
+                              GST Registered
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 text-sm">
+                          {vendor.email && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Mail className="h-3.5 w-3.5" />
+                              <span className="truncate max-w-[200px]">{vendor.email}</span>
+                            </div>
+                          )}
+                          {vendor.phone && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{vendor.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {(vendor.city || vendor.state) && (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <MapPin className="h-3.5 w-3.5" />
+                            <span>
+                              {[vendor.city, vendor.state].filter(Boolean).join(", ")}
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {vendor.payment_terms && (
+                          <span className="text-sm">{vendor.payment_terms} days</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={vendor.is_active ? "default" : "secondary"}>
+                          {vendor.is_active ? "Active" : "Inactive"}
                         </Badge>
-                      )}
-                    </div>
-                  )}
-                  {vendor.email && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" />
-                      <span className="truncate">{vendor.email}</span>
-                    </div>
-                  )}
-                  {vendor.phone && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>{vendor.phone}</span>
-                    </div>
-                  )}
-                  {(vendor.city || vendor.state) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>
-                        {[vendor.city, vendor.state].filter(Boolean).join(", ")}
-                      </span>
-                    </div>
-                  )}
-                  {vendor.payment_terms && (
-                    <div className="flex items-center gap-2 text-sm pt-2 border-t">
-                      <span className="font-medium">Payment Terms:</span>
-                      <span className="text-muted-foreground">{vendor.payment_terms} days</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
