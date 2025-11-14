@@ -1,21 +1,17 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuTrigger,
-  DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { Users, ArrowRight, Circle, ChevronDown } from "lucide-react";
+import { Users, Circle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 
 interface UserPresence {
   userId: string;
@@ -26,63 +22,6 @@ interface UserPresence {
   currentField?: string;
   lastSeen: string;
   status?: 'available' | 'busy' | 'away';
-}
-
-const avatarColors = [
-  "bg-primary",
-  "bg-success",
-  "bg-warning",
-  "bg-info",
-  "bg-secondary",
-  "bg-destructive",
-];
-
-function getAvatarColor(userId: string): string {
-  const index = userId.charCodeAt(0) % avatarColors.length;
-  return avatarColors[index];
-}
-
-function getInitials(name: string): string {
-  const parts = name.split(" ");
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
-function getPageName(path: string): string {
-  if (!path || path === '/') return 'Dashboard';
-  
-  const pathMap: Record<string, string> = {
-    '/customers': 'Customers',
-    '/scheduler': 'Scheduler',
-    '/service-orders': 'Service Orders',
-    '/invoices': 'Invoices',
-    '/quotes': 'Quotes',
-    '/projects': 'Projects',
-    '/workers': 'Workers',
-    '/helpdesk': 'Help Desk',
-    '/analytics': 'Analytics',
-    '/settings': 'Settings',
-    '/tasks': 'Tasks',
-    '/expenses': 'Expenses',
-    '/leads': 'Leads',
-    '/contacts': 'Contacts',
-  };
-
-  // Check for exact match
-  if (pathMap[path]) return pathMap[path];
-
-  // Check for detail pages
-  if (path.includes('/customers/')) return 'Customer Details';
-  if (path.includes('/scheduler/appointments/')) return 'Appointment Details';
-  if (path.includes('/service-orders/')) return 'Service Order Details';
-  if (path.includes('/invoices/')) return 'Invoice Details';
-  if (path.includes('/quotes/')) return 'Quote Details';
-  if (path.includes('/projects/')) return 'Project Details';
-  if (path.includes('/workers/')) return 'Worker Details';
-
-  return path.split('/').pop()?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
 }
 
 function getStatusColor(status?: 'available' | 'busy' | 'away'): string {
@@ -115,8 +54,9 @@ export default function PresencePanel() {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, UserPresence>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserStatus, setCurrentUserStatus] = useState<'available' | 'busy' | 'away'>('available');
-  const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const activeUserCount = Object.keys(onlineUsers).filter(id => id !== currentUserId).length;
 
   useEffect(() => {
     const initPresence = async () => {
@@ -125,85 +65,54 @@ export default function PresencePanel() {
 
       setCurrentUserId(user.id);
 
-      // Fetch current user's status
+      // Fetch user's current status
       const { data: profile } = await supabase
         .from('profiles')
         .select('status')
         .eq('id', user.id)
         .single();
 
-      // @ts-ignore - Types will update after migration
-      const status = (profile?.status || 'available') as 'available' | 'busy' | 'away';
-      setCurrentUserStatus(status);
+      if (profile?.status) {
+        setCurrentUserStatus(profile.status as 'available' | 'busy' | 'away');
+      }
 
-      const presenceChannel = supabase.channel('presence-panel', {
-        config: {
-          presence: {
-            key: user.id,
-          },
-        },
-      });
+      const presenceChannel = supabase.channel('global-presence');
 
       presenceChannel
-        .on("presence", { event: "sync" }, () => {
+        .on('presence', { event: 'sync' }, () => {
           const state = presenceChannel.presenceState();
           const users: Record<string, UserPresence> = {};
           
-          Object.keys(state).forEach((key) => {
-            const presences = state[key] as any[];
-            if (presences.length > 0 && presences[0]) {
-              const presence = presences[0];
-              if (presence.userId && presence.userName && presence.userEmail) {
-                users[key] = presence as UserPresence;
-              }
+          Object.entries(state).forEach(([key, value]) => {
+            if (Array.isArray(value) && value[0]) {
+              users[key] = value[0] as UserPresence;
             }
           });
           
           setOnlineUsers(users);
         })
-        .subscribe(async (status) => {
-          if (status === "SUBSCRIBED") {
-            await presenceChannel.track({
-              userId: user.id,
-              userName: user.user_metadata?.first_name 
-                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim()
-                : user.email?.split("@")[0] || "Anonymous",
-              userEmail: user.email || "",
-              userAvatar: user.user_metadata?.avatar_url,
-              lastSeen: new Date().toISOString(),
-              currentPage: window.location.pathname,
-              // @ts-ignore - Types will update after migration
-              status: currentUserStatus,
-            });
-          }
-        });
-
-      // Update presence on route change
-      const updatePresence = () => {
-        presenceChannel.track({
-          userId: user.id,
-          userName: user.user_metadata?.first_name 
-            ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim()
-            : user.email?.split("@")[0] || "Anonymous",
-          userEmail: user.email || "",
-          userAvatar: user.user_metadata?.avatar_url,
-          lastSeen: new Date().toISOString(),
-          currentPage: window.location.pathname,
-          // @ts-ignore - Types will update after migration
-          status: currentUserStatus,
-        });
-      };
-
-      window.addEventListener('popstate', updatePresence);
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          setOnlineUsers(prev => ({
+            ...prev,
+            [key]: newPresences[0] as UserPresence
+          }));
+        })
+        .on('presence', { event: 'leave' }, ({ key }) => {
+          setOnlineUsers(prev => {
+            const updated = { ...prev };
+            delete updated[key];
+            return updated;
+          });
+        })
+        .subscribe();
 
       return () => {
         presenceChannel.unsubscribe();
-        window.removeEventListener('popstate', updatePresence);
       };
     };
 
     initPresence();
-  }, [currentUserStatus]);
+  }, []);
 
   const handleStatusChange = async (newStatus: 'available' | 'busy' | 'away') => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -226,133 +135,55 @@ export default function PresencePanel() {
     }
   };
 
-  const otherUsers = Object.entries(onlineUsers)
-    .filter(([userId]) => userId !== currentUserId)
-    .map(([_, user]) => user);
-
-  const handleFollowUser = (user: UserPresence) => {
-    if (user.currentPage) {
-      navigate(user.currentPage);
-      setOpen(false);
-    }
-  };
-
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="relative gap-2">
-          <div className="relative">
+    <div className="flex items-center gap-2">
+      {/* Active Users Count & Sidebar Toggle */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="sm" className="gap-2">
             <Users className="h-4 w-4" />
-            <span className={cn(
-              "absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full ring-1 ring-background",
-              getStatusColor(currentUserStatus)
-            )} />
+            <span className="hidden sm:inline">Team</span>
+            {activeUserCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                {activeUserCount}
+              </span>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-full sm:w-[500px] p-0">
+          <SheetHeader className="px-6 py-4 border-b">
+            <SheetTitle>Team Activity</SheetTitle>
+          </SheetHeader>
+          <div className="h-[calc(100vh-73px)]">
+            <ActivityAndUsers />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-1 cursor-pointer">
-                <span className="hidden sm:inline">{getStatusLabel(currentUserStatus)}</span>
-                <ChevronDown className="h-3 w-3" />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="z-[9999]">
-              <DropdownMenuItem onClick={() => handleStatusChange('available')}>
-                <Circle className={cn("h-3 w-3 mr-2", getStatusColor('available'))} />
-                Available
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusChange('busy')}>
-                <Circle className={cn("h-3 w-3 mr-2", getStatusColor('busy'))} />
-                Busy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusChange('away')}>
-                <Circle className={cn("h-3 w-3 mr-2", getStatusColor('away'))} />
-                Away
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {otherUsers.length > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center p-1">
-              {otherUsers.length}
-            </Badge>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Active Users ({otherUsers.length})
-          </SheetTitle>
-        </SheetHeader>
-        <ScrollArea className="h-[calc(100vh-100px)] mt-6">
-          {otherUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-sm text-muted-foreground">No other users are currently active</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {otherUsers.map((user) => (
-                <div
-                  key={user.userId}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="relative">
-                    <Avatar className={cn(
-                      "h-10 w-10 border-2 border-background",
-                      !user.userAvatar && getAvatarColor(user.userId)
-                    )}>
-                      {user.userAvatar ? (
-                        <AvatarImage src={user.userAvatar} alt={user.userName} />
-                      ) : (
-                        <AvatarFallback className="text-sm text-white">
-                          {getInitials(user.userName)}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <span className={cn(
-                      "absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full ring-2 ring-background",
-                      getStatusColor(user.status)
-                    )} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate">{user.userName}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {getStatusLabel(user.status)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Circle className={cn("h-2 w-2", getStatusColor(user.status), "fill-current")} />
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.currentPage ? getPageName(user.currentPage) : 'Unknown'}
-                      </p>
-                    </div>
-                    {user.currentField && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Editing: {user.currentField}
-                      </p>
-                    )}
-                  </div>
+        </SheetContent>
+      </Sheet>
 
-                  {user.currentPage && user.currentPage !== window.location.pathname && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleFollowUser(user)}
-                      className="shrink-0"
-                    >
-                      Follow
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+      {/* Status Dropdown - Separate */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <Circle className={cn("h-2 w-2 fill-current", getStatusColor(currentUserStatus))} />
+            <span className="hidden sm:inline">{getStatusLabel(currentUserStatus)}</span>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => handleStatusChange('available')}>
+            <Circle className="mr-2 h-2 w-2 fill-success bg-success" />
+            Available
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleStatusChange('busy')}>
+            <Circle className="mr-2 h-2 w-2 fill-destructive bg-destructive" />
+            Busy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleStatusChange('away')}>
+            <Circle className="mr-2 h-2 w-2 fill-warning bg-warning" />
+            Away
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
