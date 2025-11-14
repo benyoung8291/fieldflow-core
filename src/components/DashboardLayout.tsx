@@ -303,7 +303,7 @@ export default function DashboardLayout({ children, showRightSidebar = false }: 
 
           {/* Main Content */}
           <main className="flex-1 overflow-hidden">
-            <div className="px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto w-full">
+            <div className="px-3 sm:px-6 lg:px-8 h-full overflow-y-auto w-full">
               {children}
             </div>
           </main>
