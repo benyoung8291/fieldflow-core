@@ -7,9 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LinkDocumentDialog } from "./LinkDocumentDialog";
 import { LinkedDocumentDetailsDialog } from "./LinkedDocumentDetailsDialog";
+import { QuickActionsTab } from "./QuickActionsTab";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 interface LinkedDocumentsSidebarProps {
