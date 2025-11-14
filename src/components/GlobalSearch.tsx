@@ -695,18 +695,17 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     return new Fuse(allResults, {
       keys: [
         { name: "title", weight: 2 },
-        { name: "subtitle", weight: 2 }, // Increased weight for customer names
-        { name: "type", weight: 0.5 },
+        { name: "subtitle", weight: 2 },
       ],
-      threshold: 0.6, // Very lenient for short queries like "ISS" or "ANZ"
-      distance: 300,
-      minMatchCharLength: 1, // Allow matching single characters
+      threshold: 0.4, // Balanced matching for whole words
+      distance: 100,
+      minMatchCharLength: 2, // Require at least 2 characters to match (allows "AN" to match "ANZ")
       includeScore: true,
       includeMatches: true, // Include match indices for highlighting
-      ignoreLocation: true, // Don't penalize matches based on position
-      useExtendedSearch: true,
+      ignoreLocation: false, // Consider match position
+      useExtendedSearch: false,
       shouldSort: true, // Enable sorting by score
-      findAllMatches: true, // Find all matches, not just the first
+      findAllMatches: false, // Stop at first good match for performance
     });
   }, [allResults]);
 
@@ -876,7 +875,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.pages.length > 0 && (
+            {searchQuery.trim() && groupedResults.pages && groupedResults.pages.length > 0 && (
               <>
                 <CommandGroup heading="Pages">
                   {groupedResults.pages.map((item) => {
@@ -897,7 +896,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.customers.length > 0 && (
+            {searchQuery.trim() && groupedResults.customers && groupedResults.customers.length > 0 && (
               <>
                 <CommandGroup heading={`Customers (${groupedResults.customers.length})`}>
                   {groupedResults.customers.slice(0, 8).map((item) => {
@@ -927,7 +926,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.locations.length > 0 && (
+            {searchQuery.trim() && groupedResults.locations && groupedResults.locations.length > 0 && (
               <>
                 <CommandGroup heading={`Locations (${groupedResults.locations.length})`}>
                   {groupedResults.locations.slice(0, 8).map((item) => {
@@ -957,7 +956,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.quotes.length > 0 && (
+            {searchQuery.trim() && groupedResults.quotes && groupedResults.quotes.length > 0 && (
               <>
                 <CommandGroup heading={`Quotes (${groupedResults.quotes.length})`}>
                   {groupedResults.quotes.slice(0, 8).map((item) => {
@@ -987,7 +986,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.invoices.length > 0 && (
+            {searchQuery.trim() && groupedResults.invoices && groupedResults.invoices.length > 0 && (
               <>
                 <CommandGroup heading={`Invoices (${groupedResults.invoices.length})`}>
                   {groupedResults.invoices.slice(0, 8).map((item) => {
@@ -1017,7 +1016,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.projects.length > 0 && (
+            {searchQuery.trim() && groupedResults.projects && groupedResults.projects.length > 0 && (
               <>
                 <CommandGroup heading={`Projects (${groupedResults.projects.length})`}>
                   {groupedResults.projects.slice(0, 8).map((item) => {
@@ -1047,7 +1046,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults["service-orders"].length > 0 && (
+            {searchQuery.trim() && groupedResults["service-orders"] && groupedResults["service-orders"].length > 0 && (
               <>
                 <CommandGroup heading={`Service Orders (${groupedResults["service-orders"].length})`}>
                   {groupedResults["service-orders"].slice(0, 8).map((item) => {
@@ -1078,7 +1077,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
             )}
 
 
-            {groupedResults.appointments.length > 0 && (
+            {searchQuery.trim() && groupedResults.appointments && groupedResults.appointments.length > 0 && (
               <>
                 <CommandGroup heading={`Appointments (${groupedResults.appointments.length})`}>
                   {groupedResults.appointments.slice(0, 5).map((item) => {
@@ -1108,7 +1107,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults["purchase-orders"].length > 0 && (
+            {searchQuery.trim() && groupedResults["purchase-orders"] && groupedResults["purchase-orders"].length > 0 && (
               <>
                 <CommandGroup heading={`Purchase Orders (${groupedResults["purchase-orders"].length})`}>
                   {groupedResults["purchase-orders"].slice(0, 5).map((item) => {
@@ -1138,7 +1137,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.leads.length > 0 && (
+            {searchQuery.trim() && groupedResults.leads && groupedResults.leads.length > 0 && (
               <>
                 <CommandGroup heading={`Leads (${groupedResults.leads.length})`}>
                   {groupedResults.leads.slice(0, 5).map((item) => {
@@ -1168,7 +1167,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.contacts.length > 0 && (
+            {searchQuery.trim() && groupedResults.contacts && groupedResults.contacts.length > 0 && (
               <>
                 <CommandGroup heading={`Contacts (${groupedResults.contacts.length})`}>
                   {groupedResults.contacts.slice(0, 5).map((item) => {
@@ -1198,7 +1197,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.suppliers.length > 0 && (
+            {searchQuery.trim() && groupedResults.suppliers && groupedResults.suppliers.length > 0 && (
               <>
                 <CommandGroup heading={`Suppliers (${groupedResults.suppliers.length})`}>
                   {groupedResults.suppliers.slice(0, 5).map((item) => {
@@ -1228,7 +1227,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.tasks.length > 0 && (
+            {searchQuery.trim() && groupedResults.tasks && groupedResults.tasks.length > 0 && (
               <>
                 <CommandGroup heading={`Tasks (${groupedResults.tasks.length})`}>
                   {groupedResults.tasks.slice(0, 5).map((item) => {
@@ -1258,7 +1257,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.contracts.length > 0 && (
+            {searchQuery.trim() && groupedResults.contracts && groupedResults.contracts.length > 0 && (
               <>
                 <CommandGroup heading={`Contracts (${groupedResults.contracts.length})`}>
                   {groupedResults.contracts.slice(0, 5).map((item) => {
@@ -1288,7 +1287,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.helpdesk.length > 0 && (
+            {searchQuery.trim() && groupedResults.helpdesk && groupedResults.helpdesk.length > 0 && (
               <CommandGroup heading={`Help Desk (${groupedResults.helpdesk.length})`}>
                 {groupedResults.helpdesk.slice(0, 5).map((item) => {
                   const Icon = item.icon;
