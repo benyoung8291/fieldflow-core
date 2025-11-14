@@ -172,7 +172,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
       quantity: 1,
       unit_price: 0,
       line_total: 0,
-      is_gst_free: !canApplyGST(selectedVendor),
+      is_gst_free: !canApplyGST(selectedSupplier),
     };
     setLineItems([...lineItems, newItem]);
   };
