@@ -465,7 +465,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       if (checklistError) throw checklistError;
 
-      // Create ONE message that references the task
+      // Create ONE message that references the task with created_by set
       const { error: messageError } = await supabase
         .from("helpdesk_messages")
         .insert({
@@ -474,6 +474,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           body: "Checklist",
           tenant_id: profile.tenant_id,
           task_id: taskData.id,
+          created_by: user.id,
         });
       
       if (messageError) throw messageError;
@@ -735,7 +736,11 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                                   </span>
                                 )}
                                 <span className="font-medium text-xs">
-                                  {message.sender_name || message.from_name || message.created_user?.first_name + " " + message.created_user?.last_name || "Unknown"}
+                                  {message.sender_name || 
+                                   message.from_name || 
+                                   (message.created_user?.first_name && message.created_user?.last_name 
+                                     ? `${message.created_user.first_name} ${message.created_user.last_name}` 
+                                     : message.created_user?.first_name || message.created_user?.last_name || "System")}
                                 </span>
                                 {(message.sender_email || message.from_email) && (
                                   <span className="text-xs text-muted-foreground">&lt;{message.sender_email || message.from_email}&gt;</span>
