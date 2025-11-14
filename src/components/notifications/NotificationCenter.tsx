@@ -64,6 +64,7 @@ export default function NotificationCenter() {
     queryFn: async () => {
       // @ts-ignore - Types will update after migration
       const { data, error } = await supabase
+        // @ts-ignore - Types will update after migration
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
@@ -76,6 +77,7 @@ export default function NotificationCenter() {
 
   // Subscribe to realtime notifications
   useEffect(() => {
+    // @ts-ignore - Types will update after migration
     const channel = supabase
       .channel('notifications')
       .on(
@@ -103,6 +105,7 @@ export default function NotificationCenter() {
     mutationFn: async (notificationId: string) => {
       // @ts-ignore - Types will update after migration
       const { error } = await supabase
+        // @ts-ignore - Types will update after migration
         .from('notifications')
         .update({ 
           is_read: true, 
@@ -125,6 +128,7 @@ export default function NotificationCenter() {
 
       // @ts-ignore - Types will update after migration
       const { error } = await supabase
+        // @ts-ignore - Types will update after migration
         .from('notifications')
         .update({ 
           is_read: true, 
@@ -146,6 +150,7 @@ export default function NotificationCenter() {
     mutationFn: async (notificationId: string) => {
       // @ts-ignore - Types will update after migration
       const { error } = await supabase
+        // @ts-ignore - Types will update after migration
         .from('notifications')
         .delete()
         .eq('id', notificationId);
