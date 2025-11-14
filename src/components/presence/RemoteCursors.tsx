@@ -34,17 +34,50 @@ export default function RemoteCursors() {
     <>
       {/* Render cursors */}
       {cursors.map((cursor) => {
-        // Convert percentage to pixels based on current viewport
-        const xPixels = (cursor.x / 100) * window.innerWidth;
-        const yPixels = (cursor.y / 100) * window.innerHeight;
+        // Get current scroll position
+        const currentScrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Get document dimensions
+        const body = document.body;
+        const html = document.documentElement;
+        const docWidth = Math.max(
+          body.scrollWidth, body.offsetWidth,
+          html.clientWidth, html.scrollWidth, html.offsetWidth
+        );
+        const docHeight = Math.max(
+          body.scrollHeight, body.offsetHeight,
+          html.clientHeight, html.scrollHeight, html.offsetHeight
+        );
+        
+        // Convert percentage back to document coordinates
+        const docX = (cursor.x / 100) * docWidth;
+        const docY = (cursor.y / 100) * docHeight;
+        
+        // Convert to viewport coordinates (accounting for scroll)
+        const viewportX = docX - currentScrollX;
+        const viewportY = docY - currentScrollY;
+        
+        // Account for zoom difference if available
+        const currentZoom = window.devicePixelRatio || 1;
+        const zoomRatio = cursor.zoom ? currentZoom / cursor.zoom : 1;
+        
+        const finalX = viewportX * zoomRatio;
+        const finalY = viewportY * zoomRatio;
+        
+        // Only render if cursor is in viewport
+        const isInViewport = finalX >= -50 && finalX <= window.innerWidth + 50 &&
+                            finalY >= -50 && finalY <= window.innerHeight + 50;
+        
+        if (!isInViewport) return null;
         
         return (
           <div
             key={cursor.user_id}
             className="fixed pointer-events-none z-[9999] transition-all duration-100 ease-out"
             style={{
-              left: `${xPixels}px`,
-              top: `${yPixels}px`,
+              left: `${finalX}px`,
+              top: `${finalY}px`,
               transform: "translate(-2px, -2px)",
             }}
           >
