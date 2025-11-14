@@ -135,6 +135,8 @@ export default function WorkflowBuilder() {
           label: node.action_type || node.node_type,
           actionType: node.action_type,
           config: node.config,
+          triggerType: node.node_type === "trigger" ? workflow.trigger_type : undefined,
+          onTriggerClick: node.node_type === "trigger" ? handleTriggerClick : undefined,
         },
       })) || [];
 
@@ -164,7 +166,11 @@ export default function WorkflowBuilder() {
           id: "trigger-1",
           type: "trigger",
           position: { x: 250, y: 50 },
-          data: { label: "When Quote Approved", triggerType: "quote_approved" },
+          data: { 
+            label: "When Quote Approved", 
+            triggerType: triggerType,
+            onTriggerClick: handleTriggerClick 
+          },
         },
       ]);
       setEdges([]);
@@ -181,7 +187,10 @@ export default function WorkflowBuilder() {
       id: node.id,
       type: node.type,
       position: node.position,
-      data: node.data,
+      data: {
+        ...node.data,
+        onTriggerClick: node.type === "trigger" ? handleTriggerClick : undefined,
+      },
     }));
 
     const templateEdges: Edge[] = template.template_data.connections.map((conn: any) => ({
@@ -246,15 +255,31 @@ export default function WorkflowBuilder() {
   const handleTriggerChange = (newTriggerType: string) => {
     setTriggerType(newTriggerType);
     setShowTriggerDialog(false);
-    setSampleData(getSampleDataForTrigger(newTriggerType as any));
+    
+    // Update the trigger node
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.type === "trigger"
+          ? { ...node, data: { ...node.data, triggerType: newTriggerType } }
+          : node
+      )
+    );
+    
+    // Load sample data for new trigger
+    getSampleDataForTrigger(newTriggerType as any).then((data) => {
+      setSampleData(data);
+    });
   };
 
-  const handleLoadSampleData = () => {
+  const handleLoadSampleData = async () => {
     if (triggerType) {
-      setSampleData(getSampleDataForTrigger(triggerType as any));
+      const data = await getSampleDataForTrigger(triggerType as any);
+      setSampleData(data);
       toastHook({
-        title: "Sample data loaded",
-        description: "You can now see example data from this trigger",
+        title: data ? "Sample data loaded" : "No data available",
+        description: data 
+          ? "You can now see example data from this trigger" 
+          : "Create some records in your system to see sample data",
       });
     }
   };

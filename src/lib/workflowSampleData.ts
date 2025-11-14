@@ -1,138 +1,250 @@
 import { WorkflowTriggerType } from "./workflowTriggers";
+import { supabase } from "@/integrations/supabase/client";
 
-export function getSampleDataForTrigger(triggerType: WorkflowTriggerType): Record<string, any> {
-  switch (triggerType) {
-    case "quote_created":
-      return {
-        sourceType: "quote",
-        sourceId: "550e8400-e29b-41d4-a716-446655440000",
-        quoteId: "550e8400-e29b-41d4-a716-446655440000",
-        quoteNumber: "Q-2024-001",
-        customerId: "650e8400-e29b-41d4-a716-446655440000",
-        customerName: "Acme Corporation",
-        status: "draft",
-        total_amount: 15750.00,
-        created_by: "750e8400-e29b-41d4-a716-446655440000",
-        createdByName: "John Smith",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-        createdAt: new Date().toISOString(),
-      };
+export async function getSampleDataForTrigger(triggerType: WorkflowTriggerType): Promise<Record<string, any> | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user?.id)
+    .maybeSingle();
 
-    case "ticket_created":
-      return {
-        sourceType: "helpdesk_ticket",
-        sourceId: "450e8400-e29b-41d4-a716-446655440000",
-        ticketId: "450e8400-e29b-41d4-a716-446655440000",
-        ticketNumber: "TKT-2024-123",
-        subject: "Unable to access dashboard",
-        status: "open",
-        priority: "high",
-        customerId: "650e8400-e29b-41d4-a716-446655440000",
-        customerName: "Acme Corporation",
-        contactId: "350e8400-e29b-41d4-a716-446655440000",
-        contactName: "Jane Doe",
-        contactEmail: "jane.doe@acme.com",
-        assigned_to: "750e8400-e29b-41d4-a716-446655440000",
-        assignedToName: "Support Agent",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-        createdAt: new Date().toISOString(),
-      };
+  if (!profile?.tenant_id) return null;
 
-    case "ticket_status_changed":
-      return {
-        sourceType: "helpdesk_ticket",
-        sourceId: "450e8400-e29b-41d4-a716-446655440000",
-        ticketId: "450e8400-e29b-41d4-a716-446655440000",
-        ticketNumber: "TKT-2024-123",
-        oldStatus: "open",
-        newStatus: "in_progress",
-        customerId: "650e8400-e29b-41d4-a716-446655440000",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-      };
+  const tenantId = profile.tenant_id;
 
-    case "invoice_sent":
-      return {
-        sourceType: "invoice",
-        sourceId: "250e8400-e29b-41d4-a716-446655440000",
-        invoiceId: "250e8400-e29b-41d4-a716-446655440000",
-        invoiceNumber: "INV-2024-456",
-        customerId: "650e8400-e29b-41d4-a716-446655440000",
-        customerName: "Acme Corporation",
-        totalAmount: 25000.00,
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        projectId: "150e8400-e29b-41d4-a716-446655440000",
-        projectName: "Office Renovation",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-      };
+  try {
+    switch (triggerType) {
+      case "quote_created":
+      case "quote_approved":
+      case "quote_sent": {
+        const { data } = await supabase
+          .from("quotes")
+          .select("*, customers(name)")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-    case "project_created":
-      return {
-        sourceType: "project",
-        sourceId: "150e8400-e29b-41d4-a716-446655440000",
-        projectId: "150e8400-e29b-41d4-a716-446655440000",
-        projectName: "Office Renovation",
-        projectNumber: "PRJ-2024-789",
-        customerId: "650e8400-e29b-41d4-a716-446655440000",
-        customerName: "Acme Corporation",
-        budget: 50000.00,
-        startDate: new Date().toISOString(),
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-      };
+        if (!data) return null;
 
-    case "purchase_order_created":
-      return {
-        sourceType: "purchase_order",
-        sourceId: "950e8400-e29b-41d4-a716-446655440000",
-        purchaseOrderId: "950e8400-e29b-41d4-a716-446655440000",
-        poNumber: "PO-2024-321",
-        supplierId: "1050e8400-e29b-41d4-a716-446655440000",
-        supplierName: "Materials Supplier Inc",
-        totalAmount: 8500.00,
-        status: "pending",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-      };
+        return {
+          sourceType: "quote",
+          sourceId: data.id,
+          quoteId: data.id,
+          quoteNumber: data.quote_number,
+          customerId: data.customer_id,
+          customerName: data.customers?.name,
+          status: data.status,
+          total_amount: data.total_amount,
+          created_by: data.created_by,
+          userId: user?.id,
+          tenantId: tenantId,
+          createdAt: data.created_at,
+        };
+      }
 
-    case "email_received":
-      return {
-        sourceType: "helpdesk_message",
-        sourceId: "1150e8400-e29b-41d4-a716-446655440000",
-        emailMessageId: "1150e8400-e29b-41d4-a716-446655440000",
-        ticketId: "450e8400-e29b-41d4-a716-446655440000",
-        fromEmail: "customer@acme.com",
-        fromName: "Jane Doe",
-        subject: "Re: Unable to access dashboard",
-        body: "I'm still having issues accessing the system...",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-      };
+      case "ticket_created":
+      case "ticket_assigned":
+      case "ticket_status_changed":
+      case "ticket_resolved":
+      case "ticket_reopened": {
+        const { data } = await supabase
+          .from("helpdesk_tickets")
+          .select("*, customers(name), contacts(first_name, last_name, email)")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-    case "expense_submitted":
-      return {
-        sourceType: "expense",
-        sourceId: "1250e8400-e29b-41d4-a716-446655440000",
-        expenseId: "1250e8400-e29b-41d4-a716-446655440000",
-        amount: 450.00,
-        category: "Travel",
-        description: "Client meeting travel expenses",
-        submittedBy: "750e8400-e29b-41d4-a716-446655440000",
-        submittedByName: "John Smith",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-      };
+        if (!data) return null;
 
-    default:
-      return {
-        sourceType: "generic",
-        sourceId: "000e8400-e29b-41d4-a716-446655440000",
-        userId: "750e8400-e29b-41d4-a716-446655440000",
-        tenantId: "850e8400-e29b-41d4-a716-446655440000",
-        timestamp: new Date().toISOString(),
-      };
+        const contactName = data.contacts 
+          ? `${data.contacts.first_name || ''} ${data.contacts.last_name || ''}`.trim()
+          : null;
+
+        return {
+          sourceType: "helpdesk_ticket",
+          sourceId: data.id,
+          ticketId: data.id,
+          ticketNumber: data.ticket_number,
+          subject: data.subject,
+          status: data.status,
+          priority: data.priority,
+          customerId: data.customer_id,
+          customerName: data.customers?.name,
+          contactId: data.contact_id,
+          contactName: contactName,
+          contactEmail: data.contacts?.email,
+          assigned_to: data.assigned_to,
+          userId: user?.id,
+          tenantId: tenantId,
+          createdAt: data.created_at,
+        };
+      }
+
+      case "invoice_sent": {
+        const { data } = await supabase
+          .from("invoices")
+          .select("*, customers(name)")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!data) return null;
+
+        return {
+          sourceType: "invoice",
+          sourceId: data.id,
+          invoiceId: data.id,
+          invoiceNumber: data.invoice_number,
+          customerId: data.customer_id,
+          customerName: data.customers?.name,
+          totalAmount: data.total_amount,
+          dueDate: data.due_date,
+          userId: user?.id,
+          tenantId: tenantId,
+        };
+      }
+
+      case "project_created": {
+        const { data } = await supabase
+          .from("projects")
+          .select("*, customers(name)")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!data) return null;
+
+        return {
+          sourceType: "project",
+          sourceId: data.id,
+          projectId: data.id,
+          projectName: data.name,
+          customerId: data.customer_id,
+          customerName: data.customers?.name,
+          budget: data.budget,
+          startDate: data.start_date,
+          userId: user?.id,
+          tenantId: tenantId,
+        };
+      }
+
+      case "purchase_order_created":
+      case "purchase_order_approved": {
+        const { data } = await supabase
+          .from("purchase_orders")
+          .select("*, suppliers(name)")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!data) return null;
+
+        return {
+          sourceType: "purchase_order",
+          sourceId: data.id,
+          purchaseOrderId: data.id,
+          poNumber: data.po_number,
+          supplierId: data.supplier_id,
+          supplierName: data.suppliers?.name,
+          totalAmount: data.total_amount,
+          status: data.status,
+          userId: user?.id,
+          tenantId: tenantId,
+        };
+      }
+
+      case "email_received":
+      case "email_sent": {
+        const { data } = await supabase
+          .from("helpdesk_messages")
+          .select("*, helpdesk_tickets(id, ticket_number)")
+          .eq("tenant_id", tenantId)
+          .eq("message_type", "email")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!data) return null;
+
+        return {
+          sourceType: "helpdesk_message",
+          sourceId: data.id,
+          emailMessageId: data.id,
+          ticketId: data.ticket_id,
+          ticketNumber: data.helpdesk_tickets?.ticket_number,
+          fromEmail: data.from_email,
+          subject: data.subject,
+          body: data.body,
+          userId: user?.id,
+          tenantId: tenantId,
+        };
+      }
+
+      case "expense_submitted":
+      case "expense_approved": {
+        const { data } = await supabase
+          .from("expenses")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!data) return null;
+
+        return {
+          sourceType: "expense",
+          sourceId: data.id,
+          expenseId: data.id,
+          amount: data.amount,
+          description: data.description,
+          submittedBy: data.submitted_by,
+          userId: user?.id,
+          tenantId: tenantId,
+        };
+      }
+
+      case "service_order_completed": {
+        const { data } = await supabase
+          .from("service_orders")
+          .select("*, customers(name)")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!data) return null;
+
+        return {
+          sourceType: "service_order",
+          sourceId: data.id,
+          serviceOrderId: data.id,
+          title: data.title,
+          customerId: data.customer_id,
+          customerName: data.customers?.name,
+          status: data.status,
+          userId: user?.id,
+          tenantId: tenantId,
+        };
+      }
+
+      default:
+        return {
+          sourceType: "generic",
+          sourceId: "sample-id",
+          userId: user?.id,
+          tenantId: tenantId,
+          timestamp: new Date().toISOString(),
+        };
+    }
+  } catch (error) {
+    console.error("Error loading sample data:", error);
+    return null;
   }
 }
