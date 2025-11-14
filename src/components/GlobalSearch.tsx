@@ -153,7 +153,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: quotes } = useQuery({
-    queryKey: ["search-quotes"],
+    queryKey: ["global-search-quotes-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
@@ -181,7 +181,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: invoices } = useQuery({
-    queryKey: ["search-invoices"],
+    queryKey: ["global-search-invoices-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
@@ -209,7 +209,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: projects } = useQuery({
-    queryKey: ["search-projects"],
+    queryKey: ["global-search-projects-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
@@ -237,7 +237,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: serviceOrders } = useQuery({
-    queryKey: ["search-service-orders"],
+    queryKey: ["global-search-service-orders-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_orders")
@@ -265,7 +265,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: locations } = useQuery({
-    queryKey: ["search-locations"],
+    queryKey: ["global-search-locations-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("customer_locations")
@@ -292,7 +292,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: appointments } = useQuery({
-    queryKey: ["search-appointments"],
+    queryKey: ["global-search-appointments-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
@@ -345,7 +345,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: purchaseOrders } = useQuery({
-    queryKey: ["search-purchase-orders"],
+    queryKey: ["global-search-purchase-orders-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
@@ -373,7 +373,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: leads } = useQuery({
-    queryKey: ["search-leads"],
+    queryKey: ["global-search-leads-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leads")
@@ -425,7 +425,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: contracts } = useQuery({
-    queryKey: ["search-contracts"],
+    queryKey: ["global-search-contracts-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_contracts")
