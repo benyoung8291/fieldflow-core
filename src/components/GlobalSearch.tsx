@@ -4,14 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Fuse from "fuse.js";
 import {
-  CommandDialog,
+  Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Search } from "lucide-react";
 import {
   Home,
   Users,
@@ -63,11 +65,15 @@ interface GlobalSearchProps {
 export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: GlobalSearchProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const navigate = useNavigate();
 
   // Use external state if provided, otherwise use internal state
   const open = externalOpen ?? internalOpen;
   const setOpen = externalSetOpen ?? setInternalOpen;
+
+  // Open dropdown when focused or has content
+  const showDropdown = isFocused || searchQuery.trim().length > 0;
 
   // Load access history and recent searches from localStorage
   const [accessHistory, setAccessHistory] = useState<Record<string, AccessHistory>>(() => {
@@ -98,12 +104,12 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
   }, [recentSearches]);
 
-  // Keyboard shortcut
+  // Keyboard shortcut to focus search
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        document.getElementById("global-search-input")?.focus();
       }
     };
 
@@ -311,8 +317,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       });
     }
 
-    setOpen(false);
     setSearchQuery("");
+    setIsFocused(false);
     navigate(result.route);
   };
 
@@ -381,238 +387,254 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   }, [filteredResults]);
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput 
-        placeholder="Search pages and documents..." 
-        value={searchQuery}
-        onValueChange={setSearchQuery}
-      />
-      <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+    <Popover open={showDropdown} onOpenChange={setIsFocused}>
+      <PopoverTrigger asChild>
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="global-search-input"
+            placeholder="Search pages and documents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            className="pl-9 pr-4"
+          />
+        </div>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-[var(--radix-popover-trigger-width)] p-0" 
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <Command shouldFilter={false}>
+          <CommandList className="max-h-[400px]">
+            <CommandEmpty>No results found.</CommandEmpty>
 
-        {!searchQuery.trim() && recentSearches.length > 0 && (
-          <>
-            <CommandGroup heading="Recent Searches">
-              {recentSearches.slice(0, 5).map((search, index) => (
-                <CommandItem
-                  key={`recent-${index}`}
-                  value={search.query}
-                  onSelect={() => setSearchQuery(search.query)}
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  <span>{search.query}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {!searchQuery.trim() && recentSearches.length > 0 && (
+              <>
+                <CommandGroup heading="Recent Searches">
+                  {recentSearches.slice(0, 5).map((search, index) => (
+                    <CommandItem
+                      key={`recent-${index}`}
+                      value={search.query}
+                      onSelect={() => setSearchQuery(search.query)}
+                    >
+                      <Clock className="mr-2 h-4 w-4" />
+                      <span>{search.query}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {!searchQuery.trim() && frequentlyAccessed.length > 0 && (
-          <>
-            <CommandGroup heading="Frequently Accessed">
-              {frequentlyAccessed.map((item) => {
-                const Icon = item.icon;
-                const accessInfo = accessHistory[item.id];
-                return (
-                  <CommandItem
-                    key={`frequent-${item.id}`}
-                    value={`${item.title} ${item.subtitle || ""}`}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col flex-1">
-                      <span>{item.title}</span>
-                      {item.subtitle && (
-                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>{accessInfo.count}</span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {!searchQuery.trim() && frequentlyAccessed.length > 0 && (
+              <>
+                <CommandGroup heading="Frequently Accessed">
+                  {frequentlyAccessed.map((item) => {
+                    const Icon = item.icon;
+                    const accessInfo = accessHistory[item.id];
+                    return (
+                      <CommandItem
+                        key={`frequent-${item.id}`}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col flex-1">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>{accessInfo.count}</span>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults.pages.length > 0 && (
-          <>
-            <CommandGroup heading="Pages">
-              {groupedResults.pages.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={item.title}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <span>{item.title}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {groupedResults.pages.length > 0 && (
+              <>
+                <CommandGroup heading="Pages">
+                  {groupedResults.pages.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={item.title}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <span>{item.title}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults.customers.length > 0 && (
-          <>
-            <CommandGroup heading="Customers">
-              {groupedResults.customers.slice(0, 5).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.title} ${item.subtitle || ""}`}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span>{item.title}</span>
-                      {item.subtitle && (
-                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {groupedResults.customers.length > 0 && (
+              <>
+                <CommandGroup heading="Customers">
+                  {groupedResults.customers.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults.quotes.length > 0 && (
-          <>
-            <CommandGroup heading="Quotes">
-              {groupedResults.quotes.slice(0, 5).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.title} ${item.subtitle || ""}`}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span>{item.title}</span>
-                      {item.subtitle && (
-                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {groupedResults.quotes.length > 0 && (
+              <>
+                <CommandGroup heading="Quotes">
+                  {groupedResults.quotes.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults.invoices.length > 0 && (
-          <>
-            <CommandGroup heading="Invoices">
-              {groupedResults.invoices.slice(0, 5).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.title} ${item.subtitle || ""}`}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span>{item.title}</span>
-                      {item.subtitle && (
-                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {groupedResults.invoices.length > 0 && (
+              <>
+                <CommandGroup heading="Invoices">
+                  {groupedResults.invoices.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults.projects.length > 0 && (
-          <>
-            <CommandGroup heading="Projects">
-              {groupedResults.projects.slice(0, 5).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.title} ${item.subtitle || ""}`}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span>{item.title}</span>
-                      {item.subtitle && (
-                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {groupedResults.projects.length > 0 && (
+              <>
+                <CommandGroup heading="Projects">
+                  {groupedResults.projects.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults["service-orders"].length > 0 && (
-          <>
-            <CommandGroup heading="Service Orders">
-              {groupedResults["service-orders"].slice(0, 5).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.title} ${item.subtitle || ""}`}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span>{item.title}</span>
-                      {item.subtitle && (
-                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
+            {groupedResults["service-orders"].length > 0 && (
+              <>
+                <CommandGroup heading="Service Orders">
+                  {groupedResults["service-orders"].slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
 
-        {groupedResults.locations.length > 0 && (
-          <CommandGroup heading="Locations">
-            {groupedResults.locations.slice(0, 5).map((item) => {
-              const Icon = item.icon;
-              return (
-                <CommandItem
-                  key={item.id}
-                  value={`${item.title} ${item.subtitle || ""}`}
-                  onSelect={() => handleSelect(item)}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  <div className="flex flex-col">
-                    <span>{item.title}</span>
-                    {item.subtitle && (
-                      <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                    )}
-                  </div>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-        )}
-      </CommandList>
-    </CommandDialog>
+            {groupedResults.locations.length > 0 && (
+              <CommandGroup heading="Locations">
+                {groupedResults.locations.slice(0, 5).map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={`${item.title} ${item.subtitle || ""}`}
+                      onSelect={() => handleSelect(item)}
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span>{item.title}</span>
+                        {item.subtitle && (
+                          <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
