@@ -56,10 +56,19 @@ export default function HelpDesk() {
       };
       
       checkAndSelectTicket();
-      // Clear the URL param after selecting
-      setSearchParams({}, { replace: true });
+      // Keep the ticket ID in the URL for proper navigation
     }
-  }, [searchParams]);
+  }, [searchParams, selectedTicketId]);
+
+  // Update URL when ticket is selected
+  useEffect(() => {
+    if (selectedTicketId) {
+      const currentTicket = searchParams.get("ticket");
+      if (currentTicket !== selectedTicketId) {
+        setSearchParams({ ticket: selectedTicketId }, { replace: true });
+      }
+    }
+  }, [selectedTicketId]);
 
   const { data: pipelines } = useQuery({
     queryKey: ["helpdesk-pipelines"],
