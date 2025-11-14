@@ -13,6 +13,7 @@ import { AddTimelineItemDialog } from "./AddTimelineItemDialog";
 import { ChecklistRenderer } from "./ChecklistRenderer";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 
 interface TicketTimelineProps {
   ticketId: string;
@@ -417,7 +418,14 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                               <div 
                                 className="prose prose-xs max-w-none dark:prose-invert [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded"
                                 dangerouslySetInnerHTML={{ 
-                                  __html: isEmail && !isExpanded ? stripQuotedReply(message.body_html) : message.body_html 
+                                  __html: DOMPurify.sanitize(
+                                    isEmail && !isExpanded ? stripQuotedReply(message.body_html) : message.body_html,
+                                    {
+                                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img'],
+                                      ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'title', 'class'],
+                                      ALLOW_DATA_ATTR: false
+                                    }
+                                  )
                                 }} 
                               />
                               {isEmail && message.body_html.length > 500 && (
