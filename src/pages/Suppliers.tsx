@@ -16,7 +16,7 @@ export default function Suppliers() {
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
 
   const { data: vendors, isLoading } = useQuery({
-    queryKey: ["vendors"],
+    queryKey: ["suppliers"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -30,7 +30,7 @@ export default function Suppliers() {
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
       const { data, error } = await supabase
-        .from("vendors")
+        .from("suppliers")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
