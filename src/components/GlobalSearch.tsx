@@ -31,6 +31,8 @@ import {
   Settings,
   BarChart3,
   Package,
+  Clock,
+  TrendingUp,
 } from "lucide-react";
 
 interface SearchResult {
@@ -40,6 +42,17 @@ interface SearchResult {
   type: string;
   route: string;
   icon: any;
+}
+
+interface AccessHistory {
+  id: string;
+  count: number;
+  lastAccessed: number;
+}
+
+interface RecentSearch {
+  query: string;
+  timestamp: number;
 }
 
 interface GlobalSearchProps {
@@ -55,6 +68,35 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   // Use external state if provided, otherwise use internal state
   const open = externalOpen ?? internalOpen;
   const setOpen = externalSetOpen ?? setInternalOpen;
+
+  // Load access history and recent searches from localStorage
+  const [accessHistory, setAccessHistory] = useState<Record<string, AccessHistory>>(() => {
+    try {
+      const saved = localStorage.getItem('searchAccessHistory');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(() => {
+    try {
+      const saved = localStorage.getItem('recentSearches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save to localStorage when access history changes
+  useEffect(() => {
+    localStorage.setItem('searchAccessHistory', JSON.stringify(accessHistory));
+  }, [accessHistory]);
+
+  // Save to localStorage when recent searches change
+  useEffect(() => {
+    localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+  }, [recentSearches]);
 
   // Keyboard shortcut
   useEffect(() => {
@@ -250,7 +292,27 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   }, [customers, quotes, invoices, projects, serviceOrders, locations, navigationItems]);
 
   const handleSelect = (result: SearchResult) => {
+    // Track access
+    const now = Date.now();
+    setAccessHistory(prev => ({
+      ...prev,
+      [result.id]: {
+        id: result.id,
+        count: (prev[result.id]?.count || 0) + 1,
+        lastAccessed: now,
+      }
+    }));
+
+    // Track search query if not empty
+    if (searchQuery.trim()) {
+      setRecentSearches(prev => {
+        const filtered = prev.filter(s => s.query !== searchQuery.trim());
+        return [{ query: searchQuery.trim(), timestamp: now }, ...filtered].slice(0, 10);
+      });
+    }
+
     setOpen(false);
+    setSearchQuery("");
     navigate(result.route);
   };
 
@@ -269,9 +331,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     });
   }, [allResults]);
 
+  // Get frequently accessed items
+  const frequentlyAccessed = useMemo(() => {
+    const sorted = Object.values(accessHistory)
+      .sort((a, b) => {
+        // Sort by count first, then by last accessed time
+        if (b.count !== a.count) return b.count - a.count;
+        return b.lastAccessed - a.lastAccessed;
+      })
+      .slice(0, 5);
+
+    return sorted
+      .map(item => allResults.find(r => r.id === item.id))
+      .filter((item): item is SearchResult => item !== undefined);
+  }, [accessHistory, allResults]);
+
   // Filter results using fuzzy search
   const filteredResults = useMemo(() => {
     if (!searchQuery.trim()) {
+      // When empty, show all results but frequently accessed will be shown first
       return allResults;
     }
     
@@ -311,6 +389,55 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+
+        {!searchQuery.trim() && recentSearches.length > 0 && (
+          <>
+            <CommandGroup heading="Recent Searches">
+              {recentSearches.slice(0, 5).map((search, index) => (
+                <CommandItem
+                  key={`recent-${index}`}
+                  value={search.query}
+                  onSelect={() => setSearchQuery(search.query)}
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  <span>{search.query}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
+        {!searchQuery.trim() && frequentlyAccessed.length > 0 && (
+          <>
+            <CommandGroup heading="Frequently Accessed">
+              {frequentlyAccessed.map((item) => {
+                const Icon = item.icon;
+                const accessInfo = accessHistory[item.id];
+                return (
+                  <CommandItem
+                    key={`frequent-${item.id}`}
+                    value={`${item.title} ${item.subtitle || ""}`}
+                    onSelect={() => handleSelect(item)}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    <div className="flex flex-col flex-1">
+                      <span>{item.title}</span>
+                      {item.subtitle && (
+                        <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>{accessInfo.count}</span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
         {groupedResults.pages.length > 0 && (
           <>
