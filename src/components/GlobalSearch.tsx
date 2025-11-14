@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search } from "lucide-react";
+import { SearchHighlight } from "@/components/search/SearchHighlight";
 import {
   Home,
   Users,
@@ -47,6 +48,10 @@ interface SearchResult {
   type: string;
   route: string;
   icon: any;
+  matches?: {
+    title?: readonly [number, number][];
+    subtitle?: readonly [number, number][];
+  };
 }
 
 interface AccessHistory {
@@ -697,6 +702,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       distance: 300,
       minMatchCharLength: 1, // Allow matching single characters
       includeScore: true,
+      includeMatches: true, // Include match indices for highlighting
       ignoreLocation: true, // Don't penalize matches based on position
       useExtendedSearch: true,
       shouldSort: true, // Enable sorting by score
@@ -727,10 +733,26 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     
     const fuseResults = fuse.search(searchQuery);
     
-    // Sort by score (lower score = better match) and return items
+    // Sort by score (lower score = better match) and map with match indices
     return fuseResults
       .sort((a, b) => (a.score || 0) - (b.score || 0))
-      .map(result => result.item);
+      .map(result => {
+        // Extract match indices for title and subtitle
+        const matches: SearchResult['matches'] = {};
+        
+        result.matches?.forEach(match => {
+          if (match.key === 'title' && match.indices) {
+            matches.title = match.indices;
+          } else if (match.key === 'subtitle' && match.indices) {
+            matches.subtitle = match.indices;
+          }
+        });
+        
+        return {
+          ...result.item,
+          matches: Object.keys(matches).length > 0 ? matches : undefined,
+        };
+      });
   }, [searchQuery, fuse, allResults]);
 
   // Group results by type and sort each group by relevance
@@ -888,9 +910,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -914,9 +940,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -940,9 +970,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -966,9 +1000,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -992,9 +1030,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1018,9 +1060,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1031,31 +1077,6 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </>
             )}
 
-            {groupedResults.locations.length > 0 && (
-              <>
-                <CommandGroup heading="Locations">
-                  {groupedResults.locations.slice(0, 5).map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <CommandItem
-                        key={item.id}
-                        value={`${item.title} ${item.subtitle || ""}`}
-                        onSelect={() => handleSelect(item)}
-                      >
-                        <Icon className="mr-2 h-4 w-4" />
-                        <div className="flex flex-col">
-                          <span>{item.title}</span>
-                          {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-                <CommandSeparator />
-              </>
-            )}
 
             {groupedResults.appointments.length > 0 && (
               <>
@@ -1070,35 +1091,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-                <CommandSeparator />
-              </>
-            )}
-
-            {groupedResults.workers.length > 0 && (
-              <>
-                <CommandGroup heading={`Workers (${groupedResults.workers.length})`}>
-                  {groupedResults.workers.slice(0, 5).map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <CommandItem
-                        key={item.id}
-                        value={`${item.title} ${item.subtitle || ""}`}
-                        onSelect={() => handleSelect(item)}
-                      >
-                        <Icon className="mr-2 h-4 w-4" />
-                        <div className="flex flex-col">
-                          <span>{item.title}</span>
-                          {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1122,9 +1121,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1148,9 +1151,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1174,9 +1181,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1200,9 +1211,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1226,9 +1241,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1252,9 +1271,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                       >
                         <Icon className="mr-2 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <SearchHighlight text={item.title} matches={item.matches?.title} />
                           {item.subtitle && (
-                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                            <SearchHighlight 
+                              text={item.subtitle} 
+                              matches={item.matches?.subtitle}
+                              className="text-xs text-muted-foreground" 
+                            />
                           )}
                         </div>
                       </CommandItem>
@@ -1277,9 +1300,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
                     >
                       <Icon className="mr-2 h-4 w-4" />
                       <div className="flex flex-col">
-                        <span>{item.title}</span>
+                        <SearchHighlight text={item.title} matches={item.matches?.title} />
                         {item.subtitle && (
-                          <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          <SearchHighlight 
+                            text={item.subtitle} 
+                            matches={item.matches?.subtitle}
+                            className="text-xs text-muted-foreground" 
+                          />
                         )}
                       </div>
                     </CommandItem>
