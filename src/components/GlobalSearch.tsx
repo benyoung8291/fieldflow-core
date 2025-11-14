@@ -150,13 +150,13 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   const searchResults = (): SearchResult[] => {
     if (!searchQuery.trim()) return [];
     
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
     const results: SearchResult[] = [];
 
     // Search customers
     customers?.forEach((customer) => {
-      const name = customer.name?.toLowerCase() || "";
-      const email = customer.email?.toLowerCase() || "";
+      const name = customer.name?.trim().toLowerCase() || "";
+      const email = customer.email?.trim().toLowerCase() || "";
       if (name.includes(query) || email.includes(query)) {
         results.push({
           id: customer.id,
@@ -171,8 +171,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search locations
     locations?.forEach((location) => {
-      const name = location.name?.toLowerCase() || "";
-      const customerName = (location.customers as any)?.name?.toLowerCase() || "";
+      const name = location.name?.trim().toLowerCase() || "";
+      const customerName = (location.customers as any)?.name?.trim().toLowerCase() || "";
       if (name.includes(query) || customerName.includes(query)) {
         results.push({
           id: location.id,
@@ -187,8 +187,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search quotes
     quotes?.forEach((quote) => {
-      const number = quote.quote_number?.toLowerCase() || "";
-      const customerName = (quote.customers as any)?.name?.toLowerCase() || "";
+      const number = quote.quote_number?.trim().toLowerCase() || "";
+      const customerName = (quote.customers as any)?.name?.trim().toLowerCase() || "";
       if (number.includes(query) || customerName.includes(query)) {
         results.push({
           id: quote.id,
@@ -203,8 +203,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search invoices
     invoices?.forEach((invoice) => {
-      const number = invoice.invoice_number?.toLowerCase() || "";
-      const customerName = (invoice.customers as any)?.name?.toLowerCase() || "";
+      const number = invoice.invoice_number?.trim().toLowerCase() || "";
+      const customerName = (invoice.customers as any)?.name?.trim().toLowerCase() || "";
       if (number.includes(query) || customerName.includes(query)) {
         results.push({
           id: invoice.id,
@@ -219,8 +219,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search projects
     projects?.forEach((project) => {
-      const name = project.name?.toLowerCase() || "";
-      const customerName = (project.customers as any)?.name?.toLowerCase() || "";
+      const name = project.name?.trim().toLowerCase() || "";
+      const customerName = (project.customers as any)?.name?.trim().toLowerCase() || "";
       if (name.includes(query) || customerName.includes(query)) {
         results.push({
           id: project.id,
@@ -235,8 +235,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search service orders
     serviceOrders?.forEach((order) => {
-      const number = order.order_number?.toLowerCase() || "";
-      const customerName = (order.customers as any)?.name?.toLowerCase() || "";
+      const number = order.order_number?.trim().toLowerCase() || "";
+      const customerName = (order.customers as any)?.name?.trim().toLowerCase() || "";
       if (number.includes(query) || customerName.includes(query)) {
         results.push({
           id: order.id,
@@ -251,8 +251,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search contracts
     contracts?.forEach((contract) => {
-      const number = contract.contract_number?.toLowerCase() || "";
-      const customerName = (contract.customers as any)?.name?.toLowerCase() || "";
+      const number = contract.contract_number?.trim().toLowerCase() || "";
+      const customerName = (contract.customers as any)?.name?.trim().toLowerCase() || "";
       if (number.includes(query) || customerName.includes(query)) {
         results.push({
           id: contract.id,
@@ -267,9 +267,9 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Search helpdesk
     helpdesk?.forEach((ticket) => {
-      const number = ticket.ticket_number?.toLowerCase() || "";
-      const subject = ticket.subject?.toLowerCase() || "";
-      const sender = ticket.sender_name?.toLowerCase() || "";
+      const number = ticket.ticket_number?.trim().toLowerCase() || "";
+      const subject = ticket.subject?.trim().toLowerCase() || "";
+      const sender = ticket.sender_name?.trim().toLowerCase() || "";
       if (number.includes(query) || subject.includes(query) || sender.includes(query)) {
         results.push({
           id: ticket.id,
