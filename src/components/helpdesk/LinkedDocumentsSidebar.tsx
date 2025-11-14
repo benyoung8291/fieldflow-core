@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Briefcase, Calendar, FileText, Receipt, FolderKanban, CheckSquare, User, MapPin, X, ExternalLink, ClipboardList, DollarSign, Users } from "lucide-react";
+import { Plus, Briefcase, Calendar, FileText, Receipt, FolderKanban, CheckSquare, User, MapPin, X, ExternalLink, ClipboardList, DollarSign, Users, Package } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +45,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; id: string } | null>(null);
   const [showCustomerLink, setShowCustomerLink] = useState(false);
   const [showContactLink, setShowContactLink] = useState(false);
+  const [showSupplierLink, setShowSupplierLink] = useState(false);
+  const [showLeadLink, setShowLeadLink] = useState(false);
 
   const { data: linkedDocs } = useQuery({
     queryKey: ["helpdesk-linked-docs", ticketId],
@@ -104,6 +106,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       toast({ title: "Link updated successfully" });
       setShowCustomerLink(false);
       setShowContactLink(false);
+      setShowSupplierLink(false);
+      setShowLeadLink(false);
     },
     onError: (error) => {
       toast({
@@ -138,6 +142,32 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
       return data;
     },
     enabled: showContactLink,
+  });
+
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: showSupplierLink,
+  });
+
+  const { data: leads } = useQuery({
+    queryKey: ["leads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("id, company_name, name")
+        .order("company_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: showLeadLink,
   });
 
   const groupedDocs = linkedDocs?.reduce((acc, doc) => {
@@ -291,6 +321,116 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground italic">No contact linked</p>
+              )}
+            </div>
+
+            <div className={cn(
+              "border rounded-lg p-3 bg-card hover:border-primary/30 transition-colors",
+              ticket?.supplier && "border-primary/20"
+            )}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Supplier</span>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowSupplierLink(!showSupplierLink)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {showSupplierLink ? "Cancel" : "Link"}
+                </Button>
+              </div>
+              
+              {showSupplierLink ? (
+                <Select
+                  value={ticket?.supplier_id || "none"}
+                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "supplier_id", value: value === "none" ? null : value })}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Select supplier..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {suppliers?.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : ticket?.supplier ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">{ticket.supplier.name}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => updateTicketLinkMutation.mutate({ field: "supplier_id", value: null })}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No supplier linked</p>
+              )}
+            </div>
+
+            <div className={cn(
+              "border rounded-lg p-3 bg-card hover:border-primary/30 transition-colors",
+              ticket?.lead && "border-primary/20"
+            )}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Lead</span>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowLeadLink(!showLeadLink)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {showLeadLink ? "Cancel" : "Link"}
+                </Button>
+              </div>
+              
+              {showLeadLink ? (
+                <Select
+                  value={ticket?.lead_id || "none"}
+                  onValueChange={(value) => updateTicketLinkMutation.mutate({ field: "lead_id", value: value === "none" ? null : value })}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Select lead..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {leads?.map((lead) => (
+                      <SelectItem key={lead.id} value={lead.id}>
+                        {lead.company_name} {lead.name && `- ${lead.name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : ticket?.lead ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {ticket.lead.company_name} {ticket.lead.name && `- ${ticket.lead.name}`}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => updateTicketLinkMutation.mutate({ field: "lead_id", value: null })}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No lead linked</p>
               )}
             </div>
           </div>
