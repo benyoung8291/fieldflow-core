@@ -13,12 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function ServiceContractDetails() {
   const { id } = useParams();
@@ -143,28 +144,51 @@ export default function ServiceContractDetails() {
     },
   });
 
+  const generateServiceOrdersMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('generate-contract-service-orders');
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["contract-service-orders", id] });
+      toast.success(`Generated ${data.createdOrders?.length || 0} service order(s)`);
+      if (data.errors && data.errors.length > 0) {
+        toast.warning(`${data.errors.length} error(s) occurred during generation`);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to generate service orders: ${error.message}`);
+    },
+  });
+
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="h-8 w-64 bg-muted animate-pulse rounded mb-6" />
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-              </CardHeader>
-            </Card>
-          ))}
+      <DashboardLayout>
+        <div className="container mx-auto p-6">
+          <div className="h-8 w-64 bg-muted animate-pulse rounded mb-6" />
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (!contract) {
     return (
-      <div className="container mx-auto p-6">
-        <p className="text-muted-foreground">Contract not found</p>
-      </div>
+      <DashboardLayout>
+        <div className="container mx-auto p-6">
+          <p className="text-muted-foreground">Contract not found</p>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -172,7 +196,8 @@ export default function ServiceContractDetails() {
   const totalValue = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.line_total || 0), 0);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <DashboardLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/service-contracts")}>
           <ArrowLeft className="h-5 w-5" />
@@ -448,10 +473,22 @@ export default function ServiceContractDetails() {
         <TabsContent value="service-orders" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Generated Service Orders</CardTitle>
-              <CardDescription>
-                Service orders automatically created from this contract
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Generated Service Orders</CardTitle>
+                  <CardDescription>
+                    Service orders automatically created from this contract
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => generateServiceOrdersMutation.mutate()}
+                  disabled={generateServiceOrdersMutation.isPending || !contract.auto_generate}
+                  size="sm"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${generateServiceOrdersMutation.isPending ? 'animate-spin' : ''}`} />
+                  {generateServiceOrdersMutation.isPending ? 'Generating...' : 'Generate Now'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {!serviceOrders || serviceOrders.length === 0 ? (
@@ -643,5 +680,6 @@ export default function ServiceContractDetails() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardLayout>
   );
 }
