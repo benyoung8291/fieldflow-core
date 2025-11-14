@@ -31,7 +31,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
 
     try {
       const { data, error } = await supabase
-        .from('service_orders')
+        .from('service_orders' as any)
         .insert({
           title: formData.title,
           description: formData.description,
@@ -49,7 +49,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         description: "Service order has been created successfully.",
       });
 
-      onSuccess(data.id);
+      onSuccess((data as any).id);
     } catch (error) {
       console.error("Error creating service order:", error);
       toast({

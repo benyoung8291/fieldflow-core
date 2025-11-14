@@ -33,7 +33,7 @@ export function InlineLeadForm({ parsedData, ticket, onSuccess, onCancel }: Inli
 
     try {
       const { data, error } = await supabase
-        .from('leads')
+        .from('leads' as any)
         .insert({
           company_name: formData.company_name,
           contact_name: formData.contact_name,
@@ -53,7 +53,7 @@ export function InlineLeadForm({ parsedData, ticket, onSuccess, onCancel }: Inli
         description: "Lead has been added successfully.",
       });
 
-      onSuccess(data.id);
+      onSuccess((data as any).id);
     } catch (error) {
       console.error("Error creating lead:", error);
       toast({

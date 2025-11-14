@@ -31,7 +31,7 @@ export function InlineContactForm({ parsedData, ticket, onSuccess, onCancel }: I
 
     try {
       const { data, error } = await supabase
-        .from('contacts')
+        .from('customer_contacts' as any)
         .insert({
           first_name: formData.first_name,
           last_name: formData.last_name,
@@ -49,7 +49,7 @@ export function InlineContactForm({ parsedData, ticket, onSuccess, onCancel }: I
         description: "Contact has been added successfully.",
       });
 
-      onSuccess(data.id);
+      onSuccess((data as any).id);
     } catch (error) {
       console.error("Error creating contact:", error);
       toast({

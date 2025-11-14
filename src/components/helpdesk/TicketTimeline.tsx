@@ -237,9 +237,9 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header - Compact */}
-      <div className="px-3 py-2 border-b bg-background">
+      <div className="px-3 py-2 border-b bg-background shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold mb-0.5 line-clamp-1">{ticket?.subject || "Loading..."}</h2>
@@ -264,7 +264,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       </div>
 
       {/* Timeline - Compact */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full p-2">
           {isLoading ? (
             <div className="text-center text-muted-foreground text-sm py-4">Loading messages...</div>
