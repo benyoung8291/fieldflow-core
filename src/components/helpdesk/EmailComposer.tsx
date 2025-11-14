@@ -75,34 +75,46 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
   };
 
   return (
-    <div className="border-t bg-background">
-      {/* Collapsed Header */}
+    <div className="sticky bottom-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
+      {/* Collapsed Header - More Prominent */}
       {!isExpanded && (
         <div 
-          className="px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-accent/50"
+          className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-primary/10 transition-colors border-l-4 border-l-primary"
           onClick={() => setIsExpanded(true)}
         >
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-medium">Compose Reply</span>
-            {to && <span className="text-muted-foreground">to {to}</span>}
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Send className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-sm">Reply to Email</div>
+              {to && <div className="text-xs text-muted-foreground">To: {to}</div>}
+            </div>
           </div>
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Click to compose</span>
+            <ChevronUp className="h-5 w-5 text-primary" />
+          </div>
         </div>
       )}
 
       {/* Expanded Composer */}
       {isExpanded && (
-        <div className="space-y-2 p-3">
+        <div className="space-y-3 p-4 max-h-[500px] overflow-y-auto">
           {/* Header with collapse button */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">New Message</span>
+          <div className="flex items-center justify-between pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Compose Reply</span>
+            </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2"
+              className="h-7 px-2"
               onClick={() => setIsExpanded(false)}
             >
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-4 w-4" />
+              <span className="ml-1 text-xs">Minimize</span>
             </Button>
           </div>
 

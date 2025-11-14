@@ -45,3 +45,6 @@ verify_jwt = true
 [functions.parse-email-content]
 verify_jwt = true
 
+[functions.suggest-ticket-links]
+verify_jwt = true
+
