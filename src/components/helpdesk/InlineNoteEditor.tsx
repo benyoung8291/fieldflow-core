@@ -1,37 +1,41 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MentionTextarea } from "./MentionTextarea";
 
 interface InlineNoteEditorProps {
-  onSave: (content: string) => Promise<void>;
+  onSave: (content: string, mentions: string[]) => Promise<void>;
   onCancel: () => void;
   isSaving?: boolean;
 }
 
 export function InlineNoteEditor({ onSave, onCancel, isSaving }: InlineNoteEditorProps) {
   const [content, setContent] = useState("");
+  const [mentions, setMentions] = useState<string[]>([]);
 
   const handleSave = async () => {
     if (!content.trim()) return;
-    await onSave(content);
+    await onSave(content, mentions);
     setContent("");
+    setMentions([]);
   };
 
   return (
-    <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+    <div className="border rounded-lg p-3 bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900 space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium text-yellow-700 dark:text-yellow-500">
         <MessageSquare className="h-4 w-4" />
         <span>Add Internal Note</span>
+        <span className="text-xs text-muted-foreground ml-2">(Use @ to mention users)</span>
       </div>
       
-      <Textarea
+      <MentionTextarea
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Type your internal note here..."
-        className="min-h-[80px] resize-none"
-        autoFocus
+        onChange={(value, userMentions) => {
+          setContent(value);
+          setMentions(userMentions);
+        }}
+        placeholder="Type your internal note here... Use @ to mention users"
+        rows={3}
       />
       
       <div className="flex items-center justify-end gap-2">

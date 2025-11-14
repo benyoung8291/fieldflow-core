@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckSquare, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { MentionTextarea } from "./MentionTextarea";
 
 interface InlineTaskEditorProps {
   onSave: (data: {
@@ -15,6 +15,7 @@ interface InlineTaskEditorProps {
     priority: string;
     assigned_to?: string;
     due_date?: string;
+    mentions?: string[];
   }) => Promise<void>;
   onCancel: () => void;
   isSaving?: boolean;
@@ -24,6 +25,7 @@ interface InlineTaskEditorProps {
 export function InlineTaskEditor({ onSave, onCancel, isSaving, defaultTitle }: InlineTaskEditorProps) {
   const [title, setTitle] = useState(defaultTitle || "");
   const [description, setDescription] = useState("");
+  const [mentions, setMentions] = useState<string[]>([]);
   const [priority, setPriority] = useState<string>("medium");
   const [assignedTo, setAssignedTo] = useState<string>("unassigned");
   const [dueDate, setDueDate] = useState("");
@@ -50,20 +52,23 @@ export function InlineTaskEditor({ onSave, onCancel, isSaving, defaultTitle }: I
       priority,
       assigned_to: (assignedTo && assignedTo !== "unassigned") ? assignedTo : undefined,
       due_date: dueDate || undefined,
+      mentions,
     });
     
     setTitle("");
     setDescription("");
+    setMentions([]);
     setPriority("medium");
     setAssignedTo("unassigned");
     setDueDate("");
   };
 
   return (
-    <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+    <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900 space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-500">
         <CheckSquare className="h-4 w-4" />
         <span>Add Task</span>
+        <span className="text-xs text-muted-foreground ml-2">(Use @ to mention users)</span>
       </div>
       
       <div className="space-y-2">
@@ -79,12 +84,15 @@ export function InlineTaskEditor({ onSave, onCancel, isSaving, defaultTitle }: I
         </div>
 
         <div>
-          <Label className="text-xs">Description</Label>
-          <Textarea
+          <Label className="text-xs">Description (Use @ to mention users)</Label>
+          <MentionTextarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Add task details..."
-            className="min-h-[60px] resize-none"
+            onChange={(value, userMentions) => {
+              setDescription(value);
+              setMentions(userMentions);
+            }}
+            placeholder="Add task details... Use @ to mention users"
+            rows={3}
           />
         </div>
 

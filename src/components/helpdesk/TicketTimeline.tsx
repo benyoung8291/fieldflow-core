@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign, ExternalLink, StickyNote, CheckCircle2 } from "lucide-react";
+import { MessageSquare, Mail, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign, ExternalLink, StickyNote, CheckCircle2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { TicketActionsMenu } from "./TicketActionsMenu";
@@ -16,6 +16,9 @@ import { InlineCheckboxEditor } from "./InlineCheckboxEditor";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface TicketTimelineProps {
   ticketId: string;
@@ -228,16 +231,52 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   });
 
   const createNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, mentions }: { content: string; mentions: string[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id, first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
       const { error } = await supabase
         .from("helpdesk_messages")
         .insert({
           ticket_id: ticketId,
           message_type: "internal_note",
           body: content,
-          tenant_id: (await supabase.auth.getUser()).data.user?.user_metadata?.tenant_id,
+          tenant_id: profile.tenant_id,
         });
+      
       if (error) throw error;
+
+      // Create notifications for mentioned users
+      if (mentions.length > 0) {
+        const notificationsToCreate = mentions.map(mentionedUserId => ({
+          tenant_id: profile.tenant_id,
+          user_id: mentionedUserId,
+          type: 'mention' as const,
+          title: 'You were mentioned in a note',
+          message: `${profile.first_name} ${profile.last_name} mentioned you in a help desk note`,
+          link: `/helpdesk?ticket=${ticketId}`,
+          metadata: {
+            ticket_id: ticketId,
+            mentioned_by: user.id,
+            context: 'helpdesk_note'
+          }
+        }));
+
+        // @ts-ignore - Types will update after migration
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notificationsToCreate);
+
+        if (notifError) console.error('Failed to create notifications:', notifError);
+      }
     },
     onSuccess: () => {
       toast({ title: "Note added successfully" });
@@ -261,7 +300,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       // Get tenant_id from profiles table
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, first_name, last_name")
         .eq("id", user.id)
         .single();
 
@@ -271,7 +310,11 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       const { data: task, error: taskError } = await supabase
         .from("tasks")
         .insert({
-          ...taskData,
+          title: taskData.title,
+          description: taskData.description,
+          priority: taskData.priority,
+          assigned_to: taskData.assigned_to,
+          due_date: taskData.due_date,
           tenant_id: profile.tenant_id,
           created_by: user.id,
           linked_module: "helpdesk",
@@ -294,6 +337,31 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         });
       
       if (messageError) throw messageError;
+
+      // Create notifications for mentioned users
+      if (taskData.mentions && taskData.mentions.length > 0) {
+        const notificationsToCreate = taskData.mentions.map((mentionedUserId: string) => ({
+          tenant_id: profile.tenant_id,
+          user_id: mentionedUserId,
+          type: 'mention' as const,
+          title: 'You were mentioned in a task',
+          message: `${profile.first_name} ${profile.last_name} mentioned you in task: ${taskData.title}`,
+          link: `/tasks`,
+          metadata: {
+            task_id: task.id,
+            ticket_id: ticketId,
+            mentioned_by: user.id,
+            context: 'helpdesk_task'
+          }
+        }));
+
+        // @ts-ignore - Types will update after migration
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notificationsToCreate);
+
+        if (notifError) console.error('Failed to create notifications:', notifError);
+      }
     },
     onSuccess: () => {
       toast({ title: "Task created successfully" });
@@ -621,9 +689,43 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                               </p>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
+                            </span>
+                            {isEmail && (
+                              <div className="flex items-center gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    composerRef.current?.reset();
+                                    setTimeout(() => {
+                                      const composer = document.querySelector('[data-composer]') as HTMLElement;
+                                      composer?.click();
+                                    }, 100);
+                                  }}
+                                  className="h-6 px-2 text-xs"
+                                  title="Reply"
+                                >
+                                  <CornerDownRight className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Copy email to clipboard
+                                    navigator.clipboard.writeText(message.body_html || message.body_text || message.body || '');
+                                    toast({ title: "Email copied to clipboard" });
+                                  }}
+                                  className="h-6 px-2 text-xs"
+                                  title="Copy"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {message.subject && message.message_type === "email" && (
@@ -667,36 +769,47 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                                 </Button>
                               )}
                             </>
-                          ) : message.message_type === "checklist" && message.metadata?.task_id ? (
-                            <ChecklistRenderer taskId={message.metadata.task_id} ticketNumber={ticket?.ticket_number || ""} />
-                          ) : message.message_type === "task" && message.metadata?.task_id ? (
+                          ) : message.message_type === "checklist" ? (
+                            (() => {
+                              const taskMatch = message.body.match(/^[☐☑]\s+(.+)$/);
+                              const taskTitle = taskMatch ? taskMatch[1] : message.body.replace(/^[☐☑]\s*/, '');
+                              const isCompleted = message.body.startsWith('☑');
+                              
+                              return (
+                                <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors shrink-0",
+                                      isCompleted 
+                                        ? 'bg-green-500 border-green-500' 
+                                        : 'border-green-400'
+                                    )}>
+                                      {isCompleted && <CheckSquare className="h-4 w-4 text-white fill-white" />}
+                                    </div>
+                                    <span className={cn(
+                                      "text-sm font-medium",
+                                      isCompleted && 'line-through text-muted-foreground'
+                                    )}>
+                                      {taskTitle}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          ) : message.message_type === "task" ? (
                             <div className="space-y-2">
-                              <div className="whitespace-pre-wrap">
-                                {renderMentions(message.body_text || message.body || "")}
+                              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                <div className="whitespace-pre-wrap text-sm font-medium">
+                                  {message.body.replace('Task created: ', '')}
+                                </div>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate('/tasks')}
-                                className="h-6 text-xs gap-1"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                View Task
-                              </Button>
+                            </div>
+                          ) : message.message_type === "internal_note" ? (
+                            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                              <div className="whitespace-pre-wrap text-sm">{renderMentions(message.body_text || message.body || "")}</div>
                             </div>
                           ) : (
-                            <div className="space-y-2">
-                              <div className="whitespace-pre-wrap">
-                                {renderMentions(message.body_text || message.body || "")}
-                              </div>
-                              {message.metadata?.mentions && message.metadata.mentions.length > 0 && (
-                                <div className="flex gap-1.5 flex-wrap pt-1 border-t border-border/50">
-                                  {message.metadata.mentions.map((userId: string) => (
-                                    <MentionBadge key={userId} userId={userId} />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                            <div className="whitespace-pre-wrap text-sm">{renderMentions(message.body_text || message.body || "")}</div>
                           )}
                         </div>
 
@@ -782,8 +895,8 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                 {showNoteEditor && (
                   <div className="relative z-10 px-2">
                     <InlineNoteEditor
-                      onSave={async (content) => {
-                        await createNoteMutation.mutateAsync(content);
+                      onSave={async (content, mentions) => {
+                        await createNoteMutation.mutateAsync({ content, mentions });
                       }}
                       onCancel={() => setShowNoteEditor(false)}
                       isSaving={createNoteMutation.isPending}
@@ -824,15 +937,17 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       </div>
 
       {/* Email Composer */}
-      <EmailComposer
-        ref={composerRef}
-        onSend={(emailData) => sendReplyMutation.mutate(emailData)}
-        defaultTo={ticket?.sender_email || ticket?.external_email || ""}
-        defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
-        isSending={sendReplyMutation.isPending}
-        ticketId={ticketId}
-        emailThread={emailThread}
-      />
+      <div data-composer>
+        <EmailComposer
+          ref={composerRef}
+          onSend={(emailData) => sendReplyMutation.mutate(emailData)}
+          defaultTo={ticket?.sender_email || ticket?.external_email || ""}
+          defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
+          isSending={sendReplyMutation.isPending}
+          ticketId={ticketId}
+          emailThread={emailThread}
+        />
+      </div>
     </div>
   );
 }
