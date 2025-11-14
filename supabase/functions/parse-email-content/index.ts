@@ -18,65 +18,196 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Define system prompts based on extraction type
-    const systemPrompts: Record<string, string> = {
-      invoice: `Extract invoice data from the email. Return a JSON object with:
-- vendor_name: string (supplier/vendor name)
-- invoice_number: string
-- invoice_date: string (ISO format)
-- due_date: string (ISO format)
-- total_amount: number
-- tax_amount: number
-- description: string (brief description)
-- line_items: array of {description: string, quantity: number, unit_price: number, amount: number}
-Return ONLY valid JSON, no markdown formatting.`,
-      
-      purchase_order: `Extract purchase order data from the email. Return a JSON object with:
-- vendor_name: string (supplier name)
-- description: string (what is being ordered)
-- expected_delivery_date: string (ISO format if mentioned)
-- total_amount: number (if mentioned)
-- notes: string (additional notes)
-- line_items: array of {description: string, quantity: number, unit_price: number}
-Return ONLY valid JSON, no markdown formatting.`,
-      
-      service_order: `Extract service order data from the email. Return a JSON object with:
-- title: string (brief title of the service needed)
-- description: string (detailed description)
-- priority: string ("low", "medium", or "high")
-- requested_date: string (ISO format if mentioned)
-- location: string (if mentioned)
-- contact_name: string
-- contact_email: string
-- contact_phone: string
-Return ONLY valid JSON, no markdown formatting.`,
-      
-      contact: `Extract contact information from the email. Return a JSON object with:
-- first_name: string
-- last_name: string
-- email: string
-- phone: string
-- company: string (if mentioned)
-- position: string (job title if mentioned)
-Return ONLY valid JSON, no markdown formatting.`,
-      
-      lead: `Extract lead information from the email. Return a JSON object with:
-- company_name: string
-- contact_name: string
-- email: string
-- phone: string
-- source: string ("Email")
-- description: string (brief description of the lead/opportunity)
-- estimated_value: number (if mentioned)
-- status: string ("new")
-Return ONLY valid JSON, no markdown formatting.`,
-    };
-
-    const systemPrompt = systemPrompts[extractionType] || systemPrompts.contact;
-
     console.log(`Parsing email content for ${extractionType}`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Step 1: Classify the email if extractionType is not specified
+    let detectedType = extractionType;
+    let confidence = 1.0;
+
+    if (!extractionType || extractionType === 'auto') {
+      const classificationResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: `Analyze the email and determine its primary type. Return ONLY a JSON object with:
+- type: one of ["invoice", "purchase_order", "service_order", "contact", "lead", "general"]
+- confidence: number between 0 and 1
+- reasoning: brief explanation`
+            },
+            {
+              role: "user",
+              content: `Classify this email:\n\n${emailContent}`
+            }
+          ],
+        }),
+      });
+
+      if (classificationResponse.ok) {
+        const classificationData = await classificationResponse.json();
+        const classificationText = classificationData.choices?.[0]?.message?.content || '{}';
+        const cleanedText = classificationText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        try {
+          const classification = JSON.parse(cleanedText);
+          detectedType = classification.type || 'general';
+          confidence = classification.confidence || 0.5;
+          console.log('Email classified as:', detectedType, 'with confidence:', confidence);
+        } catch (e) {
+          console.error('Failed to parse classification:', cleanedText);
+          detectedType = 'general';
+        }
+      }
+    }
+
+    // Step 2: Extract data based on detected type using structured output
+    const extractionSchemas: Record<string, any> = {
+      invoice: {
+        type: "function",
+        function: {
+          name: "extract_invoice_data",
+          description: "Extract invoice information from email",
+          parameters: {
+            type: "object",
+            properties: {
+              vendor_name: { type: "string", description: "Supplier/vendor name" },
+              invoice_number: { type: "string", description: "Invoice number or ID" },
+              invoice_date: { type: "string", description: "Invoice date in ISO format (YYYY-MM-DD)" },
+              due_date: { type: "string", description: "Payment due date in ISO format" },
+              total_amount: { type: "number", description: "Total invoice amount" },
+              tax_amount: { type: "number", description: "Tax amount" },
+              description: { type: "string", description: "Brief description of invoice" },
+              line_items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    description: { type: "string" },
+                    quantity: { type: "number" },
+                    unit_price: { type: "number" },
+                    amount: { type: "number" }
+                  }
+                }
+              }
+            },
+            required: ["vendor_name"]
+          }
+        }
+      },
+      purchase_order: {
+        type: "function",
+        function: {
+          name: "extract_po_data",
+          description: "Extract purchase order information",
+          parameters: {
+            type: "object",
+            properties: {
+              vendor_name: { type: "string", description: "Supplier name" },
+              description: { type: "string", description: "What is being ordered" },
+              expected_delivery_date: { type: "string", description: "Expected delivery date in ISO format" },
+              total_amount: { type: "number", description: "Total order amount if mentioned" },
+              notes: { type: "string", description: "Additional notes or special instructions" },
+              line_items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    description: { type: "string" },
+                    quantity: { type: "number" },
+                    unit_price: { type: "number" }
+                  }
+                }
+              }
+            },
+            required: ["vendor_name", "description"]
+          }
+        }
+      },
+      service_order: {
+        type: "function",
+        function: {
+          name: "extract_service_data",
+          description: "Extract service order information",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Brief title of service needed" },
+              description: { type: "string", description: "Detailed description of service request" },
+              priority: { type: "string", enum: ["low", "medium", "high"], description: "Service priority" },
+              requested_date: { type: "string", description: "Requested service date in ISO format" },
+              location: { type: "string", description: "Service location address" },
+              contact_name: { type: "string", description: "Contact person name" },
+              contact_email: { type: "string", description: "Contact email" },
+              contact_phone: { type: "string", description: "Contact phone number" },
+              issue_category: { type: "string", description: "Type of issue (e.g., maintenance, repair, installation)" }
+            },
+            required: ["title", "description"]
+          }
+        }
+      },
+      contact: {
+        type: "function",
+        function: {
+          name: "extract_contact_data",
+          description: "Extract contact information",
+          parameters: {
+            type: "object",
+            properties: {
+              first_name: { type: "string", description: "First name" },
+              last_name: { type: "string", description: "Last name" },
+              email: { type: "string", description: "Email address" },
+              phone: { type: "string", description: "Phone number" },
+              company: { type: "string", description: "Company name" },
+              position: { type: "string", description: "Job title or position" },
+              notes: { type: "string", description: "Additional notes about the contact" }
+            },
+            required: ["email"]
+          }
+        }
+      },
+      lead: {
+        type: "function",
+        function: {
+          name: "extract_lead_data",
+          description: "Extract sales lead information",
+          parameters: {
+            type: "object",
+            properties: {
+              company_name: { type: "string", description: "Company name" },
+              contact_name: { type: "string", description: "Contact person name" },
+              email: { type: "string", description: "Email address" },
+              phone: { type: "string", description: "Phone number" },
+              source: { type: "string", description: "Lead source", default: "Email" },
+              description: { type: "string", description: "Description of opportunity or inquiry" },
+              estimated_value: { type: "number", description: "Estimated deal value if mentioned" },
+              status: { type: "string", default: "new" },
+              interest_area: { type: "string", description: "Product/service they're interested in" }
+            },
+            required: ["company_name", "description"]
+          }
+        }
+      }
+    };
+
+    const schema = extractionSchemas[detectedType];
+    
+    if (!schema) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Unknown email type detected" 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const extractionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -85,57 +216,56 @@ Return ONLY valid JSON, no markdown formatting.`,
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Parse this email and extract the relevant information:\n\n${emailContent}` },
+          {
+            role: "system",
+            content: `You are a data extraction expert. Extract all relevant information from the email content. If a field is not mentioned or cannot be determined, omit it from the response. Be precise and accurate.`
+          },
+          {
+            role: "user",
+            content: `Extract information from this email:\n\n${emailContent}`
+          }
         ],
+        tools: [schema],
+        tool_choice: { type: "function", function: { name: schema.function.name } }
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    if (!extractionResponse.ok) {
+      if (extractionResponse.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      if (extractionResponse.status === 402) {
         return new Response(
           JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("Failed to parse email content");
+      const errorText = await extractionResponse.text();
+      console.error("AI gateway error:", extractionResponse.status, errorText);
+      throw new Error("Failed to extract email content");
     }
 
-    const data = await response.json();
-    const extractedText = data.choices?.[0]?.message?.content;
+    const extractionData = await extractionResponse.json();
+    const toolCall = extractionData.choices?.[0]?.message?.tool_calls?.[0];
 
-    if (!extractedText) {
-      throw new Error("No content in AI response");
+    if (!toolCall) {
+      throw new Error("No structured data extracted from email");
     }
 
-    // Clean up the response - remove markdown code blocks if present
-    let cleanedText = extractedText.trim();
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.replace(/```\n?/g, '');
-    }
-
-    let parsedData;
-    try {
-      parsedData = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error("Failed to parse AI response as JSON:", cleanedText);
-      throw new Error("Invalid JSON response from AI");
-    }
-
-    console.log("Successfully parsed email content:", parsedData);
+    const parsedData = JSON.parse(toolCall.function.arguments);
+    
+    console.log("Successfully extracted email content:", parsedData);
 
     return new Response(
-      JSON.stringify({ success: true, data: parsedData }),
+      JSON.stringify({ 
+        success: true, 
+        data: parsedData,
+        detected_type: detectedType,
+        confidence: confidence
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

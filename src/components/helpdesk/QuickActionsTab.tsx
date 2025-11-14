@@ -34,6 +34,8 @@ export function QuickActionsTab({ ticket }: QuickActionsTabProps) {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<Record<string, any>>({});
+  const [emailType, setEmailType] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<number>(0);
 
   const parseEmailContent = async (extractionType: string) => {
     setIsParsing(true);
@@ -61,9 +63,15 @@ ${ticket?.description || ""}
 
       if (data?.success) {
         setParsedData((prev) => ({ ...prev, [extractionType]: data.data }));
+        if (data.detected_type) {
+          setEmailType(data.detected_type);
+          setConfidence(data.confidence || 0);
+        }
         toast({
           title: "Email parsed successfully",
-          description: "Form will be pre-filled with extracted data",
+          description: data.detected_type 
+            ? `Detected as ${data.detected_type} (${Math.round(data.confidence * 100)}% confidence)`
+            : "Form will be pre-filled with extracted data",
         });
       } else {
         throw new Error(data?.error || "Failed to parse email");
@@ -178,8 +186,25 @@ ${ticket?.description || ""}
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 text-primary animate-spin" />
                 <p className="text-xs font-medium text-primary">
-                  AI is analyzing email content...
+                  AI is analyzing email patterns and extracting data...
                 </p>
+              </div>
+            </Card>
+          )}
+
+          {/* Email Type Detection */}
+          {emailType && confidence > 0 && !isParsing && (
+            <Card className="p-3 bg-green-50 border-green-200">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-green-600" />
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-green-900">
+                    Detected: {emailType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </p>
+                  <p className="text-xs text-green-700 mt-0.5">
+                    Confidence: {Math.round(confidence * 100)}%
+                  </p>
+                </div>
               </div>
             </Card>
           )}
