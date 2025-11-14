@@ -148,6 +148,31 @@ export default function RemoteCursors() {
 
   return (
     <>
+      {/* Render text selections */}
+      {cursors.map((cursor) => {
+        if (!cursor.selection) return null;
+        
+        return (
+          <div key={`selection-${cursor.user_id}`}>
+            {cursor.selection.rects.map((rect, index) => (
+              <div
+                key={`${cursor.user_id}-rect-${index}`}
+                className="fixed pointer-events-none z-[9998]"
+                style={{
+                  top: `${rect.top}px`,
+                  left: `${rect.left}px`,
+                  width: `${rect.width}px`,
+                  height: `${rect.height}px`,
+                  backgroundColor: cursor.color,
+                  opacity: 0.3,
+                  mixBlendMode: 'multiply',
+                }}
+              />
+            ))}
+          </div>
+        );
+      })}
+
       {/* Render cursors */}
       {cursors.map((cursor) => {
         const position = calculateCursorPosition(cursor);

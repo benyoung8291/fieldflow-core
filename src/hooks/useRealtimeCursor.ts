@@ -15,6 +15,11 @@ export interface CursorPosition {
   elementX?: number; // X position relative to element (0-100%)
   elementY?: number; // Y position relative to element (0-100%)
   elementType?: string; // type of element (button, input, etc.)
+  // Text selection
+  selection?: {
+    text: string;
+    rects: Array<{ top: number; left: number; width: number; height: number }>;
+  };
   user_id: string;
   user_name: string;
   color: string;
@@ -304,6 +309,60 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
     // Mouse move listener
     window.addEventListener("mousemove", handleMouseMove);
 
+    // Selection change listener
+    let selectionTimeout: NodeJS.Timeout;
+    const handleSelectionChange = () => {
+      clearTimeout(selectionTimeout);
+      selectionTimeout = setTimeout(() => {
+        if (!isEnabled) return;
+        
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+          // No selection, broadcast empty
+          channel.send({
+            type: "broadcast",
+            event: "selection",
+            payload: {
+              user_id: userId,
+              user_name: userName,
+              color: getUserColor(userId),
+              page_path: currentPath,
+              selection: null,
+              timestamp: Date.now(),
+            },
+          });
+          return;
+        }
+
+        const range = selection.getRangeAt(0);
+        const rects = Array.from(range.getClientRects()).map(rect => ({
+          top: rect.top + (window.pageYOffset || document.documentElement.scrollTop),
+          left: rect.left + (window.pageXOffset || document.documentElement.scrollLeft),
+          width: rect.width,
+          height: rect.height,
+        }));
+
+        // Broadcast selection
+        channel.send({
+          type: "broadcast",
+          event: "selection",
+          payload: {
+            user_id: userId,
+            user_name: userName,
+            color: getUserColor(userId),
+            page_path: currentPath,
+            selection: {
+              text: selection.toString(),
+              rects,
+            },
+            timestamp: Date.now(),
+          },
+        });
+      }, 150); // Debounce selection changes
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+
     // Click listener
     const handleClick = (e: MouseEvent) => {
       if (!isEnabled) return;
@@ -346,6 +405,28 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
           }, 1000);
         }
       })
+      .on("broadcast", { event: "selection" }, ({ payload }) => {
+        if (payload.user_id !== userId && payload.page_path === currentPath) {
+          setCursors((prev) => {
+            const otherCursors = prev.filter((c) => c.user_id !== payload.user_id);
+            if (payload.selection) {
+              // Find existing cursor and update with selection
+              const existingCursor = prev.find((c) => c.user_id === payload.user_id);
+              if (existingCursor) {
+                return [...otherCursors, { ...existingCursor, selection: payload.selection }];
+              }
+            } else {
+              // Remove selection from cursor
+              const existingCursor = prev.find((c) => c.user_id === payload.user_id);
+              if (existingCursor) {
+                const { selection, ...cursorWithoutSelection } = existingCursor;
+                return [...otherCursors, cursorWithoutSelection];
+              }
+            }
+            return prev;
+          });
+        }
+      })
       .subscribe();
 
     // Update cursor when path changes
@@ -354,6 +435,8 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("click", handleClick);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      clearTimeout(selectionTimeout);
       supabase.removeChannel(channel);
       supabase.removeChannel(clickChannel);
     };
