@@ -44,8 +44,42 @@ const getIcon = (actionType?: string) => {
   }
 };
 
+const getLabel = (actionType?: string, config?: any) => {
+  switch (actionType) {
+    case "create_project":
+      return config?.name || "Create Project";
+    case "create_service_order":
+      return config?.name || "Create Service Order";
+    case "create_invoice":
+      return config?.name || "Create Invoice";
+    case "create_task":
+      return config?.title || "Create Task";
+    case "create_checklist":
+      return config?.title || "Create Checklist";
+    case "create_note":
+      return "Create Note";
+    case "assign_user":
+      return "Assign User";
+    case "assign_ticket":
+      return "Assign Ticket";
+    case "send_email":
+      return "Send Email";
+    case "send_helpdesk_email":
+      return "Send Helpdesk Email";
+    case "delay":
+      return `Delay ${config?.duration || "?"} ${config?.unit || "minutes"}`;
+    case "update_status":
+      return "Update Status";
+    case "update_ticket_status":
+      return config?.newStatus ? `Update to ${config.newStatus}` : "Update Ticket Status";
+    default:
+      return actionType || "Action";
+  }
+};
+
 function ActionNode({ data }: ActionNodeProps) {
   const Icon = getIcon(data.actionType);
+  const label = getLabel(data.actionType, data.config);
 
   return (
     <>
@@ -59,7 +93,7 @@ function ActionNode({ data }: ActionNodeProps) {
           <Icon className="h-4 w-4 text-muted-foreground" />
           <div className="font-semibold text-xs text-muted-foreground uppercase">ACTION</div>
         </div>
-        <div className="text-sm font-medium">{data.label}</div>
+        <div className="text-sm font-medium">{label}</div>
         {data.config && Object.keys(data.config).length > 0 && (
           <div className="text-xs text-muted-foreground mt-2">
             {Object.keys(data.config).length} setting(s) configured

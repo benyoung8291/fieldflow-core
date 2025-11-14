@@ -215,7 +215,7 @@ async function executeNode(
       output = await executeAction(supabase, node, context);
       nextNodeIds = connectionMap.get(node.node_id) || [];
     } else if (node.node_type === "condition") {
-      const conditionResult = await evaluateCondition(node, context);
+      const conditionResult = await evaluateCondition(node, { ...context, supabase });
       output = { conditionMet: conditionResult };
       
       // Get connections based on condition result
@@ -588,9 +588,50 @@ async function executeAction(supabase: any, node: any, context: any): Promise<an
 
 async function evaluateCondition(node: any, context: any): Promise<boolean> {
   const { config } = node;
-  const { triggerData, createdDocuments } = context;
+  const { triggerData, createdDocuments, supabase } = context;
 
-  // Simple condition evaluation - can be extended
+  // User relationship conditions
+  if (config.conditionType === "is_assigned_to_current_user") {
+    const assignedTo = triggerData.assigned_to || triggerData.assignedTo;
+    const currentUserId = triggerData.userId;
+    return assignedTo === currentUserId;
+  }
+
+  if (config.conditionType === "is_created_by_current_user") {
+    const createdBy = triggerData.created_by || triggerData.createdBy;
+    const currentUserId = triggerData.userId;
+    return createdBy === currentUserId;
+  }
+
+  if (config.conditionType === "has_customer") {
+    return !!triggerData.customerId || !!triggerData.customer_id;
+  }
+
+  if (config.conditionType === "has_project") {
+    return !!triggerData.projectId || !!triggerData.project_id;
+  }
+
+  // Field comparison conditions
+  if (config.conditionType === "field_comparison") {
+    const fieldValue = triggerData[config.field] || createdDocuments[config.documentType]?.[config.field];
+    
+    switch (config.operator) {
+      case "equals":
+        return String(fieldValue) === String(config.value);
+      case "not_equals":
+        return String(fieldValue) !== String(config.value);
+      case "greater_than":
+        return Number(fieldValue) > Number(config.value);
+      case "less_than":
+        return Number(fieldValue) < Number(config.value);
+      case "contains":
+        return String(fieldValue || "").includes(String(config.value));
+      default:
+        return true;
+    }
+  }
+
+  // Legacy conditions for backward compatibility
   if (config.conditionType === "field_equals") {
     const value = triggerData[config.fieldName] || createdDocuments[config.documentType]?.[config.fieldName];
     return value === config.expectedValue;

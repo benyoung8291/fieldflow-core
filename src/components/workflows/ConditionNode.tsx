@@ -7,10 +7,35 @@ interface ConditionNodeProps {
   data: {
     label: string;
     condition?: string;
+    config?: {
+      conditionType?: string;
+      field?: string;
+      operator?: string;
+      value?: string;
+    };
   };
 }
 
 function ConditionNode({ data }: ConditionNodeProps) {
+  const getConditionLabel = () => {
+    if (!data.config?.conditionType) return data.label;
+    
+    switch (data.config.conditionType) {
+      case "is_assigned_to_current_user":
+        return "Assigned to me?";
+      case "is_created_by_current_user":
+        return "Created by me?";
+      case "has_customer":
+        return "Has customer?";
+      case "has_project":
+        return "Has project?";
+      case "field_comparison":
+        return `${data.config.field || "Field"} ${data.config.operator || "="} ${data.config.value || "?"}`;
+      default:
+        return data.label;
+    }
+  };
+
   return (
     <>
       <Handle
@@ -23,7 +48,7 @@ function ConditionNode({ data }: ConditionNodeProps) {
           <GitBranch className="h-4 w-4 text-yellow-600" />
           <div className="font-semibold text-xs text-yellow-600 uppercase">CONDITION</div>
         </div>
-        <div className="text-sm">{data.label}</div>
+        <div className="text-sm">{getConditionLabel()}</div>
       </Card>
       <Handle
         type="source"
