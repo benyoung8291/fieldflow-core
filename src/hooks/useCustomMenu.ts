@@ -54,6 +54,7 @@ const defaultNavigation = [
     children: [
       { name: "Invoices", href: "/invoices", icon: "Receipt", color: "#8b5cf6", isFolder: false },
       { name: "AP Invoices", href: "/ap-invoices", icon: "FileText", color: "#8b5cf6", isFolder: false },
+      { name: "AP Approval Queue", href: "/ap-invoice-approval-queue", icon: "ClipboardCheck", color: "#8b5cf6", isFolder: false },
       { name: "Recurring Invoices", href: "/recurring-invoices", icon: "RefreshCw", color: "#8b5cf6", isFolder: false },
       { name: "Suppliers", href: "/suppliers", icon: "Building2", color: "#8b5cf6", isFolder: false },
       { name: "Purchase Orders", href: "/purchase-orders", icon: "FileText", color: "#8b5cf6", isFolder: false },
