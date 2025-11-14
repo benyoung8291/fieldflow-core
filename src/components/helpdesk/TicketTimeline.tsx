@@ -846,12 +846,12 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                                         "w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 cursor-pointer",
                                         "hover:scale-110 active:scale-95",
                                         isCompleted 
-                                          ? 'bg-green-500 border-green-500 hover:bg-green-600' 
+                                          ? 'bg-white border-green-500 hover:border-green-600' 
                                           : 'border-green-400 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/30',
                                         toggleCheckboxMutation.isPending && 'opacity-50 cursor-not-allowed'
                                       )}
                                     >
-                                      {isCompleted && <CheckSquare className="h-4 w-4 text-white fill-white" />}
+                                      {isCompleted && <CheckSquare className="h-4 w-4 text-green-600 fill-green-600" />}
                                     </button>
                                     <span className={cn(
                                       "text-sm font-medium",
