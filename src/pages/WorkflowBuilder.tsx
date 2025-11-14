@@ -460,12 +460,12 @@ export default function WorkflowBuilder() {
           <>
           <div className="border-b bg-background p-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             <Button variant="ghost" size="sm" onClick={() => navigate("/workflows")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
-            <div className="flex-1">
+            <div className="flex-1 max-w-md">
               <Input
                 value={workflowName}
                 onChange={(e) => setWorkflowName(e.target.value)}
@@ -473,11 +473,27 @@ export default function WorkflowBuilder() {
                 className="text-lg font-semibold"
               />
             </div>
+            <div className="flex-1 max-w-md">
+              <Textarea
+                value={workflowDescription}
+                onChange={(e) => setWorkflowDescription(e.target.value)}
+                placeholder="Description (optional)"
+                rows={1}
+                className="resize-none"
+              />
+            </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={handleSave} disabled={saveMutation.isPending}>
               <Save className="h-4 w-4 mr-2" />
               Save
+            </Button>
+            <Button onClick={() => setShowTestDialog(true)} variant="outline">
+              <Play className="h-4 w-4 mr-2" />
+              Test
+            </Button>
+          </div>
+        </div>
             </Button>
             <Button variant="outline" onClick={() => setShowTestDialog(true)}>
               <Play className="h-4 w-4 mr-2" />
