@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { Activity, FileText, Briefcase, ClipboardList, DollarSign } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AuditLog {
   id: string;
@@ -36,6 +37,19 @@ const getActionColor = (action: string) => {
 
 export function RecentActivityFeed() {
   const [activities, setActivities] = useState<AuditLog[]>([]);
+  const navigate = useNavigate();
+
+  const getModuleRoute = (tableName: string, recordId: string) => {
+    const routes: { [key: string]: string } = {
+      "quotes": "/quotes",
+      "projects": "/projects",
+      "service_orders": "/service-orders",
+      "invoices": "/invoices",
+    };
+    
+    const basePath = routes[tableName];
+    return basePath ? `${basePath}/${recordId}` : null;
+  };
 
   // Fetch initial activity logs
   const { data: initialLogs, isLoading } = useQuery({
@@ -132,11 +146,13 @@ export function RecentActivityFeed() {
               {activities.map((log) => {
                 const Icon = getModuleIcon(log.table_name);
                 const actionColor = getActionColor(log.action);
+                const route = getModuleRoute(log.table_name, log.record_id);
 
                 return (
                   <div
                     key={log.id}
-                    className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    onClick={() => route && navigate(route)}
+                    className={`flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors ${route ? 'cursor-pointer' : ''}`}
                   >
                     <div className="mt-1">
                       <Icon className="h-4 w-4 text-muted-foreground" />
@@ -149,7 +165,7 @@ export function RecentActivityFeed() {
                         <span className={`text-sm ${actionColor}`}>
                           {log.action}
                         </span>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-muted-foreground hover:text-primary">
                           {log.table_name.replace(/_/g, " ")}
                         </span>
                       </div>
