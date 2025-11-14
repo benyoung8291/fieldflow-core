@@ -87,7 +87,7 @@ export function CreditCardsTab() {
       const cardData = {
         ...values,
         tenant_id: profile?.tenant_id,
-        assigned_to: values.assigned_to || null,
+        assigned_to: (values.assigned_to && values.assigned_to !== "unassigned") ? values.assigned_to : null,
       };
 
       if (editingCard) {
@@ -246,7 +246,7 @@ export function CreditCardsTab() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Unassigned</SelectItem>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
                           {users?.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
                               {user.name}

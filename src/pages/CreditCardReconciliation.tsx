@@ -631,14 +631,14 @@ export default function CreditCardReconciliation() {
                           <div>
                             <Label className="text-[11px] text-muted-foreground">Project (Optional)</Label>
                             <Select
-                              value={formData.project_id}
-                              onValueChange={(value) => setFormData({ ...formData, project_id: value, service_order_id: "" })}
+                              value={formData.project_id || "none"}
+                              onValueChange={(value) => setFormData({ ...formData, project_id: value === "none" ? "" : value, service_order_id: "" })}
                             >
                               <SelectTrigger className="h-8 text-xs mt-1">
                                 <SelectValue placeholder="Select project" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {projects.map((project) => (
                                   <SelectItem key={project.id} value={project.id}>
                                     {project.name}
@@ -651,14 +651,14 @@ export default function CreditCardReconciliation() {
                           <div>
                             <Label className="text-[11px] text-muted-foreground">Service Order (Optional)</Label>
                             <Select
-                              value={formData.service_order_id}
-                              onValueChange={(value) => setFormData({ ...formData, service_order_id: value, project_id: "" })}
+                              value={formData.service_order_id || "none"}
+                              onValueChange={(value) => setFormData({ ...formData, service_order_id: value === "none" ? "" : value, project_id: "" })}
                             >
                               <SelectTrigger className="h-8 text-xs mt-1">
                                 <SelectValue placeholder="Select service order" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {serviceOrders.map((so) => (
                                   <SelectItem key={so.id} value={so.id}>
                                     {so.work_order_number} {so.purchase_order_number && `- PO: ${so.purchase_order_number}`}
