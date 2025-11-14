@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface ThreeWayMatchingCardProps {
   invoiceId: string;
@@ -25,7 +26,11 @@ interface ThreeWayMatchingCardProps {
 
 export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCardProps) {
   const [approvalNotes, setApprovalNotes] = useState("");
+  const [requestNotes, setRequestNotes] = useState("");
   const queryClient = useQueryClient();
+  const { isAdmin, userRoles } = usePermissions();
+
+  const isManager = isAdmin || userRoles.some(r => r.role === 'supervisor');
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ['ap-invoice-matching', invoiceId],
@@ -76,7 +81,52 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
     },
   });
 
-  // Approve variance mutation
+  // Request approval mutation
+  const requestApprovalMutation = useMutation({
+    mutationFn: async () => {
+      // @ts-ignore - Types will update after migration
+      const { data, error } = await supabase.rpc('request_ap_invoice_approval', {
+        p_invoice_id: invoiceId,
+        p_notes: requestNotes
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ap-invoice-matching', invoiceId] });
+      toast.success('Approval request sent to managers');
+      setRequestNotes("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to request approval');
+    },
+  });
+
+  // Manager approve/reject mutation
+  const managerDecisionMutation = useMutation({
+    mutationFn: async ({ approve, notes }: { approve: boolean; notes: string }) => {
+      // @ts-ignore - Types will update after migration
+      const { data, error } = await supabase.rpc('approve_reject_ap_invoice_variance', {
+        p_invoice_id: invoiceId,
+        p_approve: approve,
+        p_notes: notes
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['ap-invoice-matching', invoiceId] });
+      toast.success(data.message || 'Decision recorded');
+      setApprovalNotes("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to process decision');
+    },
+  });
+
+  // Legacy approve variance mutation (for backward compatibility)
   const approveVarianceMutation = useMutation({
     mutationFn: async () => {
       // @ts-ignore - Types will update after migration
@@ -113,6 +163,18 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
   }
 
   const getStatusBadge = () => {
+    // @ts-ignore - Types will update after migration
+    if (invoice.approval_status === 'approved') {
+      return <Badge className="bg-success"><CheckCircle2 className="h-3 w-3 mr-1" /> Manager Approved</Badge>;
+    }
+    // @ts-ignore - Types will update after migration
+    if (invoice.approval_status === 'rejected') {
+      return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" /> Rejected</Badge>;
+    }
+    // @ts-ignore - Types will update after migration
+    if (invoice.requires_manager_approval && invoice.approval_status === 'pending') {
+      return <Badge variant="outline" className="border-warning text-warning"><Clock className="h-3 w-3 mr-1" /> Awaiting Approval</Badge>;
+    }
     // @ts-ignore - Types will update after migration
     switch (invoice.matching_status) {
       case 'matched':
@@ -316,7 +378,7 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
           )}
 
           {/* @ts-ignore - Types will update after migration */}
-          {invoice.matching_status === 'variance' && (
+          {invoice.matching_status === 'variance' && !invoice.requires_manager_approval && (
             <div className="flex-1 space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="approval-notes">Approval Notes</Label>
@@ -340,6 +402,98 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
           )}
 
           {/* @ts-ignore - Types will update after migration */}
+          {invoice.matching_status === 'variance' && invoice.requires_manager_approval && invoice.approval_status === 'pending' && !isManager && (
+            <div className="flex-1 space-y-3">
+              <Alert className="border-warning bg-warning/5">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription>
+                  Variance exceeds threshold and requires manager approval before payment.
+                </AlertDescription>
+              </Alert>
+              
+              {/* @ts-ignore - Types will update after migration */}
+              {!invoice.approval_requested_at ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="request-notes">Request Notes</Label>
+                    <Textarea
+                      id="request-notes"
+                      value={requestNotes}
+                      onChange={(e) => setRequestNotes(e.target.value)}
+                      placeholder="Explain why this variance should be approved..."
+                      rows={2}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => requestApprovalMutation.mutate()}
+                    disabled={requestApprovalMutation.isPending || !requestNotes}
+                    variant="default"
+                  >
+                    {requestApprovalMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Request Manager Approval
+                  </Button>
+                </>
+              ) : (
+                <Alert className="border-blue-500 bg-blue-500/5">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <AlertDescription>
+                    Approval request sent to managers. Waiting for decision.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          {/* @ts-ignore - Types will update after migration */}
+          {invoice.requires_manager_approval && invoice.approval_status === 'pending' && isManager && (
+            <div className="flex-1 space-y-3">
+              <Alert className="border-warning bg-warning/5">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription>
+                  <strong>Manager Approval Required</strong>
+                  <p className="mt-1">Variance exceeds threshold. Please review and approve or reject.</p>
+                  {/* @ts-ignore - Types will update after migration */}
+                  {invoice.manager_approval_notes && (
+                    // @ts-ignore - Types will update after migration
+                    <p className="mt-2 text-sm italic">Request notes: {invoice.manager_approval_notes}</p>
+                  )}
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-2">
+                <Label htmlFor="manager-notes">Decision Notes</Label>
+                <Textarea
+                  id="manager-notes"
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  placeholder="Explain your decision..."
+                  rows={2}
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => managerDecisionMutation.mutate({ approve: true, notes: approvalNotes })}
+                  disabled={managerDecisionMutation.isPending || !approvalNotes}
+                  variant="default"
+                >
+                  {managerDecisionMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Approve for Payment
+                </Button>
+                <Button
+                  onClick={() => managerDecisionMutation.mutate({ approve: false, notes: approvalNotes })}
+                  disabled={managerDecisionMutation.isPending || !approvalNotes}
+                  variant="destructive"
+                >
+                  {managerDecisionMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Reject
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* @ts-ignore - Types will update after migration */}
           {invoice.matching_status === 'matched' && (
             <Alert className="border-success bg-success/5">
               <CheckCircle2 className="h-4 w-4 text-success" />
@@ -350,15 +504,35 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
           )}
 
           {/* @ts-ignore - Types will update after migration */}
-          {invoice.matching_status === 'approved' && (
+          {(invoice.matching_status === 'approved' || invoice.approval_status === 'approved') && (
             <Alert className="border-success bg-success/5">
               <CheckCircle2 className="h-4 w-4 text-success" />
               <AlertDescription>
-                Invoice approved for payment with variance notes.
+                Invoice approved for payment.
+                {/* @ts-ignore - Types will update after migration */}
+                {invoice.manager_approval_notes && (
+                  // @ts-ignore - Types will update after migration
+                  <p className="mt-2 text-sm italic">Approval notes: {invoice.manager_approval_notes}</p>
+                )}
                 {/* @ts-ignore - Types will update after migration */}
                 {invoice.variance_notes && (
                   // @ts-ignore - Types will update after migration
                   <p className="mt-2 text-sm italic">{invoice.variance_notes}</p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* @ts-ignore - Types will update after migration */}
+          {invoice.approval_status === 'rejected' && (
+            <Alert className="border-destructive bg-destructive/5">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <AlertDescription>
+                Invoice rejected by manager.
+                {/* @ts-ignore - Types will update after migration */}
+                {invoice.manager_approval_notes && (
+                  // @ts-ignore - Types will update after migration
+                  <p className="mt-2 text-sm italic">Rejection reason: {invoice.manager_approval_notes}</p>
                 )}
               </AlertDescription>
             </Alert>
