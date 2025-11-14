@@ -35,6 +35,9 @@ import {
   Package,
   Clock,
   TrendingUp,
+  FileSignature,
+  Mail,
+  UserPlus,
 } from "lucide-react";
 
 interface SearchResult {
@@ -213,6 +216,122 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     },
   });
 
+  const { data: appointments } = useQuery({
+    queryKey: ["search-appointments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, title, start_time, customers(name)")
+        .order("start_time", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: workers } = useQuery({
+    queryKey: ["search-workers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: purchaseOrders } = useQuery({
+    queryKey: ["search-purchase-orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("id, po_number, vendors(name)")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: leads } = useQuery({
+    queryKey: ["search-leads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("id, name, company_name, email")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: contacts } = useQuery({
+    queryKey: ["search-contacts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, email, company_name")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: suppliers } = useQuery({
+    queryKey: ["search-suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("id, name, email")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: tasks } = useQuery({
+    queryKey: ["search-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, title, status")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: contracts } = useQuery({
+    queryKey: ["search-contracts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_contracts")
+        .select("id, contract_number, customers(name)")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: helpdeskTickets } = useQuery({
+    queryKey: ["search-helpdesk"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("helpdesk_tickets")
+        .select("id, ticket_number, subject, sender_name")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Combine all searchable items
   const allResults: SearchResult[] = useMemo(() => {
     const results: SearchResult[] = [...navigationItems];
@@ -294,8 +413,119 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       });
     });
 
+    // Add appointments
+    appointments?.forEach((appointment) => {
+      const customerName = (appointment.customers as any)?.name;
+      results.push({
+        id: appointment.id,
+        title: appointment.title || "Appointment",
+        subtitle: customerName,
+        type: "appointment",
+        route: `/appointments/${appointment.id}`,
+        icon: Calendar,
+      });
+    });
+
+    // Add workers
+    workers?.forEach((worker) => {
+      results.push({
+        id: worker.id,
+        title: `${worker.first_name || ""} ${worker.last_name || ""}`.trim() || "Worker",
+        subtitle: worker.email,
+        type: "worker",
+        route: `/workers/${worker.id}`,
+        icon: UserCircle,
+      });
+    });
+
+    // Add purchase orders
+    purchaseOrders?.forEach((po) => {
+      const supplierName = (po.vendors as any)?.name;
+      results.push({
+        id: po.id,
+        title: po.po_number || "Purchase Order",
+        subtitle: supplierName,
+        type: "purchase-order",
+        route: `/purchase-orders/${po.id}`,
+        icon: ShoppingCart,
+      });
+    });
+
+    // Add leads
+    leads?.forEach((lead) => {
+      results.push({
+        id: lead.id,
+        title: lead.company_name || lead.name || "Lead",
+        subtitle: lead.email,
+        type: "lead",
+        route: `/leads/${lead.id}`,
+        icon: UserPlus,
+      });
+    });
+
+    // Add contacts
+    contacts?.forEach((contact) => {
+      results.push({
+        id: contact.id,
+        title: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.company_name || "Contact",
+        subtitle: contact.email,
+        type: "contact",
+        route: `/contacts/${contact.id}`,
+        icon: Users,
+      });
+    });
+
+    // Add suppliers
+    suppliers?.forEach((supplier) => {
+      results.push({
+        id: supplier.id,
+        title: supplier.name || "Supplier",
+        subtitle: supplier.email,
+        type: "supplier",
+        route: `/suppliers/${supplier.id}`,
+        icon: Package,
+      });
+    });
+
+    // Add tasks
+    tasks?.forEach((task) => {
+      results.push({
+        id: task.id,
+        title: task.title || "Task",
+        subtitle: task.status,
+        type: "task",
+        route: `/tasks`,
+        icon: ListChecks,
+      });
+    });
+
+    // Add contracts
+    contracts?.forEach((contract) => {
+      const customerName = (contract.customers as any)?.name;
+      results.push({
+        id: contract.id,
+        title: contract.contract_number || "Contract",
+        subtitle: customerName,
+        type: "contract",
+        route: `/service-contracts/${contract.id}`,
+        icon: FileSignature,
+      });
+    });
+
+    // Add helpdesk tickets
+    helpdeskTickets?.forEach((ticket) => {
+      results.push({
+        id: ticket.id,
+        title: ticket.ticket_number || "Ticket",
+        subtitle: ticket.subject || ticket.sender_name,
+        type: "helpdesk",
+        route: `/helpdesk?ticket=${ticket.id}`,
+        icon: Headphones,
+      });
+    });
+
     return results;
-  }, [customers, quotes, invoices, projects, serviceOrders, locations, navigationItems]);
+  }, [customers, quotes, invoices, projects, serviceOrders, locations, appointments, workers, purchaseOrders, leads, contacts, suppliers, tasks, contracts, helpdeskTickets, navigationItems]);
 
   const handleSelect = (result: SearchResult) => {
     // Track access
@@ -373,6 +603,15 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       projects: [],
       "service-orders": [],
       locations: [],
+      appointments: [],
+      workers: [],
+      "purchase-orders": [],
+      leads: [],
+      contacts: [],
+      suppliers: [],
+      tasks: [],
+      contracts: [],
+      helpdesk: [],
     };
 
     filteredResults.forEach((result) => {
@@ -611,8 +850,242 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
             )}
 
             {groupedResults.locations.length > 0 && (
-              <CommandGroup heading="Locations">
-                {groupedResults.locations.slice(0, 5).map((item) => {
+              <>
+                <CommandGroup heading="Locations">
+                  {groupedResults.locations.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.appointments.length > 0 && (
+              <>
+                <CommandGroup heading="Appointments">
+                  {groupedResults.appointments.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.workers.length > 0 && (
+              <>
+                <CommandGroup heading="Workers">
+                  {groupedResults.workers.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults["purchase-orders"].length > 0 && (
+              <>
+                <CommandGroup heading="Purchase Orders">
+                  {groupedResults["purchase-orders"].slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.leads.length > 0 && (
+              <>
+                <CommandGroup heading="Leads">
+                  {groupedResults.leads.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.contacts.length > 0 && (
+              <>
+                <CommandGroup heading="Contacts">
+                  {groupedResults.contacts.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.suppliers.length > 0 && (
+              <>
+                <CommandGroup heading="Suppliers">
+                  {groupedResults.suppliers.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.tasks.length > 0 && (
+              <>
+                <CommandGroup heading="Tasks">
+                  {groupedResults.tasks.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.contracts.length > 0 && (
+              <>
+                <CommandGroup heading="Contracts">
+                  {groupedResults.contracts.slice(0, 5).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.helpdesk.length > 0 && (
+              <CommandGroup heading="Help Desk">
+                {groupedResults.helpdesk.slice(0, 5).map((item) => {
                   const Icon = item.icon;
                   return (
                     <CommandItem
