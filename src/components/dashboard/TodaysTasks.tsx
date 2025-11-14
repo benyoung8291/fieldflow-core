@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckSquare, Circle, CheckCircle2 } from "lucide-react";
+import { CheckSquare, Circle, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isPast, startOfDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 interface Task {
@@ -45,13 +45,29 @@ export function TodaysTasks() {
         .from("tasks")
         .select("*")
         .eq("assigned_to", currentUser!.id)
-        .eq("due_date", today)
+        .lte("due_date", today) // Get today's and overdue tasks
         .in("status", ["pending", "in_progress"])
-        .order("priority", { ascending: false })
-        .limit(10);
+        .order("due_date", { ascending: true })
+        .limit(20);
 
       if (error) throw error;
-      return data as Task[];
+      
+      // Sort: overdue first, then by priority
+      const sortedTasks = (data as Task[]).sort((a, b) => {
+        const aIsOverdue = isPast(startOfDay(new Date(a.due_date)));
+        const bIsOverdue = isPast(startOfDay(new Date(b.due_date)));
+        
+        // Overdue tasks first
+        if (aIsOverdue && !bIsOverdue) return -1;
+        if (!aIsOverdue && bIsOverdue) return 1;
+        
+        // Then by priority
+        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+        return priorityOrder[a.priority as keyof typeof priorityOrder] - 
+               priorityOrder[b.priority as keyof typeof priorityOrder];
+      });
+      
+      return sortedTasks;
     },
   });
 
@@ -75,13 +91,21 @@ export function TodaysTasks() {
     navigate("/tasks");
   };
 
+  const isOverdue = (dueDate: string) => {
+    return isPast(startOfDay(new Date(dueDate))) && 
+           format(new Date(dueDate), "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd");
+  };
+
+  const overdueTasks = tasks.filter(t => isOverdue(t.due_date));
+  const todayTasks = tasks.filter(t => !isOverdue(t.due_date));
+
   if (isLoading) {
     return (
-      <Card className="shadow-md">
+      <Card className="shadow-lg border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckSquare className="h-5 w-5" />
-            Today's Tasks
+            My Tasks
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -96,62 +120,88 @@ export function TodaysTasks() {
   }
 
   return (
-    <Card className="shadow-md">
-      <CardHeader>
+    <Card className="shadow-lg border-2 border-primary/20">
+      <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
         <CardTitle className="flex items-center gap-2">
-          <CheckSquare className="h-5 w-5" />
-          Today's Tasks
-          <Badge variant="secondary" className="ml-auto">
-            {tasks.length} tasks
-          </Badge>
+          <CheckSquare className="h-6 w-6 text-primary" />
+          My Tasks
+          <div className="ml-auto flex gap-2">
+            {overdueTasks.length > 0 && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {overdueTasks.length} overdue
+              </Badge>
+            )}
+            <Badge variant="secondary">
+              {todayTasks.length} today
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {tasks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <CheckCircle2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No tasks due today</p>
+            <p>No pending tasks</p>
             <p className="text-xs mt-1">You're all caught up!</p>
           </div>
         ) : (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-3">
-              {tasks.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => handleTaskClick(task)}
-                  className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <div className="mt-1">
-                    {task.status === "completed" ? (
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {task.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Badge
-                        variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
-                        className="text-xs"
-                      >
-                        {task.priority}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {task.status.replace("_", " ")}
-                      </Badge>
-                      {task.linked_module && (
-                        <span className="text-xs text-muted-foreground">
-                          {task.linked_module.replace("_", " ")}
-                        </span>
+              {tasks.map((task) => {
+                const taskIsOverdue = isOverdue(task.due_date);
+                
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => handleTaskClick(task)}
+                    className={`flex items-start gap-3 p-4 rounded-lg hover:bg-muted transition-colors cursor-pointer ${
+                      taskIsOverdue 
+                        ? 'bg-destructive/5 border-2 border-destructive' 
+                        : 'bg-muted/50 border border-border'
+                    }`}
+                  >
+                    <div className="mt-1">
+                      {task.status === "completed" ? (
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      ) : taskIsOverdue ? (
+                        <AlertCircle className="h-5 w-5 text-destructive" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${taskIsOverdue ? 'text-destructive' : ''}`}>
+                        {task.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Badge
+                          variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
+                          className="text-xs"
+                        >
+                          {task.priority}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {task.status.replace("_", " ")}
+                        </Badge>
+                        {taskIsOverdue && (
+                          <Badge variant="destructive" className="text-xs">
+                            Overdue
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          Due: {format(new Date(task.due_date), "MMM d")}
+                        </span>
+                        {task.linked_module && (
+                          <span className="text-xs text-muted-foreground">
+                            • {task.linked_module.replace("_", " ")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         )}
