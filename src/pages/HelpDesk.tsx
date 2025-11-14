@@ -25,6 +25,17 @@ export default function HelpDesk() {
   const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("all");
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
 
+  useEffect(() => {
+    // Load last used filter from localStorage
+    const lastFilter = localStorage.getItem('helpdeskLastFilter');
+    if (lastFilter && (lastFilter === 'all' || lastFilter === 'unassigned' || lastFilter === 'assigned_to_me')) {
+      setFilterAssignment(lastFilter as any);
+    } else {
+      // Default to "assigned_to_me"
+      setFilterAssignment('assigned_to_me');
+    }
+  }, []);
+
   // Handle ticket selection from URL params (e.g., from search)
   useEffect(() => {
     const ticketId = searchParams.get("ticket");
@@ -235,12 +246,50 @@ export default function HelpDesk() {
   }, [selectedTicketId, queryClient]);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout disablePresence={true}>
       <div className="flex flex-col h-full -mx-3 sm:-mx-6 lg:-mx-8">
-        {/* Header with Pipeline Selector and Sync */}
+        {/* Header with Pipeline Selector, Quick Filters, and Sync */}
         <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold">Help Desk</h1>
+            
+            {/* Quick Filter Buttons */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant={filterAssignment === "assigned_to_me" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setFilterAssignment("assigned_to_me");
+                  localStorage.setItem('helpdeskLastFilter', 'assigned_to_me');
+                }}
+              >
+                My Tickets
+              </Button>
+              <Button
+                variant={filterAssignment === "unassigned" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setFilterAssignment("unassigned");
+                  localStorage.setItem('helpdeskLastFilter', 'unassigned');
+                }}
+              >
+                Unassigned
+              </Button>
+              <Button
+                variant={filterAssignment === "all" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setFilterAssignment("all");
+                  localStorage.setItem('helpdeskLastFilter', 'all');
+                }}
+              >
+                All
+              </Button>
+            </div>
+            
             <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
               <SelectTrigger className="w-[180px] h-7 text-xs">
                 <SelectValue placeholder="All Pipelines" />

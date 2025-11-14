@@ -2,11 +2,13 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Send, Paperclip, Bold, Italic, Underline, List, Link as LinkIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Paperclip, Bold, Italic, Underline, List, Link as LinkIcon, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useEmailCollaboration } from "@/hooks/useEmailCollaboration";
+import { Badge } from "@/components/ui/badge";
 
 interface EmailComposerProps {
   onSend: (data: {
@@ -20,6 +22,7 @@ interface EmailComposerProps {
   defaultTo?: string;
   defaultSubject?: string;
   isSending?: boolean;
+  ticketId?: string;
 }
 
 export interface EmailComposerRef {
@@ -27,7 +30,7 @@ export interface EmailComposerRef {
 }
 
 export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
-  ({ onSend, defaultTo = "", defaultSubject = "", isSending = false }, ref) => {
+  ({ onSend, defaultTo = "", defaultSubject = "", isSending = false, ticketId }, ref) => {
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
@@ -36,6 +39,10 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Live collaboration
+  const { typingUsers, updateTypingStatus } = useEmailCollaboration(ticketId || "");
+  let typingTimeout: NodeJS.Timeout;
 
   // Update fields when switching tickets
   useEffect(() => {
@@ -106,6 +113,14 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
             <div className="flex items-center gap-2">
               <Send className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold">Compose Reply</span>
+              {typingUsers.length > 0 && (
+                <Badge variant="secondary" className="h-5 text-xs animate-pulse">
+                  <Users className="h-3 w-3 mr-1" />
+                  {typingUsers.length === 1 
+                    ? `${typingUsers[0].userName} is typing...`
+                    : `${typingUsers.length} people are typing...`}
+                </Badge>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -232,7 +247,18 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
           {/* Message Body */}
           <Textarea
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(e) => {
+              setBody(e.target.value);
+              // Update typing status
+              if (ticketId) {
+                updateTypingStatus(true);
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                  updateTypingStatus(false);
+                }, 1000);
+              }
+            }}
+            onBlur={() => ticketId && updateTypingStatus(false)}
             placeholder="Type your message..."
             className="min-h-[120px] text-sm resize-none"
           />
