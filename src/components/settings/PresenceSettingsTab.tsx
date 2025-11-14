@@ -30,7 +30,9 @@ export default function PresenceSettingsTab() {
 
       if (error) throw error;
 
+      // @ts-ignore - Types will update after migration
       if (profile?.auto_away_minutes) {
+        // @ts-ignore - Types will update after migration
         setAutoAwayMinutes(profile.auto_away_minutes);
       }
     } catch (error) {
@@ -54,7 +56,10 @@ export default function PresenceSettingsTab() {
 
       const { error } = await supabase
         .from('profiles')
-        .update({ auto_away_minutes: autoAwayMinutes })
+        .update({ 
+          // @ts-ignore - Types will update after migration
+          auto_away_minutes: autoAwayMinutes 
+        })
         .eq('id', user.id);
 
       if (error) throw error;

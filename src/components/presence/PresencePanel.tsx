@@ -132,6 +132,7 @@ export default function PresencePanel() {
         .eq('id', user.id)
         .single();
 
+      // @ts-ignore - Types will update after migration
       const status = (profile?.status || 'available') as 'available' | 'busy' | 'away';
       setCurrentUserStatus(status);
 
@@ -171,6 +172,7 @@ export default function PresencePanel() {
               userAvatar: user.user_metadata?.avatar_url,
               lastSeen: new Date().toISOString(),
               currentPage: window.location.pathname,
+              // @ts-ignore - Types will update after migration
               status: currentUserStatus,
             });
           }
@@ -187,6 +189,7 @@ export default function PresencePanel() {
           userAvatar: user.user_metadata?.avatar_url,
           lastSeen: new Date().toISOString(),
           currentPage: window.location.pathname,
+          // @ts-ignore - Types will update after migration
           status: currentUserStatus,
         });
       };
@@ -210,6 +213,7 @@ export default function PresencePanel() {
       await supabase
         .from('profiles')
         .update({ 
+          // @ts-ignore - Types will update after migration
           status: newStatus, 
           status_updated_at: new Date().toISOString() 
         })

@@ -68,6 +68,7 @@ import FinancialReconciliation from "./pages/FinancialReconciliation";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
+import { useRealtimeNotifications } from "./hooks/useNotifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,6 +87,7 @@ const App = () => {
   usePWAUpdate();
   useOfflineSync();
   useOfflineSyncOffice();
+  useRealtimeNotifications();
 
   useEffect(() => {
     let mounted = true;
