@@ -243,14 +243,16 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       if (!profile?.tenant_id) throw new Error("Tenant not found");
 
-      const { error } = await supabase
+      const { data: newMessage, error } = await supabase
         .from("helpdesk_messages")
         .insert({
           ticket_id: ticketId,
           message_type: "internal_note",
           body: content,
           tenant_id: profile.tenant_id,
-        });
+        })
+        .select()
+        .single();
       
       if (error) throw error;
 
@@ -265,6 +267,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           link: `/helpdesk?ticket=${ticketId}`,
           metadata: {
             ticket_id: ticketId,
+            message_id: (newMessage as any)?.id,
             mentioned_by: user.id,
             context: 'helpdesk_note'
           }
