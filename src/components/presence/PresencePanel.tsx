@@ -6,8 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, ArrowRight, Circle } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
+} from "@/components/ui/dropdown-menu";
+import { Users, ArrowRight, Circle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface UserPresence {
   userId: string;
@@ -17,6 +25,7 @@ interface UserPresence {
   currentPage?: string;
   currentField?: string;
   lastSeen: string;
+  status?: 'available' | 'busy' | 'away';
 }
 
 const avatarColors = [
@@ -76,9 +85,36 @@ function getPageName(path: string): string {
   return path.split('/').pop()?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
 }
 
+function getStatusColor(status?: 'available' | 'busy' | 'away'): string {
+  switch (status) {
+    case 'available':
+      return 'bg-success';
+    case 'busy':
+      return 'bg-destructive';
+    case 'away':
+      return 'bg-warning';
+    default:
+      return 'bg-muted';
+  }
+}
+
+function getStatusLabel(status?: 'available' | 'busy' | 'away'): string {
+  switch (status) {
+    case 'available':
+      return 'Available';
+    case 'busy':
+      return 'Busy';
+    case 'away':
+      return 'Away';
+    default:
+      return 'Unknown';
+  }
+}
+
 export default function PresencePanel() {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, UserPresence>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserStatus, setCurrentUserStatus] = useState<'available' | 'busy' | 'away'>('available');
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -88,6 +124,16 @@ export default function PresencePanel() {
       if (!user) return;
 
       setCurrentUserId(user.id);
+
+      // Fetch current user's status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', user.id)
+        .single();
+
+      const status = (profile?.status || 'available') as 'available' | 'busy' | 'away';
+      setCurrentUserStatus(status);
 
       const presenceChannel = supabase.channel('presence-panel', {
         config: {
@@ -125,6 +171,7 @@ export default function PresencePanel() {
               userAvatar: user.user_metadata?.avatar_url,
               lastSeen: new Date().toISOString(),
               currentPage: window.location.pathname,
+              status: currentUserStatus,
             });
           }
         });
@@ -140,6 +187,7 @@ export default function PresencePanel() {
           userAvatar: user.user_metadata?.avatar_url,
           lastSeen: new Date().toISOString(),
           currentPage: window.location.pathname,
+          status: currentUserStatus,
         });
       };
 
@@ -152,7 +200,27 @@ export default function PresencePanel() {
     };
 
     initPresence();
-  }, []);
+  }, [currentUserStatus]);
+
+  const handleStatusChange = async (newStatus: 'available' | 'busy' | 'away') => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('profiles')
+        .update({ 
+          status: newStatus, 
+          status_updated_at: new Date().toISOString() 
+        })
+        .eq('id', user.id);
+
+      setCurrentUserStatus(newStatus);
+      toast.success(`Status changed to ${getStatusLabel(newStatus)}`);
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
 
   const otherUsers = Object.entries(onlineUsers)
     .filter(([userId]) => userId !== currentUserId)
@@ -168,11 +236,38 @@ export default function PresencePanel() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="relative">
-          <Users className="h-4 w-4 mr-2" />
-          Active Users
+        <Button variant="outline" size="sm" className="relative gap-2">
+          <div className="relative">
+            <Users className="h-4 w-4" />
+            <span className={cn(
+              "absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full ring-1 ring-background",
+              getStatusColor(currentUserStatus)
+            )} />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 cursor-pointer">
+                <span className="hidden sm:inline">{getStatusLabel(currentUserStatus)}</span>
+                <ChevronDown className="h-3 w-3" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="z-[9999]">
+              <DropdownMenuItem onClick={() => handleStatusChange('available')}>
+                <Circle className={cn("h-3 w-3 mr-2", getStatusColor('available'))} />
+                Available
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('busy')}>
+                <Circle className={cn("h-3 w-3 mr-2", getStatusColor('busy'))} />
+                Busy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('away')}>
+                <Circle className={cn("h-3 w-3 mr-2", getStatusColor('away'))} />
+                Away
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {otherUsers.length > 0 && (
-            <Badge variant="secondary" className="ml-2 h-5 min-w-5 flex items-center justify-center p-1">
+            <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center p-1">
               {otherUsers.length}
             </Badge>
           )}
@@ -211,13 +306,21 @@ export default function PresencePanel() {
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <span className="absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full bg-success ring-2 ring-background" />
+                    <span className={cn(
+                      "absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full ring-2 ring-background",
+                      getStatusColor(user.status)
+                    )} />
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{user.userName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">{user.userName}</p>
+                      <Badge variant="outline" className="text-xs">
+                        {getStatusLabel(user.status)}
+                      </Badge>
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Circle className="h-2 w-2 fill-success text-success" />
+                      <Circle className={cn("h-2 w-2", getStatusColor(user.status), "fill-current")} />
                       <p className="text-xs text-muted-foreground truncate">
                         {user.currentPage ? getPageName(user.currentPage) : 'Unknown'}
                       </p>
