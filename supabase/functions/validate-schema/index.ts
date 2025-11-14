@@ -168,14 +168,14 @@ serve(async (req) => {
       JSON.stringify({
         tables: existingTables,
         columns: columnsByTable,
-        foreignKeys: knownRelationships,
+        foreignKeys: [],
         indexes: [],
         relationships,
         recommendations,
         stats: {
           totalTables: existingTables.length,
           totalColumns,
-          totalForeignKeys: relationships.length,
+          totalForeignKeys: relationships.filter(r => r.type === 'foreign_key').length,
           totalIndexes: 0,
         }
       }),
