@@ -157,10 +157,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, quote_number, customers(name)")
+        .select("id, quote_number, customer_id")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch customer names separately
+      if (data && data.length > 0) {
+        const customerIds = [...new Set(data.map(q => q.customer_id).filter(Boolean))];
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("id, name")
+          .in("id", customerIds);
+        
+        const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+        return data.map(quote => ({
+          ...quote,
+          customer_name: quote.customer_id ? customerMap.get(quote.customer_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -170,10 +185,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("id, invoice_number, customers(name)")
+        .select("id, invoice_number, customer_id")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch customer names separately
+      if (data && data.length > 0) {
+        const customerIds = [...new Set(data.map(inv => inv.customer_id).filter(Boolean))];
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("id, name")
+          .in("id", customerIds);
+        
+        const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+        return data.map(invoice => ({
+          ...invoice,
+          customer_name: invoice.customer_id ? customerMap.get(invoice.customer_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -211,10 +241,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_orders")
-        .select("id, order_number, customers(name)")
+        .select("id, order_number, customer_id")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch customer names separately
+      if (data && data.length > 0) {
+        const customerIds = [...new Set(data.map(so => so.customer_id).filter(Boolean))];
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("id, name")
+          .in("id", customerIds);
+        
+        const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+        return data.map(order => ({
+          ...order,
+          customer_name: order.customer_id ? customerMap.get(order.customer_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -304,10 +349,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id, po_number, vendors(name)")
+        .select("id, po_number, vendor_id")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch vendor names separately
+      if (data && data.length > 0) {
+        const vendorIds = [...new Set(data.map(po => po.vendor_id).filter(Boolean))];
+        const { data: vendorsData } = await supabase
+          .from("vendors")
+          .select("id, name")
+          .in("id", vendorIds);
+        
+        const vendorMap = new Map(vendorsData?.map(v => [v.id, v.name]));
+        return data.map(po => ({
+          ...po,
+          vendor_name: po.vendor_id ? vendorMap.get(po.vendor_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -369,10 +429,25 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_contracts")
-        .select("id, contract_number, customers(name)")
+        .select("id, contract_number, customer_id")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
+      
+      // Fetch customer names separately
+      if (data && data.length > 0) {
+        const customerIds = [...new Set(data.map(c => c.customer_id).filter(Boolean))];
+        const { data: customersData } = await supabase
+          .from("customers")
+          .select("id, name")
+          .in("id", customerIds);
+        
+        const customerMap = new Map(customersData?.map(c => [c.id, c.name]));
+        return data.map(contract => ({
+          ...contract,
+          customer_name: contract.customer_id ? customerMap.get(contract.customer_id) : null
+        }));
+      }
       return data || [];
     },
   });
@@ -408,7 +483,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add quotes
     quotes?.forEach((quote) => {
-      const customerName = (quote.customers as any)?.name;
+      const customerName = (quote as any).customer_name;
       results.push({
         id: quote.id,
         title: quote.quote_number || "Quote",
@@ -421,7 +496,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add invoices
     invoices?.forEach((invoice) => {
-      const customerName = (invoice.customers as any)?.name;
+      const customerName = (invoice as any).customer_name;
       results.push({
         id: invoice.id,
         title: invoice.invoice_number || "Invoice",
@@ -447,7 +522,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add service orders
     serviceOrders?.forEach((order) => {
-      const customerName = (order.customers as any)?.name;
+      const customerName = (order as any).customer_name;
       results.push({
         id: order.id,
         title: order.order_number || "Service Order",
@@ -498,11 +573,11 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add purchase orders
     purchaseOrders?.forEach((po) => {
-      const supplierName = (po.vendors as any)?.name;
+      const vendorName = (po as any).vendor_name;
       results.push({
         id: po.id,
         title: po.po_number || "Purchase Order",
-        subtitle: supplierName,
+        subtitle: vendorName,
         type: "purchase-order",
         route: `/purchase-orders/${po.id}`,
         icon: ShoppingCart,
@@ -559,7 +634,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
     // Add contracts
     contracts?.forEach((contract) => {
-      const customerName = (contract.customers as any)?.name;
+      const customerName = (contract as any).customer_name;
       results.push({
         id: contract.id,
         title: contract.contract_number || "Contract",
