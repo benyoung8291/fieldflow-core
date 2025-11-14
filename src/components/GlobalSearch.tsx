@@ -141,7 +141,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
   // Fetch documents from database with increased limits
   const { data: customers } = useQuery({
-    queryKey: ["search-customers"],
+    queryKey: ["global-search-customers-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("customers")
@@ -333,7 +333,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: workers } = useQuery({
-    queryKey: ["search-workers"],
+    queryKey: ["global-search-workers-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -386,7 +386,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: contacts } = useQuery({
-    queryKey: ["search-contacts"],
+    queryKey: ["global-search-contacts-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
@@ -399,7 +399,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: suppliers } = useQuery({
-    queryKey: ["search-suppliers"],
+    queryKey: ["global-search-suppliers-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendors")
@@ -412,7 +412,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: tasks } = useQuery({
-    queryKey: ["search-tasks"],
+    queryKey: ["global-search-tasks-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
@@ -453,7 +453,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
   });
 
   const { data: helpdeskTickets } = useQuery({
-    queryKey: ["search-helpdesk"],
+    queryKey: ["global-search-helpdesk-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("helpdesk_tickets")
