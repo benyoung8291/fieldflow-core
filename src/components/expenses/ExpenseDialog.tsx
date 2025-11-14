@@ -382,11 +382,9 @@ export function ExpenseDialog({ open, onOpenChange, expense, defaultValues, onSu
                 value={formData.supplier_id}
                 onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
               >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select supplier" />
-                  </SelectTrigger>
-                </FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supplier" />
+                </SelectTrigger>
                 <SelectContent>
                   {suppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
