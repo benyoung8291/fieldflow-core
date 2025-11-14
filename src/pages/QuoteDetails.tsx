@@ -55,6 +55,11 @@ import QuoteVersionHistory from "@/components/quotes/QuoteVersionHistory";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
+import { usePresence } from "@/hooks/usePresence";
+import { useDocumentRealtime } from "@/hooks/useDocumentRealtime";
+import { useCollaborativeField } from "@/hooks/useCollaborativeField";
+import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
+import PresencePanel from "@/components/presence/PresencePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +83,31 @@ export default function QuoteDetails() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Real-time collaboration setup
+  const { 
+    onlineUsers, 
+    startTyping, 
+    stopTyping, 
+    updateField,
+    currentUser 
+  } = usePresence({ 
+    page: `quote-${id}`,
+  });
+
+  // Listen for real-time document updates
+  useDocumentRealtime({
+    table: "quotes",
+    id,
+    queryKey: ["quote", id],
+    onUpdate: (payload) => {
+      console.log("Quote updated by another user:", payload);
+      toast({
+        title: "Document updated",
+        description: "Another user made changes to this quote",
+      });
+    },
+  });
+
   // Inline edit state
   const [editedFields, setEditedFields] = useState({
     title: "",
