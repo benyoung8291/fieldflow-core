@@ -73,21 +73,10 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
         const customerId = (linkedDoc as any).customer_id;
         const contactId = (linkedDoc as any).contact_id;
         
-        // Validate contact exists in database before returning it
-        if (contactId) {
-          const { data: contactExists } = await supabase
-            .from("contacts")
-            .select("id")
-            .eq("id", contactId)
-            .maybeSingle();
-          
-          // Only pass contact_id if it actually exists
-          if (customerId || contactExists) {
-            onCustomerContactLinked(customerId, contactExists?.id);
-          }
-        } else if (customerId) {
-          // Only customer, no contact
-          onCustomerContactLinked(customerId, undefined);
+        // Pass through the IDs - let the database handle validation
+        // Note: contact_id might reference a different table (contacts vs customer_contacts)
+        if (customerId || contactId) {
+          onCustomerContactLinked(customerId, contactId);
         }
       }
     },
