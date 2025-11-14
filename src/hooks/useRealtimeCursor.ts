@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 
 export interface CursorPosition {
-  x: number;
-  y: number;
+  x: number; // percentage of viewport width (0-100)
+  y: number; // percentage of viewport height (0-100)
   user_id: string;
   user_name: string;
   color: string;
@@ -67,9 +67,13 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
       if (now - lastUpdateTime < THROTTLE_MS) return;
       lastUpdateTime = now;
 
+      // Convert absolute pixels to viewport percentages
+      const xPercent = (x / window.innerWidth) * 100;
+      const yPercent = (y / window.innerHeight) * 100;
+
       channel.track({
-        x,
-        y,
+        x: xPercent,
+        y: yPercent,
         user_id: userId,
         user_name: userName,
         color: getUserColor(userId),
@@ -104,10 +108,10 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          // Track initial cursor position
+          // Track initial cursor position (center of viewport)
           await channel.track({
-            x: 0,
-            y: 0,
+            x: 50,
+            y: 50,
             user_id: userId,
             user_name: userName,
             color: getUserColor(userId),
@@ -130,10 +134,14 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
     const handleClick = (e: MouseEvent) => {
       if (!isEnabled) return;
       
+      // Convert absolute pixels to viewport percentages
+      const xPercent = (e.clientX / window.innerWidth) * 100;
+      const yPercent = (e.clientY / window.innerHeight) * 100;
+      
       const clickData = {
         type: "click" as const,
-        x: e.clientX,
-        y: e.clientY,
+        x: xPercent,
+        y: yPercent,
         user_id: userId,
         user_name: userName,
         color: getUserColor(userId),

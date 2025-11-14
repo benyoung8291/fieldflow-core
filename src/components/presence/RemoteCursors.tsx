@@ -33,62 +33,74 @@ export default function RemoteCursors() {
   return (
     <>
       {/* Render cursors */}
-      {cursors.map((cursor) => (
-        <div
-          key={cursor.user_id}
-          className="fixed pointer-events-none z-[9999] transition-all duration-100 ease-out"
-          style={{
-            left: `${cursor.x}px`,
-            top: `${cursor.y}px`,
-            transform: "translate(-2px, -2px)",
-          }}
-        >
-          <MousePointer2
-            className="h-5 w-5 drop-shadow-lg"
-            style={{ 
-              color: cursor.color,
-              fill: cursor.color,
-            }}
-          />
+      {cursors.map((cursor) => {
+        // Convert percentage to pixels based on current viewport
+        const xPixels = (cursor.x / 100) * window.innerWidth;
+        const yPixels = (cursor.y / 100) * window.innerHeight;
+        
+        return (
           <div
-            className="absolute left-4 top-1 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap shadow-lg"
-            style={{ backgroundColor: cursor.color }}
+            key={cursor.user_id}
+            className="fixed pointer-events-none z-[9999] transition-all duration-100 ease-out"
+            style={{
+              left: `${xPixels}px`,
+              top: `${yPixels}px`,
+              transform: "translate(-2px, -2px)",
+            }}
           >
-            {cursor.user_name}
+            <MousePointer2
+              className="h-5 w-5 drop-shadow-lg"
+              style={{ 
+                color: cursor.color,
+                fill: cursor.color,
+              }}
+            />
+            <div
+              className="absolute left-4 top-1 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap shadow-lg"
+              style={{ backgroundColor: cursor.color }}
+            >
+              {cursor.user_name}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       
       {/* Render click animations */}
-      {clicks.map((click) => (
-        <div
-          key={click.id}
-          className="fixed pointer-events-none z-[9999]"
-          style={{
-            left: `${click.x}px`,
-            top: `${click.y}px`,
-          }}
-        >
+      {clicks.map((click) => {
+        // Convert percentage to pixels based on current viewport
+        const xPixels = (click.x / 100) * window.innerWidth;
+        const yPixels = (click.y / 100) * window.innerHeight;
+        
+        return (
           <div
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full animate-ping"
+            key={click.id}
+            className="fixed pointer-events-none z-[9999]"
             style={{
-              width: "40px",
-              height: "40px",
-              backgroundColor: click.color,
-              opacity: 0.6,
+              left: `${xPixels}px`,
+              top: `${yPixels}px`,
             }}
-          />
-          <div
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full animate-pulse"
-            style={{
-              width: "20px",
-              height: "20px",
-              backgroundColor: click.color,
-              opacity: 0.8,
-            }}
-          />
-        </div>
-      ))}
+          >
+            <div
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full animate-ping"
+              style={{
+                width: "40px",
+                height: "40px",
+                backgroundColor: click.color,
+                opacity: 0.6,
+              }}
+            />
+            <div
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full animate-pulse"
+              style={{
+                width: "20px",
+                height: "20px",
+                backgroundColor: click.color,
+                opacity: 0.8,
+              }}
+            />
+          </div>
+        );
+      })}
     </>
   );
 }
