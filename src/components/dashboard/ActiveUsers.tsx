@@ -147,12 +147,12 @@ export function ActiveUsers() {
       .slice(0, 2);
   };
 
-  // Group users by user_id and collect all their pages
+  // Group users by user_id and collect all their unique pages
   const groupedUsers: GroupedUser[] = activeUsers.reduce((acc, user) => {
     const existingUser = acc.find(u => u.user_id === user.user_id);
     
     if (existingUser) {
-      // Check if this page is already in the list
+      // Check if this exact page path is already in the list (deduplicate)
       const pageExists = existingUser.pages.some(p => p.path === user.current_path);
       if (!pageExists) {
         existingUser.pages.push({ 

@@ -335,11 +335,11 @@ export default function Dashboard() {
 
         {/* Real-time Activity Feed, Today's Tasks and Active Users */}
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <RecentActivityFeed />
-          </div>
-          <div className="space-y-6">
+          <div className="lg:col-span-1 lg:order-1">
             <TodaysTasks />
+          </div>
+          <div className="lg:col-span-2 lg:order-2 space-y-6">
+            <RecentActivityFeed />
             <ActiveUsers />
           </div>
         </div>
