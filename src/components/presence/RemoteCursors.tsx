@@ -30,54 +30,90 @@ export default function RemoteCursors() {
     currentUser?.id || ""
   );
 
+  // Find element by generated ID
+  const findElementById = (elementId: string): Element | null => {
+    if (elementId.startsWith('id:')) {
+      return document.getElementById(elementId.substring(3));
+    }
+    
+    try {
+      return document.querySelector(elementId);
+    } catch {
+      return null;
+    }
+  };
+
+  // Calculate cursor position with element anchoring
+  const calculateCursorPosition = (cursor: any): { x: number; y: number; isAnchored: boolean } | null => {
+    // Try element anchoring first
+    if (cursor.elementId && cursor.elementX !== undefined && cursor.elementY !== undefined) {
+      const element = findElementById(cursor.elementId);
+      
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        
+        // Convert element-relative percentage to viewport pixels
+        const x = rect.left + (cursor.elementX / 100) * rect.width;
+        const y = rect.top + (cursor.elementY / 100) * rect.height;
+        
+        // Check if position is in viewport
+        if (x >= -50 && x <= window.innerWidth + 50 &&
+            y >= -50 && y <= window.innerHeight + 50) {
+          return { x, y, isAnchored: true };
+        }
+      }
+    }
+    
+    // Fall back to document coordinates
+    const currentScrollX = window.pageXOffset || document.documentElement.scrollLeft;
+    const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+    
+    const body = document.body;
+    const html = document.documentElement;
+    const docWidth = Math.max(
+      body.scrollWidth, body.offsetWidth,
+      html.clientWidth, html.scrollWidth, html.offsetWidth
+    );
+    const docHeight = Math.max(
+      body.scrollHeight, body.offsetHeight,
+      html.clientHeight, html.scrollHeight, html.offsetHeight
+    );
+    
+    const docX = (cursor.x / 100) * docWidth;
+    const docY = (cursor.y / 100) * docHeight;
+    
+    const viewportX = docX - currentScrollX;
+    const viewportY = docY - currentScrollY;
+    
+    const currentZoom = window.devicePixelRatio || 1;
+    const zoomRatio = cursor.zoom ? currentZoom / cursor.zoom : 1;
+    
+    const finalX = viewportX * zoomRatio;
+    const finalY = viewportY * zoomRatio;
+    
+    if (finalX >= -50 && finalX <= window.innerWidth + 50 &&
+        finalY >= -50 && finalY <= window.innerHeight + 50) {
+      return { x: finalX, y: finalY, isAnchored: false };
+    }
+    
+    return null;
+  };
+
   return (
     <>
       {/* Render cursors */}
       {cursors.map((cursor) => {
-        // Get current scroll position
-        const currentScrollX = window.pageXOffset || document.documentElement.scrollLeft;
-        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const position = calculateCursorPosition(cursor);
         
-        // Get document dimensions
-        const body = document.body;
-        const html = document.documentElement;
-        const docWidth = Math.max(
-          body.scrollWidth, body.offsetWidth,
-          html.clientWidth, html.scrollWidth, html.offsetWidth
-        );
-        const docHeight = Math.max(
-          body.scrollHeight, body.offsetHeight,
-          html.clientHeight, html.scrollHeight, html.offsetHeight
-        );
-        
-        // Convert percentage back to document coordinates
-        const docX = (cursor.x / 100) * docWidth;
-        const docY = (cursor.y / 100) * docHeight;
-        
-        // Convert to viewport coordinates (accounting for scroll)
-        const viewportX = docX - currentScrollX;
-        const viewportY = docY - currentScrollY;
-        
-        // Account for zoom difference if available
-        const currentZoom = window.devicePixelRatio || 1;
-        const zoomRatio = cursor.zoom ? currentZoom / cursor.zoom : 1;
-        
-        const finalX = viewportX * zoomRatio;
-        const finalY = viewportY * zoomRatio;
-        
-        // Only render if cursor is in viewport
-        const isInViewport = finalX >= -50 && finalX <= window.innerWidth + 50 &&
-                            finalY >= -50 && finalY <= window.innerHeight + 50;
-        
-        if (!isInViewport) return null;
+        if (!position) return null;
         
         return (
           <div
             key={cursor.user_id}
             className="fixed pointer-events-none z-[9999] transition-all duration-100 ease-out"
             style={{
-              left: `${finalX}px`,
-              top: `${finalY}px`,
+              left: `${position.x}px`,
+              top: `${position.y}px`,
               transform: "translate(-2px, -2px)",
             }}
           >
@@ -93,6 +129,11 @@ export default function RemoteCursors() {
               style={{ backgroundColor: cursor.color }}
             >
               {cursor.user_name}
+              {position.isAnchored && cursor.elementType && (
+                <span className="ml-1 opacity-75">
+                  on {cursor.elementType}
+                </span>
+              )}
             </div>
           </div>
         );
