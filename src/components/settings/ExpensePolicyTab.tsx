@@ -49,7 +49,7 @@ export function ExpensePolicyTab() {
         .from("expense_policy_rules")
         .select(`
           *,
-          supplier:suppliers(name),
+          supplier:suppliers!supplier_id(name),
           category:expense_categories(name)
         `)
         .order("created_at", { ascending: false });
