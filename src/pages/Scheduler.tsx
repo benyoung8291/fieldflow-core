@@ -22,7 +22,6 @@ import GPSCheckInDialog from "@/components/scheduler/GPSCheckInDialog";
 import SmartSchedulingDialog from "@/components/scheduler/SmartSchedulingDialog";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -1163,7 +1162,6 @@ export default function Scheduler() {
 
   return (
     <DashboardLayout>
-      <RemoteCursors users={onlineUsers} />
       
       {selectedAppointment && (
         <AuditDrawer 

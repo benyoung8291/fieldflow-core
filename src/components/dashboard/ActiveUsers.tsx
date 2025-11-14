@@ -68,7 +68,10 @@ export function ActiveUsers() {
         Object.keys(state).forEach((key) => {
           const presences = state[key];
           if (presences && presences.length > 0) {
-            users.push(presences[0]);
+            // Get all presence instances for this user (multiple tabs)
+            presences.forEach((presence) => {
+              users.push(presence);
+            });
           }
         });
 

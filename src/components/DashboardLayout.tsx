@@ -14,6 +14,7 @@ import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import RemoteCursors from "@/components/presence/RemoteCursors";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -185,6 +186,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Remote Cursors Overlay */}
+      <RemoteCursors />
+      
       {/* Sidebar - Desktop only, completely hidden in mobile view */}
       {!isMobile && (
         <aside className={cn(

@@ -10,7 +10,6 @@ import CustomerImportDialog from "@/components/customers/CustomerImportDialog";
 import { useNavigate } from "react-router-dom";
 import { usePresence } from "@/hooks/usePresence";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -138,7 +137,6 @@ export default function Customers() {
           pullDistance={pullDistance}
           threshold={threshold}
         />
-        <RemoteCursors users={onlineUsers} />
         <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

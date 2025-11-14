@@ -1,80 +1,62 @@
-import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeCursor } from "@/hooks/useRealtimeCursor";
+import { MousePointer2 } from "lucide-react";
 
-interface PresenceUser {
-  userId: string;
-  userName: string;
-  cursorX?: number;
-  cursorY?: number;
-}
+export default function RemoteCursors() {
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user-cursor"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
-interface RemoteCursorsProps {
-  users: PresenceUser[];
-}
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
 
-const cursorColors = [
-  "bg-primary",
-  "bg-success",
-  "bg-warning",
-  "bg-info",
-  "bg-secondary",
-  "bg-destructive",
-];
+      return {
+        id: user.id,
+        name: profile
+          ? `${profile.first_name} ${profile.last_name}`
+          : user.email || "Unknown User",
+      };
+    },
+  });
 
-function getCursorColor(userId: string): string {
-  const index = userId.charCodeAt(0) % cursorColors.length;
-  return cursorColors[index];
-}
-
-export default function RemoteCursors({ users }: RemoteCursorsProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  const { cursors } = useRealtimeCursor(
+    currentUser?.name || "",
+    currentUser?.id || ""
+  );
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {users.map((user) => {
-        if (!user.cursorX || !user.cursorY) return null;
-
-        return (
-          <div
-            key={user.userId}
-            className="absolute transition-all duration-75"
-            style={{
-              left: `${user.cursorX}px`,
-              top: `${user.cursorY}px`,
+    <>
+      {cursors.map((cursor) => (
+        <div
+          key={cursor.user_id}
+          className="fixed pointer-events-none z-[9999] transition-all duration-100 ease-out"
+          style={{
+            left: `${cursor.x}px`,
+            top: `${cursor.y}px`,
+            transform: "translate(-2px, -2px)",
+          }}
+        >
+          <MousePointer2
+            className="h-5 w-5 drop-shadow-lg"
+            style={{ 
+              color: cursor.color,
+              fill: cursor.color,
             }}
+          />
+          <div
+            className="absolute left-4 top-1 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap shadow-lg"
+            style={{ backgroundColor: cursor.color }}
           >
-            {/* Cursor arrow */}
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className={cn("drop-shadow-lg", getCursorColor(user.userId))}
-            >
-              <path
-                d="M5.65376 12.3673L11.6768 6.34425L13.4477 8.11516L10.1869 11.3759L18.2923 13.1188L13.4219 18.0008L11.6768 11.3759L5.65376 12.3673Z"
-                fill="currentColor"
-              />
-            </svg>
-            {/* User name label */}
-            <div
-              className={cn(
-                "ml-6 -mt-1 px-2 py-1 rounded text-xs font-medium text-white shadow-lg whitespace-nowrap",
-                getCursorColor(user.userId)
-              )}
-            >
-              {user.userName.split(" ")[0]}
-            </div>
+            {cursor.user_name}
           </div>
-        );
-      })}
-    </div>
+        </div>
+      ))}
+    </>
   );
 }

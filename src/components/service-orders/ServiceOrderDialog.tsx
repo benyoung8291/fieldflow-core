@@ -14,7 +14,6 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, Upload, FileText, Calendar, MapPin, User } from "lucide-react";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import ServiceOrderTemplatesDialog from "./ServiceOrderTemplatesDialog";
@@ -676,7 +675,6 @@ export default function ServiceOrderDialog({
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <RemoteCursors users={onlineUsers} />
           <DialogHeader>
             <div className="flex items-center gap-2">
               <DialogTitle>{orderId ? "Edit" : "Create"} Service Order</DialogTitle>

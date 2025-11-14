@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { usePresence } from "@/hooks/usePresence";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, Link2 } from "lucide-react";
@@ -326,8 +325,6 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             <PresenceIndicator users={onlineUsers} />
           </div>
         </DialogHeader>
-
-        <RemoteCursors users={onlineUsers} />
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {linkedVendorId && (

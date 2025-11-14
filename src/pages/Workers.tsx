@@ -12,7 +12,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Search, MoreVertical, Users, UserCheck, UserX, DollarSign, Settings as SettingsIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import RemoteCursors from "@/components/presence/RemoteCursors";
 import { usePresence } from "@/hooks/usePresence";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -92,7 +91,6 @@ export default function Workers() {
 
   return (
     <DashboardLayout>
-      <RemoteCursors users={onlineUsers} />
       <div className="space-y-6" onMouseMove={updateCursor}>
         <div className="flex items-center justify-between">
           <div>
