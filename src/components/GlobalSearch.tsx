@@ -42,10 +42,19 @@ interface SearchResult {
   icon: any;
 }
 
-export function GlobalSearch() {
-  const [open, setOpen] = useState(false);
+interface GlobalSearchProps {
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+}
+
+export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: GlobalSearchProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+
+  // Use external state if provided, otherwise use internal state
+  const open = externalOpen ?? internalOpen;
+  const setOpen = externalSetOpen ?? setInternalOpen;
 
   // Keyboard shortcut
   useEffect(() => {
