@@ -1789,6 +1789,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "helpdesk_tickets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "helpdesk_tickets_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
