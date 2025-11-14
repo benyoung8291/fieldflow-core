@@ -272,6 +272,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex-1" />
               <PresencePanel />
               <ViewModeToggle />
+              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="sm"
@@ -285,7 +286,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <LogOut className="h-4 w-4" />
                 Sign Out
               </Button>
-              <ThemeToggle />
             </div>
           </div>
 
