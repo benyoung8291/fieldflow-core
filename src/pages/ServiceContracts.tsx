@@ -122,7 +122,15 @@ export default function ServiceContracts() {
   const activeContracts = contracts?.filter((c: any) => c.status === "active") || [];
   const upcomingGenerations = calculateUpcomingGenerations().slice(0, 20);
   const monthlyRevenue = calculateMonthlyRevenue();
-  const totalContractValue = activeContracts.reduce((sum: number, c: any) => sum + parseFloat(c.total_contract_value || 0), 0);
+  
+  // Calculate total value from line items
+  const totalContractValue = activeContracts.reduce((sum: number, c: any) => {
+    const lineItemsTotal = (c.service_contract_line_items || []).reduce(
+      (itemSum: number, item: any) => itemSum + parseFloat(item.line_total || 0),
+      0
+    );
+    return sum + lineItemsTotal;
+  }, 0);
 
   const upcomingRenewals = contracts?.filter((c: any) => {
     if (!c.end_date || c.status !== "active") return false;
@@ -244,7 +252,12 @@ export default function ServiceContracts() {
                   metadata={[
                     { label: "Start Date", value: format(parseISO(contract.start_date), "PP") },
                     { label: "End Date", value: contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing" },
-                    { label: "Value", value: `$${parseFloat(contract.total_contract_value).toFixed(2)}` },
+                    { 
+                      label: "Value", 
+                      value: `$${((contract.service_contract_line_items || []).reduce(
+                        (sum: number, item: any) => sum + parseFloat(item.line_total || 0), 0
+                      )).toFixed(2)}` 
+                    },
                   ]}
                   onClick={() => navigate(`/service-contracts/${contract.id}`)}
                 />
@@ -279,7 +292,11 @@ export default function ServiceContracts() {
                       <TableCell>{contract.customers?.name}</TableCell>
                       <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
                       <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
-                      <TableCell>${parseFloat(contract.total_contract_value).toFixed(2)}</TableCell>
+                      <TableCell>
+                        ${((contract.service_contract_line_items || []).reduce(
+                          (sum: number, item: any) => sum + parseFloat(item.line_total || 0), 0
+                        )).toFixed(2)}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="default">{contract.status}</Badge>
                       </TableCell>
