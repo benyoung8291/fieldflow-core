@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectWithSearch } from "@/components/ui/select-with-search";
 import { X, Trash2 } from "lucide-react";
 import { Node } from "reactflow";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NodeConfigPanelProps {
   selectedNode: Node | null;
@@ -17,6 +20,42 @@ interface NodeConfigPanelProps {
 
 export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelete }: NodeConfigPanelProps) {
   const [config, setConfig] = useState<any>({});
+
+  // Fetch users for assignment dropdowns
+  const { data: users } = useQuery({
+    queryKey: ["users-for-workflow"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .order("first_name");
+      return data || [];
+    },
+  });
+
+  // Fetch customers
+  const { data: customers } = useQuery({
+    queryKey: ["customers-for-workflow"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, name")
+        .order("name");
+      return data || [];
+    },
+  });
+
+  // Fetch suppliers
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers-for-workflow"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .order("name");
+      return data || [];
+    },
+  });
 
   useEffect(() => {
     if (selectedNode) {
@@ -89,12 +128,14 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
                   <SelectTrigger>
                     <SelectValue placeholder="Select field to check" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover z-[100]">
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="priority">Priority</SelectItem>
                     <SelectItem value="total_amount">Total Amount</SelectItem>
                     <SelectItem value="customer_id">Customer</SelectItem>
+                    <SelectItem value="supplier_id">Supplier</SelectItem>
                     <SelectItem value="assigned_to">Assigned To</SelectItem>
+                    <SelectItem value="created_by">Created By</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -107,7 +148,7 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover z-[100]">
                     <SelectItem value="equals">Equals</SelectItem>
                     <SelectItem value="not_equals">Not Equals</SelectItem>
                     <SelectItem value="greater_than">Greater Than</SelectItem>
@@ -116,14 +157,69 @@ export default function NodeConfigPanel({ selectedNode, onClose, onSave, onDelet
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Value</Label>
-                <Input
-                  value={config.value || ""}
-                  onChange={(e) => setConfig({ ...config, value: e.target.value })}
-                  placeholder="Enter comparison value"
-                />
-              </div>
+              
+              {/* Show appropriate input based on field type */}
+              {(config.field === "assigned_to" || config.field === "created_by") && (
+                <div>
+                  <Label>User</Label>
+                  <SelectWithSearch
+                    value={config.value || ""}
+                    onValueChange={(value) => setConfig({ ...config, value })}
+                    options={(users || []).map(u => ({
+                      value: u.id,
+                      label: `${u.first_name || ''} ${u.last_name || ''} (${u.email})`.trim()
+                    }))}
+                    placeholder="Select user"
+                    searchPlaceholder="Search users..."
+                    emptyText="No users found"
+                  />
+                </div>
+              )}
+              
+              {config.field === "customer_id" && (
+                <div>
+                  <Label>Customer</Label>
+                  <SelectWithSearch
+                    value={config.value || ""}
+                    onValueChange={(value) => setConfig({ ...config, value })}
+                    options={(customers || []).map(c => ({
+                      value: c.id,
+                      label: c.name
+                    }))}
+                    placeholder="Select customer"
+                    searchPlaceholder="Search customers..."
+                    emptyText="No customers found"
+                  />
+                </div>
+              )}
+              
+              {config.field === "supplier_id" && (
+                <div>
+                  <Label>Supplier</Label>
+                  <SelectWithSearch
+                    value={config.value || ""}
+                    onValueChange={(value) => setConfig({ ...config, value })}
+                    options={(suppliers || []).map(s => ({
+                      value: s.id,
+                      label: s.name
+                    }))}
+                    placeholder="Select supplier"
+                    searchPlaceholder="Search suppliers..."
+                    emptyText="No suppliers found"
+                  />
+                </div>
+              )}
+              
+              {!["assigned_to", "created_by", "customer_id", "supplier_id"].includes(config.field || "") && (
+                <div>
+                  <Label>Value</Label>
+                  <Input
+                    value={config.value || ""}
+                    onChange={(e) => setConfig({ ...config, value: e.target.value })}
+                    placeholder="Enter comparison value"
+                  />
+                </div>
+              )}
             </>
           )}
 
