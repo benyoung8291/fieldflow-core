@@ -69,11 +69,34 @@ export function ChecklistRenderer({ taskId, ticketNumber }: ChecklistRendererPro
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task-checklist-items", taskId] });
+    onMutate: async ({ itemId, isCompleted }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["task-checklist-items", taskId] });
+
+      // Snapshot the previous value
+      const previousItems = queryClient.getQueryData(["task-checklist-items", taskId]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["task-checklist-items", taskId], (old: any) => {
+        if (!old) return old;
+        return old.map((item: any) => 
+          item.id === itemId ? { ...item, is_completed: isCompleted } : item
+        );
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousItems };
     },
-    onError: () => {
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousItems) {
+        queryClient.setQueryData(["task-checklist-items", taskId], context.previousItems);
+      }
       toast({ title: "Failed to update checklist item", variant: "destructive" });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we're in sync with the server
+      queryClient.invalidateQueries({ queryKey: ["task-checklist-items", taskId] });
     },
   });
 

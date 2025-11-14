@@ -508,15 +508,44 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
+    onMutate: async ({ messageId, currentBody }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["helpdesk-messages", ticketId] });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData(["helpdesk-messages", ticketId]);
+
+      // Calculate new body
+      const isCurrentlyChecked = currentBody.startsWith('☑');
+      const newBody = isCurrentlyChecked 
+        ? currentBody.replace('☑', '☐')
+        : currentBody.replace('☐', '☑');
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["helpdesk-messages", ticketId], (old: any) => {
+        if (!old) return old;
+        return old.map((msg: any) => 
+          msg.id === messageId ? { ...msg, body: newBody } : msg
+        );
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousMessages };
     },
-    onError: (error) => {
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousMessages) {
+        queryClient.setQueryData(["helpdesk-messages", ticketId], context.previousMessages);
+      }
       toast({
         title: "Failed to toggle checkbox",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we're in sync with the server
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
     },
   });
 
