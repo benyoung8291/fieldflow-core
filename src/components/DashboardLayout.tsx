@@ -276,30 +276,42 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
       )}
 
-      {/* Top Header Bar */}
+      {/* Header and Main Content Container */}
       {isMobile ? (
-        <MobileHeader />
+        <>
+          <MobileHeader />
+          <main className="flex-1 overflow-hidden">
+            <div className={cn(
+              "px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto",
+              "pb-20" // Bottom padding for bottom nav with safe area
+            )}>
+              {children}
+            </div>
+          </main>
+        </>
       ) : (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
-          <div className="flex items-center px-4 py-3 gap-4">
-            <GlobalSearch />
-            <div className="flex-1" />
-            <ViewModeToggle />
-            <ThemeToggle />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top Header Bar - positioned to the right of sidebar */}
+          <div className={cn(
+            "z-40 bg-background border-b border-border transition-all duration-300",
+            sidebarCollapsed ? "ml-0" : "ml-0"
+          )}>
+            <div className="flex items-center px-4 py-3 gap-4">
+              <GlobalSearch />
+              <div className="flex-1" />
+              <ViewModeToggle />
+              <ThemeToggle />
+            </div>
           </div>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-hidden">
+            <div className="px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto">
+              {children}
+            </div>
+          </main>
         </div>
       )}
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
-        <div className={cn(
-          "px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto",
-          "pt-14 lg:pt-20", // Top padding for fixed header
-          isMobile && "pb-20" // Bottom padding for bottom nav with safe area
-        )}>
-          {children}
-        </div>
-      </main>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
