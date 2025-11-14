@@ -86,24 +86,15 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     }
   };
 
-  // Combine and sort messages and audit logs
-  // Sort: emails first (chronological), then other items (chronological)
+  // Combine and sort all timeline items chronologically
   const timelineItems = [...(messages || []), ...(auditLogs || [])].sort((a, b) => {
-    const aIsEmail = a.message_type === 'email';
-    const bIsEmail = b.message_type === 'email';
-    
-    // Both emails: sort chronologically
-    if (aIsEmail && bIsEmail) {
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    }
-    
-    // Email comes before non-email
-    if (aIsEmail && !bIsEmail) return -1;
-    if (!aIsEmail && bIsEmail) return 1;
-    
-    // Both non-emails: sort chronologically
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
+
+  // Get email thread for replies (all previous emails in chronological order)
+  const emailThread = (messages || [])
+    .filter((m: any) => m.message_type === 'email')
+    .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   // Auto-scroll to bottom on load
   useEffect(() => {
@@ -425,23 +416,41 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header - Compact */}
-      <div className="px-3 py-2 border-b bg-background shrink-0">
-        <div className="flex items-start justify-between gap-2">
+      {/* Header - Optimized */}
+      <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 sticky top-0 z-10">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold mb-0.5 line-clamp-1">{ticket?.subject || "Loading..."}</h2>
+            <h2 className="text-base font-semibold mb-1 line-clamp-2">{ticket?.subject || "Loading..."}</h2>
             <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-              <span className="font-mono">{ticket?.ticket_number}</span>
+              <Badge variant="outline" className="font-mono text-xs">{ticket?.ticket_number}</Badge>
               {ticket?.customer && (
                 <>
                   <span>•</span>
-                  <span>{ticket.customer.name}</span>
+                  <span className="font-medium">{ticket.customer.name}</span>
                 </>
               )}
               {ticket?.assigned_user && (
                 <>
                   <span>•</span>
-                  <span>Assigned to: {ticket.assigned_user.first_name} {ticket.assigned_user.last_name}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {ticket.assigned_user.first_name} {ticket.assigned_user.last_name}
+                  </Badge>
+                </>
+              )}
+              {ticket?.priority && (
+                <>
+                  <span>•</span>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs",
+                      ticket.priority === "high" && "border-red-500 text-red-600 dark:text-red-400",
+                      ticket.priority === "medium" && "border-yellow-500 text-yellow-600 dark:text-yellow-400",
+                      ticket.priority === "low" && "border-green-500 text-green-600 dark:text-green-400"
+                    )}
+                  >
+                    {ticket.priority}
+                  </Badge>
                 </>
               )}
             </div>
@@ -450,13 +459,16 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         </div>
       </div>
 
-      {/* Timeline - Compact */}
+      {/* Timeline - Optimized */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollArea className="h-full p-2">
+        <ScrollArea className="h-full p-3">
           {isLoading ? (
-            <div className="text-center text-muted-foreground text-sm py-4">Loading messages...</div>
+            <div className="text-center text-muted-foreground text-sm py-8">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+              Loading messages...
+            </div>
           ) : (
-            <div className="space-y-3 pb-2">
+            <div className="space-y-4 pb-4">
               {timelineItems && timelineItems.length > 0 && timelineItems.map((item, index) => {
                 // Check if this is an audit log
                 const isAuditLog = !item.message_type;
@@ -471,23 +483,27 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                   const docType = item.details?.document_type || "document";
                   
                   return (
-                    <div key={item.id} className="relative flex items-center justify-center py-2">
+                    <div key={item.id} className="relative flex items-center justify-center py-3">
                       {/* Center line */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-px h-full bg-border/30" />
                       </div>
                       
-                      {/* Audit text */}
-                      <div className="relative bg-background px-3 py-1 rounded-full border border-border/50">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {/* Audit event badge */}
+                      <div className="relative z-10 bg-background px-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full border">
                           {item.action === "create" ? (
-                            <Link className="h-3 w-3" />
+                            <Link className="h-3 w-3 text-primary" />
                           ) : (
-                            <Unlink className="h-3 w-3" />
+                            <Unlink className="h-3 w-3 text-destructive" />
                           )}
-                          <span>
-                            {item.user?.first_name} {item.user?.last_name} {actionText} ({docType.replace("_", " ")})
+                          <span className="font-medium">
+                            {item.user?.first_name} {item.user?.last_name}
                           </span>
+                          <span>{actionText}</span>
+                          <Badge variant="outline" className="text-xs h-4 px-1">
+                            {docType.replace("_", " ")}
+                          </Badge>
                           <span>•</span>
                           <span>{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</span>
                         </div>
@@ -506,16 +522,22 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                 
                 return (
                   <div key={message.id} className="relative">
-                    {/* Threading line */}
+                     {/* Threading line */}
                     {index !== timelineItems.length - 1 && (
                       <div className={cn(
-                        "absolute top-8 bottom-0 w-px",
+                        "absolute top-9 bottom-0 w-0.5",
                         shouldIndent ? "left-8" : "left-4",
-                        message.direction === "inbound" 
-                          ? "bg-blue-500/30" 
-                          : message.direction === "outbound" 
-                          ? "bg-green-500/30" 
-                          : "bg-purple-500/30"
+                        message.message_type === "email" && message.direction === "inbound" 
+                          ? "bg-primary/20" 
+                          : message.message_type === "email" && message.direction === "outbound" 
+                          ? "bg-accent/20"
+                          : message.message_type === "internal_note"
+                          ? "bg-yellow-500/20"
+                          : message.message_type === "task"
+                          ? "bg-blue-500/20"
+                          : message.message_type === "checklist"
+                          ? "bg-green-500/20"
+                          : "bg-border"
                       )} />
                     )}
                     
@@ -533,12 +555,18 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                     
                     <div className={cn("flex gap-2", shouldIndent && "ml-4")}>
                       <div className={cn(
-                        "h-7 w-7 rounded-full flex items-center justify-center shrink-0 border-2 bg-background relative z-10",
-                        message.direction === "inbound" 
-                          ? "border-blue-500/50" 
-                          : message.direction === "outbound" 
-                          ? "border-green-500/50" 
-                          : "border-purple-500/50"
+                        "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border-2 bg-background relative z-10 shadow-sm",
+                        message.message_type === "email" && message.direction === "inbound" 
+                          ? "border-primary/50 bg-primary/5" 
+                          : message.message_type === "email" && message.direction === "outbound" 
+                          ? "border-accent/50 bg-accent/5"
+                          : message.message_type === "internal_note"
+                          ? "border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20"
+                          : message.message_type === "task"
+                          ? "border-blue-500/50 bg-blue-50 dark:bg-blue-950/20"
+                          : message.message_type === "checklist"
+                          ? "border-green-500/50 bg-green-50 dark:bg-green-950/20"
+                          : "border-border"
                       )}>
                         <div className={getMessageTypeColor(message.message_type)}>
                           {getMessageIcon(message.message_type)}
@@ -546,10 +574,13 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className={cn(
-                          "bg-card border rounded-md p-2",
-                          message.direction === "inbound" && "border-l-2 border-l-blue-500/30",
-                          message.direction === "outbound" && "border-l-2 border-l-green-500/30"
+                         <div className={cn(
+                          "bg-card border rounded-md p-2.5 shadow-sm hover:shadow-md transition-shadow",
+                          message.direction === "inbound" && "border-l-4 border-l-primary/40",
+                          message.direction === "outbound" && "border-l-4 border-l-accent/40",
+                          message.message_type === "internal_note" && "bg-yellow-50/50 dark:bg-yellow-950/10 border-yellow-200 dark:border-yellow-900",
+                          message.message_type === "task" && "bg-blue-50/50 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900",
+                          message.message_type === "checklist" && "bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-900"
                         )}>
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <div className="flex-1 min-w-0">
@@ -708,7 +739,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
               })}
               
               {/* Add Item Buttons - Inline in timeline */}
-              <div className="relative flex flex-col gap-2 py-4">
+              <div className="relative flex flex-col gap-2 py-6">
                 {/* Center line */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-px h-full bg-border/30" />
@@ -716,35 +747,33 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                 
                 {/* Action Buttons */}
                 {!showNoteEditor && !showTaskEditor && !showCheckboxEditor && (
-                  <div className="relative flex items-center gap-1 bg-background px-2 justify-center">
+                  <div className="relative flex items-center gap-2 bg-background px-3 justify-center flex-wrap">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => setShowNoteEditor(true)}
-                      className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                      className="h-8 gap-2 shadow-sm hover:shadow-md transition-all"
                     >
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="text-xs">Add Note</span>
+                      <StickyNote className="h-4 w-4 text-yellow-600" />
+                      <span className="text-xs font-medium">Add Note</span>
                     </Button>
-                    <div className="h-4 w-px bg-border/50" />
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => setShowTaskEditor(true)}
-                      className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                      className="h-8 gap-2 shadow-sm hover:shadow-md transition-all"
                     >
-                      <CheckSquare className="h-4 w-4" />
-                      <span className="text-xs">Add Task</span>
+                      <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs font-medium">Add Task</span>
                     </Button>
-                    <div className="h-4 w-px bg-border/50" />
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => setShowCheckboxEditor(true)}
-                      className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+                      className="h-8 gap-2 shadow-sm hover:shadow-md transition-all"
                     >
-                      <CheckSquare className="h-4 w-4" />
-                      <span className="text-xs">Add Checkbox</span>
+                      <CheckSquare className="h-4 w-4 text-green-600" />
+                      <span className="text-xs font-medium">Add Checkbox</span>
                     </Button>
                   </div>
                 )}
@@ -802,6 +831,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
         isSending={sendReplyMutation.isPending}
         ticketId={ticketId}
+        emailThread={emailThread}
       />
     </div>
   );
