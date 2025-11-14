@@ -409,7 +409,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   });
 
   const createCheckboxMutation = useMutation({
-    mutationFn: async (checkboxData: { title: string }) => {
+    mutationFn: async (checkboxData: { items: string[] }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -431,46 +431,47 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Create the task as a checkbox
-      const { data: task, error: taskError } = await supabase
-        .from("tasks")
-        .insert({
-          title: checkboxData.title,
-          description: "",
-          priority: "medium",
-          assigned_to: ticketData?.assigned_to || user.id,
-          due_date: today,
-          tenant_id: profile.tenant_id,
-          created_by: user.id,
-          linked_module: "helpdesk",
-          linked_record_id: ticketId,
-          status: "pending",
-        })
-        .select()
-        .single();
-      
-      if (taskError) throw taskError;
+      // Create multiple checklist items
+      for (const item of checkboxData.items) {
+        // Create the task as a checkbox
+        const { error: taskError } = await supabase
+          .from("tasks")
+          .insert({
+            title: item,
+            description: "",
+            priority: "medium",
+            assigned_to: ticketData?.assigned_to || user.id,
+            due_date: today,
+            tenant_id: profile.tenant_id,
+            created_by: user.id,
+            linked_module: "helpdesk",
+            linked_record_id: ticketId,
+            status: "pending",
+          });
+        
+        if (taskError) throw taskError;
 
-      // Also add a message to the timeline
-      const { error: messageError } = await supabase
-        .from("helpdesk_messages")
-        .insert({
-          ticket_id: ticketId,
-          message_type: "checklist",
-          body: `☐ ${checkboxData.title}`,
-          tenant_id: profile.tenant_id,
-        });
-      
-      if (messageError) throw messageError;
+        // Also add a message to the timeline
+        const { error: messageError } = await supabase
+          .from("helpdesk_messages")
+          .insert({
+            ticket_id: ticketId,
+            message_type: "checklist",
+            body: `☐ ${item}`,
+            tenant_id: profile.tenant_id,
+          });
+        
+        if (messageError) throw messageError;
+      }
     },
     onSuccess: () => {
-      toast({ title: "Checkbox created successfully" });
+      toast({ title: "Checklist items created successfully" });
       setShowCheckboxEditor(false);
       queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
     },
     onError: (error) => {
       toast({
-        title: "Failed to create checkbox",
+        title: "Failed to create checklist items",
         description: error.message,
         variant: "destructive",
       });
