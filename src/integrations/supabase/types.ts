@@ -59,6 +59,44 @@ export type Database = {
         }
         Relationships: []
       }
+      ap_invoice_settings: {
+        Row: {
+          auto_approve_within_threshold: boolean
+          created_at: string | null
+          id: string
+          require_manager_approval_above_threshold: boolean
+          tenant_id: string
+          updated_at: string | null
+          variance_threshold_percentage: number
+        }
+        Insert: {
+          auto_approve_within_threshold?: boolean
+          created_at?: string | null
+          id?: string
+          require_manager_approval_above_threshold?: boolean
+          tenant_id: string
+          updated_at?: string | null
+          variance_threshold_percentage?: number
+        }
+        Update: {
+          auto_approve_within_threshold?: boolean
+          created_at?: string | null
+          id?: string
+          require_manager_approval_above_threshold?: boolean
+          tenant_id?: string
+          updated_at?: string | null
+          variance_threshold_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_invoice_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_attachments: {
         Row: {
           appointment_id: string
@@ -710,7 +748,7 @@ export type Database = {
             foreignKeyName: "contacts_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
-            referencedRelation: "vendors"
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -945,6 +983,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string | null
           customer_id: string
+          customer_location_id: string | null
           id: string
           is_active: boolean | null
           is_primary: boolean | null
@@ -965,6 +1004,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string | null
           customer_id: string
+          customer_location_id?: string | null
           id?: string
           is_active?: boolean | null
           is_primary?: boolean | null
@@ -985,6 +1025,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string | null
           customer_id?: string
+          customer_location_id?: string | null
           id?: string
           is_active?: boolean | null
           is_primary?: boolean | null
@@ -1053,11 +1094,11 @@ export type Database = {
           phone: string | null
           postcode: string | null
           state: string | null
+          supplier_id: string | null
           tax_exempt: boolean | null
           tenant_id: string
           trading_name: string | null
           updated_at: string | null
-          vendor_id: string | null
         }
         Insert: {
           abn?: string | null
@@ -1079,11 +1120,11 @@ export type Database = {
           phone?: string | null
           postcode?: string | null
           state?: string | null
+          supplier_id?: string | null
           tax_exempt?: boolean | null
           tenant_id: string
           trading_name?: string | null
           updated_at?: string | null
-          vendor_id?: string | null
         }
         Update: {
           abn?: string | null
@@ -1105,11 +1146,11 @@ export type Database = {
           phone?: string | null
           postcode?: string | null
           state?: string | null
+          supplier_id?: string | null
           tax_exempt?: boolean | null
           tenant_id?: string
           trading_name?: string | null
           updated_at?: string | null
-          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -1128,9 +1169,9 @@ export type Database = {
           },
           {
             foreignKeyName: "customers_vendor_id_fkey"
-            columns: ["vendor_id"]
+            columns: ["supplier_id"]
             isOneToOne: false
-            referencedRelation: "vendors"
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1211,9 +1252,9 @@ export type Database = {
           max_amount: number | null
           rule_name: string
           rule_type: string
+          supplier_id: string | null
           tenant_id: string
           updated_at: string
-          vendor_id: string | null
           violation_action: string
         }
         Insert: {
@@ -1225,9 +1266,9 @@ export type Database = {
           max_amount?: number | null
           rule_name: string
           rule_type: string
+          supplier_id?: string | null
           tenant_id: string
           updated_at?: string
-          vendor_id?: string | null
           violation_action?: string
         }
         Update: {
@@ -1239,9 +1280,9 @@ export type Database = {
           max_amount?: number | null
           rule_name?: string
           rule_type?: string
+          supplier_id?: string | null
           tenant_id?: string
           updated_at?: string
-          vendor_id?: string | null
           violation_action?: string
         }
         Relationships: [
@@ -1254,9 +1295,9 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_expense_policy_vendor"
-            columns: ["vendor_id"]
+            columns: ["supplier_id"]
             isOneToOne: false
-            referencedRelation: "vendors"
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1287,11 +1328,11 @@ export type Database = {
           sub_account: string | null
           submitted_at: string | null
           submitted_by: string
+          supplier_id: string | null
           sync_error: string | null
           sync_status: string | null
           tenant_id: string
           updated_at: string
-          vendor_id: string | null
         }
         Insert: {
           account_code?: string | null
@@ -1318,11 +1359,11 @@ export type Database = {
           sub_account?: string | null
           submitted_at?: string | null
           submitted_by: string
+          supplier_id?: string | null
           sync_error?: string | null
           sync_status?: string | null
           tenant_id: string
           updated_at?: string
-          vendor_id?: string | null
         }
         Update: {
           account_code?: string | null
@@ -1349,11 +1390,38 @@ export type Database = {
           sub_account?: string | null
           submitted_at?: string | null
           submitted_by?: string
+          supplier_id?: string | null
           sync_error?: string | null
           sync_status?: string | null
           tenant_id?: string
           updated_at?: string
-          vendor_id?: string | null
+        }
+        Relationships: []
+      }
+      general_settings: {
+        Row: {
+          created_at: string | null
+          default_margin_percentage: number | null
+          id: string
+          overhead_percentage: number | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_margin_percentage?: number | null
+          id?: string
+          overhead_percentage?: number | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_margin_percentage?: number | null
+          id?: string
+          overhead_percentage?: number | null
+          tenant_id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1898,6 +1966,9 @@ export type Database = {
       }
       invoices: {
         Row: {
+          approval_requested_at: string | null
+          approval_requested_by: string | null
+          approval_status: string | null
           created_at: string | null
           created_by: string
           customer_id: string
@@ -1906,8 +1977,12 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           is_progress_invoice: boolean | null
+          manager_approval_notes: string | null
+          manager_approved_at: string | null
+          manager_approved_by: string | null
           notes: string | null
           recurring_invoice_id: string | null
+          requires_manager_approval: boolean | null
           status: string
           subtotal: number
           tax_amount: number
@@ -1917,6 +1992,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          approval_requested_at?: string | null
+          approval_requested_by?: string | null
+          approval_status?: string | null
           created_at?: string | null
           created_by: string
           customer_id: string
@@ -1925,8 +2003,12 @@ export type Database = {
           invoice_date?: string
           invoice_number: string
           is_progress_invoice?: boolean | null
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
           notes?: string | null
           recurring_invoice_id?: string | null
+          requires_manager_approval?: boolean | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -1936,6 +2018,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          approval_requested_at?: string | null
+          approval_requested_by?: string | null
+          approval_status?: string | null
           created_at?: string | null
           created_by?: string
           customer_id?: string
@@ -1944,8 +2029,12 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           is_progress_invoice?: boolean | null
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
           notes?: string | null
           recurring_invoice_id?: string | null
+          requires_manager_approval?: boolean | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -2201,6 +2290,59 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_read: boolean | null
+          link: string | null
+          message: string
+          metadata: Json | null
+          read_at: string | null
+          tenant_id: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message: string
+          metadata?: Json | null
+          read_at?: string | null
+          tenant_id: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          tenant_id?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -2492,6 +2634,7 @@ export type Database = {
       profiles: {
         Row: {
           abn: string | null
+          auto_away_minutes: number | null
           avatar_url: string | null
           created_at: string | null
           default_pipeline_id: string | null
@@ -2512,6 +2655,8 @@ export type Database = {
           projects_enabled: boolean | null
           service_orders_enabled: boolean | null
           standard_work_hours: number | null
+          status: string | null
+          status_updated_at: string | null
           super_fund_name: string | null
           super_fund_number: string | null
           task_kanban_mode: string | null
@@ -2523,6 +2668,7 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          auto_away_minutes?: number | null
           avatar_url?: string | null
           created_at?: string | null
           default_pipeline_id?: string | null
@@ -2543,6 +2689,8 @@ export type Database = {
           projects_enabled?: boolean | null
           service_orders_enabled?: boolean | null
           standard_work_hours?: number | null
+          status?: string | null
+          status_updated_at?: string | null
           super_fund_name?: string | null
           super_fund_number?: string | null
           task_kanban_mode?: string | null
@@ -2554,6 +2702,7 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          auto_away_minutes?: number | null
           avatar_url?: string | null
           created_at?: string | null
           default_pipeline_id?: string | null
@@ -2574,6 +2723,8 @@ export type Database = {
           projects_enabled?: boolean | null
           service_orders_enabled?: boolean | null
           standard_work_hours?: number | null
+          status?: string | null
+          status_updated_at?: string | null
           super_fund_name?: string | null
           super_fund_number?: string | null
           task_kanban_mode?: string | null
@@ -3249,12 +3400,12 @@ export type Database = {
           service_order_id: string | null
           status: string
           subtotal: number
+          supplier_id: string
           tax_amount: number
           tax_rate: number
           tenant_id: string
           total_amount: number
           updated_at: string | null
-          vendor_id: string
         }
         Insert: {
           approved_at?: string | null
@@ -3274,12 +3425,12 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
+          supplier_id: string
           tax_amount?: number
           tax_rate?: number
           tenant_id: string
           total_amount?: number
           updated_at?: string | null
-          vendor_id: string
         }
         Update: {
           approved_at?: string | null
@@ -3299,14 +3450,64 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
+          supplier_id?: string
           tax_amount?: number
           tax_rate?: number
           tenant_id?: string
           total_amount?: number
           updated_at?: string | null
-          vendor_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quote_attachments: {
         Row: {
@@ -4056,6 +4257,7 @@ export type Database = {
           contract_id: string
           created_at: string | null
           description: string
+          estimated_hours: number | null
           first_generation_date: string
           generation_day_of_month: number | null
           generation_day_of_week: number | null
@@ -4075,6 +4277,7 @@ export type Database = {
           contract_id: string
           created_at?: string | null
           description: string
+          estimated_hours?: number | null
           first_generation_date: string
           generation_day_of_month?: number | null
           generation_day_of_week?: number | null
@@ -4094,6 +4297,7 @@ export type Database = {
           contract_id?: string
           created_at?: string | null
           description?: string
+          estimated_hours?: number | null
           first_generation_date?: string
           generation_day_of_month?: number | null
           generation_day_of_week?: number | null
@@ -4443,6 +4647,7 @@ export type Database = {
           parent_service_order_id: string | null
           preferred_date: string | null
           preferred_date_end: string | null
+          preferred_date_range: number | null
           preferred_date_start: string | null
           priority: string | null
           project_id: string | null
@@ -4484,6 +4689,7 @@ export type Database = {
           parent_service_order_id?: string | null
           preferred_date?: string | null
           preferred_date_end?: string | null
+          preferred_date_range?: number | null
           preferred_date_start?: string | null
           priority?: string | null
           project_id?: string | null
@@ -4525,6 +4731,7 @@ export type Database = {
           parent_service_order_id?: string | null
           preferred_date?: string | null
           preferred_date_end?: string | null
+          preferred_date_range?: number | null
           preferred_date_start?: string | null
           priority?: string | null
           project_id?: string | null
@@ -4629,6 +4836,83 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      suppliers: {
+        Row: {
+          abn: string | null
+          address: string | null
+          city: string | null
+          created_at: string | null
+          customer_id: string | null
+          email: string | null
+          gst_registered: boolean | null
+          id: string
+          is_active: boolean | null
+          legal_company_name: string | null
+          mobile: string | null
+          name: string
+          notes: string | null
+          payment_terms: number | null
+          phone: string | null
+          postcode: string | null
+          state: string | null
+          tenant_id: string
+          trading_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          abn?: string | null
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
+          gst_registered?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          legal_company_name?: string | null
+          mobile?: string | null
+          name: string
+          notes?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          tenant_id: string
+          trading_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          abn?: string | null
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
+          gst_registered?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          legal_company_name?: string | null
+          mobile?: string | null
+          name?: string
+          notes?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          tenant_id?: string
+          trading_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_checklist_items: {
         Row: {
@@ -5160,83 +5444,6 @@ export type Database = {
           },
         ]
       }
-      vendors: {
-        Row: {
-          abn: string | null
-          address: string | null
-          city: string | null
-          created_at: string | null
-          customer_id: string | null
-          email: string | null
-          gst_registered: boolean | null
-          id: string
-          is_active: boolean | null
-          legal_company_name: string | null
-          mobile: string | null
-          name: string
-          notes: string | null
-          payment_terms: number | null
-          phone: string | null
-          postcode: string | null
-          state: string | null
-          tenant_id: string
-          trading_name: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          abn?: string | null
-          address?: string | null
-          city?: string | null
-          created_at?: string | null
-          customer_id?: string | null
-          email?: string | null
-          gst_registered?: boolean | null
-          id?: string
-          is_active?: boolean | null
-          legal_company_name?: string | null
-          mobile?: string | null
-          name: string
-          notes?: string | null
-          payment_terms?: number | null
-          phone?: string | null
-          postcode?: string | null
-          state?: string | null
-          tenant_id: string
-          trading_name?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          abn?: string | null
-          address?: string | null
-          city?: string | null
-          created_at?: string | null
-          customer_id?: string | null
-          email?: string | null
-          gst_registered?: boolean | null
-          id?: string
-          is_active?: boolean | null
-          legal_company_name?: string | null
-          mobile?: string | null
-          name?: string
-          notes?: string | null
-          payment_terms?: number | null
-          phone?: string | null
-          postcode?: string | null
-          state?: string | null
-          tenant_id?: string
-          trading_name?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vendors_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       worker_certificates: {
         Row: {
           certificate_name: string
@@ -5592,6 +5799,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_reject_ap_invoice_variance: {
+        Args: { p_approve: boolean; p_invoice_id: string; p_notes: string }
+        Returns: Json
+      }
       auto_clock_out_other_appointments: {
         Args: {
           p_new_appointment_id: string
@@ -5600,7 +5811,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_variance_requires_approval: {
+        Args: { p_invoice_id: string; p_total_variance: number }
+        Returns: boolean
+      }
       cleanup_overlapping_time_logs: { Args: never; Returns: undefined }
+      create_notification: {
+        Args: {
+          p_link?: string
+          p_message: string
+          p_metadata?: Json
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_next_sequential_number: {
         Args: { p_entity_type: string; p_tenant_id: string }
         Returns: string
@@ -5623,6 +5849,14 @@ export type Database = {
       initialize_brand_colors: {
         Args: { p_tenant_id: string }
         Returns: undefined
+      }
+      perform_three_way_match: {
+        Args: { p_invoice_id: string; p_tolerance_percentage?: number }
+        Returns: Json
+      }
+      request_ap_invoice_approval: {
+        Args: { p_invoice_id: string; p_notes?: string }
+        Returns: Json
       }
     }
     Enums: {
