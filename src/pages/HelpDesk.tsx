@@ -106,6 +106,11 @@ export default function HelpDesk() {
       .update({ is_read: true })
       .eq("id", ticketId);
     
+    // Also mark as read in Microsoft (fire and forget)
+    supabase.functions.invoke("microsoft-mark-read", {
+      body: { ticketId }
+    }).catch(err => console.error("Failed to sync read status to Microsoft:", err));
+    
     queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
   };
 
