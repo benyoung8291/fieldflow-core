@@ -53,54 +53,76 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
     queryFn: async () => {
       const { data, error } = await supabase
         .from("helpdesk_linked_documents" as any)
-        .select(`
-          *,
-          service_order:service_orders!helpdesk_linked_documents_document_id_fkey(
-            work_order_number,
-            status,
-            service_date,
-            total_amount,
-            customer:customers(name)
-          ),
-          appointment:appointments!helpdesk_linked_documents_document_id_fkey(
-            title,
-            status,
-            start_time,
-            end_time
-          ),
-          quote:quotes!helpdesk_linked_documents_document_id_fkey(
-            quote_number,
-            status,
-            quote_date,
-            total,
-            customer:customers(name)
-          ),
-          invoice:invoices!helpdesk_linked_documents_document_id_fkey(
-            invoice_number,
-            status,
-            invoice_date,
-            total_amount,
-            customer:customers(name)
-          ),
-          project:projects!helpdesk_linked_documents_document_id_fkey(
-            project_number,
-            name,
-            status,
-            start_date,
-            budget,
-            customer:customers(name)
-          ),
-          task:tasks!helpdesk_linked_documents_document_id_fkey(
-            title,
-            status,
-            priority,
-            due_date
-          )
-        `)
+        .select("*")
         .eq("ticket_id", ticketId);
 
       if (error) throw error;
-      return data as any[];
+      
+      // Fetch related document details for each linked doc
+      const docsWithDetails = await Promise.all(
+        (data || []).map(async (doc: any) => {
+          let details = null;
+          
+          try {
+            switch (doc.document_type) {
+              case 'service_order':
+                const { data: so } = await supabase
+                  .from("service_orders")
+                  .select("work_order_number, status, service_date, total_amount, description, customer:customers(name)")
+                  .eq("id", doc.document_id)
+                  .single();
+                details = so;
+                break;
+              case 'appointment':
+                const { data: apt } = await supabase
+                  .from("appointments")
+                  .select("title, status, start_time, end_time, location")
+                  .eq("id", doc.document_id)
+                  .single();
+                details = apt;
+                break;
+              case 'quote':
+                const { data: quote } = await supabase
+                  .from("quotes")
+                  .select("quote_number, status, quote_date, total, customer:customers(name)")
+                  .eq("id", doc.document_id)
+                  .single();
+                details = quote;
+                break;
+              case 'invoice':
+                const { data: inv } = await supabase
+                  .from("invoices")
+                  .select("invoice_number, status, invoice_date, total_amount, customer:customers(name)")
+                  .eq("id", doc.document_id)
+                  .single();
+                details = inv;
+                break;
+              case 'project':
+                const { data: proj } = await supabase
+                  .from("projects")
+                  .select("project_number, name, status, start_date, budget, customer:customers(name)")
+                  .eq("id", doc.document_id)
+                  .single();
+                details = proj;
+                break;
+              case 'task':
+                const { data: task } = await supabase
+                  .from("tasks")
+                  .select("title, status, priority, due_date")
+                  .eq("id", doc.document_id)
+                  .single();
+                details = task;
+                break;
+            }
+          } catch (err) {
+            console.error(`Error fetching ${doc.document_type} details:`, err);
+          }
+          
+          return { ...doc, details };
+        })
+      );
+      
+      return docsWithDetails;
     },
   });
 
@@ -548,8 +570,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                 {hasLinkedDocs ? (
                   <div className="space-y-2 mt-2">
                     {docs.map((doc) => {
-                      // Extract details from the joined data
-                      const docData = doc[docType.type];
+                      // Extract details from the fetched data
+                      const docData = doc.details;
                       const getDocumentDetails = () => {
                         switch (docType.type) {
                           case 'service_order':
@@ -559,6 +581,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                               date: docData?.service_date,
                               amount: docData?.total_amount,
                               customer: docData?.customer?.name,
+                              description: docData?.description,
                               label: 'Service Date'
                             };
                           case 'appointment':
@@ -567,6 +590,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                               status: docData?.status,
                               date: docData?.start_time,
                               time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null,
+                              location: docData?.location,
                               label: 'Scheduled'
                             };
                           case 'quote':
@@ -641,6 +665,19 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                             {details.customer && (
                               <div className="text-xs text-muted-foreground">
                                 {details.customer}
+                              </div>
+                            )}
+                            
+                            {details.description && docType.type === 'service_order' && (
+                              <div className="text-xs text-muted-foreground line-clamp-2 italic">
+                                {details.description}
+                              </div>
+                            )}
+                            
+                            {details.location && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {details.location}
                               </div>
                             )}
                             
