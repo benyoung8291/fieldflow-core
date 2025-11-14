@@ -1555,6 +1555,7 @@ export type Database = {
           sender_name: string | null
           sent_at: string | null
           subject: string | null
+          task_id: string | null
           tenant_id: string
           ticket_id: string
           to_email: string | null
@@ -1582,6 +1583,7 @@ export type Database = {
           sender_name?: string | null
           sent_at?: string | null
           subject?: string | null
+          task_id?: string | null
           tenant_id: string
           ticket_id: string
           to_email?: string | null
@@ -1609,6 +1611,7 @@ export type Database = {
           sender_name?: string | null
           sent_at?: string | null
           subject?: string | null
+          task_id?: string | null
           tenant_id?: string
           ticket_id?: string
           to_email?: string | null
@@ -1626,6 +1629,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_messages_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
