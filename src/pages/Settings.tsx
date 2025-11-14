@@ -30,7 +30,8 @@ import {
   Activity,
   ScrollText,
   CreditCard,
-  Database
+  Database,
+  Radio
 } from "lucide-react";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
@@ -45,6 +46,7 @@ import IntegrationsTab from "@/components/settings/IntegrationsTab";
 import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
 import UserProfileTab from "@/components/settings/UserProfileTab";
 import BrandColorsTab from "@/components/settings/BrandColorsTab";
+import PresenceSettingsTab from "@/components/settings/PresenceSettingsTab";
 import { HelpDeskSettingsTab } from "@/components/settings/HelpDeskSettingsTab";
 import { ExpenseCategoriesTab } from "@/components/settings/ExpenseCategoriesTab";
 import { CreditCardsTab } from "@/components/settings/CreditCardsTab";
@@ -80,6 +82,7 @@ const settingsNavigation: SettingsNavGroup[] = [
     group: "Personal",
     items: [
       { title: "My Profile", value: "user-profile", icon: User },
+      { title: "Presence", value: "presence", icon: Radio },
     ]
   },
   {
@@ -344,6 +347,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <UserProfileTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "presence" && (
+              <Card>
+                <CardContent className="pt-6">
+                  <PresenceSettingsTab />
                 </CardContent>
               </Card>
             )}

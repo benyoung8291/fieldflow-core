@@ -15,6 +15,8 @@ interface PresenceUser {
   isTyping?: boolean;
   typingInField?: string;
   color?: string;
+  status?: 'available' | 'busy' | 'away';
+  lastActivity?: string;
 }
 
 interface UsePresenceOptions {
@@ -49,6 +51,9 @@ export function usePresence({ page, field }: UsePresenceOptions) {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, PresenceUser>>({});
   const [currentUser, setCurrentUser] = useState<PresenceUser | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [activityTimeout, setActivityTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [userStatus, setUserStatus] = useState<'available' | 'busy' | 'away'>('available');
+  const [autoAwayMinutes, setAutoAwayMinutes] = useState<number>(5);
 
   useEffect(() => {
     // Get current user info
@@ -56,6 +61,19 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) return;
+
+      // Fetch user's status and auto-away settings from profiles
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('status, auto_away_minutes')
+        .eq('id', user.id)
+        .single();
+
+      const status = (profile?.status || 'available') as 'available' | 'busy' | 'away';
+      const autoAway = profile?.auto_away_minutes || 5;
+      
+      setUserStatus(status);
+      setAutoAwayMinutes(autoAway);
 
       const userData: PresenceUser = {
         userId: user.id,
@@ -68,6 +86,8 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         currentPage: page,
         currentField: field,
         color: getUserColor(user.id),
+        status: status,
+        lastActivity: new Date().toISOString(),
       };
 
       setCurrentUser(userData);
@@ -117,6 +137,50 @@ export function usePresence({ page, field }: UsePresenceOptions) {
 
     initPresence();
 
+    // Start activity tracking for auto-away
+    const resetActivityTimer = () => {
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+      }
+      
+      // Only set auto-away if current status is not manually set to busy
+      if (userStatus !== 'busy') {
+        const timeout = setTimeout(async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && channel) {
+            await supabase
+              .from('profiles')
+              .update({ status: 'away', status_updated_at: new Date().toISOString() })
+              .eq('id', user.id);
+            
+            setUserStatus('away');
+            channel.track({
+              ...currentUser,
+              status: 'away',
+              lastActivity: new Date().toISOString(),
+            });
+          }
+        }, autoAwayMinutes * 60 * 1000);
+        
+        setActivityTimeout(timeout);
+      }
+    };
+
+    // Track user activity
+    const handleActivity = () => {
+      if (channel && currentUser && userStatus === 'away') {
+        // Auto-return from away when user is active
+        updateStatus('available');
+      }
+      resetActivityTimer();
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    
+    resetActivityTimer();
+
     return () => {
       if (channel) {
         channel.unsubscribe();
@@ -124,8 +188,14 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+      }
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
     };
-  }, [page]);
+  }, [page, autoAwayMinutes, userStatus]);
 
   // Update field when it changes
   useEffect(() => {
@@ -200,6 +270,33 @@ export function usePresence({ page, field }: UsePresenceOptions) {
     }
   };
 
+  const updateStatus = async (newStatus: 'available' | 'busy' | 'away') => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && channel && currentUser) {
+      // Update in database
+      await supabase
+        .from('profiles')
+        .update({ 
+          status: newStatus, 
+          status_updated_at: new Date().toISOString() 
+        })
+        .eq('id', user.id);
+      
+      // Update local state
+      setUserStatus(newStatus);
+      
+      // Update presence channel
+      const updatedUser = {
+        ...currentUser,
+        status: newStatus,
+        lastActivity: new Date().toISOString(),
+      };
+      
+      setCurrentUser(updatedUser);
+      channel.track(updatedUser);
+    }
+  };
+
   // Filter out current user from online users
   const otherUsers = Object.entries(onlineUsers)
     .filter(([userId]) => userId !== currentUser?.userId)
@@ -212,5 +309,8 @@ export function usePresence({ page, field }: UsePresenceOptions) {
     updateField,
     startTyping,
     stopTyping,
+    updateStatus,
+    userStatus,
+    autoAwayMinutes,
   };
 }
