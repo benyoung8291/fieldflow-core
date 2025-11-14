@@ -636,6 +636,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                 {showTaskEditor && (
                   <div className="relative z-10 px-2">
                     <InlineTaskEditor
+                      defaultTitle={ticket?.subject}
                       onSave={async (taskData) => {
                         await createTaskMutation.mutateAsync(taskData);
                       }}

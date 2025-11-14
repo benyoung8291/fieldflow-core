@@ -53,7 +53,50 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
     queryFn: async () => {
       const { data, error } = await supabase
         .from("helpdesk_linked_documents" as any)
-        .select("*")
+        .select(`
+          *,
+          service_order:service_orders!helpdesk_linked_documents_document_id_fkey(
+            work_order_number,
+            status,
+            service_date,
+            total_amount,
+            customer:customers(name)
+          ),
+          appointment:appointments!helpdesk_linked_documents_document_id_fkey(
+            title,
+            status,
+            start_time,
+            end_time
+          ),
+          quote:quotes!helpdesk_linked_documents_document_id_fkey(
+            quote_number,
+            status,
+            quote_date,
+            total,
+            customer:customers(name)
+          ),
+          invoice:invoices!helpdesk_linked_documents_document_id_fkey(
+            invoice_number,
+            status,
+            invoice_date,
+            total_amount,
+            customer:customers(name)
+          ),
+          project:projects!helpdesk_linked_documents_document_id_fkey(
+            project_number,
+            name,
+            status,
+            start_date,
+            budget,
+            customer:customers(name)
+          ),
+          task:tasks!helpdesk_linked_documents_document_id_fkey(
+            title,
+            status,
+            priority,
+            due_date
+          )
+        `)
         .eq("ticket_id", ticketId);
 
       if (error) throw error;
@@ -504,7 +547,65 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
 
                 {hasLinkedDocs ? (
                   <div className="space-y-1.5 mt-2">
-                    {docs.map((doc) => (
+                    {docs.map((doc) => {
+                      // Extract details from the joined data
+                      const docData = doc[docType.type];
+                      const getDocumentDetails = () => {
+                        switch (docType.type) {
+                          case 'service_order':
+                            return {
+                              title: docData?.work_order_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.service_date,
+                              amount: docData?.total_amount,
+                              customer: docData?.customer?.name
+                            };
+                          case 'appointment':
+                            return {
+                              title: docData?.title || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.start_time,
+                              time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null
+                            };
+                          case 'quote':
+                            return {
+                              title: docData?.quote_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.quote_date,
+                              amount: docData?.total,
+                              customer: docData?.customer?.name
+                            };
+                          case 'invoice':
+                            return {
+                              title: docData?.invoice_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.invoice_date,
+                              amount: docData?.total_amount,
+                              customer: docData?.customer?.name
+                            };
+                          case 'project':
+                            return {
+                              title: docData?.project_number || docData?.name || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.start_date,
+                              amount: docData?.budget,
+                              customer: docData?.customer?.name
+                            };
+                          case 'task':
+                            return {
+                              title: docData?.title || 'Untitled',
+                              status: docData?.status,
+                              priority: docData?.priority,
+                              date: docData?.due_date
+                            };
+                          default:
+                            return { title: doc.document_number || 'Untitled' };
+                        }
+                      };
+                      
+                      const details = getDocumentDetails();
+                      
+                      return (
                       <div
                         key={doc.id}
                         className="group relative p-2 rounded border border-border/50 hover:border-border hover:bg-accent/30 transition-all"
@@ -513,16 +614,55 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                           className="cursor-pointer"
                           onClick={() => handleDocumentClick(docType.type, doc.document_id)}
                         >
-                          <div className="text-sm font-medium truncate">
-                            {doc.document_number || "Untitled"}
-                          </div>
-                          {doc.description && (
-                            <div className="text-xs text-muted-foreground truncate mt-0.5">
-                              {doc.description}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="text-sm font-medium truncate flex-1">
+                              {details.title}
                             </div>
-                          )}
+                            {details.status && (
+                              <span className={cn(
+                                "text-xs px-1.5 py-0.5 rounded-full shrink-0",
+                                details.status === 'completed' && "bg-green-100 text-green-700",
+                                details.status === 'pending' && "bg-yellow-100 text-yellow-700",
+                                details.status === 'in_progress' && "bg-blue-100 text-blue-700",
+                                details.status === 'cancelled' && "bg-red-100 text-red-700",
+                                details.status === 'draft' && "bg-gray-100 text-gray-700"
+                              )}>
+                                {details.status.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-0.5 mt-1">
+                            {details.customer && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {details.customer}
+                              </div>
+                            )}
+                            {details.date && (
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(details.date).toLocaleDateString()}
+                                {details.time && ` • ${details.time}`}
+                              </div>
+                            )}
+                            {details.amount && (
+                              <div className="text-xs font-medium text-foreground">
+                                ${details.amount.toLocaleString()}
+                              </div>
+                            )}
+                            {details.priority && (
+                              <span className={cn(
+                                "inline-flex text-xs px-1.5 py-0.5 rounded",
+                                details.priority === 'high' && "bg-red-100 text-red-700",
+                                details.priority === 'medium' && "bg-yellow-100 text-yellow-700",
+                                details.priority === 'low' && "bg-green-100 text-green-700"
+                              )}>
+                                {details.priority} priority
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -548,7 +688,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground italic mt-1">

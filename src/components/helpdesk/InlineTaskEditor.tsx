@@ -18,10 +18,11 @@ interface InlineTaskEditorProps {
   }) => Promise<void>;
   onCancel: () => void;
   isSaving?: boolean;
+  defaultTitle?: string;
 }
 
-export function InlineTaskEditor({ onSave, onCancel, isSaving }: InlineTaskEditorProps) {
-  const [title, setTitle] = useState("");
+export function InlineTaskEditor({ onSave, onCancel, isSaving, defaultTitle }: InlineTaskEditorProps) {
+  const [title, setTitle] = useState(defaultTitle || "");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("medium");
   const [assignedTo, setAssignedTo] = useState<string>("unassigned");
