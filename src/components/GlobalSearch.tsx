@@ -139,14 +139,14 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     { id: "settings", title: "Settings", type: "page", route: "/settings", icon: Settings },
   ];
 
-  // Fetch documents from database
+  // Fetch documents from database with increased limits
   const { data: customers } = useQuery({
     queryKey: ["search-customers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("customers")
         .select("id, name, email")
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -159,7 +159,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("quotes")
         .select("id, quote_number, customers(name)")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -172,7 +172,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("invoices")
         .select("id, invoice_number, customers(name)")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -185,7 +185,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("projects")
         .select("id, name, customers(name)")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -198,7 +198,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("service_orders")
         .select("id, order_number, customers(name)")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -210,7 +210,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       const { data, error } = await supabase
         .from("customer_locations")
         .select("id, name, address, customers(name)")
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -223,7 +223,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("appointments")
         .select("id, title, start_time, customers(name)")
         .order("start_time", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -235,7 +235,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       const { data, error } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, email")
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -248,7 +248,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("purchase_orders")
         .select("id, po_number, vendors(name)")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -261,7 +261,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("leads")
         .select("id, name, company_name, email")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -274,7 +274,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("contacts")
         .select("id, first_name, last_name, email, company_name")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -287,7 +287,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("vendors")
         .select("id, name, email")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -300,7 +300,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("tasks")
         .select("id, title, status")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -313,7 +313,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("service_contracts")
         .select("id, contract_number, customers(name)")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -326,7 +326,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         .from("helpdesk_tickets")
         .select("id, ticket_number, subject, sender_name")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (error) throw error;
       return data || [];
     },
@@ -552,18 +552,20 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     navigate(result.route);
   };
 
-  // Initialize Fuse.js for fuzzy search
+  // Initialize Fuse.js for fuzzy search with optimized settings
   const fuse = useMemo(() => {
     return new Fuse(allResults, {
       keys: [
-        { name: "title", weight: 2 },
-        { name: "subtitle", weight: 1 },
-        { name: "type", weight: 0.5 },
+        { name: "title", weight: 3 },
+        { name: "subtitle", weight: 1.5 },
+        { name: "type", weight: 0.3 },
       ],
-      threshold: 0.4, // Lower = more strict, higher = more fuzzy (0-1)
-      distance: 100,
-      minMatchCharLength: 2,
+      threshold: 0.5, // More lenient for short queries like "ISS" or "ANZ"
+      distance: 200,
+      minMatchCharLength: 1, // Allow matching single characters
       includeScore: true,
+      ignoreLocation: true, // Don't penalize matches based on position
+      useExtendedSearch: true,
     });
   }, [allResults]);
 
@@ -582,18 +584,20 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       .filter((item): item is SearchResult => item !== undefined);
   }, [accessHistory, allResults]);
 
-  // Filter results using fuzzy search
+  // Filter results using fuzzy search and sort by score
   const filteredResults = useMemo(() => {
     if (!searchQuery.trim()) {
-      // When empty, show all results but frequently accessed will be shown first
       return allResults;
     }
     
     const fuseResults = fuse.search(searchQuery);
-    return fuseResults.map(result => result.item);
+    // Sort by score (lower score = better match) and return items
+    return fuseResults
+      .sort((a, b) => (a.score || 0) - (b.score || 0))
+      .map(result => result.item);
   }, [searchQuery, fuse, allResults]);
 
-  // Group results by type
+  // Group results by type and sort each group by relevance
   const groupedResults = useMemo(() => {
     const groups: Record<string, SearchResult[]> = {
       pages: [],
@@ -622,8 +626,22 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       }
     });
 
-    return groups;
-  }, [filteredResults]);
+    // Sort groups by document type priority when searching
+    const sortedGroups: Record<string, SearchResult[]> = {};
+    const priorityOrder = searchQuery.trim() ? [
+      'customers', 'locations', 'quotes', 'invoices', 'projects', 
+      'service-orders', 'appointments', 'purchase-orders', 'leads', 
+      'contacts', 'workers', 'suppliers', 'tasks', 'contracts', 'helpdesk', 'pages'
+    ] : Object.keys(groups);
+
+    priorityOrder.forEach(key => {
+      if (groups[key]) {
+        sortedGroups[key] = groups[key];
+      }
+    });
+
+    return sortedGroups;
+  }, [filteredResults, searchQuery]);
 
   return (
     <Popover open={showDropdown} onOpenChange={setIsFocused}>
@@ -721,8 +739,34 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.customers.length > 0 && (
               <>
-                <CommandGroup heading="Customers">
-                  {groupedResults.customers.slice(0, 5).map((item) => {
+                <CommandGroup heading={`Customers (${groupedResults.customers.length})`}>
+                  {groupedResults.customers.slice(0, 8).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.id}
+                        value={`${item.title} ${item.subtitle || ""}`}
+                        onSelect={() => handleSelect(item)}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.title}</span>
+                          {item.subtitle && (
+                            <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            {groupedResults.locations.length > 0 && (
+              <>
+                <CommandGroup heading={`Locations (${groupedResults.locations.length})`}>
+                  {groupedResults.locations.slice(0, 8).map((item) => {
                     const Icon = item.icon;
                     return (
                       <CommandItem
@@ -747,8 +791,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.quotes.length > 0 && (
               <>
-                <CommandGroup heading="Quotes">
-                  {groupedResults.quotes.slice(0, 5).map((item) => {
+                <CommandGroup heading={`Quotes (${groupedResults.quotes.length})`}>
+                  {groupedResults.quotes.slice(0, 8).map((item) => {
                     const Icon = item.icon;
                     return (
                       <CommandItem
@@ -773,8 +817,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.invoices.length > 0 && (
               <>
-                <CommandGroup heading="Invoices">
-                  {groupedResults.invoices.slice(0, 5).map((item) => {
+                <CommandGroup heading={`Invoices (${groupedResults.invoices.length})`}>
+                  {groupedResults.invoices.slice(0, 8).map((item) => {
                     const Icon = item.icon;
                     return (
                       <CommandItem
@@ -799,8 +843,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.projects.length > 0 && (
               <>
-                <CommandGroup heading="Projects">
-                  {groupedResults.projects.slice(0, 5).map((item) => {
+                <CommandGroup heading={`Projects (${groupedResults.projects.length})`}>
+                  {groupedResults.projects.slice(0, 8).map((item) => {
                     const Icon = item.icon;
                     return (
                       <CommandItem
@@ -825,8 +869,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults["service-orders"].length > 0 && (
               <>
-                <CommandGroup heading="Service Orders">
-                  {groupedResults["service-orders"].slice(0, 5).map((item) => {
+                <CommandGroup heading={`Service Orders (${groupedResults["service-orders"].length})`}>
+                  {groupedResults["service-orders"].slice(0, 8).map((item) => {
                     const Icon = item.icon;
                     return (
                       <CommandItem
@@ -877,7 +921,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.appointments.length > 0 && (
               <>
-                <CommandGroup heading="Appointments">
+                <CommandGroup heading={`Appointments (${groupedResults.appointments.length})`}>
                   {groupedResults.appointments.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -903,7 +947,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.workers.length > 0 && (
               <>
-                <CommandGroup heading="Workers">
+                <CommandGroup heading={`Workers (${groupedResults.workers.length})`}>
                   {groupedResults.workers.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -929,7 +973,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults["purchase-orders"].length > 0 && (
               <>
-                <CommandGroup heading="Purchase Orders">
+                <CommandGroup heading={`Purchase Orders (${groupedResults["purchase-orders"].length})`}>
                   {groupedResults["purchase-orders"].slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -955,7 +999,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.leads.length > 0 && (
               <>
-                <CommandGroup heading="Leads">
+                <CommandGroup heading={`Leads (${groupedResults.leads.length})`}>
                   {groupedResults.leads.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -981,7 +1025,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.contacts.length > 0 && (
               <>
-                <CommandGroup heading="Contacts">
+                <CommandGroup heading={`Contacts (${groupedResults.contacts.length})`}>
                   {groupedResults.contacts.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -1007,7 +1051,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.suppliers.length > 0 && (
               <>
-                <CommandGroup heading="Suppliers">
+                <CommandGroup heading={`Suppliers (${groupedResults.suppliers.length})`}>
                   {groupedResults.suppliers.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -1033,7 +1077,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.tasks.length > 0 && (
               <>
-                <CommandGroup heading="Tasks">
+                <CommandGroup heading={`Tasks (${groupedResults.tasks.length})`}>
                   {groupedResults.tasks.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -1059,7 +1103,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
 
             {groupedResults.contracts.length > 0 && (
               <>
-                <CommandGroup heading="Contracts">
+                <CommandGroup heading={`Contracts (${groupedResults.contracts.length})`}>
                   {groupedResults.contracts.slice(0, 5).map((item) => {
                     const Icon = item.icon;
                     return (
@@ -1084,7 +1128,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
             )}
 
             {groupedResults.helpdesk.length > 0 && (
-              <CommandGroup heading="Help Desk">
+              <CommandGroup heading={`Help Desk (${groupedResults.helpdesk.length})`}>
                 {groupedResults.helpdesk.slice(0, 5).map((item) => {
                   const Icon = item.icon;
                   return (
