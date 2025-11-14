@@ -44,14 +44,33 @@ interface LineItem {
   source_id?: string;
 }
 
+interface SourceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price?: number;
+  line_total?: number;
+}
+
 interface PurchaseOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   purchaseOrder?: any;
   onSuccess?: () => void;
+  sourceLineItems?: SourceLineItem[];
+  serviceOrderId?: string;
+  projectId?: string;
 }
 
-export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSuccess }: PurchaseOrderDialogProps) {
+export function PurchaseOrderDialog({ 
+  open, 
+  onOpenChange, 
+  purchaseOrder, 
+  onSuccess,
+  sourceLineItems = [],
+  serviceOrderId,
+  projectId 
+}: PurchaseOrderDialogProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -60,6 +79,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
   const [importOpen, setImportOpen] = useState(false);
   const [serviceOrders, setServiceOrders] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [selectedSourceItems, setSelectedSourceItems] = useState<Set<string>>(new Set());
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -318,6 +338,8 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
           subtotal: poData.subtotal,
           tax_amount: poData.tax_amount,
           total_amount: poData.total_amount,
+          service_order_id: serviceOrderId || purchaseOrder.service_order_id,
+          project_id: projectId || purchaseOrder.project_id,
         })
         .eq("id", purchaseOrder.id);
 
@@ -346,6 +368,8 @@ export function PurchaseOrderDialog({ open, onOpenChange, purchaseOrder, onSucce
             tenant_id: poData.tenant_id,
             created_by: poData.created_by,
             status: 'draft',
+            service_order_id: serviceOrderId,
+            project_id: projectId,
           })
           .select()
           .single();

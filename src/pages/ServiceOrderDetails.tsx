@@ -1096,6 +1096,24 @@ export default function ServiceOrderDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Purchase Order Dialog */}
+      <PurchaseOrderDialog
+        open={purchaseOrderDialogOpen}
+        onOpenChange={setPurchaseOrderDialogOpen}
+        serviceOrderId={id}
+        sourceLineItems={lineItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price || 0,
+          line_total: item.line_total || 0,
+        }))}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["service-order-purchase-orders", id] });
+          queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+        }}
+      />
     </>
   );
 }
