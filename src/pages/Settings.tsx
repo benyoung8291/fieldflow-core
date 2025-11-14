@@ -55,8 +55,9 @@ import { CreditCardsTab } from "@/components/settings/CreditCardsTab";
 import { ExpensePolicyTab } from "@/components/settings/ExpensePolicyTab";
 import { SchemaValidatorTab } from "@/components/settings/SchemaValidatorTab";
 import { PerformanceMonitorTab } from "@/components/settings/PerformanceMonitorTab";
+import APInvoiceSettingsTab from "@/components/settings/APInvoiceSettingsTab";
 import { cn } from "@/lib/utils";
-import { Receipt, Shield as ShieldCheck } from "lucide-react";
+import { Receipt, Shield as ShieldCheck, FileCheck } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 
 interface PayRateCategory {
@@ -118,6 +119,7 @@ const settingsNavigation: SettingsNavGroup[] = [
       { title: "Templates", value: "templates", icon: FileText },
       { title: "CRM Pipeline", value: "crm-statuses", icon: PieChart },
       { title: "Help Desk", value: "helpdesk", icon: Headphones },
+      { title: "AP Invoice Settings", value: "ap-invoice-settings", icon: FileCheck },
       { title: "Expense Categories", value: "expense-categories", icon: Receipt },
       { title: "Expense Policy", value: "expense-policy", icon: ShieldCheck },
       { title: "Credit Cards", value: "credit-cards", icon: CreditCard },
@@ -526,6 +528,10 @@ export default function Settings() {
                   <HelpDeskSettingsTab />
                 </CardContent>
               </Card>
+            )}
+
+            {activeTab === "ap-invoice-settings" && (
+              <APInvoiceSettingsTab />
             )}
 
             {activeTab === "expense-categories" && (
