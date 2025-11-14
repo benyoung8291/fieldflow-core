@@ -12,6 +12,8 @@ interface PresenceUser {
   currentField?: string;
   cursorX?: number;
   cursorY?: number;
+  isTyping?: boolean;
+  typingInField?: string;
 }
 
 interface UsePresenceOptions {
@@ -23,6 +25,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, PresenceUser>>({});
   const [currentUser, setCurrentUser] = useState<PresenceUser | null>(null);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Get current user info
@@ -94,6 +97,9 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       if (channel) {
         channel.unsubscribe();
       }
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
     };
   }, [page]);
 
@@ -129,6 +135,47 @@ export function usePresence({ page, field }: UsePresenceOptions) {
     }
   };
 
+  const startTyping = (fieldName: string) => {
+    if (channel && currentUser) {
+      // Clear existing timeout
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+
+      // Update presence to show typing
+      channel.track({
+        ...currentUser,
+        isTyping: true,
+        typingInField: fieldName,
+        currentField: fieldName,
+        lastSeen: new Date().toISOString(),
+      });
+
+      // Auto-stop typing after 2 seconds of inactivity
+      const timeout = setTimeout(() => {
+        stopTyping();
+      }, 2000);
+      
+      setTypingTimeout(timeout);
+    }
+  };
+
+  const stopTyping = () => {
+    if (channel && currentUser) {
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        setTypingTimeout(null);
+      }
+
+      channel.track({
+        ...currentUser,
+        isTyping: false,
+        typingInField: undefined,
+        lastSeen: new Date().toISOString(),
+      });
+    }
+  };
+
   // Filter out current user from online users
   const otherUsers = Object.entries(onlineUsers)
     .filter(([userId]) => userId !== currentUser?.userId)
@@ -139,5 +186,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
     currentUser,
     updateCursorPosition,
     updateField,
+    startTyping,
+    stopTyping,
   };
 }
