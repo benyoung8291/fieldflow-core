@@ -546,7 +546,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                 )}
 
                 {hasLinkedDocs ? (
-                  <div className="space-y-1.5 mt-2">
+                  <div className="space-y-2 mt-2">
                     {docs.map((doc) => {
                       // Extract details from the joined data
                       const docData = doc[docType.type];
@@ -558,14 +558,16 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                               status: docData?.status,
                               date: docData?.service_date,
                               amount: docData?.total_amount,
-                              customer: docData?.customer?.name
+                              customer: docData?.customer?.name,
+                              label: 'Service Date'
                             };
                           case 'appointment':
                             return {
                               title: docData?.title || 'Untitled',
                               status: docData?.status,
                               date: docData?.start_time,
-                              time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null
+                              time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null,
+                              label: 'Scheduled'
                             };
                           case 'quote':
                             return {
@@ -573,7 +575,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                               status: docData?.status,
                               date: docData?.quote_date,
                               amount: docData?.total,
-                              customer: docData?.customer?.name
+                              customer: docData?.customer?.name,
+                              label: 'Quote Date'
                             };
                           case 'invoice':
                             return {
@@ -581,7 +584,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                               status: docData?.status,
                               date: docData?.invoice_date,
                               amount: docData?.total_amount,
-                              customer: docData?.customer?.name
+                              customer: docData?.customer?.name,
+                              label: 'Invoice Date'
                             };
                           case 'project':
                             return {
@@ -589,14 +593,16 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                               status: docData?.status,
                               date: docData?.start_date,
                               amount: docData?.budget,
-                              customer: docData?.customer?.name
+                              customer: docData?.customer?.name,
+                              label: 'Start Date'
                             };
                           case 'task':
                             return {
                               title: docData?.title || 'Untitled',
                               status: docData?.status,
                               priority: docData?.priority,
-                              date: docData?.due_date
+                              date: docData?.due_date,
+                              label: 'Due Date'
                             };
                           default:
                             return { title: doc.document_number || 'Untitled' };
@@ -606,89 +612,77 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
                       const details = getDocumentDetails();
                       
                       return (
-                      <div
-                        key={doc.id}
-                        className="group relative p-2 rounded border border-border/50 hover:border-border hover:bg-accent/30 transition-all"
-                      >
-                        <div 
-                          className="cursor-pointer"
-                          onClick={() => handleDocumentClick(docType.type, doc.document_id)}
+                        <div
+                          key={doc.id}
+                          className="group relative p-3 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer"
+                          onClick={() => handleOpenInNewTab(docType.type, doc.document_id)}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="text-sm font-medium truncate flex-1">
-                              {details.title}
-                            </div>
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="font-medium text-sm">{details.title}</div>
                             {details.status && (
                               <span className={cn(
-                                "text-xs px-1.5 py-0.5 rounded-full shrink-0",
-                                details.status === 'completed' && "bg-green-100 text-green-700",
-                                details.status === 'pending' && "bg-yellow-100 text-yellow-700",
-                                details.status === 'in_progress' && "bg-blue-100 text-blue-700",
-                                details.status === 'cancelled' && "bg-red-100 text-red-700",
-                                details.status === 'draft' && "bg-gray-100 text-gray-700"
+                                "text-xs px-2 py-0.5 rounded-full shrink-0 font-medium",
+                                details.status === 'completed' && "bg-success/10 text-success",
+                                details.status === 'pending' && "bg-warning/10 text-warning",
+                                details.status === 'in_progress' && "bg-info/10 text-info",
+                                details.status === 'cancelled' && "bg-destructive/10 text-destructive",
+                                details.status === 'draft' && "bg-muted text-muted-foreground",
+                                details.status === 'scheduled' && "bg-primary/10 text-primary",
+                                details.status === 'confirmed' && "bg-success/10 text-success",
+                                details.status === 'sent' && "bg-info/10 text-info",
+                                details.status === 'accepted' && "bg-success/10 text-success"
                               )}>
                                 {details.status.replace('_', ' ')}
                               </span>
                             )}
                           </div>
                           
-                          <div className="space-y-0.5 mt-1">
+                          <div className="space-y-1.5">
                             {details.customer && (
-                              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Users className="h-3 w-3" />
+                              <div className="text-xs text-muted-foreground">
                                 {details.customer}
                               </div>
                             )}
-                            {details.date && (
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(details.date).toLocaleDateString()}
-                                {details.time && ` • ${details.time}`}
-                              </div>
-                            )}
-                            {details.amount && (
-                              <div className="text-xs font-medium text-foreground">
-                                ${details.amount.toLocaleString()}
-                              </div>
-                            )}
+                            
+                            <div className="flex items-center justify-between text-xs">
+                              {details.date && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium">{details.label}:</span> {new Date(details.date).toLocaleDateString()}
+                                  {details.time && <div className="mt-0.5">{details.time}</div>}
+                                </div>
+                              )}
+                              {details.amount && (
+                                <div className="font-semibold text-foreground">
+                                  ${details.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                              )}
+                            </div>
+                            
                             {details.priority && (
                               <span className={cn(
-                                "inline-flex text-xs px-1.5 py-0.5 rounded",
-                                details.priority === 'high' && "bg-red-100 text-red-700",
-                                details.priority === 'medium' && "bg-yellow-100 text-yellow-700",
-                                details.priority === 'low' && "bg-green-100 text-green-700"
+                                "inline-flex text-xs px-2 py-0.5 rounded-full font-medium",
+                                details.priority === 'high' && "bg-destructive/10 text-destructive",
+                                details.priority === 'medium' && "bg-warning/10 text-warning",
+                                details.priority === 'low' && "bg-success/10 text-success"
                               )}>
                                 {details.priority} priority
                               </span>
                             )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                          
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenInNewTab(docType.type, doc.document_id);
-                            }}
-                          >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            Open
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 ml-auto text-destructive"
+                            className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={(e) => {
                               e.stopPropagation();
                               unlinkMutation.mutate(doc.id);
                             }}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      </div>
-                    );
+                      );
                     })}
                   </div>
                 ) : (
