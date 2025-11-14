@@ -170,7 +170,7 @@ export default function PurchaseOrderDetails() {
     );
   }
 
-  const gstWarning = getGSTWarning(vendor);
+  const gstWarning = getGSTWarning(supplier);
 
   return (
     <DashboardLayout>
@@ -183,12 +183,12 @@ export default function PurchaseOrderDetails() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{purchaseOrder.po_number}</h1>
-            <p className="text-muted-foreground">{vendor?.name}</p>
+            <p className="text-muted-foreground">{supplier?.name}</p>
           </div>
           <Badge className={getStatusColor(purchaseOrder.status)}>
             {purchaseOrder.status?.replace("_", " ").toUpperCase()}
           </Badge>
-          {vendor?.gst_registered && (
+          {supplier?.gst_registered && (
             <Badge variant="outline">GST Registered</Badge>
           )}
         </div>
@@ -418,19 +418,19 @@ export default function PurchaseOrderDetails() {
               <div>
                 <h3 className="font-semibold mb-2">Supplier Information</h3>
                 <div className="space-y-1 text-sm">
-                  <div><span className="text-muted-foreground">Name:</span> {vendor?.name}</div>
-                  {vendor?.abn && (
-                    <div><span className="text-muted-foreground">ABN:</span> {vendor.abn}</div>
+                  <div><span className="text-muted-foreground">Name:</span> {supplier?.name}</div>
+                  {supplier?.abn && (
+                    <div><span className="text-muted-foreground">ABN:</span> {supplier.abn}</div>
                   )}
-                  {vendor?.email && (
-                    <div><span className="text-muted-foreground">Email:</span> {vendor.email}</div>
+                  {supplier?.email && (
+                    <div><span className="text-muted-foreground">Email:</span> {supplier.email}</div>
                   )}
-                  {vendor?.phone && (
-                    <div><span className="text-muted-foreground">Phone:</span> {vendor.phone}</div>
+                  {supplier?.phone && (
+                    <div><span className="text-muted-foreground">Phone:</span> {supplier.phone}</div>
                   )}
                   <div>
                     <span className="text-muted-foreground">GST Status:</span>{" "}
-                    {vendor?.gst_registered ? (
+                    {supplier?.gst_registered ? (
                       <Badge variant="outline">GST Registered</Badge>
                     ) : (
                       <Badge variant="outline">Not GST Registered</Badge>
