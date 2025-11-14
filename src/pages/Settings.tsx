@@ -326,7 +326,12 @@ export default function Settings() {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto w-full">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
+          <div className={cn(
+            "w-full",
+            activeTab === "schema-validator" || activeTab === "performance-monitor" 
+              ? "h-full" 
+              : "p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto"
+          )}>
             {activeTab === "general" && (
               <Card>
                 <CardContent className="pt-6">
@@ -542,19 +547,15 @@ export default function Settings() {
             )}
 
             {activeTab === "schema-validator" && isAdmin && (
-              <Card>
-                <CardContent className="pt-6">
-                  <SchemaValidatorTab />
-                </CardContent>
-              </Card>
+              <div className="h-full p-4 sm:p-6 lg:p-8">
+                <SchemaValidatorTab />
+              </div>
             )}
 
             {activeTab === "performance-monitor" && isAdmin && (
-              <Card>
-                <CardContent className="pt-6">
-                  <PerformanceMonitorTab />
-                </CardContent>
-              </Card>
+              <div className="h-full p-4 sm:p-6 lg:p-8">
+                <PerformanceMonitorTab />
+              </div>
             )}
           </div>
         </main>
