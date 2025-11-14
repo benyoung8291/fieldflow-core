@@ -9,29 +9,28 @@ import {
   Users, 
   ShoppingCart,
   Loader2,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from "lucide-react";
-import APInvoiceDialog from "@/components/invoices/APInvoiceDialog";
-import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
-import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
-import QuickContactDialog from "@/components/customers/QuickContactDialog";
-import LeadDialog from "@/components/leads/LeadDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { InlineAPInvoiceForm } from "./inline-forms/InlineAPInvoiceForm";
+import { InlinePurchaseOrderForm } from "./inline-forms/InlinePurchaseOrderForm";
+import { InlineServiceOrderForm } from "./inline-forms/InlineServiceOrderForm";
+import { InlineContactForm } from "./inline-forms/InlineContactForm";
+import { InlineLeadForm } from "./inline-forms/InlineLeadForm";
 
 interface QuickActionsTabProps {
   ticket: any;
 }
 
+type ViewType = 'menu' | 'invoice' | 'purchase_order' | 'service_order' | 'contact' | 'lead';
+
 export function QuickActionsTab({ ticket }: QuickActionsTabProps) {
   const { toast } = useToast();
-  const [showAPInvoiceDialog, setShowAPInvoiceDialog] = useState(false);
-  const [showPODialog, setShowPODialog] = useState(false);
-  const [showServiceOrderDialog, setShowServiceOrderDialog] = useState(false);
-  const [showContactDialog, setShowContactDialog] = useState(false);
-  const [showLeadDialog, setShowLeadDialog] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewType>('menu');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<Record<string, any>>({});
   const [emailType, setEmailType] = useState<string | null>(null);
@@ -88,11 +87,32 @@ ${ticket?.description || ""}
     }
   };
 
-  const handleActionClick = async (actionId: string, openDialog: () => void) => {
+  const handleActionClick = async (actionId: string, view: ViewType) => {
     if (!parsedData[actionId]) {
       await parseEmailContent(actionId);
     }
-    openDialog();
+    setCurrentView(view);
+  };
+
+  const handleDocumentCreated = async (documentType: string, documentId: string) => {
+    // Link the document to the ticket
+    try {
+      await supabase.from('helpdesk_linked_documents').insert({
+        ticket_id: ticket.id,
+        document_type: documentType,
+        document_id: documentId,
+      });
+      
+      toast({
+        title: "Document linked",
+        description: "The document has been created and linked to this ticket.",
+      });
+    } catch (error) {
+      console.error("Error linking document:", error);
+    }
+    
+    // Return to menu
+    setCurrentView('menu');
   };
 
   const actions = [
@@ -101,7 +121,7 @@ ${ticket?.description || ""}
       label: "Create AP Invoice",
       description: "Create an invoice from email attachments",
       icon: <Receipt className="h-5 w-5" />,
-      onClick: () => handleActionClick("invoice", () => setShowAPInvoiceDialog(true)),
+      onClick: () => handleActionClick("invoice", 'invoice'),
       color: "text-orange-600",
       bgColor: "bg-orange-50 hover:bg-orange-100",
     },
@@ -110,7 +130,7 @@ ${ticket?.description || ""}
       label: "Create Purchase Order",
       description: "Generate PO from email content",
       icon: <ShoppingCart className="h-5 w-5" />,
-      onClick: () => handleActionClick("purchase_order", () => setShowPODialog(true)),
+      onClick: () => handleActionClick("purchase_order", 'purchase_order'),
       color: "text-blue-600",
       bgColor: "bg-blue-50 hover:bg-blue-100",
     },
@@ -119,7 +139,7 @@ ${ticket?.description || ""}
       label: "Create Service Order",
       description: "Convert email to service order",
       icon: <ClipboardList className="h-5 w-5" />,
-      onClick: () => handleActionClick("service_order", () => setShowServiceOrderDialog(true)),
+      onClick: () => handleActionClick("service_order", 'service_order'),
       color: "text-green-600",
       bgColor: "bg-green-50 hover:bg-green-100",
     },
@@ -128,7 +148,7 @@ ${ticket?.description || ""}
       label: "Create Contact",
       description: "Add sender as a contact",
       icon: <User className="h-5 w-5" />,
-      onClick: () => handleActionClick("contact", () => setShowContactDialog(true)),
+      onClick: () => handleActionClick("contact", 'contact'),
       color: "text-purple-600",
       bgColor: "bg-purple-50 hover:bg-purple-100",
     },
@@ -137,7 +157,7 @@ ${ticket?.description || ""}
       label: "Create Lead",
       description: "Convert to sales lead",
       icon: <Users className="h-5 w-5" />,
-      onClick: () => handleActionClick("lead", () => setShowLeadDialog(true)),
+      onClick: () => handleActionClick("lead", 'lead'),
       color: "text-pink-600",
       bgColor: "bg-pink-50 hover:bg-pink-100",
     },
@@ -151,6 +171,108 @@ ${ticket?.description || ""}
       ? `${ticket.contact.first_name} ${ticket.contact.last_name}`
       : "") || "Unknown Sender";
 
+  // Render inline forms based on current view
+  if (currentView === 'invoice') {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentView('menu')} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Quick Actions
+          </Button>
+          <h3 className="font-semibold text-sm">Create AP Invoice</h3>
+        </div>
+        <InlineAPInvoiceForm 
+          parsedData={parsedData.invoice}
+          ticket={ticket}
+          onSuccess={(id) => handleDocumentCreated('ap_invoice', id)}
+          onCancel={() => setCurrentView('menu')}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === 'purchase_order') {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentView('menu')} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Quick Actions
+          </Button>
+          <h3 className="font-semibold text-sm">Create Purchase Order</h3>
+        </div>
+        <InlinePurchaseOrderForm 
+          parsedData={parsedData.purchase_order}
+          ticket={ticket}
+          onSuccess={(id) => handleDocumentCreated('purchase_order', id)}
+          onCancel={() => setCurrentView('menu')}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === 'service_order') {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentView('menu')} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Quick Actions
+          </Button>
+          <h3 className="font-semibold text-sm">Create Service Order</h3>
+        </div>
+        <InlineServiceOrderForm 
+          parsedData={parsedData.service_order}
+          ticket={ticket}
+          onSuccess={(id) => handleDocumentCreated('service_order', id)}
+          onCancel={() => setCurrentView('menu')}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === 'contact') {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentView('menu')} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Quick Actions
+          </Button>
+          <h3 className="font-semibold text-sm">Create Contact</h3>
+        </div>
+        <InlineContactForm 
+          parsedData={parsedData.contact}
+          ticket={ticket}
+          onSuccess={(id) => handleDocumentCreated('contact', id)}
+          onCancel={() => setCurrentView('menu')}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === 'lead') {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentView('menu')} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Quick Actions
+          </Button>
+          <h3 className="font-semibold text-sm">Create Lead</h3>
+        </div>
+        <InlineLeadForm 
+          parsedData={parsedData.lead}
+          ticket={ticket}
+          onSuccess={(id) => handleDocumentCreated('lead', id)}
+          onCancel={() => setCurrentView('menu')}
+        />
+      </div>
+    );
+  }
+
+  // Default: Show Quick Actions menu
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 py-3">
@@ -257,43 +379,6 @@ ${ticket?.description || ""}
         </div>
       </ScrollArea>
 
-      {/* Dialogs - simplified without initialData */}
-      {showAPInvoiceDialog && (
-        <APInvoiceDialog
-          open={showAPInvoiceDialog}
-          onOpenChange={setShowAPInvoiceDialog}
-        />
-      )}
-
-      {showPODialog && (
-        <PurchaseOrderDialog
-          open={showPODialog}
-          onOpenChange={setShowPODialog}
-        />
-      )}
-
-      {showServiceOrderDialog && (
-        <ServiceOrderDialog
-          open={showServiceOrderDialog}
-          onOpenChange={setShowServiceOrderDialog}
-        />
-      )}
-
-      {showContactDialog && (
-        <QuickContactDialog
-          open={showContactDialog}
-          onOpenChange={setShowContactDialog}
-          customerId={ticket?.customer_id}
-          onContactCreated={() => setShowContactDialog(false)}
-        />
-      )}
-
-      {showLeadDialog && (
-        <LeadDialog
-          open={showLeadDialog}
-          onOpenChange={setShowLeadDialog}
-        />
-      )}
     </div>
   );
 }
