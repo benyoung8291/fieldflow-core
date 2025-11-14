@@ -50,6 +50,28 @@ interface ParsedLineItem {
   };
 }
 
+interface LocationMatch {
+  lineItemIndex: number;
+  suggestedLocation: {
+    id: string;
+    name: string;
+    address: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+  } | null;
+  alternatives: Array<{
+    id: string;
+    name: string;
+    address: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+  }>;
+  action: 'use-suggested' | 'use-alternative' | 'create-new';
+  selectedAlternativeId?: string;
+}
+
 export default function ImportContractDialog({ open, onOpenChange, onSuccess }: ImportContractDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -58,12 +80,14 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
   const [contractStartDate, setContractStartDate] = useState("");
   const [billingFrequency, setBillingFrequency] = useState<"monthly" | "quarterly" | "annually">("monthly");
   const [lineItems, setLineItems] = useState<ParsedLineItem[]>([]);
-  const [step, setStep] = useState<"upload" | "mapping" | "review">("upload");
+  const [step, setStep] = useState<"upload" | "mapping" | "location-matching" | "review">("upload");
   const [columnMappings, setColumnMappings] = useState<Record<string, string | null>>({});
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [spreadsheetData, setSpreadsheetData] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [expectedTotal, setExpectedTotal] = useState<string>("");
+  const [locationMatches, setLocationMatches] = useState<LocationMatch[]>([]);
 
   const requiredFields = ['description', 'location_name', 'location_address', 'unit_price'];
   const missingRequiredFields = requiredFields.filter(field => !columnMappings[field]);
@@ -199,7 +223,11 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
       if (functionData.lineItems && functionData.lineItems.length > 0) {
         setLineItems(functionData.lineItems);
-        setStep("review");
+        
+        // Find potential location matches
+        await findLocationMatches(functionData.lineItems);
+        
+        setStep("location-matching");
         toast.success(`Parsed ${functionData.lineItems.length} line items`);
       } else {
         toast.error("No line items found in spreadsheet");
@@ -210,6 +238,80 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const findLocationMatches = async (items: ParsedLineItem[]) => {
+    const { data: existingLocations } = await supabase
+      .from("customer_locations")
+      .select("id, name, address, city, state, postcode")
+      .eq("customer_id", customerId)
+      .eq("is_active", true);
+
+    if (!existingLocations) {
+      setLocationMatches(items.map((_, index) => ({
+        lineItemIndex: index,
+        suggestedLocation: null,
+        alternatives: [],
+        action: 'create-new'
+      })));
+      return;
+    }
+
+    const matches: LocationMatch[] = items.map((item, index) => {
+      // Find exact matches
+      const exactMatch = existingLocations.find(loc =>
+        loc.name.toLowerCase().trim() === item.location.name.toLowerCase().trim() &&
+        loc.address.toLowerCase().trim() === item.location.address.toLowerCase().trim()
+      );
+
+      if (exactMatch) {
+        return {
+          lineItemIndex: index,
+          suggestedLocation: exactMatch,
+          alternatives: [],
+          action: 'use-suggested' as const
+        };
+      }
+
+      // Find similar matches (by name OR address)
+      const similarMatches = existingLocations.filter(loc => {
+        const nameMatch = loc.name.toLowerCase().includes(item.location.name.toLowerCase()) ||
+          item.location.name.toLowerCase().includes(loc.name.toLowerCase());
+        const addressMatch = loc.address.toLowerCase().includes(item.location.address.toLowerCase()) ||
+          item.location.address.toLowerCase().includes(loc.address.toLowerCase());
+        return nameMatch || addressMatch;
+      });
+
+      return {
+        lineItemIndex: index,
+        suggestedLocation: similarMatches[0] || null,
+        alternatives: similarMatches.slice(1),
+        action: similarMatches.length > 0 ? 'use-suggested' as const : 'create-new' as const
+      };
+    });
+
+    setLocationMatches(matches);
+  };
+
+  const handleBulkLocationAction = (action: 'accept-all' | 'create-all-new') => {
+    setLocationMatches(prev => prev.map(match => ({
+      ...match,
+      action: action === 'accept-all' 
+        ? (match.suggestedLocation ? 'use-suggested' : 'create-new')
+        : 'create-new'
+    })));
+  };
+
+  const handleLocationMatchAction = (index: number, action: LocationMatch['action'], alternativeId?: string) => {
+    setLocationMatches(prev => prev.map((match, i) => 
+      i === index 
+        ? { ...match, action, selectedAlternativeId: alternativeId }
+        : match
+    ));
+  };
+
+  const handleConfirmLocationMatches = () => {
+    setStep("review");
   };
 
   const startEditing = (rowIndex: number, field: string, currentValue: any) => {
@@ -247,6 +349,10 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     }
   };
 
+  const calculateTotal = () => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  };
+
   const handleImport = async () => {
     if (!contractTitle || !contractStartDate || lineItems.length === 0) {
       toast.error("Please fill in all required fields");
@@ -257,6 +363,21 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     if (itemsWithErrors.length > 0) {
       toast.error(`${itemsWithErrors.length} line items have validation errors. Please fix them before importing.`);
       return;
+    }
+
+    // Validate total if provided
+    if (expectedTotal) {
+      const expected = parseFloat(expectedTotal);
+      const calculated = calculateTotal();
+      const difference = Math.abs(expected - calculated);
+      const tolerance = expected * 0.01; // 1% tolerance
+
+      if (difference > tolerance) {
+        const proceed = window.confirm(
+          `Total mismatch:\nExpected: ${formatCurrency(expected)}\nCalculated: ${formatCurrency(calculated)}\nDifference: ${formatCurrency(difference)}\n\nDo you want to proceed anyway?`
+        );
+        if (!proceed) return;
+      }
     }
 
     setIsProcessing(true);
@@ -279,44 +400,43 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
       const locationMap = new Map<string, string>();
       const lineItemsToInsert: any[] = [];
 
-      for (const item of lineItems) {
+      for (let i = 0; i < lineItems.length; i++) {
+        const item = lineItems[i];
+        const match = locationMatches[i];
+        let locationId: string;
+
         const locationKey = `${item.location.name}|${item.location.address}`.toLowerCase();
-        let locationId = locationMap.get(locationKey);
+        const cachedLocationId = locationMap.get(locationKey);
 
-        if (!locationId) {
-          const { data: existingLocation } = await supabase
+        if (cachedLocationId) {
+          locationId = cachedLocationId;
+        } else if (match?.action === 'use-suggested' && match.suggestedLocation) {
+          locationId = match.suggestedLocation.id;
+        } else if (match?.action === 'use-alternative' && match.selectedAlternativeId) {
+          locationId = match.selectedAlternativeId;
+        } else {
+          // Create new location
+          const { data: newLocation, error: locationError } = await supabase
             .from("customer_locations")
-            .select("id")
-            .eq("customer_id", customerId)
-            .eq("name", item.location.name)
-            .eq("address", item.location.address)
-            .maybeSingle();
+            .insert([{
+              customer_id: customerId,
+              name: item.location.name,
+              address: item.location.address,
+              city: item.location.city,
+              state: item.location.state,
+              postcode: item.location.postcode,
+              customer_location_id: item.location.customer_location_id,
+              is_primary: false,
+              is_active: true,
+            }] as any)
+            .select()
+            .single();
 
-          if (existingLocation) {
-            locationId = existingLocation.id;
-          } else {
-            const { data: newLocation, error: locationError } = await supabase
-              .from("customer_locations")
-              .insert([{
-                customer_id: customerId,
-                name: item.location.name,
-                address: item.location.address,
-                city: item.location.city,
-                state: item.location.state,
-                postcode: item.location.postcode,
-                customer_location_id: item.location.customer_location_id,
-                is_primary: false,
-                is_active: true,
-              }] as any)
-              .select()
-              .single();
-
-            if (locationError) throw locationError;
-            locationId = newLocation.id;
-          }
-
-          locationMap.set(locationKey, locationId);
+          if (locationError) throw locationError;
+          locationId = newLocation.id;
         }
+
+        locationMap.set(locationKey, locationId);
 
         lineItemsToInsert.push({
           service_contract_id: contract.id,
@@ -368,6 +488,8 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
     setSpreadsheetData([]);
     setEditingCell(null);
     setEditValue("");
+    setExpectedTotal("");
+    setLocationMatches([]);
     onOpenChange(false);
   };
 
@@ -437,6 +559,42 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
 
         {step === "mapping" && (
           <div className="space-y-4 overflow-y-auto flex-1">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Map your spreadsheet columns to the required fields. Fields marked with * are required.
+              </AlertDescription>
+            </Alert>
+
+            {/* Example Data Preview */}
+            {spreadsheetData.length > 1 && (
+              <div className="border rounded-lg p-4 bg-muted/20">
+                <h4 className="text-sm font-medium mb-3">Example Data Preview (First 3 Rows)</h4>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {availableColumns.map((col) => (
+                          <TableHead key={col} className="text-xs">{col}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {spreadsheetData.slice(1, 4).map((row, rowIndex) => (
+                        <TableRow key={rowIndex}>
+                          {availableColumns.map((col, colIndex) => (
+                            <TableCell key={colIndex} className="text-xs">
+                              {row[colIndex] || '-'}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
             <div>
               <h3 className="font-semibold mb-2">Map Columns</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -520,9 +678,135 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
           </div>
         )}
 
+        {step === "location-matching" && (
+          <div className="space-y-4 overflow-y-auto flex-1">
+            <div className="flex items-center justify-between">
+              <Alert className="flex-1 mr-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Review and confirm location matches. We found {locationMatches.filter(m => m.suggestedLocation).length} potential matches.
+                </AlertDescription>
+              </Alert>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkLocationAction('accept-all')}
+                >
+                  Accept All Suggestions
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkLocationAction('create-all-new')}
+                >
+                  Create All New
+                </Button>
+              </div>
+            </div>
+
+            <div className="max-h-[500px] overflow-y-auto border rounded-lg">
+              {lineItems.map((item, index) => {
+                const match = locationMatches[index];
+                if (!match) return null;
+
+                return (
+                  <div key={index} className="p-4 border-b last:border-b-0 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{item.description}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Import: {item.location.name} - {item.location.address}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {match.suggestedLocation && (
+                        <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-muted/50">
+                          <input
+                            type="radio"
+                            name={`location-${index}`}
+                            checked={match.action === 'use-suggested'}
+                            onChange={() => handleLocationMatchAction(index, 'use-suggested')}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-success" />
+                              <span className="text-sm font-medium">Use Existing Location (Recommended)</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {match.suggestedLocation.name} - {match.suggestedLocation.address}
+                              {match.suggestedLocation.city && `, ${match.suggestedLocation.city}`}
+                              {match.suggestedLocation.state && ` ${match.suggestedLocation.state}`}
+                            </p>
+                          </div>
+                        </label>
+                      )}
+
+                      {match.alternatives.length > 0 && (
+                        <div className="space-y-2 ml-6">
+                          <p className="text-xs font-medium text-muted-foreground">Other Possible Matches:</p>
+                          {match.alternatives.map((alt) => (
+                            <label key={alt.id} className="flex items-start gap-3 p-2 border rounded cursor-pointer hover:bg-muted/50">
+                              <input
+                                type="radio"
+                                name={`location-${index}`}
+                                checked={match.action === 'use-alternative' && match.selectedAlternativeId === alt.id}
+                                onChange={() => handleLocationMatchAction(index, 'use-alternative', alt.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <p className="text-xs">
+                                  {alt.name} - {alt.address}
+                                  {alt.city && `, ${alt.city}`}
+                                  {alt.state && ` ${alt.state}`}
+                                </p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-muted/50">
+                        <input
+                          type="radio"
+                          name={`location-${index}`}
+                          checked={match.action === 'create-new'}
+                          onChange={() => handleLocationMatchAction(index, 'create-new')}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Upload className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium">Create New Location</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Create a new location with the imported details
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setStep("mapping")}>
+                Back to Mapping
+              </Button>
+              <Button onClick={handleConfirmLocationMatches}>
+                Continue to Review
+              </Button>
+            </div>
+          </div>
+        )}
+
         {step === "review" && (
           <div className="space-y-4 overflow-hidden flex flex-col flex-1">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Contract Title *</Label>
                 <Input
@@ -556,7 +840,42 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="expectedTotal">Expected Total (Optional)</Label>
+                <Input
+                  id="expectedTotal"
+                  type="number"
+                  step="0.01"
+                  value={expectedTotal}
+                  onChange={(e) => setExpectedTotal(e.target.value)}
+                  placeholder="Enter expected total for validation"
+                />
+              </div>
             </div>
+
+            {expectedTotal && (
+              <Alert className={
+                Math.abs(parseFloat(expectedTotal) - calculateTotal()) > parseFloat(expectedTotal) * 0.01
+                  ? "border-warning"
+                  : "border-success"
+              }>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <div>Expected Total: {formatCurrency(parseFloat(expectedTotal))}</div>
+                    <div>Calculated Total: {formatCurrency(calculateTotal())}</div>
+                    <div className={
+                      Math.abs(parseFloat(expectedTotal) - calculateTotal()) > parseFloat(expectedTotal) * 0.01
+                        ? "text-warning font-medium"
+                        : "text-success"
+                    }>
+                      Difference: {formatCurrency(Math.abs(parseFloat(expectedTotal) - calculateTotal()))}
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex-1 overflow-hidden flex flex-col">
               <div className="flex items-center justify-between mb-2">
@@ -794,10 +1113,10 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
             </div>
 
             <div className="flex justify-between pt-4 border-t">
-              <Button variant="outline" onClick={() => setStep("mapping")} disabled={isProcessing}>
-                Back
+              <Button variant="outline" onClick={() => setStep("location-matching")} disabled={isProcessing}>
+                Back to Location Matching
               </Button>
-              <Button onClick={handleImport} disabled={isProcessing}>
+              <Button onClick={handleImport} disabled={isProcessing || lineItems.length === 0}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -806,7 +1125,7 @@ export default function ImportContractDialog({ open, onOpenChange, onSuccess }: 
                 ) : (
                   <>
                     <Check className="mr-2 h-4 w-4" />
-                    Import Contract
+                    Import Contract ({lineItems.length} items, {formatCurrency(calculateTotal())})
                   </>
                 )}
               </Button>

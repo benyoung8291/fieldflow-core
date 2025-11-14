@@ -89,7 +89,13 @@ CRITICAL EXTRACTION RULES:
 - Use ONLY the column names provided in the mappings to find data
 - For each row, extract the value from the column specified in the mapping
 - Convert prices to numbers (remove $, commas)
-- Standardize frequency to: weekly, monthly, quarterly, annually (map "6 Monthly" to "quarterly", "Annual" to "annually", etc.)
+- FREQUENCY MAPPING (case-insensitive, match any of these patterns):
+  * "weekly", "week", "w" → "weekly"
+  * "monthly", "month", "m", "1 monthly" → "monthly"  
+  * "quarterly", "quarter", "q", "3 monthly", "3 month", "6 monthly", "6 month" → "quarterly"
+  * "annually", "annual", "yearly", "year", "y", "12 monthly", "12 month" → "annually"
+  * If frequency is a number: 1→monthly, 3→quarterly, 6→quarterly, 12→annually
+  * Default to "monthly" if unclear
 - Convert dates to YYYY-MM-DD format (use 2025 if year not specified, convert month names like "Jul" to "2025-07-01", "Jan" to "2025-01-01", etc.)
 - Default quantity to 1 if mapping is null or value is not a valid number
 - Match existing locations by name and address when possible
