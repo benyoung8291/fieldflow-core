@@ -788,6 +788,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         groups.pages.push(result);
       } else if (groups[result.type]) {
         groups[result.type].push(result);
+      } else {
+        console.warn('Unknown result type:', result.type, result);
       }
     });
 
@@ -803,6 +805,14 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       if (groups[key]) {
         sortedGroups[key] = groups[key];
       }
+    });
+
+    console.log('Grouped results:', {
+      query: searchQuery,
+      totalFiltered: filteredResults.length,
+      byGroup: Object.fromEntries(
+        Object.entries(sortedGroups).map(([k, v]) => [k, v.length])
+      )
     });
 
     return sortedGroups;
