@@ -23,6 +23,7 @@ interface EmailComposerProps {
   defaultSubject?: string;
   isSending?: boolean;
   ticketId?: string;
+  emailThread?: any[];
 }
 
 export interface EmailComposerRef {
@@ -30,7 +31,7 @@ export interface EmailComposerRef {
 }
 
 export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
-  ({ onSend, defaultTo = "", defaultSubject = "", isSending = false, ticketId }, ref) => {
+  ({ onSend, defaultTo = "", defaultSubject = "", isSending = false, ticketId, emailThread = [] }, ref) => {
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
@@ -67,6 +68,28 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
     }
   }));
 
+  const formatEmailThread = () => {
+    if (!emailThread || emailThread.length === 0) return "";
+    
+    return emailThread.map((email: any) => {
+      const date = new Date(email.sent_at || email.created_at).toLocaleString();
+      const sender = email.sender_name || email.from_name || "Unknown";
+      const senderEmail = email.sender_email || email.from_email || "";
+      
+      return `
+<br/>
+<br/>
+<div style="border-left: 2px solid #ccc; padding-left: 10px; margin: 10px 0; color: #666;">
+  <div><strong>From:</strong> ${sender} ${senderEmail ? `&lt;${senderEmail}&gt;` : ''}</div>
+  <div><strong>Date:</strong> ${date}</div>
+  <div><strong>Subject:</strong> ${email.subject || '(no subject)'}</div>
+  ${email.to_email ? `<div><strong>To:</strong> ${email.to_email}</div>` : ''}
+  <br/>
+  ${email.body_html || email.body_text || email.body || ''}
+</div>`;
+    }).join('');
+  };
+
   const handleSend = () => {
     const toEmails = to.split(",").map(e => e.trim()).filter(Boolean);
     const ccEmails = cc.split(",").map(e => e.trim()).filter(Boolean);
@@ -74,12 +97,15 @@ export const EmailComposer = forwardRef<EmailComposerRef, EmailComposerProps>(
 
     if (toEmails.length === 0 || !body.trim()) return;
 
+    // Include the email thread in the body
+    const fullBody = body + formatEmailThread();
+
     onSend({
       to: toEmails,
       cc: ccEmails,
       bcc: bccEmails,
       subject: subject || undefined,
-      body: body,
+      body: fullBody,
     });
   };
 
