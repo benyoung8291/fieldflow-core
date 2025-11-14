@@ -77,6 +77,26 @@ export default function NotificationCenter() {
 
   // Subscribe to realtime notifications
   useEffect(() => {
+    // Play notification sound
+    const playNotificationSound = () => {
+      // Create a simple notification sound using Web Audio API
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Configure sound (pleasant notification tone)
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    };
+
     // @ts-ignore - Types will update after migration
     const channel = supabase
       .channel('notifications')
@@ -87,8 +107,30 @@ export default function NotificationCenter() {
           schema: 'public',
           table: 'notifications',
         },
-        () => {
+        (payload) => {
+          console.log('New notification received:', payload);
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          
+          // Play sound and show toast for new notifications
+          if (payload.new) {
+            playNotificationSound();
+            
+            // Show toast notification
+            const notification = payload.new as Notification;
+            toast.info(notification.title, {
+              description: notification.message,
+              action: notification.link ? {
+                label: 'View',
+                onClick: () => {
+                  if (notification.link) {
+                    navigate(notification.link);
+                    setOpen(false);
+                  }
+                }
+              } : undefined,
+              duration: 5000,
+            });
+          }
         }
       )
       .subscribe();
@@ -96,7 +138,7 @@ export default function NotificationCenter() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, navigate]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -180,13 +222,16 @@ export default function NotificationCenter() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
-          <Bell className="h-4 w-4" />
+          <Bell className={cn(
+            "h-4 w-4 transition-transform",
+            unreadCount > 0 && "animate-[wiggle_1s_ease-in-out_infinite]"
+          )} />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 text-xs animate-scale-in shadow-lg"
             >
-              {unreadCount > 99 ? '99+' : unreadCount}
+              <span className="animate-pulse">{unreadCount > 99 ? '99+' : unreadCount}</span>
             </Badge>
           )}
           <span className="sr-only">Notifications</span>
@@ -233,19 +278,27 @@ export default function NotificationCenter() {
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notification) => (
+              {notifications.map((notification, index) => (
                 <div
                   key={notification.id}
                   className={cn(
-                    "px-6 py-4 hover:bg-accent/50 transition-colors cursor-pointer group",
-                    !notification.is_read && "bg-accent/20"
+                    "relative px-6 py-4 hover:bg-accent/50 transition-all cursor-pointer group",
+                    !notification.is_read && "bg-accent/20 animate-fade-in",
+                    "hover:scale-[1.01] hover:shadow-sm"
                   )}
+                  style={{
+                    animationDelay: `${index * 0.05}s`
+                  }}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex gap-3">
+                    {!notification.is_read && (
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                    )}
                     <div className={cn(
-                      "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center",
-                      getNotificationColor(notification.type)
+                      "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-all",
+                      getNotificationColor(notification.type),
+                      !notification.is_read && "ring-2 ring-primary/30 animate-bounce-in"
                     )}>
                       {getNotificationIcon(notification.type)}
                     </div>
