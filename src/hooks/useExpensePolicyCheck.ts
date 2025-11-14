@@ -24,7 +24,7 @@ export function useExpensePolicyCheck(params: PolicyCheckParams) {
         .from("expense_policy_rules")
         .select(`
           *,
-          supplier:suppliers(name),
+          supplier:suppliers!supplier_id(name),
           category:expense_categories(name)
         `)
         .eq("is_active", true)
