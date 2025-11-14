@@ -144,8 +144,8 @@ export function SchemaValidatorTab() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-12rem)] space-y-4">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold">Database Schema Validator</h2>
           <p className="text-muted-foreground">
@@ -159,7 +159,7 @@ export function SchemaValidatorTab() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total Tables</CardTitle>
@@ -194,8 +194,8 @@ export function SchemaValidatorTab() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
           <TabsTrigger value="overview">
             <Database className="h-4 w-4 mr-2" />
             Overview
@@ -210,16 +210,16 @@ export function SchemaValidatorTab() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
+        <TabsContent value="overview" className="flex-1 min-h-0 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Recommendations</CardTitle>
               <CardDescription>
                 Suggested improvements for your database schema
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px] pr-4">
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="h-full pr-4">
                 <div className="space-y-3">
                   {schemaData?.recommendations.length === 0 ? (
                     <div className="flex items-center gap-2 text-success">
@@ -245,16 +245,16 @@ export function SchemaValidatorTab() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="map">
-          <Card>
-            <CardHeader>
+        <TabsContent value="map" className="flex-1 min-h-0 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Database Relationship Map</CardTitle>
               <CardDescription>
                 Visual representation of how tables are connected through foreign keys
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="h-[600px] border rounded-lg bg-muted/20">
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <div className="h-full border rounded-lg bg-muted/20">
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
@@ -275,19 +275,20 @@ export function SchemaValidatorTab() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tables" className="space-y-4">
-          {schemaData?.tables.map((table) => (
-            <Card key={table}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>{table}</CardTitle>
-                  <Badge variant="secondary">
-                    {schemaData.columns[table]?.length || 0} columns
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[200px]">
+        <TabsContent value="tables" className="flex-1 min-h-0 mt-4 overflow-auto">
+          <div className="space-y-4 pb-4">
+            {schemaData?.tables.map((table) => (
+              <Card key={table}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{table}</CardTitle>
+                    <Badge variant="secondary">
+                      {schemaData.columns[table]?.length || 0} columns
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[250px]">
                   <div className="space-y-2">
                     {schemaData.columns[table]?.map((col: any, index: number) => (
                       <div
@@ -312,9 +313,10 @@ export function SchemaValidatorTab() {
                     ))}
                   </div>
                 </ScrollArea>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

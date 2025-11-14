@@ -107,8 +107,8 @@ export function PerformanceMonitorTab() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-12rem)] space-y-4">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold">Database Performance Monitor</h2>
           <p className="text-muted-foreground">
@@ -127,7 +127,7 @@ export function PerformanceMonitorTab() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Database Size</CardTitle>
@@ -177,8 +177,8 @@ export function PerformanceMonitorTab() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
           <TabsTrigger value="overview">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Recommendations
@@ -197,16 +197,16 @@ export function PerformanceMonitorTab() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
+        <TabsContent value="overview" className="flex-1 min-h-0 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Optimization Recommendations</CardTitle>
               <CardDescription>
                 Automated suggestions to improve database performance
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px] pr-4">
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="h-full pr-4">
                 <div className="space-y-3">
                   {perfData?.recommendations.map((rec, index) => (
                     <div
@@ -225,16 +225,16 @@ export function PerformanceMonitorTab() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tables">
-          <Card>
-            <CardHeader>
+        <TabsContent value="tables" className="flex-1 min-h-0 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Table Sizes</CardTitle>
               <CardDescription>
                 Storage usage and row counts for all tables
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px]">
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="h-full">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -270,16 +270,16 @@ export function PerformanceMonitorTab() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="queries">
-          <Card>
-            <CardHeader>
+        <TabsContent value="queries" className="flex-1 min-h-0 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Slow Queries</CardTitle>
               <CardDescription>
                 Most time-consuming database queries
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px]">
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="h-full">
                 <div className="space-y-4">
                   {perfData?.slowQueries.length === 0 ? (
                     <div className="flex items-center gap-2 text-success p-4 border rounded-lg">
@@ -312,16 +312,16 @@ export function PerformanceMonitorTab() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="indexes">
-          <Card>
-            <CardHeader>
+        <TabsContent value="indexes" className="flex-1 min-h-0 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Index Usage Statistics</CardTitle>
               <CardDescription>
                 How frequently indexes are being used
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px]">
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="h-full">
                 <Table>
                   <TableHeader>
                     <TableRow>
