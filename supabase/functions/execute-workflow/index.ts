@@ -430,8 +430,8 @@ async function executeAction(supabase: any, node: any, context: any): Promise<an
       // Create a task with multiple checklist items
       const taskData = {
         tenant_id: tenantId,
-        title: config.title || `Checklist from ${triggerData.sourceType || "workflow"}`,
-        description: config.description || "",
+        title: finalConfig.title || `Checklist from ${triggerData.sourceType || "workflow"}`,
+        description: finalConfig.description || "",
         status: config.status || "pending",
         priority: config.priority || "medium",
         due_date: config.dueDate || null,
@@ -495,7 +495,7 @@ async function executeAction(supabase: any, node: any, context: any): Promise<an
         .insert({
           ticket_id: triggerData.ticketId,
           message_type: "internal_note",
-          body: config.content || config.body || "Automated note from workflow",
+          body: finalConfig.content || finalConfig.body || "Automated note from workflow",
           tenant_id: tenantId,
           created_by: triggerData.userId,
         });
@@ -554,9 +554,9 @@ async function executeAction(supabase: any, node: any, context: any): Promise<an
 
       const emailData = {
         ticketId: triggerData.ticketId,
-        to: config.toEmail || triggerData.contactEmail,
-        subject: config.subject || "Update on your ticket",
-        body: config.body || config.content || "",
+        to: finalConfig.toEmail || triggerData.contactEmail,
+        subject: finalConfig.subject || "Update on your ticket",
+        body: finalConfig.body || finalConfig.content || "",
         tenantId: tenantId,
       };
 
