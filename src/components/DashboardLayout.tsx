@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, User, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
@@ -17,12 +17,14 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import PresencePanel from "@/components/presence/PresencePanel";
 import NotificationCenter from "@/components/notifications/NotificationCenter";
+import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 
 interface DashboardLayoutProps {
   children: ReactNode;
+  showRightSidebar?: boolean;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, showRightSidebar = false }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
@@ -30,7 +32,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved === 'true';
   });
-  const { menuItems } = useCustomMenu();
+  const { menuItems, isLoading: menuLoading } = useCustomMenu();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('expandedMenuFolders');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -220,7 +222,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           
           <nav className="flex-1 flex flex-col gap-2 px-6 overflow-y-auto">
-            {renderMenuContent()}
+            {menuLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-10 bg-muted/50 animate-pulse rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              renderMenuContent()
+            )}
           </nav>
           
           <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4 bg-sidebar">
@@ -292,10 +302,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-hidden">
-            <div className="px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto">
+          <main className="flex-1 overflow-hidden flex">
+            <div className={cn(
+              "px-3 sm:px-6 lg:px-8 py-3 lg:py-10 h-full overflow-y-auto",
+              showRightSidebar ? "flex-1" : "w-full"
+            )}>
               {children}
             </div>
+
+            {/* Right Sidebar */}
+            {showRightSidebar && !isMobile && (
+              <aside className="w-80 border-l bg-card/50 flex flex-col">
+                <div className="p-4 border-b">
+                  <h2 className="text-sm font-semibold">Team Activity</h2>
+                </div>
+                <div className="flex-1 overflow-hidden p-4">
+                  <ActivityAndUsers />
+                </div>
+              </aside>
+            )}
           </main>
         </div>
       )}
