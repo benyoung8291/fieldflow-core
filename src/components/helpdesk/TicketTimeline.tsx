@@ -268,7 +268,6 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           message_type: "task",
           body: `Task created: ${taskData.title}`,
           tenant_id: profile.tenant_id,
-          metadata: { task_id: task.id }
         });
       
       if (messageError) throw messageError;
@@ -338,7 +337,6 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           message_type: "checklist",
           body: `☐ ${checkboxData.title}`,
           tenant_id: profile.tenant_id,
-          metadata: { task_id: task.id, is_checkbox: true }
         });
       
       if (messageError) throw messageError;
