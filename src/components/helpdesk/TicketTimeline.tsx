@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign, ExternalLink } from "lucide-react";
+import { MessageSquare, Mail, FileText, CheckSquare, Paperclip, CornerDownRight, Forward, Plus, ChevronDown, ChevronUp, Link, Unlink, AtSign, ExternalLink, StickyNote, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { TicketActionsMenu } from "./TicketActionsMenu";
@@ -68,10 +68,42 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     },
   });
 
+  // Fetch linked tasks for checkbox matching  
+  const getTaskByTitle = async (title: string): Promise<{ id: string; title: string; status: string } | null> => {
+    try {
+      const result = await (supabase as any)
+        .from("tasks")
+        .select("id, title, status")
+        .eq("linked_module", "helpdesk")
+        .eq("linked_id", ticketId)
+        .eq("title", title)
+        .maybeSingle();
+    
+      return result.data || null;
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      return null;
+    }
+  };
+
   // Combine and sort messages and audit logs
-  const timelineItems = [...(messages || []), ...(auditLogs || [])].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
+  // Sort: emails first (chronological), then other items (chronological)
+  const timelineItems = [...(messages || []), ...(auditLogs || [])].sort((a, b) => {
+    const aIsEmail = a.message_type === 'email';
+    const bIsEmail = b.message_type === 'email';
+    
+    // Both emails: sort chronologically
+    if (aIsEmail && bIsEmail) {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    
+    // Email comes before non-email
+    if (aIsEmail && !bIsEmail) return -1;
+    if (!aIsEmail && bIsEmail) return 1;
+    
+    // Both non-emails: sort chronologically
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
 
   // Auto-scroll to bottom on load
   useEffect(() => {
@@ -358,9 +390,9 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const getMessageIcon = (type: string) => {
     switch (type) {
       case "email": return <Mail className="h-4 w-4" />;
-      case "note": return <MessageSquare className="h-4 w-4" />;
-      case "internal_note": return <MessageSquare className="h-4 w-4" />;
-      case "task": return <CheckSquare className="h-4 w-4" />;
+      case "note": return <StickyNote className="h-4 w-4" />;
+      case "internal_note": return <StickyNote className="h-4 w-4" />;
+      case "task": return <CheckCircle2 className="h-4 w-4" />;
       case "checklist": return <CheckSquare className="h-4 w-4" />;
       default: return <Mail className="h-4 w-4" />;
     }
@@ -369,9 +401,9 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const getMessageTypeColor = (type: string) => {
     switch (type) {
       case "email": return "text-blue-600 dark:text-blue-400";
-      case "note": return "text-purple-600 dark:text-purple-400";
-      case "internal_note": return "text-purple-600 dark:text-purple-400";
-      case "task": return "text-orange-600 dark:text-orange-400";
+      case "note": return "text-yellow-600 dark:text-yellow-400";
+      case "internal_note": return "text-yellow-600 dark:text-yellow-400";
+      case "task": return "text-blue-600 dark:text-blue-400";
       case "checklist": return "text-green-600 dark:text-green-400";
       default: return "text-gray-600 dark:text-gray-400";
     }
