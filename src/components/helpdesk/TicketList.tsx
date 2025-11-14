@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface TicketListProps {
   selectedTicketId: string | null;
@@ -19,6 +19,31 @@ interface TicketListProps {
 
 export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filterAssignment = "all", filterArchived = false }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime updates for ticket changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('helpdesk-tickets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'helpdesk_tickets'
+        },
+        (payload) => {
+          console.log('Ticket change detected:', payload);
+          // Invalidate and refetch tickets when any change occurs
+          queryClient.invalidateQueries({ queryKey: ['helpdesk-tickets'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["helpdesk-tickets", filterArchived],
@@ -28,7 +53,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
         .select(`
           *,
           customer:customers(name),
-          contact:customer_contacts(first_name, last_name),
+          contact:contacts(first_name, last_name),
           pipeline:helpdesk_pipelines(name, color),
           assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
           email_account:helpdesk_email_accounts(id, email_address)
@@ -56,7 +81,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
     const matchesSearch = 
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.ticket_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.external_email?.toLowerCase().includes(searchQuery.toLowerCase());
+      ticket.sender_email?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesPipeline = !pipelineId || ticket.pipeline_id === pipelineId;
     

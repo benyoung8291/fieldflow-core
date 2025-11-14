@@ -1741,6 +1741,7 @@ export type Database = {
           email_message_id: string | null
           email_thread_id: string | null
           external_email: string | null
+          forwarded_by: string | null
           id: string
           is_archived: boolean | null
           is_read: boolean | null
@@ -1773,6 +1774,7 @@ export type Database = {
           email_message_id?: string | null
           email_thread_id?: string | null
           external_email?: string | null
+          forwarded_by?: string | null
           id?: string
           is_archived?: boolean | null
           is_read?: boolean | null
@@ -1805,6 +1807,7 @@ export type Database = {
           email_message_id?: string | null
           email_thread_id?: string | null
           external_email?: string | null
+          forwarded_by?: string | null
           id?: string
           is_archived?: boolean | null
           is_read?: boolean | null

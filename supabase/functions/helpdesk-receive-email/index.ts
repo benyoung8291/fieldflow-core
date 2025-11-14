@@ -22,6 +22,53 @@ interface InboundEmail {
   }>;
 }
 
+// Helper function to extract original sender from forwarded email
+function extractOriginalSender(text: string, html: string, subject: string): {
+  email: string | null;
+  name: string | null;
+  isForwarded: boolean;
+} {
+  const isForwarded = /^(fwd:|fw:)/i.test(subject.trim());
+  
+  if (!isForwarded) {
+    return { email: null, name: null, isForwarded: false };
+  }
+
+  // Try multiple patterns to extract original sender
+  const patterns = [
+    // Gmail style
+    /From:.*?<([^>]+)>/i,
+    /From:\s*([^\s<]+@[^\s>]+)/i,
+    // Outlook style
+    /Original Message.*?From:.*?<([^>]+)>/is,
+    /Original Message.*?From:\s*([^\s<]+@[^\s>]+)/is,
+    // Generic patterns
+    /forwarded message.*?from:.*?<([^>]+)>/is,
+    /forwarded message.*?from:\s*([^\s<]+@[^\s>]+)/is,
+  ];
+
+  const content = html || text || "";
+  
+  for (const pattern of patterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      const email = match[1].trim();
+      
+      // Try to extract name
+      const namePattern = new RegExp(`From:\\s*([^<]+?)\\s*<${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}>`, 'i');
+      const nameMatch = content.match(namePattern);
+      
+      return {
+        email,
+        name: nameMatch?.[1]?.trim() || null,
+        isForwarded: true,
+      };
+    }
+  }
+
+  return { email: null, name: null, isForwarded: true };
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -33,8 +80,22 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const emailData: InboundEmail = await req.json();
+    
+    // Check if this is a forwarded email and extract original sender
+    const forwardedInfo = extractOriginalSender(
+      emailData.text || "",
+      emailData.html || "",
+      emailData.subject || ""
+    );
+    
+    // Use original sender if detected, otherwise use the forwarder
+    const actualSenderEmail = forwardedInfo.email || emailData.from;
+    const actualSenderName = forwardedInfo.name || emailData.from_name || emailData.from;
+    
     console.log("Received inbound email:", {
       from: emailData.from,
+      actualSender: forwardedInfo.isForwarded ? actualSenderEmail : emailData.from,
+      isForwarded: forwardedInfo.isForwarded,
       to: emailData.to,
       subject: emailData.subject,
     });
@@ -91,14 +152,14 @@ serve(async (req: Request) => {
         .from("helpdesk_tickets")
         .select("*")
         .eq("pipeline_id", emailAccounts.pipeline_id)
-        .or(`external_email.eq.${emailData.from},customer_id.not.is.null`)
+        .or(`sender_email.eq.${actualSenderEmail},customer_id.not.is.null`)
         .order("created_at", { ascending: false })
         .limit(5);
 
       if (recentTickets && recentTickets.length > 0) {
         // Check if any recent ticket matches this sender
         existingTicket = recentTickets.find(
-          (t) => t.external_email === emailData.from && t.status !== "closed"
+          (t) => t.sender_email === actualSenderEmail && t.status !== "closed"
         );
       }
     }
@@ -110,11 +171,12 @@ serve(async (req: Request) => {
       ticketId = existingTicket.id;
       console.log("Adding message to existing ticket:", ticketId);
 
-      // Update last_message_at
+      // Update last_message_at and mark as unread when new message arrives
       await supabase
         .from("helpdesk_tickets")
         .update({
           last_message_at: new Date().toISOString(),
+          is_read: false,
           status: existingTicket.status === "closed" ? "open" : existingTicket.status,
         })
         .eq("id", ticketId);
@@ -122,14 +184,14 @@ serve(async (req: Request) => {
       // Create new ticket
       console.log("Creating new ticket for:", emailData.from);
 
-      // Try to find existing customer by email
+      // Try to find existing customer by email (use actual sender)
       let customerId = null;
       let contactId = null;
 
       const { data: contact } = await supabase
-        .from("customer_contacts")
+        .from("contacts")
         .select("id, customer_id")
-        .eq("email", emailData.from)
+        .ilike("email", actualSenderEmail)
         .limit(1)
         .single();
 
@@ -160,8 +222,10 @@ serve(async (req: Request) => {
           priority: "normal",
           customer_id: customerId,
           contact_id: contactId,
-          external_email: emailData.from,
-          external_name: emailData.from_name || emailData.from,
+          sender_email: actualSenderEmail,
+          sender_name: actualSenderName,
+          forwarded_by: forwardedInfo.isForwarded ? emailData.from : null,
+          is_read: false,
           first_message_at: new Date().toISOString(),
           last_message_at: new Date().toISOString(),
         })
