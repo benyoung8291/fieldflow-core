@@ -697,12 +697,12 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         { name: "title", weight: 2 },
         { name: "subtitle", weight: 2 },
       ],
-      threshold: 0.4, // Balanced matching for whole words
-      distance: 100,
-      minMatchCharLength: 2, // Require at least 2 characters to match (allows "AN" to match "ANZ")
+      threshold: 0.5, // More lenient to catch exact and near-exact matches
+      distance: 200,
+      minMatchCharLength: 2, // Require at least 2 characters to match
       includeScore: true,
       includeMatches: true, // Include match indices for highlighting
-      ignoreLocation: false, // Consider match position
+      ignoreLocation: true, // Don't penalize based on position in string
       useExtendedSearch: false,
       shouldSort: true, // Enable sorting by score
       findAllMatches: false, // Stop at first good match for performance
