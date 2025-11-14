@@ -99,22 +99,28 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
 
   const updateLink = async (field: string, value: string | null) => {
     try {
+      console.log("Updating link:", field, value);
       const updates: any = { [field]: value };
       
       // If linking a contact, automatically link their customer
       if (field === "contact_id" && value) {
         const contact = contacts.find(c => c.id === value);
+        console.log("Found contact:", contact);
         if (contact?.customer_id) {
           updates.customer_id = contact.customer_id;
         }
       }
 
+      console.log("Updates to apply:", updates);
       const { error } = await supabase
-        .from("helpdesk_tickets" as any)
+        .from("helpdesk_tickets")
         .update(updates)
         .eq("id", ticket.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
 
       toast({ title: "Link updated successfully" });
       onUpdate();
