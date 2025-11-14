@@ -431,38 +431,52 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Create multiple checklist items
-      for (const item of checkboxData.items) {
-        // Create the task as a checkbox
-        const { error: taskError } = await supabase
-          .from("tasks")
-          .insert({
-            title: item,
-            description: "",
-            priority: "medium",
-            assigned_to: ticketData?.assigned_to || user.id,
-            due_date: today,
-            tenant_id: profile.tenant_id,
-            created_by: user.id,
-            linked_module: "helpdesk",
-            linked_record_id: ticketId,
-            status: "pending",
-          });
-        
-        if (taskError) throw taskError;
+      // Create ONE task for the entire checklist
+      const { data: taskData, error: taskError } = await supabase
+        .from("tasks")
+        .insert({
+          title: `Checklist (${checkboxData.items.length} items)`,
+          description: "",
+          priority: "medium",
+          assigned_to: ticketData?.assigned_to || user.id,
+          due_date: today,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
+          linked_module: "helpdesk",
+          linked_record_id: ticketId,
+          status: "pending",
+        })
+        .select()
+        .single();
+      
+      if (taskError) throw taskError;
 
-        // Also add a message to the timeline
-        const { error: messageError } = await supabase
-          .from("helpdesk_messages")
-          .insert({
-            ticket_id: ticketId,
-            message_type: "checklist",
-            body: `☐ ${item}`,
-            tenant_id: profile.tenant_id,
-          });
-        
-        if (messageError) throw messageError;
-      }
+      // Create checklist items for the task
+      const checklistItems = checkboxData.items.map((item, index) => ({
+        task_id: taskData.id,
+        title: item,
+        is_completed: false,
+        item_order: index,
+      }));
+
+      const { error: checklistError } = await supabase
+        .from("task_checklist_items" as any)
+        .insert(checklistItems);
+
+      if (checklistError) throw checklistError;
+
+      // Create ONE message that references the task
+      const { error: messageError } = await supabase
+        .from("helpdesk_messages")
+        .insert({
+          ticket_id: ticketId,
+          message_type: "checklist",
+          body: "Checklist",
+          tenant_id: profile.tenant_id,
+          task_id: taskData.id,
+        });
+      
+      if (messageError) throw messageError;
     },
     onSuccess: () => {
       toast({ title: "Checklist items created successfully" });
