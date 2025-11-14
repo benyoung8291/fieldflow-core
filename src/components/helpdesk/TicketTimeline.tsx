@@ -230,12 +230,24 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
-      const user = (await supabase.auth.getUser()).data.user;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get tenant_id from profiles table
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("Tenant not found");
+
       const { error } = await supabase
         .from("tasks")
         .insert({
           ...taskData,
-          tenant_id: user?.user_metadata?.tenant_id,
+          tenant_id: profile.tenant_id,
+          created_by: user.id,
           linked_module: "helpdesk",
           linked_record_id: ticketId,
           status: "pending",
