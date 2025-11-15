@@ -81,8 +81,7 @@ export default function ServiceOrders() {
         .from("service_orders")
         .select(`
           *,
-          customers!service_orders_customer_id_fkey(name),
-          customer_locations!service_orders_customer_location_id_fkey(name, address)
+          customers!service_orders_customer_id_fkey(name)
         `)
         .order("created_at", { ascending: false });
 
@@ -90,7 +89,7 @@ export default function ServiceOrders() {
         console.error("Error fetching service orders:", error);
         throw error;
       }
-      return data;
+      return data || [];
     },
   });
 
