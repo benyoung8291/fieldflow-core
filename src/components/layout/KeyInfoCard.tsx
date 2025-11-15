@@ -19,11 +19,11 @@ export default function KeyInfoCard({
 }: KeyInfoCardProps) {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-3">
-          <Icon className={`h-8 w-8 ${iconColor}`} />
+      <CardContent className="p-3">
+        <div className="flex items-center gap-2.5">
+          <Icon className={`h-7 w-7 ${iconColor}`} />
           <div>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-xl font-bold">{value}</div>
             <div className="text-xs text-muted-foreground">{label}</div>
             {description && (
               <div className="text-xs text-muted-foreground mt-0.5">

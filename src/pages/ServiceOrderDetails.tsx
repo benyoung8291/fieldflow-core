@@ -682,12 +682,10 @@ export default function ServiceOrderDetails() {
       label: "Details",
       icon: <FileText className="h-4 w-4" />,
       content: (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Order Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Order Information</h3>
+                <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Work Order #</div>
@@ -766,14 +764,12 @@ export default function ServiceOrderDetails() {
                       <div className="text-sm">{format(new Date((order as any).completed_date), "PPP")}</div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Contact Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Contact Details</h3>
+                <div className="space-y-3">
                   {order.customer_locations && (
                     <>
                       <div>
@@ -810,8 +806,8 @@ export default function ServiceOrderDetails() {
                       )}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
       ),
     },
