@@ -82,8 +82,7 @@ export default function ServiceOrders() {
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name),
-          customer_locations!service_orders_customer_location_id_fkey(name, address),
-          contacts!service_orders_contact_id_fkey(first_name, last_name, email)
+          customer_locations!service_orders_customer_location_id_fkey(name, address)
         `)
         .order("created_at", { ascending: false });
 
