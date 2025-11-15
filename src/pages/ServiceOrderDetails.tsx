@@ -682,10 +682,10 @@ export default function ServiceOrderDetails() {
       label: "Details",
       icon: <FileText className="h-4 w-4" />,
       content: (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div>
-                <h3 className="font-semibold text-sm mb-2">Order Information</h3>
-                <div className="space-y-3">
+                <h3 className="font-semibold text-sm mb-1.5">Order Information</h3>
+                <div className="space-y-2.5">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Work Order #</div>
@@ -768,8 +768,8 @@ export default function ServiceOrderDetails() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-sm mb-2">Contact Details</h3>
-                <div className="space-y-3">
+                <h3 className="font-semibold text-sm mb-1.5">Contact Details</h3>
+                <div className="space-y-2.5">
                   {order.customer_locations && (
                     <>
                       <div>
