@@ -209,17 +209,17 @@ export default function DocumentDetailLayout({
 
           {/* Key Info */}
           {keyInfoSection && (
-            <div className="p-3">
+            <div className="p-2">
               {keyInfoSection}
             </div>
           )}
 
           {/* Sections as Accordion */}
-          <div className="px-3 pb-3">
+          <div className="px-2 pb-2">
             <Accordion
               type="multiple"
               defaultValue={[defaultTab || tabs[0]?.value]}
-              className="space-y-2"
+              className="space-y-1.5"
             >
               {tabs.map((tab) => (
                 <AccordionItem
@@ -227,18 +227,18 @@ export default function DocumentDetailLayout({
                   value={tab.value}
                   className="border rounded-lg bg-card"
                 >
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline">
                     <div className="flex items-center gap-2">
                       {tab.icon}
-                      <span className="font-medium">{tab.label}</span>
+                      <span className="font-medium text-sm">{tab.label}</span>
                       {tab.badge !== undefined && (
-                        <Badge variant="secondary" className="ml-1">
+                        <Badge variant="secondary" className="ml-1 text-xs">
                           {tab.badge}
                         </Badge>
                       )}
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
+                  <AccordionContent className="px-3 pb-3 pt-0">
                     {tab.content}
                   </AccordionContent>
                 </AccordionItem>
