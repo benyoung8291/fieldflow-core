@@ -93,11 +93,10 @@ export default function ServiceOrderDetails() {
           *,
           customers!service_orders_customer_id_fkey(name, email, phone),
           customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
-          contacts!service_orders_contact_id_fkey(first_name, last_name, email, phone),
           projects(id, name)
         `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
