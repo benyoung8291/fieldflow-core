@@ -283,6 +283,19 @@ export default function QuoteDetails() {
     }
   }, [quote]);
 
+  // Check if any fields have changed
+  const hasChanges = () => {
+    if (!quote) return false;
+    
+    return (
+      editedFields.title !== (quote.title || "") ||
+      editedFields.description !== (quote.description || "") ||
+      editedFields.notes !== (quote.notes || "") ||
+      editedFields.terms_conditions !== (quote.terms_conditions || "") ||
+      editedFields.internal_notes !== (quote.internal_notes || "")
+    );
+  };
+
   // Initialize line items for editing
   useEffect(() => {
     if (lineItems && lineItems.length > 0) {
@@ -870,7 +883,7 @@ export default function QuoteDetails() {
   const actionButtons: DocumentAction[] = [];
 
   // Primary save/approve/convert actions based on status
-  if (canEdit) {
+  if (canEdit && hasChanges()) {
     actionButtons.push({
       label: isSaving ? "Saving..." : "Save Changes",
       icon: <Save className="h-4 w-4" />,
@@ -888,6 +901,7 @@ export default function QuoteDetails() {
     });
   }
   
+  // Show conversion buttons when approved
   if (isApproved && !isConverted) {
     actionButtons.push({
       label: "Convert to Service Order",
@@ -917,6 +931,24 @@ export default function QuoteDetails() {
         setConvertDialogOpen(true);
       },
       variant: "default",
+    });
+  }
+  
+  // Show disabled conversion buttons in draft/sent status with explanation
+  if (!isApproved && !isConverted) {
+    actionButtons.push({
+      label: isDraft ? "Convert (Approve First)" : "Convert (Send & Approve First)",
+      icon: <RefreshCw className="h-4 w-4" />,
+      onClick: () => {
+        toast({
+          title: "Quote must be approved",
+          description: isDraft 
+            ? "Please send and approve this quote before converting it."
+            : "Please approve this quote before converting it.",
+          variant: "default",
+        });
+      },
+      variant: "outline",
     });
   }
 
