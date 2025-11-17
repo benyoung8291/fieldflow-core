@@ -191,8 +191,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
 
   useEffect(() => {
     if (open) {
-      fetchCustomersAndLeads();
       fetchTenantId();
+      fetchCustomersAndLeads();
       if (quoteId) {
         fetchQuote();
       } else {
