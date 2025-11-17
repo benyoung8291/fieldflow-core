@@ -920,73 +920,77 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Quote For</Label>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="for-customer"
-                      checked={!isForLead}
-                      onChange={() => {
-                        setIsForLead(false);
-                        setFormData({ ...formData, lead_id: "", customer_id: "" });
-                      }}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="for-customer" className="font-normal cursor-pointer">Customer</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="for-lead"
-                      checked={isForLead}
-                      onChange={() => {
-                        setIsForLead(true);
-                        setFormData({ ...formData, customer_id: "", lead_id: "" });
-                      }}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="for-lead" className="font-normal cursor-pointer">Lead</Label>
+              {!leadId && (
+                <div className="space-y-2">
+                  <Label>Quote For</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="for-customer"
+                        checked={!isForLead}
+                        onChange={() => {
+                          setIsForLead(false);
+                          setFormData({ ...formData, lead_id: "", customer_id: "" });
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="for-customer" className="font-normal cursor-pointer">Customer</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="for-lead"
+                        checked={isForLead}
+                        onChange={() => {
+                          setIsForLead(true);
+                          setFormData({ ...formData, customer_id: "", lead_id: "" });
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="for-lead" className="font-normal cursor-pointer">Lead</Label>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
-                  {isForLead && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCreateLeadOpen(true)}
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Create Lead
-                    </Button>
-                  )}
+              {!leadId && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
+                    {isForLead && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCreateLeadOpen(true)}
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Create Lead
+                      </Button>
+                    )}
+                  </div>
+                  <Select
+                    value={isForLead ? formData.lead_id : formData.customer_id}
+                    onValueChange={(value) => setFormData({ 
+                      ...formData, 
+                      [isForLead ? "lead_id" : "customer_id"]: value 
+                    })}
+                  >
+                    <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
+                      <SelectValue placeholder={`Select ${isForLead ? "lead" : "customer"}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(isForLead ? leads : customers).map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} {item.company_name && `(${item.company_name})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.customer_id && <p className="text-sm text-red-500">{errors.customer_id}</p>}
                 </div>
-                <Select
-                  value={isForLead ? formData.lead_id : formData.customer_id}
-                  onValueChange={(value) => setFormData({ 
-                    ...formData, 
-                    [isForLead ? "lead_id" : "customer_id"]: value 
-                  })}
-                >
-                  <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
-                    <SelectValue placeholder={`Select ${isForLead ? "lead" : "customer"}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(isForLead ? leads : customers).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name} {item.company_name && `(${item.company_name})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.customer_id && <p className="text-sm text-red-500">{errors.customer_id}</p>}
-              </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="valid_until">Valid Until</Label>
