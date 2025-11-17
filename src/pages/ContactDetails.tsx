@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit, Archive, Trash2 } from "lucide-react";
+import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit, Archive, Trash2, Activity } from "lucide-react";
 import { toast } from "sonner";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import ContactActivityTimeline from "@/components/contacts/ContactActivityTimeline";
 
 export default function ContactDetails() {
   const { id } = useParams();
@@ -450,6 +451,12 @@ export default function ContactDetails() {
           )}
         </div>
       ),
+    },
+    {
+      value: "activity",
+      label: "Activity",
+      icon: <Activity className="h-4 w-4" />,
+      content: <ContactActivityTimeline contactId={id!} />,
     },
   ];
 
