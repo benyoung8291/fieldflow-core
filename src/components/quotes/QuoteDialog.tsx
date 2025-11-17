@@ -71,6 +71,8 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [updatedFields, setUpdatedFields] = useState<Record<string, boolean>>({});
+  const [saveDescriptionTemplateOpen, setSaveDescriptionTemplateOpen] = useState(false);
+  const [descriptionTemplateName, setDescriptionTemplateName] = useState("");
 
   const clearUpdatedField = (key: string) => {
     setTimeout(() => {
@@ -92,7 +94,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
     notes: "",
     terms_conditions: "",
     internal_notes: "",
-    customer_message: "",
     pipeline_id: "",
     stage_id: "",
   });
@@ -108,6 +109,19 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         .from("customer_message_templates")
         .select("*")
         .order("is_default", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  const { data: descriptionTemplates = [] } = useQuery({
+    queryKey: ["quote-description-templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quote_description_templates")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -299,7 +313,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         notes: quoteData.notes || "",
         terms_conditions: quoteData.terms_conditions || "",
         internal_notes: quoteData.internal_notes || "",
-        customer_message: quoteData.customer_message || "",
         pipeline_id: quoteData.pipeline_id || "",
         stage_id: quoteData.stage_id || "",
       });
@@ -363,7 +376,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       notes: "",
       terms_conditions: "",
       internal_notes: "",
-      customer_message: "",
       pipeline_id: "",
       stage_id: "",
     });
@@ -770,7 +782,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         notes: formData.notes || null,
         terms_conditions: formData.terms_conditions || null,
         internal_notes: formData.internal_notes || null,
-        customer_message: formData.customer_message || null,
         pipeline_id: formData.pipeline_id || null,
         stage_id: formData.stage_id || null,
       };
@@ -1075,30 +1086,20 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <RichTextEditor
-                value={formData.description}
-                onChange={(value) => setFormData({ ...formData, description: value })}
-                placeholder="Enter a description..."
-              />
-              {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
-            </div>
-
-            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="customer_message">Customer Message</Label>
-                {messageTemplates.length > 0 && (
+                <Label htmlFor="description">Description</Label>
+                {descriptionTemplates.length > 0 && (
                   <Select onValueChange={(value) => {
-                    const template = messageTemplates.find(t => t.id === value);
+                    const template = descriptionTemplates.find((t: any) => t.id === value);
                     if (template) {
-                      setFormData({ ...formData, customer_message: template.content });
+                      setFormData({ ...formData, description: template.description });
                     }
                   }}>
                     <SelectTrigger className="w-[200px]">
                       <SelectValue placeholder="Load template..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {messageTemplates.map((template) => (
+                      {descriptionTemplates.map((template: any) => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}
                         </SelectItem>
@@ -1106,15 +1107,27 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                     </SelectContent>
                   </Select>
                 )}
+                {formData.description && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSaveDescriptionTemplateOpen(true)}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save as Template
+                  </Button>
+                )}
               </div>
-              <RichTextEditor
-                value={formData.customer_message}
-                onChange={(value) => setFormData({ ...formData, customer_message: value })}
-                placeholder="Thank you for the opportunity to quote..."
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter a description..."
+                rows={10}
+                className="resize-none"
               />
-              <p className="text-xs text-muted-foreground">
-                This message will appear on the PDF above the line items
-              </p>
+              {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
             </div>
 
             <div className="space-y-4">
@@ -1499,10 +1512,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
 
               <div className="space-y-2">
                 <Label htmlFor="internal_notes">Internal Notes</Label>
-                <RichTextEditor
+                <Textarea
+                  id="internal_notes"
                   value={formData.internal_notes}
-                  onChange={(value) => setFormData({ ...formData, internal_notes: value })}
+                  onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
                   placeholder="Add internal notes, comments, or reminders..."
+                  rows={4}
+                  className="resize-none whitespace-pre-wrap"
                 />
               </div>
 
@@ -1682,6 +1698,82 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         lineItems={lineItems}
         quoteType={isComplexQuote ? 'complex' : 'simple'}
       />
+
+      <Dialog open={saveDescriptionTemplateOpen} onOpenChange={setSaveDescriptionTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Description Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="template_name">Template Name *</Label>
+              <Input
+                id="template_name"
+                value={descriptionTemplateName}
+                onChange={(e) => setDescriptionTemplateName(e.target.value)}
+                placeholder="e.g., Standard Service Description"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSaveDescriptionTemplateOpen(false);
+                  setDescriptionTemplateName("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  if (!descriptionTemplateName.trim()) {
+                    toast({
+                      title: "Template name required",
+                      description: "Please enter a name for the template",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) throw new Error("Not authenticated");
+
+                    const { error } = await supabase
+                      .from("quote_description_templates")
+                      .insert({
+                        tenant_id: tenantId,
+                        name: descriptionTemplateName.trim(),
+                        description: formData.description,
+                        created_by: user.id,
+                      });
+
+                    if (error) throw error;
+
+                    queryClient.invalidateQueries({ queryKey: ["quote-description-templates"] });
+                    toast({
+                      title: "Template saved",
+                      description: "Description template has been saved successfully",
+                    });
+                    setSaveDescriptionTemplateOpen(false);
+                    setDescriptionTemplateName("");
+                  } catch (error: any) {
+                    toast({
+                      title: "Error saving template",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Save Template
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
