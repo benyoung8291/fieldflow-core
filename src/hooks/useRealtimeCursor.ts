@@ -75,7 +75,7 @@ export const useRealtimeCursor = (userName: string, userId: string) => {
 
     const channel = supabase.channel("cursor-tracking");
     let lastUpdateTime = 0;
-    const THROTTLE_MS = 50; // Send updates max every 50ms
+    const THROTTLE_MS = 500; // Send updates max every 500ms (much less frequent)
 
     // Get browser zoom level
     const getZoomLevel = (): number => {
