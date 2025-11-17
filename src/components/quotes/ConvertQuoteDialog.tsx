@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   Select,
   SelectContent,
@@ -796,12 +797,10 @@ export default function ConvertQuoteDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="project-description">Description</Label>
-                <Textarea
-                  id="project-description"
+                <RichTextEditor
                   value={projectData.description}
-                  onChange={(e) => setProjectData({ ...projectData, description: e.target.value })}
+                  onChange={(value) => setProjectData({ ...projectData, description: value })}
                   placeholder="Enter project description"
-                  rows={3}
                 />
               </div>
 
@@ -851,12 +850,10 @@ export default function ConvertQuoteDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="so-description">Description</Label>
-                <Textarea
-                  id="so-description"
+                <RichTextEditor
                   value={serviceOrderData.description}
-                  onChange={(e) => setServiceOrderData({ ...serviceOrderData, description: e.target.value })}
+                  onChange={(value) => setServiceOrderData({ ...serviceOrderData, description: value })}
                   placeholder="Enter description"
-                  rows={3}
                 />
               </div>
 
@@ -906,12 +903,10 @@ export default function ConvertQuoteDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="contract-description">Description</Label>
-                <Textarea
-                  id="contract-description"
+                <RichTextEditor
                   value={contractData.description}
-                  onChange={(e) => setContractData({ ...contractData, description: e.target.value })}
+                  onChange={(value) => setContractData({ ...contractData, description: value })}
                   placeholder="Enter description"
-                  rows={2}
                 />
               </div>
 
