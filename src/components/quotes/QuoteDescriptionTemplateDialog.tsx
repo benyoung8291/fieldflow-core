@@ -35,23 +35,26 @@ export default function QuoteDescriptionTemplateDialog({
   // Fetch tenant ID when dialog opens
   useEffect(() => {
     const fetchTenantId = async () => {
-      if (open && !tenantId) {
-        console.log('[QuoteDescriptionTemplateDialog] Fetching tenant ID...');
+      if (open) {
+        console.log('[QuoteDescriptionTemplateDialog] Dialog opened, fetching tenant ID...');
         const { data: { user } } = await supabase.auth.getUser();
         console.log('[QuoteDescriptionTemplateDialog] User:', user?.id);
         if (user) {
-          const { data: profile } = await supabase
+          const { data: profile, error } = await supabase
             .from("profiles")
             .select("tenant_id")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
           
-          console.log('[QuoteDescriptionTemplateDialog] Profile data:', profile);
+          console.log('[QuoteDescriptionTemplateDialog] Profile query result:', { profile, error });
           if (profile) {
             console.log('[QuoteDescriptionTemplateDialog] Setting tenant ID:', profile.tenant_id);
             setTenantId(profile.tenant_id);
           }
         }
+      } else {
+        // Reset tenant ID when dialog closes
+        setTenantId("");
       }
     };
     fetchTenantId();
@@ -75,7 +78,7 @@ export default function QuoteDescriptionTemplateDialog({
     enabled: open && !!tenantId,
   });
 
-  // Fetch other quotes for copying
+  console.log('[QuoteDescriptionTemplateDialog] Component state - tenantId:', tenantId, 'templates:', templates, 'loadingTemplates:', loadingTemplates);
   const { data: otherQuotes = [], isLoading: loadingQuotes } = useQuery({
     queryKey: ["quotes-for-description-copy", tenantId],
     queryFn: async () => {
