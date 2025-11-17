@@ -1,56 +1,70 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Mail, Phone, Building2, MapPin, UserPlus, TrendingUp, MoreVertical, FileText } from "lucide-react";
+import { Mail, Phone, MapPin, Building2, User, FileText, TrendingUp, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import LeadDialog from "@/components/leads/LeadDialog";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
-import { useToast } from "@/hooks/use-toast";
-import { useViewMode } from "@/contexts/ViewModeContext";
-import { useSwipeToClose } from "@/hooks/useSwipeGesture";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
 export default function LeadDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isMobile } = useViewMode();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leads")
-        .select("*")
+        .select(`
+          *,
+          assigned_user:profiles!leads_assigned_to_fkey(id, first_name, last_name, email),
+          created_user:profiles!leads_created_by_fkey(id, first_name, last_name)
+        `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("Lead not found");
+
+      // Handle foreign key relationships that return as arrays
+      const assignedUser = Array.isArray(data.assigned_user) ? data.assigned_user[0] : data.assigned_user;
+      const createdUser = Array.isArray(data.created_user) ? data.created_user[0] : data.created_user;
+
+      return {
+        ...data,
+        assigned_user: assignedUser ? {
+          ...assignedUser,
+          full_name: `${assignedUser.first_name || ''} ${assignedUser.last_name || ''}`.trim()
+        } : null,
+        created_user: createdUser ? {
+          ...createdUser,
+          full_name: `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim()
+        } : null
+      };
+    },
+  });
+
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["lead-contacts", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("lead_id", id)
+        .order("created_at", { ascending: false});
 
       if (error) throw error;
       return data;
@@ -85,8 +99,10 @@ export default function LeadDetails() {
     },
   });
 
-  const handleConvertToCustomer = async () => {
-    try {
+  const convertToCustomerMutation = useMutation({
+    mutationFn: async () => {
+      if (!lead) return;
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -103,14 +119,14 @@ export default function LeadDetails() {
         .from("customers")
         .insert([{
           tenant_id: profile.tenant_id,
-          name: lead!.company_name || lead!.name,
-          email: lead!.email,
-          phone: lead!.phone,
-          address: lead!.address,
-          city: lead!.city,
-          state: lead!.state,
-          postcode: lead!.postcode,
-          notes: lead!.notes,
+          name: lead.company_name || lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          address: lead.address,
+          city: lead.city,
+          state: lead.state,
+          postcode: lead.postcode,
+          notes: lead.notes,
         }])
         .select()
         .single();
@@ -129,6 +145,20 @@ export default function LeadDetails() {
 
       if (updateError) throw updateError;
 
+      // Update linked contacts to reference customer
+      if (contacts.length > 0) {
+        const { error: contactsError } = await supabase
+          .from("contacts")
+          .update({
+            customer_id: newCustomer.id,
+            contact_type: "customer",
+            status: "active",
+          })
+          .eq("lead_id", id);
+
+        if (contactsError) throw contactsError;
+      }
+
       // Update any quotes from lead to customer
       const { error: quotesError } = await supabase
         .from("quotes")
@@ -141,569 +171,413 @@ export default function LeadDetails() {
 
       if (quotesError) throw quotesError;
 
-      // Log activity
-      await supabase.from("lead_activities").insert([{
-        tenant_id: profile.tenant_id,
-        lead_id: id!,
-        activity_type: "conversion",
-        subject: "Lead Converted to Customer",
-        description: `Lead successfully converted to customer: ${newCustomer.name}`,
-        created_by: user.id,
-      }]);
-
-      toast({ title: "Lead converted to customer successfully" });
+      return newCustomer;
+    },
+    onSuccess: (newCustomer) => {
       queryClient.invalidateQueries({ queryKey: ["lead", id] });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead-stats"] });
+      toast.success("Lead converted to customer successfully");
       setConvertDialogOpen(false);
-
-      // Navigate to customer details
       navigate(`/customers/${newCustomer.id}`);
-    } catch (error: any) {
-      toast({
-        title: "Error converting lead",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    },
+    onError: (error) => {
+      console.error("Error converting lead:", error);
+      toast.error("Failed to convert lead to customer");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("leads")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Lead deleted successfully");
+      navigate("/leads");
+    },
+    onError: (error) => {
+      console.error("Error deleting lead:", error);
+      toast.error("Failed to delete lead");
+    },
+  });
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      new: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      contacted: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+      qualified: "bg-green-500/10 text-green-500 border-green-500/20",
+      proposal: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      negotiation: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+      lost: "bg-red-500/10 text-red-500 border-red-500/20",
+    };
+    return colors[status] || colors.new;
   };
 
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading lead...</p>
+  const primaryActions = [
+    {
+      label: "Edit",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => setDialogOpen(true),
+      variant: "outline" as const,
+    },
+    {
+      label: "Convert to Customer",
+      icon: <TrendingUp className="h-4 w-4" />,
+      onClick: () => setConvertDialogOpen(true),
+      variant: "default" as const,
+      show: !lead?.converted_to_customer_id,
+    },
+  ];
+
+  const menuActions = [
+    {
+      label: "Create Quote",
+      icon: <FileText className="h-4 w-4 mr-2" />,
+      onClick: () => setQuoteDialogOpen(true),
+    },
+    {
+      label: "Delete Lead",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+      onClick: () => setDeleteDialogOpen(true),
+      destructive: true,
+    },
+  ];
+
+  const keyInfoSection = (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">Status</p>
+        <Badge className={getStatusColor(lead?.status || "new")}>
+          {lead?.status?.charAt(0).toUpperCase()}{lead?.status?.slice(1)}
+        </Badge>
+      </div>
+      
+      {lead?.company_name && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Company</p>
+          <p className="text-sm font-medium flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            {lead.company_name}
+          </p>
         </div>
-      </DashboardLayout>
-    );
-  }
+      )}
 
-  if (!lead) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Lead not found</p>
-          <Button onClick={() => navigate("/leads")} className="mt-4">
-            Back to Leads
-          </Button>
+      {lead?.email && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Email</p>
+          <a href={`mailto:${lead.email}`} className="text-sm font-medium flex items-center gap-2 hover:underline">
+            <Mail className="h-4 w-4" />
+            {lead.email}
+          </a>
         </div>
-      </DashboardLayout>
-    );
-  }
+      )}
 
-  const statusColors: Record<string, string> = {
-    new: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    contacted: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-    qualified: "bg-green-500/10 text-green-500 border-green-500/20",
-    proposal: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-    negotiation: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-    lost: "bg-red-500/10 text-red-500 border-red-500/20",
-  };
+      {lead?.phone && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Phone</p>
+          <a href={`tel:${lead.phone}`} className="text-sm font-medium flex items-center gap-2 hover:underline">
+            <Phone className="h-4 w-4" />
+            {lead.phone}
+          </a>
+        </div>
+      )}
 
-  if (isMobile) {
-    const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/leads"), true);
-    
-    return (
-      <DashboardLayout>
-        <div ref={elementRef} className="flex flex-col h-full">
-          {/* Swipe indicator */}
-          {swipeProgress > 0 && (
-            <div 
-              className="fixed left-0 top-0 bottom-0 w-1 bg-primary/30 transition-opacity z-50"
-              style={{ opacity: swipeProgress }}
-            />
-          )}
-          
-          {/* Mobile Header */}
-          <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/leads")}
-                  className="shrink-0"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                  <h1 className="font-semibold truncate">{lead.name}</h1>
-                  {lead.company_name && (
-                    <p className="text-xs text-muted-foreground truncate">{lead.company_name}</p>
-                  )}
-                </div>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="shrink-0">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {!lead.converted_to_customer_id && (
-                    <>
-                      <DropdownMenuItem onClick={() => setQuoteDialogOpen(true)}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Create Quote
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setConvertDialogOpen(true)}>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Convert to Customer
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={() => setDialogOpen(true)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
+      {lead?.assigned_user && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Assigned To</p>
+          <p className="text-sm font-medium flex items-center gap-2">
+            <User className="h-4 w-4" />
+            {lead.assigned_user.full_name}
+          </p>
+        </div>
+      )}
 
-          <div className="flex-1 overflow-auto">
-            <div className="space-y-4 p-4">
-              <div className="flex gap-2">
-                <Badge variant="outline" className={statusColors[lead.status]}>
-                  {lead.status}
-                </Badge>
-                {lead.rating && (
-                  <Badge variant="secondary">
-                    {lead.rating}
-                  </Badge>
+      {lead?.source && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Source</p>
+          <p className="text-sm font-medium capitalize">{lead.source.replace('_', ' ')}</p>
+        </div>
+      )}
+
+      {lead?.converted_to_customer_id && (
+        <div className="md:col-span-2">
+          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+            Converted to Customer
+          </Badge>
+        </div>
+      )}
+    </div>
+  );
+
+  const tabs = [
+    {
+      value: "details",
+      label: "Details",
+      content: (
+        <div className="space-y-6">
+          {(lead?.address || lead?.city || lead?.state) && (
+            <div>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Address
+              </h3>
+              <div className="text-sm">
+                {lead.address && <div>{lead.address}</div>}
+                {(lead.city || lead.state || lead.postcode) && (
+                  <div>
+                    {lead.city} {lead.state} {lead.postcode}
+                  </div>
                 )}
               </div>
-
-              {lead.converted_to_customer_id && (
-                <Card className="border-green-500/50 bg-green-500/5">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-2 text-green-600">
-                      <TrendingUp className="h-5 w-5" />
-                      <span className="font-medium text-sm">
-                        This lead has been converted to a customer
-                      </span>
-                    </div>
-                    {lead.converted_at && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Converted on {format(new Date(lead.converted_at), "PPP")}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <Accordion type="multiple" defaultValue={["contact", "notes"]} className="space-y-2">
-                <AccordionItem value="contact">
-                  <AccordionTrigger className="text-base font-semibold">
-                    Contact Information
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3 pt-2">
-                      {lead.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <a href={`mailto:${lead.email}`} className="text-sm hover:underline">
-                            {lead.email}
-                          </a>
-                        </div>
-                      )}
-                      {lead.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <a href={`tel:${lead.phone}`} className="text-sm hover:underline">
-                            {lead.phone}
-                          </a>
-                        </div>
-                      )}
-                      {lead.mobile && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <a href={`tel:${lead.mobile}`} className="text-sm hover:underline">
-                            {lead.mobile} (Mobile)
-                          </a>
-                        </div>
-                      )}
-                      {(lead.address || lead.city || lead.state) && (
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div className="text-sm">
-                            {lead.address && <div>{lead.address}</div>}
-                            {(lead.city || lead.state || lead.postcode) && (
-                              <div>
-                                {lead.city} {lead.state} {lead.postcode}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {lead.source && (
-                        <div className="pt-2 border-t">
-                          <p className="text-sm text-muted-foreground">Source</p>
-                          <p className="text-sm font-medium capitalize">{lead.source.replace('_', ' ')}</p>
-                        </div>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="notes">
-                  <AccordionTrigger className="text-base font-semibold">
-                    Notes
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm whitespace-pre-wrap">{lead.notes || "No notes"}</p>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="quotes">
-                  <AccordionTrigger className="text-base font-semibold">
-                    Quotes ({quotes.length})
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {quotes.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No quotes yet</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {quotes.map((quote) => (
-                          <div
-                            key={quote.id}
-                            className="p-3 border rounded-lg active:bg-muted/50"
-                            onClick={() => navigate(`/quotes/${quote.id}`)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-sm">{quote.title}</p>
-                                <p className="text-xs text-muted-foreground">{quote.quote_number}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-medium text-sm">${Number(quote.total_amount).toFixed(2)}</p>
-                                <Badge variant="outline" className="text-xs">{quote.status}</Badge>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="activity">
-                  <AccordionTrigger className="text-base font-semibold">
-                    Activity Timeline
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {activities.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No activities yet</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {activities.map((activity) => (
-                          <div key={activity.id} className="flex gap-3 border-l-2 pl-4 pb-4">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{activity.subject}</p>
-                              {activity.description && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {activity.description}
-                                </p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-2">
-                                {format(new Date(activity.activity_date), "PPP p")}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className="h-fit text-xs">
-                              {activity.activity_type}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="tasks">
-                  <AccordionTrigger className="text-base font-semibold">
-                    Tasks
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="flex justify-end mb-3">
-                      <CreateTaskButton
-                        linkedModule="lead"
-                        linkedRecordId={id!}
-                        variant="default"
-                        size="sm"
-                      />
-                    </div>
-                    <LinkedTasksList linkedModule="lead" linkedRecordId={id!} />
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
             </div>
-          </div>
-        </div>
+          )}
 
-        <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} leadId={id} />
-
-        <QuoteDialog 
-          open={quoteDialogOpen} 
-          onOpenChange={setQuoteDialogOpen} 
-          leadId={id}
-        />
-
-        <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Convert Lead to Customer</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will create a new customer record with all the lead information. Any quotes
-                associated with this lead will be transferred to the new customer. This action
-                cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConvertToCustomer}>
-                Convert to Customer
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </DashboardLayout>
-    );
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/leads")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">{lead.name}</h1>
-              <Badge variant="outline" className={statusColors[lead.status]}>
-                {lead.status}
-              </Badge>
-              {lead.rating && (
-                <Badge variant="secondary">
-                  {lead.rating}
-                </Badge>
-              )}
+          {lead?.notes && (
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Notes</h3>
+              <p className="text-sm whitespace-pre-wrap">{lead.notes}</p>
             </div>
-            {lead.company_name && (
-              <p className="text-muted-foreground flex items-center gap-1">
-                <Building2 className="h-4 w-4" />
-                {lead.company_name}
+          )}
+
+          {lead?.created_at && (
+            <div className="pt-4 border-t">
+              <p className="text-xs text-muted-foreground">
+                Created {format(new Date(lead.created_at), "PPP 'at' p")}
+                {lead.created_user && ` by ${lead.created_user.full_name}`}
               </p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {!lead.converted_to_customer_id && (
-              <>
-                <Button onClick={() => setQuoteDialogOpen(true)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Quote
-                </Button>
-                <Button onClick={() => setConvertDialogOpen(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Convert to Customer
-                </Button>
-              </>
-            )}
-            <Button variant="outline" onClick={() => setDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
-
-        {lead.converted_to_customer_id && (
-          <Card className="border-green-500/50 bg-green-500/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-green-600">
-                <TrendingUp className="h-5 w-5" />
-                <span className="font-medium">
-                  This lead has been converted to a customer
-                </span>
-              </div>
-              {lead.converted_at && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Converted on {format(new Date(lead.converted_at), "PPP")}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {lead.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${lead.email}`} className="text-sm hover:underline">
-                    {lead.email}
-                  </a>
-                </div>
-              )}
-              {lead.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${lead.phone}`} className="text-sm hover:underline">
-                    {lead.phone}
-                  </a>
-                </div>
-              )}
-              {lead.mobile && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${lead.mobile}`} className="text-sm hover:underline">
-                    {lead.mobile} (Mobile)
-                  </a>
-                </div>
-              )}
-              {(lead.address || lead.city || lead.state) && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div className="text-sm">
-                    {lead.address && <div>{lead.address}</div>}
-                    {(lead.city || lead.state || lead.postcode) && (
-                      <div>
-                        {lead.city} {lead.state} {lead.postcode}
-                      </div>
-                    )}
+      ),
+    },
+    {
+      value: "contacts",
+      label: "Contacts",
+      badge: contacts.length,
+      content: (
+        <div className="space-y-4">
+          {contacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No contacts linked to this lead</p>
+          ) : (
+            <div className="space-y-3">
+              {contacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/contacts/${contact.id}`)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium">{contact.first_name} {contact.last_name}</p>
+                      {contact.position && (
+                        <p className="text-sm text-muted-foreground">{contact.position}</p>
+                      )}
+                      {contact.email && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                          <Mail className="h-3 w-3" />
+                          {contact.email}
+                        </p>
+                      )}
+                      {contact.phone && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {contact.phone}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className={
+                      contact.status === "active" 
+                        ? "bg-green-500/10 text-green-600 border-green-500/20"
+                        : contact.status === "lead"
+                        ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                        : "bg-muted"
+                    }>
+                      {contact.status}
+                    </Badge>
                   </div>
                 </div>
-              )}
-              {lead.source && (
-                <div className="pt-2 border-t">
-                  <p className="text-sm text-muted-foreground">Source</p>
-                  <p className="text-sm font-medium capitalize">{lead.source.replace('_', ' ')}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{lead.notes || "No notes"}</p>
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          )}
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quotes ({quotes.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {quotes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No quotes yet</p>
-            ) : (
-              <div className="space-y-2">
-                {quotes.map((quote) => (
-                  <div
-                    key={quote.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                    onClick={() => navigate(`/quotes/${quote.id}`)}
-                  >
+      ),
+    },
+    {
+      value: "quotes",
+      label: "Quotes",
+      badge: quotes.length,
+      content: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => setQuoteDialogOpen(true)} size="sm">
+              <FileText className="h-4 w-4 mr-2" />
+              Create Quote
+            </Button>
+          </div>
+          
+          {quotes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No quotes for this lead</p>
+          ) : (
+            <div className="space-y-3">
+              {quotes.map((quote) => (
+                <div
+                  key={quote.id}
+                  className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/quotes/${quote.id}`)}
+                >
+                  <div className="flex items-start justify-between">
                     <div>
                       <p className="font-medium">{quote.title}</p>
                       <p className="text-sm text-muted-foreground">{quote.quote_number}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">${Number(quote.total_amount).toFixed(2)}</p>
-                      <Badge variant="outline">{quote.status}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Activity Timeline</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No activities yet</p>
-            ) : (
-              <div className="space-y-4">
-                {activities.map((activity) => (
-                  <div key={activity.id} className="flex gap-3 border-l-2 pl-4 pb-4">
-                    <div className="flex-1">
-                      <p className="font-medium">{activity.subject}</p>
-                      {activity.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {activity.description}
+                      {quote.created_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(quote.created_at), "PPP")}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {format(new Date(activity.activity_date), "PPP p")}
-                      </p>
                     </div>
-                    <Badge variant="outline" className="h-fit">
-                      {activity.activity_type}
-                    </Badge>
+                    <div className="text-right">
+                      <p className="font-semibold">${Number(quote.total_amount).toFixed(2)}</p>
+                      <Badge variant="outline" className="mt-1">
+                        {quote.status}
+                      </Badge>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Tasks</CardTitle>
-              <CreateTaskButton
-                linkedModule="lead"
-                linkedRecordId={id!}
-                variant="default"
-                size="sm"
-              />
+                </div>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            <LinkedTasksList linkedModule="lead" linkedRecordId={id!} />
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      value: "activities",
+      label: "Activities",
+      badge: activities.length,
+      content: (
+        <div className="space-y-4">
+          {activities.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activities recorded</p>
+          ) : (
+            <div className="space-y-3">
+              {activities.map((activity) => (
+                <div key={activity.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium">{activity.subject}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{activity.activity_type}</p>
+                      {activity.description && (
+                        <p className="text-sm mt-2">{activity.description}</p>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(activity.activity_date), "PPP")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      value: "tasks",
+      label: "Tasks",
+      content: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <CreateTaskButton
+              linkedModule="lead"
+              linkedRecordId={id || ""}
+            />
+          </div>
+          <LinkedTasksList
+            linkedModule="lead"
+            linkedRecordId={id || ""}
+          />
+        </div>
+      ),
+    },
+  ];
 
-      <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} leadId={id} />
+  return (
+    <>
+      <DocumentDetailLayout
+        title={lead?.name || "Lead"}
+        subtitle={lead?.company_name}
+        backPath="/leads"
+        primaryActions={primaryActions}
+        fileMenuActions={menuActions}
+        keyInfoSection={keyInfoSection}
+        tabs={tabs}
+        isLoading={isLoading}
+      />
 
-      <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Convert Lead to Customer</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will create a new customer record with all the lead information. Any quotes
-              associated with this lead will be transferred to the new customer. This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConvertToCustomer}>
-              Convert to Customer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} leadId={id} />
-      
-      <QuoteDialog 
-        open={quoteDialogOpen} 
-        onOpenChange={setQuoteDialogOpen} 
+      <LeadDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         leadId={id}
       />
-    </DashboardLayout>
+
+      <QuoteDialog
+        open={quoteDialogOpen}
+        onOpenChange={setQuoteDialogOpen}
+        leadId={id}
+      />
+
+      <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert Lead to Customer</DialogTitle>
+            <DialogDescription>
+              This will create a new customer record from this lead and transfer all quotes{contacts.length > 0 && ' and linked contacts'}.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => convertToCustomerMutation.mutate()}
+              disabled={convertToCustomerMutation.isPending}
+            >
+              Convert to Customer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Lead</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this lead? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                deleteMutation.mutate();
+                setDeleteDialogOpen(false);
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              Delete Lead
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
