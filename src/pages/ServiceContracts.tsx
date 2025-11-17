@@ -52,7 +52,7 @@ export default function ServiceContracts() {
     const endDate = addMonths(now, 12);
 
     contracts.forEach((contract: any) => {
-      if (contract.status !== "active" || !contract.auto_generate) return;
+      if (contract.status !== "active") return;
 
       contract.service_contract_line_items?.forEach((item: any) => {
         if (!item.is_active) return;
@@ -280,31 +280,41 @@ export default function ServiceContracts() {
                     <TableHead>Customer</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
-                    <TableHead>Value</TableHead>
+                    <TableHead>Next Generation</TableHead>
+                    <TableHead>12-Month Value</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {activeContracts.map((contract: any) => (
-                    <TableRow 
-                      key={contract.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/service-contracts/${contract.id}`)}
-                    >
-                      <TableCell className="font-medium">{contract.contract_number}</TableCell>
-                      <TableCell>{contract.customers?.name}</TableCell>
-                      <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
-                      <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
-                      <TableCell>
-                        ${((contract.service_contract_line_items || []).reduce(
-                          (sum: number, item: any) => sum + parseFloat(item.line_total || 0), 0
-                        )).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">{contract.status}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {activeContracts.map((contract: any) => {
+                    // Calculate next generation date
+                    const nextGenDates = (contract.service_contract_line_items || [])
+                      .filter((item: any) => item.is_active && (item.next_generation_date || item.first_generation_date))
+                      .map((item: any) => parseISO(item.next_generation_date || item.first_generation_date));
+                    const nextGenDate = nextGenDates.length > 0 ? new Date(Math.min(...nextGenDates.map(d => d.getTime()))) : null;
+
+                    // Calculate 12-month value for this contract
+                    const contractGenerations = calculateUpcomingGenerations().filter((gen: any) => gen.contractId === contract.id);
+                    const twelveMonthValue = contractGenerations.reduce((sum: number, gen: any) => sum + parseFloat(gen.amount), 0);
+
+                    return (
+                      <TableRow 
+                        key={contract.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/service-contracts/${contract.id}`)}
+                      >
+                        <TableCell className="font-medium">{contract.contract_number}</TableCell>
+                        <TableCell>{contract.customers?.name}</TableCell>
+                        <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
+                        <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
+                        <TableCell>{nextGenDate ? format(nextGenDate, "PP") : "N/A"}</TableCell>
+                        <TableCell className="font-semibold">${twelveMonthValue.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge variant="default">{contract.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
