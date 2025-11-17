@@ -671,6 +671,7 @@ export default function QuoteDetails() {
   const handleSaveInlineEdits = async () => {
     try {
       setIsSaving(true);
+      console.log("Starting save, editedLineItems:", editedLineItems);
 
       // Get user profile for tenant_id
       const { data: { user } } = await supabase.auth.getUser();
@@ -708,6 +709,7 @@ export default function QuoteDetails() {
         }
       }
 
+      console.log("Updating quote fields...");
       // Update quote fields
       const { error: quoteError } = await supabase
         .from("quotes")
@@ -716,6 +718,7 @@ export default function QuoteDetails() {
 
       if (quoteError) throw quoteError;
 
+      console.log("Creating audit logs...");
       // Create audit log entries for changed fields
       for (const change of changedFields) {
         await supabase.from("audit_logs").insert({
@@ -731,13 +734,16 @@ export default function QuoteDetails() {
         });
       }
 
+      console.log("Deleting old line items...");
       // Update line items - delete all and recreate
       await supabase.from("quote_line_items").delete().eq("quote_id", id);
 
+      console.log("Processing new line items...");
       const allItems: any[] = [];
       let itemOrder = 0;
 
       for (const item of editedLineItems) {
+        console.log("Processing item:", item);
         const parentItem = {
           quote_id: id,
           tenant_id: profile.tenant_id,
@@ -751,16 +757,21 @@ export default function QuoteDetails() {
           unit_price: parseFloat(item.sell_price),
         };
 
+        console.log("Inserting parent item:", parentItem);
         const { data: savedParent, error: parentError } = await supabase
           .from("quote_line_items")
           .insert([parentItem])
           .select()
           .single();
 
-        if (parentError) throw parentError;
+        if (parentError) {
+          console.error("Parent insert error:", parentError);
+          throw parentError;
+        }
 
         // Save sub-items
         if (item.subItems && item.subItems.length > 0) {
+          console.log("Processing sub-items:", item.subItems);
           for (const subItem of item.subItems) {
             allItems.push({
               quote_id: id,
@@ -780,13 +791,18 @@ export default function QuoteDetails() {
       }
 
       if (allItems.length > 0) {
+        console.log("Inserting sub-items:", allItems);
         const { error: subItemsError } = await supabase
           .from("quote_line_items")
           .insert(allItems);
 
-        if (subItemsError) throw subItemsError;
+        if (subItemsError) {
+          console.error("Sub-items insert error:", subItemsError);
+          throw subItemsError;
+        }
       }
 
+      console.log("Recalculating totals...");
       // Recalculate quote totals
       const subtotal = editedLineItems.reduce((sum, item) => sum + item.line_total, 0);
       const taxRate = parseFloat(quote?.tax_rate?.toString() || "10");
@@ -802,17 +818,20 @@ export default function QuoteDetails() {
         })
         .eq("id", id);
 
+      console.log("Save completed successfully");
       toast({ title: "Quote saved successfully" });
       queryClient.invalidateQueries({ queryKey: ["quote", id] });
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
       queryClient.invalidateQueries({ queryKey: ["quote-line-items", id] });
     } catch (error: any) {
+      console.error("Save error:", error);
       toast({
         title: "Error saving quote",
         description: error.message,
         variant: "destructive",
       });
     } finally {
+      console.log("Setting isSaving to false");
       setIsSaving(false);
     }
   };
