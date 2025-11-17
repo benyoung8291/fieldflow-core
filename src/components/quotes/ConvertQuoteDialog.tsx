@@ -258,6 +258,13 @@ export default function ConvertQuoteDialog({
             quantity: item.quantity,
             unit_price: item.unit_price,
             line_total: item.line_total,
+            cost_price: (item as any).cost_price || null,
+            sell_price: (item as any).sell_price || null,
+            margin_percentage: (item as any).margin_percentage || null,
+            is_gst_free: (item as any).is_gst_free || false,
+            notes: (item as any).notes || null,
+            is_from_price_book: (item as any).is_from_price_book || false,
+            price_book_item_id: (item as any).price_book_item_id || null,
             item_order: i,
           })
           .select()
@@ -279,6 +286,13 @@ export default function ConvertQuoteDialog({
                 quantity: subItem.quantity,
                 unit_price: subItem.unit_price || subItem.sell_price,
                 line_total: subItem.line_total,
+                cost_price: subItem.cost_price || null,
+                sell_price: subItem.sell_price || null,
+                margin_percentage: subItem.margin_percentage || null,
+                is_gst_free: subItem.is_gst_free || false,
+                notes: subItem.notes || null,
+                is_from_price_book: subItem.is_from_price_book || false,
+                price_book_item_id: subItem.price_book_item_id || null,
                 item_order: j,
                 parent_line_item_id: insertedItem.id,
               });
@@ -442,6 +456,10 @@ export default function ConvertQuoteDialog({
             quantity: item.quantity,
             unit_price: item.unit_price,
             line_total: item.line_total,
+            is_gst_free: (item as any).is_gst_free || false,
+            notes: (item as any).notes || null,
+            is_from_price_book: (item as any).is_from_price_book || false,
+            price_book_item_id: (item as any).price_book_item_id || null,
             item_order: i,
           })
           .select()
@@ -463,6 +481,10 @@ export default function ConvertQuoteDialog({
                 quantity: subItem.quantity,
                 unit_price: subItem.unit_price || subItem.sell_price,
                 line_total: subItem.line_total,
+                is_gst_free: subItem.is_gst_free || false,
+                notes: subItem.notes || null,
+                is_from_price_book: subItem.is_from_price_book || false,
+                price_book_item_id: subItem.price_book_item_id || null,
                 item_order: j,
                 parent_line_item_id: insertedItem.id,
               });
