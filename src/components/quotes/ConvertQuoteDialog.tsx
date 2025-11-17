@@ -111,6 +111,8 @@ export default function ConvertQuoteDialog({
     title: quote?.title || '',
     description: quote?.description || '',
     preferred_date: format(new Date(), 'yyyy-MM-dd'),
+    preferred_date_start: '',
+    preferred_date_end: '',
     billing_type: 'fixed',
     fixed_amount: quote?.total_amount || 0,
   });
@@ -393,6 +395,8 @@ export default function ConvertQuoteDialog({
           title: serviceOrderData.title,
           description: serviceOrderData.description,
           preferred_date: serviceOrderData.preferred_date,
+          preferred_date_start: serviceOrderData.preferred_date_start || null,
+          preferred_date_end: serviceOrderData.preferred_date_end || null,
           billing_type: serviceOrderData.billing_type,
           fixed_amount: serviceOrderData.fixed_amount,
           status: 'draft',
@@ -857,7 +861,7 @@ export default function ConvertQuoteDialog({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="so-date">Preferred Date *</Label>
                   <Input
@@ -867,6 +871,29 @@ export default function ConvertQuoteDialog({
                     onChange={(e) => setServiceOrderData({ ...serviceOrderData, preferred_date: e.target.value })}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="so-date-start">Date Range Start</Label>
+                  <Input
+                    id="so-date-start"
+                    type="date"
+                    value={serviceOrderData.preferred_date_start}
+                    onChange={(e) => setServiceOrderData({ ...serviceOrderData, preferred_date_start: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="so-date-end">Date Range End</Label>
+                  <Input
+                    id="so-date-end"
+                    type="date"
+                    value={serviceOrderData.preferred_date_end}
+                    onChange={(e) => setServiceOrderData({ ...serviceOrderData, preferred_date_end: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
 
                 <div className="space-y-2">
                   <Label htmlFor="so-amount">Fixed Amount</Label>
