@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectWithSearch } from "@/components/ui/select-with-search";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -1012,7 +1013,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                     </Button>
                   )}
                 </div>
-                <Select
+                <SelectWithSearch
                   value={isForLead ? formData.lead_id : formData.customer_id}
                   onValueChange={(value) => {
                     console.log('[QuoteDialog] Select onValueChange:', value, 'isForLead:', isForLead);
@@ -1021,19 +1022,14 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                       [isForLead ? "lead_id" : "customer_id"]: value 
                     });
                   }}
-                  disabled={!!leadId}
-                >
-                  <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
-                    <SelectValue placeholder={`Select ${isForLead ? "lead" : "customer"}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(isForLead ? leads : customers).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name} {item.company_name && `(${item.company_name})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={(isForLead ? leads : customers).map((item) => ({
+                    value: item.id,
+                    label: `${item.name}${item.company_name ? ` (${item.company_name})` : ''}`
+                  }))}
+                  placeholder={`Select ${isForLead ? "lead" : "customer"}`}
+                  searchPlaceholder={`Search ${isForLead ? "leads" : "customers"}...`}
+                  className={errors.customer_id ? "border-red-500" : ""}
+                />
                 {errors.customer_id && <p className="text-sm text-red-500">{errors.customer_id}</p>}
               </div>
 
