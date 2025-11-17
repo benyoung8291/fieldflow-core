@@ -318,6 +318,44 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
           .single();
 
         if (error) throw error;
+        
+        // If creating from a lead, update the lead and transfer related documents
+        if (leadId && newCustomer) {
+          // Update lead with conversion details
+          await supabase
+            .from("leads")
+            .update({
+              converted_to_customer_id: newCustomer.id,
+              converted_at: new Date().toISOString(),
+              converted_by: user.id,
+            })
+            .eq("id", leadId);
+          
+          // Transfer all contacts from lead to customer
+          await supabase
+            .from("contacts")
+            .update({
+              customer_id: newCustomer.id,
+              lead_id: null,
+              contact_type: "customer",
+              status: "active",
+            })
+            .eq("lead_id", leadId);
+          
+          // Transfer all quotes from lead to customer
+          await supabase
+            .from("quotes")
+            .update({
+              customer_id: newCustomer.id,
+              lead_id: null,
+            })
+            .eq("lead_id", leadId);
+          
+          queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+          queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          queryClient.invalidateQueries({ queryKey: ["quotes"] });
+        }
+        
         toast.success("Customer created successfully");
         
         // Invalidate queries to refresh the list
