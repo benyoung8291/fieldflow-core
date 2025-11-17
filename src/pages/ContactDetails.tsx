@@ -281,115 +281,127 @@ export default function ContactDetails() {
       value: "details",
       label: "Details",
       content: (
-        <div className="space-y-4 p-3">
-          <div className="bg-card border rounded-lg p-3">
-            <h3 className="font-semibold mb-3 text-sm">Contact Information</h3>
-            <div className="space-y-2.5">
-              {contact.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
-                    {contact.email}
-                  </a>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3">
+          <div className="space-y-4">
+            <div className="bg-card border rounded-lg p-3">
+              <h3 className="font-semibold mb-3 text-sm">Contact Information</h3>
+              <div className="space-y-2.5">
+                {contact.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                      {contact.email}
+                    </a>
+                  </div>
+                )}
+                {contact.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${contact.phone}`} className="hover:underline">
+                      {contact.phone}
+                    </a>
+                  </div>
+                )}
+                {contact.mobile && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${contact.mobile}`} className="hover:underline">
+                      {contact.mobile} <span className="text-muted-foreground">(Mobile)</span>
+                    </a>
+                  </div>
+                )}
+                {contact.website && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a href={contact.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {contact.website}
+                    </a>
+                  </div>
+                )}
+                {contact.linkedin_url && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Linkedin className="h-4 w-4 text-muted-foreground" />
+                    <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      LinkedIn Profile
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {(contact.address || contact.city || contact.state || contact.postcode) && (
+              <div className="bg-card border rounded-lg p-3">
+                <h3 className="font-semibold mb-3 text-sm">Address</h3>
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    {contact.address && <div>{contact.address}</div>}
+                    {(contact.city || contact.state || contact.postcode) && (
+                      <div>
+                        {[contact.city, contact.state, contact.postcode].filter(Boolean).join(", ")}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-              {contact.phone && (
+              </div>
+            )}
+
+            {contact.assigned_user && (
+              <div className="bg-card border rounded-lg p-3">
+                <h3 className="font-semibold mb-3 text-sm">Assignment</h3>
                 <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${contact.phone}`} className="hover:underline">
-                    {contact.phone}
-                  </a>
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{contact.assigned_user.full_name}</span>
                 </div>
-              )}
-              {contact.mobile && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${contact.mobile}`} className="hover:underline">
-                    {contact.mobile} <span className="text-muted-foreground">(Mobile)</span>
-                  </a>
-                </div>
-              )}
-              {contact.website && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <a href={contact.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    {contact.website}
-                  </a>
-                </div>
-              )}
-              {contact.linkedin_url && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Linkedin className="h-4 w-4 text-muted-foreground" />
-                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    LinkedIn Profile
-                  </a>
-                </div>
-              )}
+              </div>
+            )}
+
+            {contact.notes && (
+              <div className="bg-card border rounded-lg p-3">
+                <h3 className="font-semibold mb-3 text-sm">Notes</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{contact.notes}</p>
+              </div>
+            )}
+
+            <div className="bg-card border rounded-lg p-3">
+              <h3 className="font-semibold mb-3 text-sm">Additional Information</h3>
+              <div className="space-y-2 text-sm">
+                {contact.source && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Source:</span>
+                    <span>{contact.source}</span>
+                  </div>
+                )}
+                {contact.last_contacted_at && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Last Contacted:</span>
+                    <span>{new Date(contact.last_contacted_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {contact.tags && contact.tags.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground">Tags:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {contact.tags.map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {(contact.address || contact.city || contact.state || contact.postcode) && (
+          <div className="space-y-4">
             <div className="bg-card border rounded-lg p-3">
-              <h3 className="font-semibold mb-3 text-sm">Address</h3>
-              <div className="flex items-start gap-2 text-sm">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  {contact.address && <div>{contact.address}</div>}
-                  {(contact.city || contact.state || contact.postcode) && (
-                    <div>
-                      {[contact.city, contact.state, contact.postcode].filter(Boolean).join(", ")}
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Activity Timeline</h3>
               </div>
-            </div>
-          )}
-
-          {contact.assigned_user && (
-            <div className="bg-card border rounded-lg p-3">
-              <h3 className="font-semibold mb-3 text-sm">Assignment</h3>
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.assigned_user.full_name}</span>
-              </div>
-            </div>
-          )}
-
-          {contact.notes && (
-            <div className="bg-card border rounded-lg p-3">
-              <h3 className="font-semibold mb-3 text-sm">Notes</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{contact.notes}</p>
-            </div>
-          )}
-
-          <div className="bg-card border rounded-lg p-3">
-            <h3 className="font-semibold mb-3 text-sm">Additional Information</h3>
-            <div className="space-y-2 text-sm">
-              {contact.source && (
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Source:</span>
-                  <span>{contact.source}</span>
-                </div>
-              )}
-              {contact.last_contacted_at && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Last Contacted:</span>
-                  <span>{new Date(contact.last_contacted_at).toLocaleDateString()}</span>
-                </div>
-              )}
-              {contact.tags && contact.tags.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground">Tags:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {contact.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <ContactActivityTimeline contactId={id!} />
             </div>
           </div>
         </div>
@@ -451,12 +463,6 @@ export default function ContactDetails() {
           )}
         </div>
       ),
-    },
-    {
-      value: "activity",
-      label: "Activity",
-      icon: <Activity className="h-4 w-4" />,
-      content: <ContactActivityTimeline contactId={id!} />,
     },
   ];
 
