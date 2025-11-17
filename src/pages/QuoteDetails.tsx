@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,10 @@ import {
   Save,
   Info,
   Folder,
+  Upload,
+  Eye,
+  Tag,
+  AlertCircle,
 } from "lucide-react";
 import InlineQuoteLineItems from "@/components/quotes/InlineQuoteLineItems";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
@@ -82,6 +87,7 @@ export default function QuoteDetails() {
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   
   // Real-time collaboration setup
   const { 
@@ -161,7 +167,7 @@ export default function QuoteDetails() {
     },
   });
 
-  const { data: attachments } = useQuery({
+  const { data: attachments, refetch: refetchAttachments } = useQuery({
     queryKey: ["quote-attachments", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -174,6 +180,79 @@ export default function QuoteDetails() {
       return data;
     },
   });
+
+  // Fetch lead information if quote is linked to a lead
+  const { data: leadInfo } = useQuery({
+    queryKey: ["quote-lead", quote?.lead_id],
+    queryFn: async () => {
+      if (!quote?.lead_id) return null;
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", quote.lead_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!quote?.lead_id,
+  });
+
+  // Fetch tasks and count overdue
+  const { data: tasks } = useQuery({
+    queryKey: ["quote-tasks", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("linked_module", "quote")
+        .eq("linked_record_id", id)
+        .neq("status", "completed");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch helpdesk tickets count
+  const { data: helpdeskTickets } = useQuery({
+    queryKey: ["quote-helpdesk-count", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("helpdesk_linked_documents")
+        .select("id")
+        .eq("document_type", "quote")
+        .eq("document_id", id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch linked documents count
+  const { data: linkedDocs } = useQuery({
+    queryKey: ["quote-linked-docs-count", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("id")
+        .eq("table_name", "quotes")
+        .eq("record_id", id)
+        .ilike("note", "%linked%");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const overdueTasksCount = tasks?.filter((task) => {
+    if (task.status === "completed") return false;
+    const dueDate = task.due_date ? new Date(task.due_date) : null;
+    if (!dueDate) return false;
+    const today = new Date();
+    const threeDaysFromNow = new Date(today);
+    threeDaysFromNow.setDate(today.getDate() + 3);
+    return dueDate <= threeDaysFromNow;
+  }).length || 0;
 
   // Fetch default margin percentage
   const { data: defaultMarginData } = useQuery({
@@ -288,6 +367,89 @@ export default function QuoteDetails() {
     } catch (error: any) {
       toast({
         title: "Error downloading file",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !id) return;
+
+    try {
+      setUploadingFile(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${profile.tenant_id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('quote-attachments')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('quote_attachments')
+        .insert({
+          quote_id: id,
+          tenant_id: profile.tenant_id,
+          file_name: file.name,
+          file_url: filePath,
+          file_size: file.size,
+          file_type: file.type,
+          uploaded_by: user.id,
+        });
+
+      if (dbError) throw dbError;
+
+      toast({ title: "File uploaded successfully" });
+      refetchAttachments();
+      
+      // Reset input
+      event.target.value = '';
+    } catch (error: any) {
+      toast({
+        title: "Error uploading file",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string, fileUrl: string) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('quote-attachments')
+        .remove([fileUrl]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('quote_attachments')
+        .delete()
+        .eq('id', attachmentId);
+
+      if (dbError) throw dbError;
+
+      toast({ title: "Attachment deleted successfully" });
+      refetchAttachments();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting attachment",
         description: error.message,
         variant: "destructive",
       });
@@ -639,21 +801,24 @@ export default function QuoteDetails() {
     });
   }
 
-  // File menu actions (kept minimal for other operations)
-  const fileMenuActions: FileMenuAction[] = [
-    ...(!isConverted ? [{
+  // Move all file menu actions to header buttons
+  if (!isConverted) {
+    actionButtons.push({
       label: "Edit in Dialog",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
-    }] : []),
-    ...(isDraft && !isConverted ? [{
+      variant: "outline",
+    });
+  }
+
+  if (isDraft && !isConverted) {
+    actionButtons.push({
       label: "Delete Quote",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: () => setDeleteDialogOpen(true),
-      destructive: true,
-      separator: true,
-    }] : []),
-  ];
+      variant: "destructive",
+    });
+  }
 
   // Key info section
   const keyInfoSection = quote && (
@@ -801,18 +966,21 @@ export default function QuoteDetails() {
               )}
             </div>
 
-            <div>
+            <div className="space-y-6">
               <Label className="text-sm font-medium">Description</Label>
               {canEdit ? (
-                <Textarea
-                  value={editedFields.description}
-                  onChange={(e) => setEditedFields(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter quote description"
-                  className="mt-1"
-                  rows={3}
-                />
+                <div className="border rounded-md overflow-hidden">
+                  <RichTextEditor
+                    value={editedFields.description}
+                    onChange={(value) => setEditedFields(prev => ({ ...prev, description: value }))}
+                    placeholder="Enter quote description"
+                  />
+                </div>
               ) : quote.description ? (
-                <p className="text-sm text-muted-foreground mt-1">{quote.description}</p>
+                <div 
+                  className="text-sm text-muted-foreground mt-1 prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: quote.description }}
+                />
               ) : null}
             </div>
 
@@ -920,39 +1088,98 @@ export default function QuoteDetails() {
       label: "Customer",
       icon: <User className="h-4 w-4" />,
       content: quote && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">Name</Label>
-              <p className="text-sm text-muted-foreground">{quote.customer?.name}</p>
-            </div>
-            {quote.customer?.email && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div>
-                <Label className="text-sm font-medium">Email</Label>
-                <p className="text-sm text-muted-foreground">{quote.customer.email}</p>
+                <Label className="text-sm font-medium">Name</Label>
+                <p className="text-sm text-muted-foreground">{quote.customer?.name}</p>
               </div>
-            )}
-            {quote.customer?.phone && (
-              <div>
-                <Label className="text-sm font-medium">Phone</Label>
-                <p className="text-sm text-muted-foreground">{quote.customer.phone}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {quote.customer?.email && (
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <p className="text-sm text-muted-foreground">{quote.customer.email}</p>
+                </div>
+              )}
+              {quote.customer?.phone && (
+                <div>
+                  <Label className="text-sm font-medium">Phone</Label>
+                  <p className="text-sm text-muted-foreground">{quote.customer.phone}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {leadInfo && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Lead Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium">Company Name</Label>
+                  <p className="text-sm text-muted-foreground">{leadInfo.company_name || "N/A"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Contact Name</Label>
+                  <p className="text-sm text-muted-foreground">{leadInfo.name || "N/A"}</p>
+                </div>
+                {leadInfo.email && (
+                  <div>
+                    <Label className="text-sm font-medium">Email</Label>
+                    <p className="text-sm text-muted-foreground">{leadInfo.email}</p>
+                  </div>
+                )}
+                {leadInfo.phone && (
+                  <div>
+                    <Label className="text-sm font-medium">Phone</Label>
+                    <p className="text-sm text-muted-foreground">{leadInfo.phone}</p>
+                  </div>
+                )}
+                {leadInfo.source && (
+                  <div>
+                    <Label className="text-sm font-medium">Source</Label>
+                    <p className="text-sm text-muted-foreground">{leadInfo.source}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       ),
     },
     {
       value: "files",
       label: "Files",
       icon: <Folder className="h-4 w-4" />,
+      badge: attachments?.length || 0,
       content: quote && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle>Attachments</CardTitle>
+            {canEdit && (
+              <div>
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={uploadingFile}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  disabled={uploadingFile}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploadingFile ? "Uploading..." : "Upload File"}
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {attachments && attachments.length > 0 ? (
@@ -960,29 +1187,54 @@ export default function QuoteDetails() {
                 {attachments.map((attachment: any) => (
                   <div
                     key={attachment.id}
-                    className="flex items-center justify-between p-2 border rounded hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}</span>
+                          {attachment.created_at && (
+                            <>
+                              <span>•</span>
+                              <span>{format(new Date(attachment.created_at), "MMM d, yyyy")}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDownloadAttachment(attachment.file_url, attachment.file_name)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownloadAttachment(attachment.file_url, attachment.file_name)}
+                        title="Download"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteAttachment(attachment.id, attachment.file_url)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No attachments</p>
+              <div className="text-center py-8">
+                <Folder className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-sm text-muted-foreground">No attachments yet</p>
+                {canEdit && (
+                  <p className="text-xs text-muted-foreground mt-1">Click "Upload File" to add attachments</p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -1034,7 +1286,8 @@ export default function QuoteDetails() {
     {
       value: "tasks",
       label: "Tasks",
-      icon: <ListChecks className="h-4 w-4" />,
+      icon: overdueTasksCount > 0 ? <AlertCircle className="h-4 w-4 text-destructive" /> : <ListChecks className="h-4 w-4" />,
+      badge: overdueTasksCount > 0 ? overdueTasksCount : undefined,
       content: <LinkedTasksList linkedModule="quote" linkedRecordId={id!} />,
     },
     {
@@ -1047,12 +1300,14 @@ export default function QuoteDetails() {
       value: "helpdesk",
       label: "Help Desk",
       icon: <Mail className="h-4 w-4" />,
+      badge: helpdeskTickets?.length || undefined,
       content: <LinkedHelpdeskTicketsTab documentType="quote" documentId={id!} />,
     },
     {
       value: "linked-documents",
       label: "Linked Documents",
       icon: <FileText className="h-4 w-4" />,
+      badge: linkedDocs?.length || undefined,
       content: <LinkedDocumentsTimeline documentType="quote" documentId={id!} />,
     },
     {
@@ -1071,7 +1326,6 @@ export default function QuoteDetails() {
         backPath="/quotes"
         statusBadges={statusBadges}
         primaryActions={actionButtons}
-        fileMenuActions={fileMenuActions}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
         defaultTab="line-items"
