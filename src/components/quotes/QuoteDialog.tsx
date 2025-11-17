@@ -196,17 +196,33 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       if (quoteId) {
         fetchQuote();
       } else {
-        resetForm();
         // Set default valid_until to 30 days from now
         const defaultDate = new Date();
         defaultDate.setDate(defaultDate.getDate() + 30);
-        setFormData(prev => ({
-          ...prev,
-          valid_until: defaultDate.toISOString().split('T')[0],
-          ...(leadId && { lead_id: leadId })
-        }));
+        
+        // If leadId is provided, initialize form with lead selected
         if (leadId) {
           setIsForLead(true);
+          setFormData({
+            customer_id: "",
+            lead_id: leadId,
+            title: "",
+            description: "",
+            valid_until: defaultDate.toISOString().split('T')[0],
+            tax_rate: "10",
+            notes: "",
+            terms_conditions: "",
+            internal_notes: "",
+            pipeline_id: "",
+            stage_id: "",
+          });
+        } else {
+          // Reset form for new quote without lead
+          resetForm();
+          setFormData(prev => ({
+            ...prev,
+            valid_until: defaultDate.toISOString().split('T')[0],
+          }));
         }
       }
     }
