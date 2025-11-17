@@ -200,38 +200,33 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         const defaultDate = new Date();
         defaultDate.setDate(defaultDate.getDate() + 30);
         
-        // Reset form for new quote
-        resetForm();
-        setFormData(prev => ({
-          ...prev,
-          valid_until: defaultDate.toISOString().split('T')[0],
-        }));
+        // If leadId is provided, initialize form with lead selected
+        if (leadId) {
+          setIsForLead(true);
+          setFormData({
+            customer_id: "",
+            lead_id: leadId,
+            title: "",
+            description: "",
+            valid_until: defaultDate.toISOString().split('T')[0],
+            tax_rate: "10",
+            notes: "",
+            terms_conditions: "",
+            internal_notes: "",
+            pipeline_id: "",
+            stage_id: "",
+          });
+        } else {
+          // Reset form for new quote without lead
+          resetForm();
+          setFormData(prev => ({
+            ...prev,
+            valid_until: defaultDate.toISOString().split('T')[0],
+          }));
+        }
       }
     }
-  }, [open, quoteId]);
-
-  // Separate effect to handle leadId initialization after leads are loaded
-  useEffect(() => {
-    if (open && leadId && !quoteId && leads.length > 0) {
-      const defaultDate = new Date();
-      defaultDate.setDate(defaultDate.getDate() + 30);
-      
-      setIsForLead(true);
-      setFormData({
-        customer_id: "",
-        lead_id: leadId,
-        title: "",
-        description: "",
-        valid_until: defaultDate.toISOString().split('T')[0],
-        tax_rate: "10",
-        notes: "",
-        terms_conditions: "",
-        internal_notes: "",
-        pipeline_id: "",
-        stage_id: "",
-      });
-    }
-  }, [open, leadId, quoteId, leads]);
+  }, [open, quoteId, leadId]);
 
   const fetchTenantId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
