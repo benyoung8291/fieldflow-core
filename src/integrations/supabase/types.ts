@@ -4521,6 +4521,7 @@ export type Database = {
       }
       service_contracts: {
         Row: {
+          archived_at: string | null
           auto_generate: boolean | null
           billing_frequency: string | null
           contract_number: string
@@ -4540,6 +4541,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           auto_generate?: boolean | null
           billing_frequency?: string | null
           contract_number: string
@@ -4559,6 +4561,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           auto_generate?: boolean | null
           billing_frequency?: string | null
           contract_number?: string
