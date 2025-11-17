@@ -194,56 +194,60 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
     },
   });
 
+  // Fetch data when dialog opens
   useEffect(() => {
-    console.log('[QuoteDialog] useEffect triggered - open:', open, 'quoteId:', quoteId, 'leadId:', leadId);
+    console.log('[QuoteDialog] Dialog opened - open:', open, 'quoteId:', quoteId, 'leadId:', leadId);
     if (open) {
-      const initializeDialog = async () => {
-        fetchTenantId();
-        const fetchedLeads = await fetchCustomersAndLeads();
-        
-        if (quoteId) {
-          fetchQuote();
-        } else {
-          // Set default valid_until to 30 days from now
-          const defaultDate = new Date();
-          defaultDate.setDate(defaultDate.getDate() + 30);
-          
-          // If leadId is provided, initialize form with lead selected
-          if (leadId) {
-            console.log('[QuoteDialog] Setting form for lead:', leadId, 'Leads available:', fetchedLeads?.length);
-            // Verify the lead exists in the fetched leads
-            const leadExists = fetchedLeads?.some(l => l.id === leadId);
-            console.log('[QuoteDialog] Lead exists in fetched leads:', leadExists);
-            
-            setIsForLead(true);
-            setFormData({
-              customer_id: "",
-              lead_id: leadId,
-              title: "",
-              description: "",
-              valid_until: defaultDate.toISOString().split('T')[0],
-              tax_rate: "10",
-              notes: "",
-              terms_conditions: "",
-              internal_notes: "",
-              pipeline_id: "",
-              stage_id: "",
-            });
-          } else {
-            console.log('[QuoteDialog] Resetting form for new quote');
-            // Reset form for new quote without lead
-            resetForm();
-            setFormData(prev => ({
-              ...prev,
-              valid_until: defaultDate.toISOString().split('T')[0],
-            }));
-          }
-        }
-      };
+      fetchTenantId();
+      fetchCustomersAndLeads();
       
-      initializeDialog();
+      if (quoteId) {
+        fetchQuote();
+      }
     }
-  }, [open, quoteId, leadId]);
+  }, [open, quoteId]);
+
+  // Initialize form for lead after leads are loaded
+  useEffect(() => {
+    if (open && leadId && !quoteId && leads.length > 0) {
+      console.log('[QuoteDialog] Initializing form for lead:', leadId, 'Leads loaded:', leads.length);
+      const leadExists = leads.some(l => l.id === leadId);
+      console.log('[QuoteDialog] Lead found in list:', leadExists, leads.map(l => ({ id: l.id, name: l.name })));
+      
+      if (leadExists) {
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 30);
+        
+        setIsForLead(true);
+        setFormData({
+          customer_id: "",
+          lead_id: leadId,
+          title: "",
+          description: "",
+          valid_until: defaultDate.toISOString().split('T')[0],
+          tax_rate: "10",
+          notes: "",
+          terms_conditions: "",
+          internal_notes: "",
+          pipeline_id: "",
+          stage_id: "",
+        });
+        console.log('[QuoteDialog] Form initialized with lead_id:', leadId);
+      } else {
+        console.error('[QuoteDialog] Lead not found in leads array!');
+      }
+    } else if (open && !leadId && !quoteId && leads.length > 0) {
+      // New quote without lead
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 30);
+      
+      resetForm();
+      setFormData(prev => ({
+        ...prev,
+        valid_until: defaultDate.toISOString().split('T')[0],
+      }));
+    }
+  }, [open, leadId, quoteId, leads]);
 
   const fetchTenantId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
