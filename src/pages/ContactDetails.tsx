@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit, Archive, Trash2, Activity } from "lucide-react";
+import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit, Archive, Trash2, Activity, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
 import { useState } from "react";
@@ -20,7 +20,10 @@ export default function ContactDetails() {
   const queryClient = useQueryClient();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [conversionNotes, setConversionNotes] = useState("");
+  const [leadFormData, setLeadFormData] = useState({
+    company_name: "",
+    notes: "",
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
@@ -60,12 +63,12 @@ export default function ContactDetails() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Create lead
+      // Create lead with company details
       const { data: lead, error: leadError } = await supabase
         .from("leads")
         .insert({
-          name: contact.company_name || `${contact.first_name} ${contact.last_name}`,
-          company_name: contact.company_name,
+          name: leadFormData.company_name || contact.company_name || `${contact.first_name} ${contact.last_name}`,
+          company_name: leadFormData.company_name || contact.company_name,
           email: contact.email,
           phone: contact.phone,
           mobile: contact.mobile,
@@ -73,7 +76,7 @@ export default function ContactDetails() {
           city: contact.city,
           state: contact.state,
           postcode: contact.postcode,
-          notes: conversionNotes || contact.notes,
+          notes: leadFormData.notes || contact.notes,
           source: contact.source || "Contact Conversion",
           assigned_to: contact.assigned_to,
           status: "new",
@@ -85,14 +88,12 @@ export default function ContactDetails() {
 
       if (leadError) throw leadError;
 
-      // Update contact to reference the lead and change type
+      // Update contact to link to lead and change status only
       const { error: contactError } = await supabase
         .from("contacts")
         .update({
-          contact_type: "lead",
           lead_id: lead.id,
-          status: "converted",
-          notes: conversionNotes ? `${contact.notes || ''}\n\nConverted to Lead: ${conversionNotes}`.trim() : contact.notes,
+          status: "lead",
         })
         .eq("id", id);
 
@@ -105,7 +106,7 @@ export default function ContactDetails() {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       toast.success("Contact converted to lead successfully");
       setConvertDialogOpen(false);
-      setConversionNotes("");
+      setLeadFormData({ company_name: "", notes: "" });
       // Navigate to the new lead
       if (lead) {
         navigate(`/leads/${lead.id}`);
@@ -506,23 +507,39 @@ export default function ContactDetails() {
         contact={contact}
       />
 
-      <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+      <Dialog open={convertDialogOpen} onOpenChange={(open) => {
+        setConvertDialogOpen(open);
+        if (!open) {
+          setLeadFormData({ company_name: "", notes: "" });
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Convert Prospect to Lead</DialogTitle>
+            <DialogTitle>Convert Contact to Lead</DialogTitle>
             <DialogDescription>
-              This will create a new lead record and update this contact. You can add additional notes about this conversion.
+              Create a new lead record and link {contact?.first_name} {contact?.last_name} to it. The contact will remain intact with status changed to "Lead".
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="conversion-notes">Conversion Notes (Optional)</Label>
+              <Label htmlFor="company-name">
+                Company Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="company-name"
+                value={leadFormData.company_name}
+                onChange={(e) => setLeadFormData({ ...leadFormData, company_name: e.target.value })}
+                placeholder="Enter company name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lead-notes">Additional Notes</Label>
               <Textarea
-                id="conversion-notes"
-                placeholder="Add any additional information about this lead conversion..."
-                value={conversionNotes}
-                onChange={(e) => setConversionNotes(e.target.value)}
-                rows={4}
+                id="lead-notes"
+                value={leadFormData.notes}
+                onChange={(e) => setLeadFormData({ ...leadFormData, notes: e.target.value })}
+                placeholder="Add any notes about this lead..."
+                className="min-h-[100px]"
               />
             </div>
           </div>
@@ -530,7 +547,18 @@ export default function ContactDetails() {
             <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => convertToLeadMutation.mutate()}>
+            <Button
+              onClick={() => {
+                if (!leadFormData.company_name.trim()) {
+                  toast.error("Company name is required");
+                  return;
+                }
+                convertToLeadMutation.mutate();
+                setConvertDialogOpen(false);
+              }}
+              disabled={convertToLeadMutation.isPending}
+            >
+              {convertToLeadMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Convert to Lead
             </Button>
           </DialogFooter>
