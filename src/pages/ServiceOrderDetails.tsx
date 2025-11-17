@@ -697,6 +697,11 @@ export default function ServiceOrderDetails() {
                     </div>
                   </div>
 
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Key Number</div>
+                    <div className="text-sm font-medium">{(order as any).key_number || "N/A"}</div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">

@@ -39,8 +39,7 @@ export default function ServiceContractDetails() {
         .from("service_contracts" as any)
         .select(`
           *,
-          customers (name, email, phone, address, id),
-          quotes (id, quote_number, title),
+          customers!inner (name, email, phone, address, id),
           service_contract_line_items (
             *,
             customer_locations (
@@ -57,6 +56,21 @@ export default function ServiceContractDetails() {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error("Contract not found");
+      
+      // Fetch related quote separately if it exists
+      if ((data as any).quote_id) {
+        const { data: quoteData } = await supabase
+          .from("quotes" as any)
+          .select("id, quote_number, title")
+          .eq("id", (data as any).quote_id)
+          .single();
+        
+        if (quoteData) {
+          (data as any).quotes = quoteData;
+        }
+      }
+      
       return data as any;
     },
   });
