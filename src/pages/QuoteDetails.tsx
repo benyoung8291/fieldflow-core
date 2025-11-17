@@ -159,6 +159,7 @@ export default function QuoteDetails() {
   const { data: lineItems, isLoading: lineItemsLoading } = useQuery({
     queryKey: ["quote-line-items", id],
     queryFn: async () => {
+      // Fetch all line items
       const { data, error } = await supabase
         .from("quote_line_items")
         .select("*")
@@ -166,7 +167,18 @@ export default function QuoteDetails() {
         .order("item_order");
 
       if (error) throw error;
-      return data;
+      
+      // Organize into parent-child structure
+      const parentItems = data?.filter(item => !item.parent_line_item_id) || [];
+      const subItems = data?.filter(item => item.parent_line_item_id) || [];
+      
+      // Attach sub-items to their parents
+      const structured = parentItems.map(parent => ({
+        ...parent,
+        subItems: subItems.filter(sub => sub.parent_line_item_id === parent.id)
+      }));
+      
+      return structured;
     },
   });
 
