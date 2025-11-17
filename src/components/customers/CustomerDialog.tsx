@@ -342,12 +342,11 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             })
             .eq("lead_id", leadId);
           
-          // Transfer all quotes from lead to customer
+          // Transfer all quotes from lead to customer (keep lead_id for history)
           await supabase
             .from("quotes")
             .update({
               customer_id: newCustomer.id,
-              lead_id: null,
             })
             .eq("lead_id", leadId);
           
