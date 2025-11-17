@@ -110,7 +110,7 @@ export default function ConvertQuoteDialog({
   const [serviceOrderData, setServiceOrderData] = useState({
     title: quote?.title || '',
     description: quote?.description || '',
-    scheduled_date: format(new Date(), 'yyyy-MM-dd'),
+    preferred_date: format(new Date(), 'yyyy-MM-dd'),
     billing_type: 'fixed',
     fixed_amount: quote?.total_amount || 0,
   });
@@ -392,7 +392,7 @@ export default function ConvertQuoteDialog({
           order_number: orderNumber,
           title: serviceOrderData.title,
           description: serviceOrderData.description,
-          scheduled_date: serviceOrderData.scheduled_date,
+          preferred_date: serviceOrderData.preferred_date,
           billing_type: serviceOrderData.billing_type,
           fixed_amount: serviceOrderData.fixed_amount,
           status: 'draft',
@@ -859,12 +859,12 @@ export default function ConvertQuoteDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="so-date">Scheduled Date *</Label>
+                  <Label htmlFor="so-date">Preferred Date *</Label>
                   <Input
                     id="so-date"
                     type="date"
-                    value={serviceOrderData.scheduled_date}
-                    onChange={(e) => setServiceOrderData({ ...serviceOrderData, scheduled_date: e.target.value })}
+                    value={serviceOrderData.preferred_date}
+                    onChange={(e) => setServiceOrderData({ ...serviceOrderData, preferred_date: e.target.value })}
                   />
                 </div>
 
