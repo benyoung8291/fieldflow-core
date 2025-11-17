@@ -197,42 +197,51 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
   useEffect(() => {
     console.log('[QuoteDialog] useEffect triggered - open:', open, 'quoteId:', quoteId, 'leadId:', leadId);
     if (open) {
-      fetchTenantId();
-      fetchCustomersAndLeads();
-      if (quoteId) {
-        fetchQuote();
-      } else {
-        // Set default valid_until to 30 days from now
-        const defaultDate = new Date();
-        defaultDate.setDate(defaultDate.getDate() + 30);
+      const initializeDialog = async () => {
+        fetchTenantId();
+        const fetchedLeads = await fetchCustomersAndLeads();
         
-        // If leadId is provided, initialize form with lead selected
-        if (leadId) {
-          console.log('[QuoteDialog] Setting form for lead:', leadId);
-          setIsForLead(true);
-          setFormData({
-            customer_id: "",
-            lead_id: leadId,
-            title: "",
-            description: "",
-            valid_until: defaultDate.toISOString().split('T')[0],
-            tax_rate: "10",
-            notes: "",
-            terms_conditions: "",
-            internal_notes: "",
-            pipeline_id: "",
-            stage_id: "",
-          });
+        if (quoteId) {
+          fetchQuote();
         } else {
-          console.log('[QuoteDialog] Resetting form for new quote');
-          // Reset form for new quote without lead
-          resetForm();
-          setFormData(prev => ({
-            ...prev,
-            valid_until: defaultDate.toISOString().split('T')[0],
-          }));
+          // Set default valid_until to 30 days from now
+          const defaultDate = new Date();
+          defaultDate.setDate(defaultDate.getDate() + 30);
+          
+          // If leadId is provided, initialize form with lead selected
+          if (leadId) {
+            console.log('[QuoteDialog] Setting form for lead:', leadId, 'Leads available:', fetchedLeads?.length);
+            // Verify the lead exists in the fetched leads
+            const leadExists = fetchedLeads?.some(l => l.id === leadId);
+            console.log('[QuoteDialog] Lead exists in fetched leads:', leadExists);
+            
+            setIsForLead(true);
+            setFormData({
+              customer_id: "",
+              lead_id: leadId,
+              title: "",
+              description: "",
+              valid_until: defaultDate.toISOString().split('T')[0],
+              tax_rate: "10",
+              notes: "",
+              terms_conditions: "",
+              internal_notes: "",
+              pipeline_id: "",
+              stage_id: "",
+            });
+          } else {
+            console.log('[QuoteDialog] Resetting form for new quote');
+            // Reset form for new quote without lead
+            resetForm();
+            setFormData(prev => ({
+              ...prev,
+              valid_until: defaultDate.toISOString().split('T')[0],
+            }));
+          }
         }
-      }
+      };
+      
+      initializeDialog();
     }
   }, [open, quoteId, leadId]);
 
@@ -286,9 +295,12 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
     if (leadsError) {
       console.error('[QuoteDialog] Error fetching leads:', leadsError);
       toast({ title: "Error fetching leads", variant: "destructive" });
+      setLeads([]);
+      return [];
     } else {
       console.log('[QuoteDialog] Leads fetched:', leadsData?.length, leadsData);
       setLeads(leadsData || []);
+      return leadsData || [];
     }
   };
 
