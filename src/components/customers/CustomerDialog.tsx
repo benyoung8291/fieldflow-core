@@ -321,8 +321,10 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         
         // If creating from a lead, update the lead and transfer related documents
         if (leadId && newCustomer) {
+          console.log("Converting lead to customer:", { leadId, customerId: newCustomer.id });
+          
           // Update lead with conversion details
-          await supabase
+          const { error: leadUpdateError } = await supabase
             .from("leads")
             .update({
               converted_to_customer_id: newCustomer.id,
@@ -331,8 +333,13 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             })
             .eq("id", leadId);
           
+          if (leadUpdateError) {
+            console.error("Failed to update lead:", leadUpdateError);
+            throw new Error(`Failed to link lead to customer: ${leadUpdateError.message}`);
+          }
+          
           // Transfer all contacts from lead to customer
-          await supabase
+          const { error: contactsError } = await supabase
             .from("contacts")
             .update({
               customer_id: newCustomer.id,
@@ -342,15 +349,27 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             })
             .eq("lead_id", leadId);
           
+          if (contactsError) {
+            console.error("Failed to transfer contacts:", contactsError);
+            // Don't throw here, just log - contacts transfer is not critical
+          }
+          
           // Transfer all quotes from lead to customer (keep lead_id for history)
-          await supabase
+          const { error: quotesError } = await supabase
             .from("quotes")
             .update({
               customer_id: newCustomer.id,
             })
             .eq("lead_id", leadId);
           
+          if (quotesError) {
+            console.error("Failed to transfer quotes:", quotesError);
+            throw new Error(`Failed to link quotes to customer: ${quotesError.message}`);
+          }
+          
+          console.log("Lead conversion completed successfully");
           queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
+          queryClient.invalidateQueries({ queryKey: ["leads"] });
           queryClient.invalidateQueries({ queryKey: ["contacts"] });
           queryClient.invalidateQueries({ queryKey: ["quotes"] });
         }
