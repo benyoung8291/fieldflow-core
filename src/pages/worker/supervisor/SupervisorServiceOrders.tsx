@@ -152,11 +152,11 @@ export default function SupervisorServiceOrders() {
                   </div>
 
                   <div className="space-y-2 text-sm">
-                    {so.scheduled_date && (
+                    {so.preferred_date && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         <span className="text-xs">
-                          {format(parseISO(so.scheduled_date), 'MMM d, yyyy')}
+                          {format(parseISO(so.preferred_date), 'MMM d, yyyy')}
                         </span>
                       </div>
                     )}

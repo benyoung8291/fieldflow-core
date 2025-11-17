@@ -21,7 +21,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
   const [formData, setFormData] = useState({
     title: parsedData?.title || ticket?.subject || "",
     description: parsedData?.description || ticket?.description || "",
-    scheduled_date: parsedData?.scheduled_date || "",
+    preferred_date: parsedData?.preferred_date || "",
     priority: parsedData?.priority || "medium",
   });
 
@@ -35,7 +35,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         .insert({
           title: formData.title,
           description: formData.description,
-          scheduled_date: formData.scheduled_date || null,
+          preferred_date: formData.preferred_date || null,
           priority: formData.priority,
           status: 'draft',
         })
@@ -90,12 +90,12 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="scheduled_date">Scheduled Date</Label>
+            <Label htmlFor="preferred_date">Preferred Date</Label>
             <Input
-              id="scheduled_date"
+              id="preferred_date"
               type="date"
-              value={formData.scheduled_date}
-              onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+              value={formData.preferred_date}
+              onChange={(e) => setFormData({ ...formData, preferred_date: e.target.value })}
             />
           </div>
 
