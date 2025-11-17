@@ -135,6 +135,25 @@ export default function ContactDetails() {
     },
   });
 
+  const unarchiveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("contacts")
+        .update({ status: "active" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact", id] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Contact unarchived successfully");
+    },
+    onError: (error) => {
+      console.error("Error unarchiving contact:", error);
+      toast.error("Failed to unarchive contact");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("contacts").delete().eq("id", id);
@@ -199,6 +218,7 @@ export default function ContactDetails() {
   }
 
   const showConvertToLead = contact.contact_type === "prospect" && contact.status !== "converted";
+  const isArchived = contact.status === "inactive";
 
   const primaryActions = [
     {
@@ -213,12 +233,17 @@ export default function ContactDetails() {
       onClick: () => setConvertDialogOpen(true),
       variant: "default" as const,
     }] : []),
-    {
+    ...(isArchived ? [{
+      label: "Unarchive",
+      icon: <Archive className="h-4 w-4" />,
+      onClick: () => unarchiveMutation.mutate(),
+      variant: "outline" as const,
+    }] : [{
       label: "Archive",
       icon: <Archive className="h-4 w-4" />,
       onClick: () => archiveMutation.mutate(),
       variant: "outline" as const,
-    },
+    }]),
     {
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
