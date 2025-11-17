@@ -157,6 +157,12 @@ export default function ConvertQuoteDialog({
       return;
     }
 
+    // If quote already has a customer, use it directly
+    if (hasCustomer) {
+      handleConvert();
+      return;
+    }
+
     // Check if lead has already been converted to a customer
     if (hasLead) {
       // First check if lead has converted_to_customer_id
@@ -788,7 +794,7 @@ export default function ConvertQuoteDialog({
             </Alert>
           )}
 
-          {hasLead && !createdCustomerId && (
+          {hasLead && !hasCustomer && !createdCustomerId && (
             <Alert>
               <UserPlus className="h-4 w-4" />
               <AlertDescription>
