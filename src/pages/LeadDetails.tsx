@@ -6,8 +6,9 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Mail, Phone, Building2, MapPin, UserPlus, TrendingUp, MoreVertical } from "lucide-react";
+import { ArrowLeft, Edit, Mail, Phone, Building2, MapPin, UserPlus, TrendingUp, MoreVertical, FileText } from "lucide-react";
 import LeadDialog from "@/components/leads/LeadDialog";
+import QuoteDialog from "@/components/quotes/QuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,7 @@ export default function LeadDetails() {
   const { isMobile } = useViewMode();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", id],
@@ -239,10 +241,16 @@ export default function LeadDetails() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {!lead.converted_to_customer_id && (
-                    <DropdownMenuItem onClick={() => setConvertDialogOpen(true)}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Convert to Customer
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onClick={() => setQuoteDialogOpen(true)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Create Quote
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConvertDialogOpen(true)}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Convert to Customer
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuItem onClick={() => setDialogOpen(true)}>
                     <Edit className="mr-2 h-4 w-4" />
@@ -434,6 +442,12 @@ export default function LeadDetails() {
 
         <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} leadId={id} />
 
+        <QuoteDialog 
+          open={quoteDialogOpen} 
+          onOpenChange={setQuoteDialogOpen} 
+          leadId={id}
+        />
+
         <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -484,10 +498,16 @@ export default function LeadDetails() {
           </div>
           <div className="flex gap-2">
             {!lead.converted_to_customer_id && (
-              <Button onClick={() => setConvertDialogOpen(true)}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Convert to Customer
-              </Button>
+              <>
+                <Button onClick={() => setQuoteDialogOpen(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Create Quote
+                </Button>
+                <Button onClick={() => setConvertDialogOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Convert to Customer
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => setDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
@@ -676,6 +696,14 @@ export default function LeadDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} leadId={id} />
+      
+      <QuoteDialog 
+        open={quoteDialogOpen} 
+        onOpenChange={setQuoteDialogOpen} 
+        leadId={id}
+      />
     </DashboardLayout>
   );
 }
