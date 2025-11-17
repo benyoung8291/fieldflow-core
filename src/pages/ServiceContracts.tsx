@@ -55,9 +55,12 @@ export default function ServiceContracts() {
       if (contract.status !== "active" || !contract.auto_generate) return;
 
       contract.service_contract_line_items?.forEach((item: any) => {
-        if (!item.is_active || !item.next_generation_date) return;
+        if (!item.is_active) return;
+        
+        const startDate = item.next_generation_date || item.first_generation_date;
+        if (!startDate) return;
 
-        let currentDate = parseISO(item.next_generation_date);
+        let currentDate = parseISO(startDate);
         
         while (currentDate <= endDate) {
           if (currentDate >= now) {
