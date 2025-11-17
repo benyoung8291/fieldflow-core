@@ -844,6 +844,7 @@ export default function QuoteDetails() {
   const isApproved = quote?.status === "approved";
   const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
   const canEdit = isDraft && !isConverted;
+  const hasLead = !!quote?.lead_id && !quote?.customer_id;
 
   const statusBadges: StatusBadge[] = [
     {
@@ -880,7 +881,7 @@ export default function QuoteDetails() {
   
   if (isApproved && !isConverted) {
     actionButtons.push({
-      label: "Convert to Service Order / Project",
+      label: hasLead ? "Convert (Lead to Customer Required)" : "Convert to Service Order / Project",
       icon: <RefreshCw className="h-4 w-4" />,
       onClick: () => setConvertDialogOpen(true),
       variant: "default",
