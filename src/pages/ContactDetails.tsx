@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight } from "lucide-react";
+import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit } from "lucide-react";
 import { toast } from "sonner";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
 import { useState } from "react";
@@ -166,20 +166,24 @@ export default function ContactDetails() {
 
   const showConvertToLead = contact.contact_type === "prospect" && contact.status !== "converted";
 
-  const fileMenuActions = [
+  const primaryActions = [
     {
-      label: "Edit Contact",
+      label: "Edit",
+      icon: <Edit className="h-4 w-4" />,
       onClick: () => setEditDialogOpen(true),
+      variant: "outline" as const,
     },
     ...(showConvertToLead ? [{
       label: "Convert to Lead",
+      icon: <ArrowRight className="h-4 w-4" />,
       onClick: () => setConvertDialogOpen(true),
+      variant: "default" as const,
     }] : []),
     {
-      label: "Delete Contact",
+      label: "Delete",
+      icon: <FileText className="h-4 w-4" />,
       onClick: () => deleteMutation.mutate(),
-      destructive: true,
-      separator: true,
+      variant: "destructive" as const,
     },
   ];
 
@@ -400,7 +404,7 @@ export default function ContactDetails() {
             variant: getStatusColor(contact.status),
           },
         ]}
-        fileMenuActions={fileMenuActions}
+        primaryActions={primaryActions}
         keyInfoSection={
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3">
             {keyInfoItems.map((item, index) => (
