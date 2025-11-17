@@ -627,6 +627,57 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          contact_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          subject: string
+          tenant_id: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_type: string
+          contact_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          subject: string
+          tenant_id: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          contact_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          subject?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_contact_activities_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           address: string | null
