@@ -11,8 +11,10 @@ import ContactManagementDialog from "@/components/contacts/ContactManagementDial
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 export default function Contacts() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
@@ -160,7 +162,7 @@ export default function Contacts() {
                   <Card
                     key={contact.id}
                     className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => handleEdit(contact)}
+                    onClick={() => navigate(`/contacts/${contact.id}`)}
                   >
                     <CardContent className="p-6 space-y-4">
                       {/* Header with name and badges */}
