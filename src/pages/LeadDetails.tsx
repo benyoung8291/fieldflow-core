@@ -10,7 +10,7 @@ import CustomerDialog from "@/components/customers/CustomerDialog";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -107,6 +107,32 @@ export default function LeadDetails() {
       return data;
     },
   });
+
+  // Real-time subscription for quotes
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel('lead-quotes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quotes',
+          filter: `lead_id=eq.${id}`
+        },
+        () => {
+          // Invalidate and refetch quotes when changes occur
+          queryClient.invalidateQueries({ queryKey: ["lead-quotes", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
 
   const handleCustomerCreated = async (customerId: string) => {
     try {
