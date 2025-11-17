@@ -1,0 +1,181 @@
+  // Status badges
+  const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    draft: "secondary",
+    sent: "default",
+    approved: "default",
+    rejected: "destructive",
+    expired: "outline",
+    converted: "default",
+  };
+
+  const isDraft = quote?.status === "draft";
+  const isSent = quote?.status === "sent";
+  const isApproved = quote?.status === "approved";
+  const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
+  const canEdit = isDraft && !isConverted;
+  const hasLead = !!quote?.lead_id && !quote?.customer_id;
+
+  const statusBadges: StatusBadge[] = [
+    {
+      label: quote?.status || "",
+      variant: statusColors[quote?.status || "draft"],
+    },
+    ...(isConverted ? [{
+      label: "Locked",
+      variant: "outline" as const,
+    }] : []),
+  ];
+
+  // Quick status change dropdown component
+  const statusChangeDropdown = !isConverted && (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">Status:</span>
+      <Select value={quote?.status} onValueChange={(value) => updateStatus(value as any)}>
+        <SelectTrigger className="w-[150px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="draft">
+            <div className="flex items-center gap-2">
+              <Edit className="h-3 w-3" />
+              <span>Draft</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="sent">
+            <div className="flex items-center gap-2">
+              <Send className="h-3 w-3" />
+              <span>Sent</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="approved">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-3 w-3" />
+              <span>Approved</span>
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  // Action buttons based on quote status
+  const actionButtons: DocumentAction[] = [];
+
+  // Primary save/approve/convert actions based on status
+  if (canEdit && hasChanges()) {
+    actionButtons.push({
+      label: isSaving ? "Saving..." : "Save Changes",
+      icon: <Save className="h-4 w-4" />,
+      onClick: handleSaveInlineEdits,
+      variant: "default",
+    });
+  }
+  
+  if (isSent && !isConverted) {
+    actionButtons.push({
+      label: "Approve Quote",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: () => updateStatus("approved"),
+      variant: "default",
+    });
+  }
+  
+  // Show conversion buttons when approved
+  if (isApproved && !isConverted) {
+    actionButtons.push({
+      label: "Convert to Service Order",
+      icon: <Briefcase className="h-4 w-4" />,
+      onClick: () => {
+        setConversionType('service_order');
+        setConvertDialogOpen(true);
+      },
+      variant: "default",
+    });
+    
+    actionButtons.push({
+      label: "Convert to Service Contract",
+      icon: <FileText className="h-4 w-4" />,
+      onClick: () => {
+        setConversionType('contract');
+        setConvertDialogOpen(true);
+      },
+      variant: "default",
+    });
+    
+    actionButtons.push({
+      label: "Convert to Project",
+      icon: <FolderKanban className="h-4 w-4" />,
+      onClick: () => {
+        setConversionType('project');
+        setConvertDialogOpen(true);
+      },
+      variant: "default",
+    });
+  }
+  
+  // Show disabled conversion buttons in draft/sent status with explanation
+  if (!isApproved && !isConverted) {
+    actionButtons.push({
+      label: isDraft ? "Convert (Approve First)" : "Convert (Send & Approve First)",
+      icon: <RefreshCw className="h-4 w-4" />,
+      onClick: () => {
+        toast({
+          title: "Quote must be approved",
+          description: isDraft 
+            ? "Please send and approve this quote before converting it."
+            : "Please approve this quote before converting it.",
+          variant: "default",
+        });
+      },
+      variant: "outline",
+    });
+  }
+
+  // Secondary action buttons (always available unless draft)
+  if (!isDraft) {
+    actionButtons.push({
+      label: "Download PDF",
+      icon: <Download className="h-4 w-4" />,
+      onClick: () => setPdfDialogOpen(true),
+      variant: "outline",
+    });
+    
+    actionButtons.push({
+      label: "Email to Customer",
+      icon: <Mail className="h-4 w-4" />,
+      onClick: () => {
+        setEmailMode(true);
+        setPdfDialogOpen(true);
+      },
+      variant: "outline",
+    });
+  }
+
+  // Change to Draft (if allowed and not converted)
+  if (!isDraft && !isConverted) {
+    actionButtons.push({
+      label: "Change to Draft",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => updateStatus("draft"),
+      variant: "outline",
+    });
+  }
+
+  // Move all file menu actions to header buttons
+  if (!isConverted) {
+    actionButtons.push({
+      label: "Edit in Dialog",
+      icon: <Edit className="h-4 w-4" />,
+      onClick: () => setDialogOpen(true),
+      variant: "outline",
+    });
+  }
+
+  if (isDraft && !isConverted) {
+    actionButtons.push({
+      label: "Archive Quote",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => setDeleteDialogOpen(true),
+      variant: "outline",
+    });
+  }
