@@ -13,22 +13,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Pause, Play, FileText, Trash2, AlertTriangle, RefreshCw, Plus, MapPin, History } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import DashboardLayout from "@/components/DashboardLayout";
+import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
 
 export default function ServiceContractDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editingLineItem, setEditingLineItem] = useState<any>(null);
+  const [addingLineItem, setAddingLineItem] = useState(false);
   const [editingContract, setEditingContract] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [viewingLineItemHistory, setViewingLineItemHistory] = useState<string | null>(null);
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],
@@ -37,8 +41,18 @@ export default function ServiceContractDetails() {
         .from("service_contracts" as any)
         .select(`
           *,
-          customers (name, email, phone, address),
-          service_contract_line_items (*)
+          customers (name, email, phone, address, id),
+          service_contract_line_items (
+            *,
+            customer_locations (
+              id,
+              name,
+              address,
+              city,
+              state,
+              postcode
+            )
+          )
         `)
         .eq("id", id)
         .single();
@@ -62,11 +76,33 @@ export default function ServiceContractDetails() {
     },
   });
 
+  const { data: customerLocations } = useQuery({
+    queryKey: ["customer-locations", contract?.customer_id],
+    enabled: !!contract?.customer_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customer_locations")
+        .select("*")
+        .eq("customer_id", contract.customer_id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const updateLineItemMutation = useMutation({
     mutationFn: async (lineItem: any) => {
       const { error } = await supabase
         .from("service_contract_line_items" as any)
         .update({
+          description: lineItem.description,
+          quantity: lineItem.quantity,
+          unit_price: lineItem.unit_price,
+          line_total: lineItem.line_total,
+          estimated_hours: lineItem.estimated_hours,
+          location_id: lineItem.location_id,
           first_generation_date: lineItem.first_generation_date,
           next_generation_date: lineItem.next_generation_date,
           recurrence_frequency: lineItem.recurrence_frequency,
@@ -86,6 +122,62 @@ export default function ServiceContractDetails() {
     },
     onError: (error: any) => {
       toast.error(`Failed to update line item: ${error.message}`);
+    },
+  });
+
+  const addLineItemMutation = useMutation({
+    mutationFn: async (lineItem: any) => {
+      const maxOrder = contract.service_contract_line_items?.reduce(
+        (max: number, item: any) => Math.max(max, item.item_order || 0),
+        0
+      ) || 0;
+
+      const { error } = await supabase
+        .from("service_contract_line_items" as any)
+        .insert({
+          contract_id: id,
+          description: lineItem.description,
+          quantity: lineItem.quantity,
+          unit_price: lineItem.unit_price,
+          line_total: lineItem.line_total,
+          estimated_hours: lineItem.estimated_hours,
+          location_id: lineItem.location_id,
+          first_generation_date: lineItem.first_generation_date,
+          recurrence_frequency: lineItem.recurrence_frequency,
+          generation_day_of_week: lineItem.generation_day_of_week,
+          generation_day_of_month: lineItem.generation_day_of_month,
+          item_order: maxOrder + 1,
+          notes: lineItem.notes,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
+      toast.success("Line item added successfully");
+      setAddingLineItem(false);
+      setEditingLineItem(null);
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to add line item: ${error.message}`);
+    },
+  });
+
+  const deleteLineItemMutation = useMutation({
+    mutationFn: async (lineItemId: string) => {
+      const { error } = await supabase
+        .from("service_contract_line_items" as any)
+        .delete()
+        .eq("id", lineItemId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
+      toast.success("Line item deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete line item: ${error.message}`);
     },
   });
 
@@ -286,21 +378,42 @@ export default function ServiceContractDetails() {
 
         <TabsContent value="line-items" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Contract Line Items</CardTitle>
-              <CardDescription>Manage line items and generation schedules</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Contract Line Items</CardTitle>
+                <CardDescription>Manage line items and generation schedules</CardDescription>
+              </div>
+              <Button onClick={() => {
+                setEditingLineItem({
+                  description: "",
+                  quantity: 1,
+                  unit_price: 0,
+                  line_total: 0,
+                  estimated_hours: 0,
+                  location_id: "",
+                  first_generation_date: "",
+                  recurrence_frequency: "monthly",
+                  is_active: true,
+                  notes: "",
+                });
+                setAddingLineItem(true);
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Line Item
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Description</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Unit Price</TableHead>
                     <TableHead>Total</TableHead>
+                    <TableHead>Est. Hours</TableHead>
                     <TableHead>Frequency</TableHead>
                     <TableHead>First Generation</TableHead>
-                    <TableHead>Next Generation</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -309,20 +422,22 @@ export default function ServiceContractDetails() {
                   {lineItems.map((item: any) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.description}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          {item.customer_locations?.name || "No location"}
+                        </div>
+                      </TableCell>
                       <TableCell>{item.quantity}</TableCell>
                       <TableCell>${parseFloat(item.unit_price).toFixed(2)}</TableCell>
                       <TableCell>${parseFloat(item.line_total).toFixed(2)}</TableCell>
+                      <TableCell>{item.estimated_hours || 0}h</TableCell>
                       <TableCell>
                         <Badge variant="outline">{item.recurrence_frequency}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.first_generation_date
                           ? format(parseISO(item.first_generation_date), "PP")
-                          : "Not set"}
-                      </TableCell>
-                      <TableCell>
-                        {item.next_generation_date
-                          ? format(parseISO(item.next_generation_date), "PP")
                           : "Not set"}
                       </TableCell>
                       <TableCell>
@@ -333,26 +448,43 @@ export default function ServiceContractDetails() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Dialog open={editingLineItem?.id === item.id} onOpenChange={(open) => {
-                          if (!open) setEditingLineItem(null);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setEditingLineItem(item)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Edit Line Item</DialogTitle>
-                              <DialogDescription>
-                                Update generation settings and schedule
-                              </DialogDescription>
-                            </DialogHeader>
-                            {editingLineItem && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setViewingLineItemHistory(item.id)}
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingLineItem({ ...item });
+                              setAddingLineItem(false);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this line item?")) {
+                                deleteLineItemMutation.mutate(item.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
                               <div className="space-y-4">
                                 <div className="space-y-2">
                                   <Label>Description</Label>
