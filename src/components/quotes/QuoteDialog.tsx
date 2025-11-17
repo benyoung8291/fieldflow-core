@@ -954,43 +954,42 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                 </div>
               )}
 
-              {!leadId && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
-                    {isForLead && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCreateLeadOpen(true)}
-                      >
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Create Lead
-                      </Button>
-                    )}
-                  </div>
-                  <Select
-                    value={isForLead ? formData.lead_id : formData.customer_id}
-                    onValueChange={(value) => setFormData({ 
-                      ...formData, 
-                      [isForLead ? "lead_id" : "customer_id"]: value 
-                    })}
-                  >
-                    <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
-                      <SelectValue placeholder={`Select ${isForLead ? "lead" : "customer"}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(isForLead ? leads : customers).map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name} {item.company_name && `(${item.company_name})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.customer_id && <p className="text-sm text-red-500">{errors.customer_id}</p>}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="customer_or_lead">{isForLead ? "Lead" : "Customer"} *</Label>
+                  {isForLead && !leadId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreateLeadOpen(true)}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Create Lead
+                    </Button>
+                  )}
                 </div>
-              )}
+                <Select
+                  value={isForLead ? formData.lead_id : formData.customer_id}
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    [isForLead ? "lead_id" : "customer_id"]: value 
+                  })}
+                  disabled={!!leadId}
+                >
+                  <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
+                    <SelectValue placeholder={`Select ${isForLead ? "lead" : "customer"}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(isForLead ? leads : customers).map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name} {item.company_name && `(${item.company_name})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.customer_id && <p className="text-sm text-red-500">{errors.customer_id}</p>}
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="valid_until">Valid Until</Label>
