@@ -4038,7 +4038,7 @@ export type Database = {
           converted_to_service_order_id: string | null
           created_at: string | null
           created_by: string
-          customer_id: string
+          customer_id: string | null
           customer_message: string | null
           description: string | null
           duplicated_from_quote_id: string | null
@@ -4074,7 +4074,7 @@ export type Database = {
           converted_to_service_order_id?: string | null
           created_at?: string | null
           created_by: string
-          customer_id: string
+          customer_id?: string | null
           customer_message?: string | null
           description?: string | null
           duplicated_from_quote_id?: string | null
@@ -4110,7 +4110,7 @@ export type Database = {
           converted_to_service_order_id?: string | null
           created_at?: string | null
           created_by?: string
-          customer_id?: string
+          customer_id?: string | null
           customer_message?: string | null
           description?: string | null
           duplicated_from_quote_id?: string | null
