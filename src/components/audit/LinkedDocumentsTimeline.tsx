@@ -152,7 +152,7 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
       if (documentType === "quote") {
         const { data: quote } = await supabase
           .from("quotes")
-          .select("lead_id, customer_id")
+          .select("lead_id, customer_id, converted_to_service_order_id, converted_to_project_id")
           .eq("id", documentId)
           .single();
 
@@ -222,6 +222,52 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
               createdBy,
               status: contract.status,
               route: `/service-contracts/${contract.id}`,
+            });
+          }
+        }
+
+        // Fetch converted service order
+        if (quote?.converted_to_service_order_id) {
+          const { data: serviceOrder } = await supabase
+            .from("service_orders")
+            .select("id, order_number, title, status, created_at, created_by")
+            .eq("id", quote.converted_to_service_order_id)
+            .single();
+
+          if (serviceOrder) {
+            const createdBy = await getUserName(serviceOrder.created_by);
+            allDocuments.push({
+              id: serviceOrder.id,
+              type: "Service Order",
+              number: serviceOrder.order_number,
+              title: serviceOrder.title,
+              createdAt: new Date(serviceOrder.created_at),
+              createdBy,
+              status: serviceOrder.status,
+              route: `/service-orders/${serviceOrder.id}`,
+            });
+          }
+        }
+
+        // Fetch converted project
+        if (quote?.converted_to_project_id) {
+          const { data: project } = await supabase
+            .from("projects")
+            .select("id, name, status, created_at, created_by")
+            .eq("id", quote.converted_to_project_id)
+            .single();
+
+          if (project) {
+            const createdBy = await getUserName(project.created_by);
+            allDocuments.push({
+              id: project.id,
+              type: "Project",
+              number: project.name,
+              title: project.name,
+              createdAt: new Date(project.created_at),
+              createdBy,
+              status: project.status,
+              route: `/projects/${project.id}`,
             });
           }
         }
