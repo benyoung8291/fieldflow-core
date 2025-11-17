@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      abn_validation_cache: {
+        Row: {
+          abn: string
+          cached_at: string
+          entity_type: string | null
+          expires_at: string
+          gst_registered: boolean | null
+          last_updated: string | null
+          legal_name: string | null
+          status: string | null
+          trading_names: string[] | null
+          valid: boolean
+        }
+        Insert: {
+          abn: string
+          cached_at?: string
+          entity_type?: string | null
+          expires_at?: string
+          gst_registered?: boolean | null
+          last_updated?: string | null
+          legal_name?: string | null
+          status?: string | null
+          trading_names?: string[] | null
+          valid: boolean
+        }
+        Update: {
+          abn?: string
+          cached_at?: string
+          entity_type?: string | null
+          expires_at?: string
+          gst_registered?: boolean | null
+          last_updated?: string | null
+          legal_name?: string | null
+          status?: string | null
+          trading_names?: string[] | null
+          valid?: boolean
+        }
+        Relationships: []
+      }
       accounting_integrations: {
         Row: {
           acumatica_company_name: string | null
