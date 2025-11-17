@@ -4453,6 +4453,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           item_order: number
+          key_number: string | null
           last_generated_date: string | null
           line_total: number
           location_id: string | null
@@ -4473,6 +4474,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           item_order?: number
+          key_number?: string | null
           last_generated_date?: string | null
           line_total?: number
           location_id?: string | null
@@ -4493,6 +4495,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           item_order?: number
+          key_number?: string | null
           last_generated_date?: string | null
           line_total?: number
           location_id?: string | null
