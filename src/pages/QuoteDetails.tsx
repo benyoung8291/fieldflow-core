@@ -287,13 +287,20 @@ export default function QuoteDetails() {
   const hasChanges = () => {
     if (!quote) return false;
     
-    return (
+    const fieldsChanged = (
       editedFields.title !== (quote.title || "") ||
       editedFields.description !== (quote.description || "") ||
       editedFields.notes !== (quote.notes || "") ||
       editedFields.terms_conditions !== (quote.terms_conditions || "") ||
       editedFields.internal_notes !== (quote.internal_notes || "")
     );
+
+    // Check if line items have changed by comparing JSON strings
+    const originalLineItemsJSON = JSON.stringify(lineItems || []);
+    const editedLineItemsJSON = JSON.stringify(editedLineItems);
+    const lineItemsChanged = originalLineItemsJSON !== editedLineItemsJSON;
+
+    return fieldsChanged || lineItemsChanged;
   };
 
   // Initialize line items for editing
@@ -474,6 +481,13 @@ export default function QuoteDetails() {
 
   const updateStatus = async (newStatus: string) => {
     try {
+      // Save changes first if there are any unsaved changes
+      if (hasChanges()) {
+        await handleSaveInlineEdits();
+        // Wait a moment for the save to complete and data to refresh
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
       // Validate line items if changing status away from draft
       if (quote?.status === "draft" && newStatus !== "draft") {
         // Check if there are any line items (use editedLineItems for current state)
