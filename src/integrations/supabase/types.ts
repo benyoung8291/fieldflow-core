@@ -2222,6 +2222,8 @@ export type Database = {
       leads: {
         Row: {
           address: string | null
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           city: string | null
           company_name: string | null
@@ -2233,6 +2235,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean | null
+          is_archived: boolean | null
           mobile: string | null
           name: string
           notes: string | null
@@ -2247,6 +2250,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
           city?: string | null
           company_name?: string | null
@@ -2258,6 +2263,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          is_archived?: boolean | null
           mobile?: string | null
           name: string
           notes?: string | null
@@ -2272,6 +2278,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
           city?: string | null
           company_name?: string | null
@@ -2283,6 +2291,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          is_archived?: boolean | null
           mobile?: string | null
           name?: string
           notes?: string | null
