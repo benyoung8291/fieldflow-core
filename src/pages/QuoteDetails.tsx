@@ -826,8 +826,8 @@ export default function QuoteDetails() {
       <div className="grid gap-4 md:grid-cols-4">
         <KeyInfoCard
           icon={User}
-          label="Customer"
-          value={quote.customer?.name || "N/A"}
+          label={leadInfo ? "Lead" : "Customer"}
+          value={leadInfo ? (leadInfo.company_name || leadInfo.name) : (quote.customer?.name || "N/A")}
         />
         <KeyInfoCard
           icon={FileText}
@@ -1318,11 +1318,23 @@ export default function QuoteDetails() {
     },
   ];
 
+  // Format quote number properly - remove leading hyphens and ensure Q prefix
+  const formattedQuoteNumber = quote?.quote_number 
+    ? (quote.quote_number.startsWith('Q-') 
+        ? quote.quote_number 
+        : `Q${quote.quote_number.replace(/^-+/, '')}`)
+    : '';
+
+  // Determine company name to display
+  const companyName = leadInfo 
+    ? (leadInfo.company_name || leadInfo.name)
+    : quote?.customer?.name;
+
   return (
     <>
       <DocumentDetailLayout
         title={quote?.title || ""}
-        subtitle={`${quote?.quote_number} • ${quote?.customer?.name}`}
+        subtitle={`${formattedQuoteNumber} • ${companyName || 'No Customer/Lead'}`}
         backPath="/quotes"
         statusBadges={statusBadges}
         primaryActions={actionButtons}
