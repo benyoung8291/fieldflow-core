@@ -147,7 +147,7 @@ export default function ConvertQuoteDialog({
   }, [createdCustomerId, pendingConversion]);
 
   // Initialize conversion when dialog opens
-  const initiateConversion = () => {
+  const initiateConversion = async () => {
     if (isConverted) {
       toast({
         title: "Already Converted",
@@ -158,21 +158,40 @@ export default function ConvertQuoteDialog({
     }
 
     // Check if lead has already been converted to a customer
-    if (hasLead && leadData?.converted_to_customer_id) {
-      // Use existing customer from previous conversion
-      setCreatedCustomerId(leadData.converted_to_customer_id);
-      handleConvert();
-      return;
+    if (hasLead) {
+      // First check if lead has converted_to_customer_id
+      if (leadData?.converted_to_customer_id) {
+        setCreatedCustomerId(leadData.converted_to_customer_id);
+        handleConvert();
+        return;
+      }
+      
+      // Also check if a customer already exists with this lead_id in quotes
+      // (in case previous conversion didn't update lead properly)
+      const { data: existingQuotes } = await supabase
+        .from('quotes')
+        .select('customer_id')
+        .eq('lead_id', quote.lead_id)
+        .not('customer_id', 'is', null)
+        .limit(1);
+      
+      if (existingQuotes && existingQuotes.length > 0 && existingQuotes[0].customer_id) {
+        // Found existing customer from previous conversion
+        setCreatedCustomerId(existingQuotes[0].customer_id);
+        handleConvert();
+        return;
+      }
+      
+      // No existing customer found, need to convert lead to customer first
+      if (!createdCustomerId) {
+        setPendingConversion(true);
+        setCustomerDialogOpen(true);
+        return;
+      }
     }
-
-    if (hasLead && !createdCustomerId) {
-      // Need to convert lead to customer first
-      setPendingConversion(true);
-      setCustomerDialogOpen(true);
-    } else {
-      // Can convert directly
-      handleConvert();
-    }
+    
+    // Can convert directly
+    handleConvert();
   };
 
   // Convert to Project mutation
