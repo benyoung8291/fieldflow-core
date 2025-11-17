@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, FileText, Receipt, Folder, Calendar, User, ExternalLink } from "lucide-react";
+import { Loader2, FileText, Receipt, Folder, Calendar, User, ExternalLink, UserCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -148,8 +148,63 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
         }
       }
 
-      // Fetch linked service contracts
+      // Fetch linked lead and contacts for quotes
       if (documentType === "quote") {
+        const { data: quote } = await supabase
+          .from("quotes")
+          .select("lead_id, customer_id")
+          .eq("id", documentId)
+          .single();
+
+        // Fetch linked lead
+        if (quote?.lead_id) {
+          const { data: lead } = await supabase
+            .from("leads")
+            .select("id, name, company_name, status, created_at, created_by")
+            .eq("id", quote.lead_id)
+            .single();
+
+          if (lead) {
+            const createdBy = await getUserName(lead.created_by);
+            allDocuments.push({
+              id: lead.id,
+              type: "Lead",
+              number: lead.company_name || lead.name,
+              title: lead.name,
+              createdAt: new Date(lead.created_at),
+              createdBy,
+              status: lead.status,
+              route: `/leads/${lead.id}`,
+            });
+          }
+        }
+
+        // Fetch linked contacts (from lead or customer)
+        const { data: contacts } = await supabase
+          .from("contacts")
+          .select("id, first_name, last_name, status, created_at")
+          .or(
+            quote?.lead_id 
+              ? `lead_id.eq.${quote.lead_id},customer_id.eq.${quote.customer_id}`
+              : `customer_id.eq.${quote.customer_id}`
+          );
+
+        if (contacts) {
+          for (const contact of contacts) {
+            allDocuments.push({
+              id: contact.id,
+              type: "Contact",
+              number: `${contact.first_name} ${contact.last_name}`,
+              title: `${contact.first_name} ${contact.last_name}`,
+              createdAt: new Date(contact.created_at),
+              createdBy: "System",
+              status: contact.status,
+              route: `/contacts/${contact.id}`,
+            });
+          }
+        }
+
+        // Fetch linked service contracts
         const { data: contracts } = await supabase
           .from("service_contracts")
           .select("id, contract_number, title, status, created_at, created_by")
@@ -206,6 +261,10 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
         return <Folder className="h-4 w-4" />;
       case "Service Contract":
         return <FileText className="h-4 w-4" />;
+      case "Lead":
+        return <User className="h-4 w-4" />;
+      case "Contact":
+        return <UserCircle className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
