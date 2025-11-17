@@ -38,6 +38,7 @@ interface QuoteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quoteId?: string;
+  leadId?: string;
 }
 
 interface LineItem {
@@ -53,7 +54,7 @@ interface LineItem {
   expanded?: boolean;
 }
 
-export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialogProps) {
+export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: QuoteDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
@@ -200,11 +201,15 @@ export default function QuoteDialog({ open, onOpenChange, quoteId }: QuoteDialog
         defaultDate.setDate(defaultDate.getDate() + 30);
         setFormData(prev => ({
           ...prev,
-          valid_until: defaultDate.toISOString().split('T')[0]
+          valid_until: defaultDate.toISOString().split('T')[0],
+          ...(leadId && { lead_id: leadId })
         }));
+        if (leadId) {
+          setIsForLead(true);
+        }
       }
     }
-  }, [open, quoteId]);
+  }, [open, quoteId, leadId]);
 
   const fetchTenantId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
