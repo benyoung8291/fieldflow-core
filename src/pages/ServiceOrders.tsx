@@ -80,10 +80,20 @@ export default function ServiceOrders() {
       const { data, error } = await supabase
         .from("service_orders")
         .select(`
-          *,
+          id,
+          order_number,
+          title,
+          customer_id,
+          status,
+          priority,
+          total_cost,
+          scheduled_date,
+          completion_date,
+          created_at,
           customers!service_orders_customer_id_fkey(name)
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       if (error) {
         console.error("Error fetching service orders:", error);
