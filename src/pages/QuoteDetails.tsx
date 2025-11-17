@@ -898,7 +898,7 @@ export default function QuoteDetails() {
   const isSent = quote?.status === "sent";
   const isApproved = quote?.status === "approved";
   const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
-  const canEdit = isDraft && !isConverted;
+  const canEdit = isDraft && !isConverted; // Only drafts can be edited
   const hasLead = !!quote?.lead_id && !quote?.customer_id;
 
   const statusBadges: StatusBadge[] = [
@@ -1058,8 +1058,8 @@ export default function QuoteDetails() {
     });
   }
 
-  // Move all file menu actions to header buttons
-  if (!isConverted) {
+  // Move all file menu actions to header buttons - only show for draft quotes
+  if (isDraft && !isConverted) {
     actionButtons.push({
       label: "Edit in Dialog",
       icon: <Edit className="h-4 w-4" />,
