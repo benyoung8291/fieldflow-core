@@ -264,6 +264,19 @@ export default function ConvertQuoteDialog({
         }
       }
 
+      // Find "Closed Won" stage for the pipeline
+      let closedWonStageId = null;
+      if (quote.pipeline_id) {
+        const { data: closedWonStage } = await supabase
+          .from('crm_status_settings')
+          .select('id')
+          .eq('pipeline_id', quote.pipeline_id)
+          .ilike('display_name', '%closed%won%')
+          .maybeSingle();
+        
+        closedWonStageId = closedWonStage?.id || null;
+      }
+
       // Update quote
       const { error: quoteError } = await supabase
         .from('quotes')
@@ -271,6 +284,7 @@ export default function ConvertQuoteDialog({
           converted_to_project_id: project.id,
           crm_status: 'won',
           customer_id: customerId, // Update customer_id if converted from lead
+          ...(closedWonStageId && { stage_id: closedWonStageId }), // Set to Closed Won stage
         } as any)
         .eq('id', quote.id);
 
@@ -433,6 +447,19 @@ export default function ConvertQuoteDialog({
         }
       }
 
+      // Find "Closed Won" stage for the pipeline
+      let closedWonStageId = null;
+      if (quote.pipeline_id) {
+        const { data: closedWonStage } = await supabase
+          .from('crm_status_settings')
+          .select('id')
+          .eq('pipeline_id', quote.pipeline_id)
+          .ilike('display_name', '%closed%won%')
+          .maybeSingle();
+        
+        closedWonStageId = closedWonStage?.id || null;
+      }
+
       // Update quote
       const { error: quoteError } = await supabase
         .from('quotes')
@@ -440,6 +467,7 @@ export default function ConvertQuoteDialog({
           converted_to_service_order_id: serviceOrder.id,
           crm_status: 'won',
           customer_id: customerId, // Update customer_id if converted from lead
+          ...(closedWonStageId && { stage_id: closedWonStageId }), // Set to Closed Won stage
         } as any)
         .eq('id', quote.id);
 
@@ -583,6 +611,19 @@ export default function ConvertQuoteDialog({
 
       if (itemsError) throw itemsError;
 
+      // Find "Closed Won" stage for the pipeline
+      let closedWonStageId = null;
+      if (quote.pipeline_id) {
+        const { data: closedWonStage } = await supabase
+          .from('crm_status_settings')
+          .select('id')
+          .eq('pipeline_id', quote.pipeline_id)
+          .ilike('display_name', '%closed%won%')
+          .maybeSingle();
+        
+        closedWonStageId = closedWonStage?.id || null;
+      }
+
       // Update quote
       const { error: quoteError } = await supabase
         .from('quotes')
@@ -590,6 +631,7 @@ export default function ConvertQuoteDialog({
           converted_to_contract_id: (contract as any).id,
           crm_status: 'won',
           customer_id: customerId, // Update customer_id if converted from lead
+          ...(closedWonStageId && { stage_id: closedWonStageId }), // Set to Closed Won stage
         } as any)
         .eq('id', quote.id);
 

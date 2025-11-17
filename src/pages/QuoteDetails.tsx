@@ -1283,7 +1283,7 @@ export default function QuoteDetails() {
                   <Select
                     value={quote.pipeline_id || ''}
                     onValueChange={(value) => updatePipelineStage('pipeline_id', value)}
-                    disabled={!isDraft}
+                    disabled={isConverted}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select pipeline" />
@@ -1303,7 +1303,7 @@ export default function QuoteDetails() {
                   <Select
                     value={quote.stage_id || ''}
                     onValueChange={(value) => updatePipelineStage('stage_id', value)}
-                    disabled={!isDraft || !quote.pipeline_id || stages.length === 0}
+                    disabled={isConverted || !quote.pipeline_id || stages.length === 0}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select stage" />
