@@ -45,7 +45,6 @@ export default function Leads() {
           status,
           rating,
           source,
-          estimated_value,
           created_at,
           converted_to_customer_id
         `)
