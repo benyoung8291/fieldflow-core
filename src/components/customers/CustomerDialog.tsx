@@ -27,9 +27,12 @@ interface CustomerDialogProps {
   onOpenChange: (open: boolean) => void;
   customer?: any;
   parentCustomerId?: string;
+  leadId?: string;
+  leadData?: any;
+  onCustomerCreated?: (customerId: string) => void;
 }
 
-export default function CustomerDialog({ open, onOpenChange, customer, parentCustomerId }: CustomerDialogProps) {
+export default function CustomerDialog({ open, onOpenChange, customer, parentCustomerId, leadId, leadData, onCustomerCreated }: CustomerDialogProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [validatingABN, setValidatingABN] = useState(false);
@@ -197,6 +200,31 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
       setLinkedVendorId(customer.supplier_id || null);
       setAbnValidated(false);
       setAvailableTradingNames([]);
+    } else if (leadData) {
+      // Pre-populate form with lead data for conversion
+      setFormData({
+        customerType: "company",
+        name: leadData.name || "",
+        tradingName: leadData.company_name || "",
+        legalName: "",
+        abn: "",
+        email: leadData.email || "",
+        phone: leadData.phone || "",
+        address: leadData.address || "",
+        city: leadData.city || "",
+        state: leadData.state || "",
+        postcode: leadData.postcode || "",
+        billingEmail: "",
+        billingPhone: "",
+        billingAddress: "",
+        paymentTerms: "30",
+        taxExempt: false,
+        isActive: true,
+        notes: leadData.notes || "",
+      });
+      setLinkedVendorId(null);
+      setAbnValidated(false);
+      setAvailableTradingNames([]);
     } else {
       // Reset form for new customer
       setFormData({
@@ -223,7 +251,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
       setAbnValidated(false);
       setAvailableTradingNames([]);
     }
-  }, [customer, open]);
+  }, [customer, leadData, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,20 +304,33 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
 
         if (error) throw error;
         toast.success("Customer updated successfully");
+        
+        // Invalidate queries to refresh the list
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: ["customer-sub-accounts"] });
+        onOpenChange(false);
       } else {
         // Create new customer
-        const { error } = await supabase
+        const { data: newCustomer, error } = await supabase
           .from("customers")
-          .insert(customerData);
+          .insert(customerData)
+          .select()
+          .single();
 
         if (error) throw error;
         toast.success("Customer created successfully");
+        
+        // Invalidate queries to refresh the list
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: ["customer-sub-accounts"] });
+        
+        // Call callback if provided (for lead conversion)
+        if (onCustomerCreated && newCustomer) {
+          onCustomerCreated(newCustomer.id);
+        }
+        
+        onOpenChange(false);
       }
-
-      // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-      queryClient.invalidateQueries({ queryKey: ["customer-sub-accounts"] });
-      onOpenChange(false);
     } catch (error: any) {
       console.error("Error saving customer:", error);
       toast.error(error.message || "Failed to save customer");
