@@ -105,6 +105,7 @@ export default function ServiceContractDetails() {
           first_generation_date: lineItem.first_generation_date,
           recurrence_frequency: lineItem.recurrence_frequency,
           is_active: lineItem.is_active,
+          key_number: lineItem.key_number,
           notes: lineItem.notes,
         })
         .eq("id", lineItem.id);
@@ -142,6 +143,7 @@ export default function ServiceContractDetails() {
           first_generation_date: lineItem.first_generation_date,
           recurrence_frequency: lineItem.recurrence_frequency,
           item_order: maxOrder + 1,
+          key_number: lineItem.key_number,
           notes: lineItem.notes,
         });
 
@@ -332,6 +334,7 @@ export default function ServiceContractDetails() {
                     first_generation_date: "",
                     recurrence_frequency: "monthly",
                     is_active: true,
+                    key_number: "",
                     notes: "",
                   });
                   setAddingLineItem(true);
@@ -346,6 +349,7 @@ export default function ServiceContractDetails() {
                     <TableRow>
                       <TableHead>Description</TableHead>
                       <TableHead>Location</TableHead>
+                      <TableHead>Key Number</TableHead>
                       <TableHead>Qty</TableHead>
                       <TableHead>Unit Price</TableHead>
                       <TableHead>Total</TableHead>
@@ -365,6 +369,9 @@ export default function ServiceContractDetails() {
                             <MapPin className="h-3 w-3 text-muted-foreground" />
                             {item.customer_locations?.name || "No location"}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{item.key_number || "-"}</span>
                         </TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>${parseFloat(item.unit_price).toFixed(2)}</TableCell>
@@ -588,6 +595,14 @@ export default function ServiceContractDetails() {
                 <div className="space-y-2">
                   <Label>Estimated Hours</Label>
                   <Input type="number" value={editingLineItem.estimated_hours || 0} onChange={(e) => setEditingLineItem({ ...editingLineItem, estimated_hours: parseFloat(e.target.value) || 0 })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Key Number</Label>
+                  <Input 
+                    value={editingLineItem.key_number || ""} 
+                    onChange={(e) => setEditingLineItem({ ...editingLineItem, key_number: e.target.value })}
+                    placeholder="Enter key number (optional)"
+                  />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
