@@ -1119,13 +1119,10 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                   </Button>
                 )}
               </div>
-              <Textarea
-                id="description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, description: value })}
                 placeholder="Enter a description..."
-                rows={10}
-                className="resize-none"
               />
               {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
             </div>
@@ -1464,15 +1461,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <RichTextEditor
-                value={formData.notes}
-                onChange={(value) => setFormData({ ...formData, notes: value })}
-                placeholder="Add notes..."
-              />
-            </div>
-
-            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="terms_conditions">Terms & Conditions</Label>
                 {termsTemplates.length > 0 && (
@@ -1495,10 +1483,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                   </Select>
                 )}
               </div>
-              <RichTextEditor
+              <Textarea
+                id="terms_conditions"
                 value={formData.terms_conditions}
-                onChange={(value) => setFormData({ ...formData, terms_conditions: value })}
+                onChange={(e) => setFormData({ ...formData, terms_conditions: e.target.value })}
                 placeholder="Enter terms and conditions..."
+                rows={6}
+                className="resize-none"
               />
             </div>
 
