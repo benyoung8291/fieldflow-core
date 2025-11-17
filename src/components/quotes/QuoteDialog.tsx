@@ -1134,20 +1134,18 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
               <div className="flex items-center justify-between">
                 <Label>Line Items {isComplexQuote && "& Takeoffs"}</Label>
                 <div className="flex gap-2">
-                  {isComplexQuote && (
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedParentIndex(null);
-                        setPriceBookOpen(true);
-                      }}
-                    >
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Price Book
-                    </Button>
-                  )}
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedParentIndex(null);
+                      setPriceBookOpen(true);
+                    }}
+                  >
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Price Book
+                  </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesDialogOpen(true)}>
                     <FileText className="mr-2 h-4 w-4" />
                     Load Template

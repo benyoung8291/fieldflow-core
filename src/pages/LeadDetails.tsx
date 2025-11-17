@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Building2, User, FileText, TrendingUp, Edit, Trash2 } from "lucide-react";
+import { Mail, Phone, MapPin, Building2, User, FileText, TrendingUp, Edit, Trash2, Archive } from "lucide-react";
 import { toast } from "sonner";
 import LeadDialog from "@/components/leads/LeadDialog";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
@@ -13,6 +13,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function LeadDetails() {
   const { id } = useParams();
@@ -22,6 +25,12 @@ export default function LeadDetails() {
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [contactActionDialogOpen, setContactActionDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'delete' | 'archive' | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [archiveContacts, setArchiveContacts] = useState(false);
+  const [inactivateContacts, setInactivateContacts] = useState(false);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", id],
@@ -192,8 +201,21 @@ export default function LeadDetails() {
         .from("leads")
         .delete()
         .eq("id", id);
-
+      
       if (error) throw error;
+
+      // Handle contact actions if requested
+      if (contacts.length > 0 && (archiveContacts || inactivateContacts)) {
+        const contactUpdates: any = {};
+        if (inactivateContacts) contactUpdates.status = 'inactive';
+        
+        const { error: contactError } = await supabase
+          .from("contacts")
+          .update(contactUpdates)
+          .eq("lead_id", id);
+        
+        if (contactError) console.error("Error updating contacts:", contactError);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
@@ -203,6 +225,47 @@ export default function LeadDetails() {
     onError: (error) => {
       console.error("Error deleting lead:", error);
       toast.error("Failed to delete lead");
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("leads")
+        .update({ 
+          is_archived: true, 
+          archived_at: new Date().toISOString(),
+          archived_by: user.id
+        })
+        .eq("id", id);
+      
+      if (error) throw error;
+
+      // Handle contact actions if requested
+      if (contacts.length > 0 && (archiveContacts || inactivateContacts)) {
+        const contactUpdates: any = {};
+        if (inactivateContacts) contactUpdates.status = 'inactive';
+        
+        const { error: contactError } = await supabase
+          .from("contacts")
+          .update(contactUpdates)
+          .eq("lead_id", id);
+        
+        if (contactError) console.error("Error updating contacts:", contactError);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead", id] });
+      toast.success("Lead archived successfully");
+      navigate("/leads");
+    },
+    onError: (error) => {
+      console.error("Error archiving lead:", error);
+      toast.error("Failed to archive lead");
     },
   });
 
@@ -236,12 +299,33 @@ export default function LeadDetails() {
       icon: <TrendingUp className="h-4 w-4" />,
       onClick: () => setConvertDialogOpen(true),
       variant: "default" as const,
-      show: !lead?.converted_to_customer_id,
+      show: !lead?.converted_to_customer_id && !lead?.is_archived,
+    },
+    {
+      label: "Archive Lead",
+      icon: <Archive className="h-4 w-4" />,
+      onClick: () => {
+        if (contacts.length > 0) {
+          setPendingAction('archive');
+          setContactActionDialogOpen(true);
+        } else {
+          setArchiveDialogOpen(true);
+        }
+      },
+      variant: "outline" as const,
+      show: !lead?.is_archived,
     },
     {
       label: "Delete Lead",
       icon: <Trash2 className="h-4 w-4" />,
-      onClick: () => setDeleteDialogOpen(true),
+      onClick: () => {
+        if (contacts.length > 0) {
+          setPendingAction('delete');
+          setContactActionDialogOpen(true);
+        } else {
+          setDeleteDialogOpen(true);
+        }
+      },
       variant: "destructive" as const,
     },
   ];
@@ -556,10 +640,24 @@ export default function LeadDetails() {
             <DialogTitle>Delete Lead</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this lead? This action cannot be undone.
+              Type "delete" below to confirm.
             </DialogDescription>
           </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="delete-confirm">Type "delete" to confirm</Label>
+            <Input
+              id="delete-confirm"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="delete"
+              className="mt-2"
+            />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setDeleteDialogOpen(false);
+              setDeleteConfirmText("");
+            }}>
               Cancel
             </Button>
             <Button
@@ -567,10 +665,78 @@ export default function LeadDetails() {
               onClick={() => {
                 deleteMutation.mutate();
                 setDeleteDialogOpen(false);
+                setDeleteConfirmText("");
               }}
-              disabled={deleteMutation.isPending}
+              disabled={deleteMutation.isPending || deleteConfirmText.toLowerCase() !== 'delete'}
             >
               Delete Lead
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Lead</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive this lead? You can restore it later from the archived leads list.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                archiveMutation.mutate();
+                setArchiveDialogOpen(false);
+              }}
+              disabled={archiveMutation.isPending}
+            >
+              Archive Lead
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={contactActionDialogOpen} onOpenChange={setContactActionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contact Status</DialogTitle>
+            <DialogDescription>
+              This lead has {contacts.length} linked contact{contacts.length !== 1 ? 's' : ''}. What would you like to do with {contacts.length === 1 ? 'it' : 'them'}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="inactivate-contacts"
+                checked={inactivateContacts}
+                onCheckedChange={(checked) => setInactivateContacts(checked as boolean)}
+              />
+              <Label htmlFor="inactivate-contacts" className="cursor-pointer">
+                Mark contact{contacts.length !== 1 ? 's' : ''} as inactive
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setContactActionDialogOpen(false);
+              setArchiveContacts(false);
+              setInactivateContacts(false);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              setContactActionDialogOpen(false);
+              if (pendingAction === 'delete') {
+                setDeleteDialogOpen(true);
+              } else if (pendingAction === 'archive') {
+                setArchiveDialogOpen(true);
+              }
+            }}>
+              Continue
             </Button>
           </DialogFooter>
         </DialogContent>
