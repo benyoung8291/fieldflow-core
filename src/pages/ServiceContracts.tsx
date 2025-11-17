@@ -29,13 +29,14 @@ export default function ServiceContracts() {
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
     queryFn: async () => {
-      const { data, error } = await supabase
+    const { data, error } = await supabase
         .from("service_contracts" as any)
         .select(`
           *,
           customers (name),
           service_contract_line_items (*)
         `)
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

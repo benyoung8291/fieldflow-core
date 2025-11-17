@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Trash2, Plus, MapPin, History } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
@@ -28,8 +28,7 @@ export default function ServiceContractDetails() {
   const queryClient = useQueryClient();
   const [editingLineItem, setEditingLineItem] = useState<any>(null);
   const [addingLineItem, setAddingLineItem] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [viewingLineItemHistory, setViewingLineItemHistory] = useState<string | null>(null);
 
@@ -41,6 +40,7 @@ export default function ServiceContractDetails() {
         .select(`
           *,
           customers (name, email, phone, address, id),
+          quotes (id, quote_number, title),
           service_contract_line_items (
             *,
             customer_locations (
@@ -191,21 +191,26 @@ export default function ServiceContractDetails() {
     },
   });
 
-  const deleteContractMutation = useMutation({
+  const archiveContractMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
         .from("service_contracts" as any)
-        .delete()
+        .update({ 
+          archived_at: new Date().toISOString(),
+          auto_generate: false 
+        })
         .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Contract deleted");
+      queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
+      queryClient.invalidateQueries({ queryKey: ["service-contracts-dashboard"] });
+      toast.success("Contract archived");
       navigate("/service-contracts");
     },
     onError: (error: any) => {
-      toast.error(`Failed to delete: ${error.message}`);
+      toast.error(`Failed to archive: ${error.message}`);
     },
   });
 
@@ -250,8 +255,8 @@ export default function ServiceContractDetails() {
           </div>
           <div className="flex items-center gap-2">
             <CreateTaskButton linkedModule="contract" linkedRecordId={id!} variant="outline" />
-            <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)}>
-              <Trash2 className="h-4 w-4" />
+            <Button variant="outline" size="icon" onClick={() => setShowArchiveDialog(true)}>
+              <Archive className="h-4 w-4" />
             </Button>
             <Badge variant={contract.status === "active" ? "default" : "secondary"}>{contract.status}</Badge>
           </div>
@@ -303,6 +308,7 @@ export default function ServiceContractDetails() {
           <TabsList>
             <TabsTrigger value="line-items">Line Items</TabsTrigger>
             <TabsTrigger value="service-orders">Service Orders</TabsTrigger>
+            <TabsTrigger value="linked-documents">Linked Documents</TabsTrigger>
             <TabsTrigger value="details">Contract Details</TabsTrigger>
             <TabsTrigger value="audit">Change Log</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
@@ -390,6 +396,71 @@ export default function ServiceContractDetails() {
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="linked-documents" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Linked Documents</CardTitle>
+                <CardDescription>Related documents and entities</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Customer */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline">Customer</Badge>
+                        <span className="font-medium">{contract.customers?.name}</span>
+                      </div>
+                      {contract.customers?.email && (
+                        <p className="text-sm text-muted-foreground">{contract.customers.email}</p>
+                      )}
+                      {contract.customers?.phone && (
+                        <p className="text-sm text-muted-foreground">{contract.customers.phone}</p>
+                      )}
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="px-0 h-auto"
+                        onClick={() => navigate(`/customers/${contract.customers.id}`)}
+                      >
+                        View Customer Details →
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quote */}
+                {contract.quotes && (
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline">Quote</Badge>
+                          <span className="font-medium">{contract.quotes.quote_number}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{contract.quotes.title}</p>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="px-0 h-auto"
+                          onClick={() => navigate(`/quotes/${contract.quotes.id}`)}
+                        >
+                          View Quote Details →
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(!contract.quotes) && (
+                  <p className="text-sm text-muted-foreground">No linked quote found.</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -597,16 +668,28 @@ export default function ServiceContractDetails() {
           }}
         />
 
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        {/* Archive Confirmation Dialog */}
+        <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Contract</DialogTitle>
-              <DialogDescription>Type "delete" to confirm deletion.</DialogDescription>
+              <DialogTitle>Archive Contract</DialogTitle>
+              <DialogDescription>
+                Archiving this contract will turn off auto-generation and remove it from revenue forecasting.
+                The contract will remain in the system for historical reference.
+              </DialogDescription>
             </DialogHeader>
-            <Input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder='Type "delete"' />
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setShowDeleteDialog(false); setDeleteConfirmText(""); }}>Cancel</Button>
-              <Button variant="destructive" disabled={deleteConfirmText !== "delete"} onClick={() => deleteContractMutation.mutate()}>Delete Contract</Button>
+              <Button variant="outline" onClick={() => setShowArchiveDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  archiveContractMutation.mutate();
+                  setShowArchiveDialog(false);
+                }}
+              >
+                Archive Contract
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
