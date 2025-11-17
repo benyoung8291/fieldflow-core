@@ -41,6 +41,7 @@ interface ConvertQuoteDialogProps {
   onOpenChange: (open: boolean) => void;
   quote: any;
   lineItems: LineItem[];
+  initialType?: 'project' | 'service_order' | 'contract' | null;
 }
 
 const frequencyOptions = [
@@ -59,10 +60,18 @@ export default function ConvertQuoteDialog({
   onOpenChange,
   quote,
   lineItems,
+  initialType,
 }: ConvertQuoteDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [conversionType, setConversionType] = useState<'project' | 'service_order' | 'contract'>('project');
+  const [conversionType, setConversionType] = useState<'project' | 'service_order' | 'contract'>(initialType || 'project');
+  
+  // Update conversion type when initialType changes
+  useEffect(() => {
+    if (initialType) {
+      setConversionType(initialType);
+    }
+  }, [initialType]);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [pendingConversion, setPendingConversion] = useState(false);
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
