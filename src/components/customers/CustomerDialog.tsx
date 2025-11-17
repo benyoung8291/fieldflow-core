@@ -207,7 +207,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         name: leadData.name || "",
         tradingName: leadData.company_name || "",
         legalName: "",
-        abn: "",
+        abn: leadData.abn || "",
         email: leadData.email || "",
         phone: leadData.phone || "",
         address: leadData.address || "",
