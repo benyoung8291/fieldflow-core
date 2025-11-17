@@ -73,7 +73,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
     billingEmail: "",
     billingPhone: "",
     billingAddress: "",
-    paymentTerms: "30",
+    paymentTerms: "0",
     taxExempt: false,
     isActive: true,
     notes: "",
@@ -217,7 +217,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         billingEmail: "",
         billingPhone: "",
         billingAddress: "",
-        paymentTerms: "30",
+        paymentTerms: "0",
         taxExempt: false,
         isActive: true,
         notes: leadData.notes || "",
@@ -242,7 +242,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         billingEmail: "",
         billingPhone: "",
         billingAddress: "",
-        paymentTerms: "30",
+        paymentTerms: "0",
         taxExempt: false,
         isActive: true,
         notes: "",
@@ -608,31 +608,34 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="billingEmail">Billing Email</Label>
+                  <Label htmlFor="billingEmail">Billing Email *</Label>
                   <Input
                     id="billingEmail"
                     type="email"
                     value={formData.billingEmail}
                     onChange={(e) => setFormData({ ...formData, billingEmail: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="billingPhone">Billing Phone</Label>
+                  <Label htmlFor="billingPhone">Billing Phone *</Label>
                   <Input
                     id="billingPhone"
                     value={formData.billingPhone}
                     onChange={(e) => setFormData({ ...formData, billingPhone: e.target.value })}
+                    required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="billingAddress">Billing Address</Label>
+                <Label htmlFor="billingAddress">Billing Address *</Label>
                 <Textarea
                   id="billingAddress"
                   value={formData.billingAddress}
                   onChange={(e) => setFormData({ ...formData, billingAddress: e.target.value })}
                   rows={3}
+                  required
                 />
               </div>
 
