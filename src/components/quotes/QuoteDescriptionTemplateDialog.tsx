@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,34 @@ export default function QuoteDescriptionTemplateDialog({
   onOpenChange,
   currentDescription,
   onSelectDescription,
-  tenantId,
+  tenantId: propTenantId,
 }: QuoteDescriptionTemplateDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [tenantId, setTenantId] = useState("");
+
+  // Fetch tenant ID when dialog opens
+  useEffect(() => {
+    const fetchTenantId = async () => {
+      if (open && !tenantId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("tenant_id")
+            .eq("id", user.id)
+            .single();
+          
+          if (profile) {
+            setTenantId(profile.tenant_id);
+          }
+        }
+      }
+    };
+    fetchTenantId();
+  }, [open]);
 
   // Fetch templates
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
