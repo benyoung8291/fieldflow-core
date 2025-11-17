@@ -16,6 +16,7 @@ import AILineItemMatcher from "./AILineItemMatcher";
 import CreateLeadDialog from "../leads/CreateLeadDialog";
 import QuoteItemTemplatesDialog from "./QuoteItemTemplatesDialog";
 import SaveAsTemplateDialog from "./SaveAsTemplateDialog";
+import QuoteDescriptionTemplateDialog from "./QuoteDescriptionTemplateDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { formatCurrency } from "@/lib/utils";
@@ -71,8 +72,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [updatedFields, setUpdatedFields] = useState<Record<string, boolean>>({});
-  const [saveDescriptionTemplateOpen, setSaveDescriptionTemplateOpen] = useState(false);
-  const [descriptionTemplateName, setDescriptionTemplateName] = useState("");
+  const [descriptionTemplateDialogOpen, setDescriptionTemplateDialogOpen] = useState(false);
 
   const clearUpdatedField = (key: string) => {
     setTimeout(() => {
@@ -109,19 +109,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         .from("customer_message_templates")
         .select("*")
         .order("is_default", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: open,
-  });
-
-  const { data: descriptionTemplates = [] } = useQuery({
-    queryKey: ["quote-description-templates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("quote_description_templates")
-        .select("*")
-        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -1088,36 +1075,14 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="description">Description</Label>
-                {descriptionTemplates.length > 0 && (
-                  <Select onValueChange={(value) => {
-                    const template = descriptionTemplates.find((t: any) => t.id === value);
-                    if (template) {
-                      setFormData({ ...formData, description: template.description });
-                    }
-                  }}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Load template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {descriptionTemplates.map((template: any) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {formData.description && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSaveDescriptionTemplateOpen(true)}
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save as Template
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDescriptionTemplateDialogOpen(true)}
+                >
+                  Manage Templates
+                </Button>
               </div>
               <RichTextEditor
                 value={formData.description}
@@ -1688,81 +1653,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         quoteType={isComplexQuote ? 'complex' : 'simple'}
       />
 
-      <Dialog open={saveDescriptionTemplateOpen} onOpenChange={setSaveDescriptionTemplateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save Description Template</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="template_name">Template Name *</Label>
-              <Input
-                id="template_name"
-                value={descriptionTemplateName}
-                onChange={(e) => setDescriptionTemplateName(e.target.value)}
-                placeholder="e.g., Standard Service Description"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setSaveDescriptionTemplateOpen(false);
-                  setDescriptionTemplateName("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={async () => {
-                  if (!descriptionTemplateName.trim()) {
-                    toast({
-                      title: "Template name required",
-                      description: "Please enter a name for the template",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-
-                  try {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user) throw new Error("Not authenticated");
-
-                    const { error } = await supabase
-                      .from("quote_description_templates")
-                      .insert({
-                        tenant_id: tenantId,
-                        name: descriptionTemplateName.trim(),
-                        description: formData.description,
-                        created_by: user.id,
-                      });
-
-                    if (error) throw error;
-
-                    queryClient.invalidateQueries({ queryKey: ["quote-description-templates"] });
-                    toast({
-                      title: "Template saved",
-                      description: "Description template has been saved successfully",
-                    });
-                    setSaveDescriptionTemplateOpen(false);
-                    setDescriptionTemplateName("");
-                  } catch (error: any) {
-                    toast({
-                      title: "Error saving template",
-                      description: error.message,
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                Save Template
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <QuoteDescriptionTemplateDialog
+        open={descriptionTemplateDialogOpen}
+        onOpenChange={setDescriptionTemplateDialogOpen}
+        currentDescription={formData.description}
+        onSelectDescription={(description) => setFormData({ ...formData, description })}
+        tenantId={tenantId}
+      />
     </>
   );
 }
