@@ -43,10 +43,9 @@ export default function LeadDetails() {
           created_user:profiles!leads_created_by_fkey(id, first_name, last_name)
         `)
         .eq("id", id)
-        .maybeSingle();
+        .single();
 
       if (error) throw error;
-      if (!data) throw new Error("Lead not found");
 
       // Handle foreign key relationships that return as arrays
       const assignedUser = Array.isArray(data.assigned_user) ? data.assigned_user[0] : data.assigned_user;
