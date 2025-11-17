@@ -226,25 +226,23 @@ export default function LeadDetails() {
       variant: "outline" as const,
     },
     {
+      label: "Create Quote",
+      icon: <FileText className="h-4 w-4" />,
+      onClick: () => setQuoteDialogOpen(true),
+      variant: "outline" as const,
+    },
+    {
       label: "Convert to Customer",
       icon: <TrendingUp className="h-4 w-4" />,
       onClick: () => setConvertDialogOpen(true),
       variant: "default" as const,
       show: !lead?.converted_to_customer_id,
     },
-  ];
-
-  const menuActions = [
-    {
-      label: "Create Quote",
-      icon: <FileText className="h-4 w-4 mr-2" />,
-      onClick: () => setQuoteDialogOpen(true),
-    },
     {
       label: "Delete Lead",
-      icon: <Trash2 className="h-4 w-4 mr-2" />,
+      icon: <Trash2 className="h-4 w-4" />,
       onClick: () => setDeleteDialogOpen(true),
-      destructive: true,
+      variant: "destructive" as const,
     },
   ];
 
@@ -512,7 +510,6 @@ export default function LeadDetails() {
         subtitle={lead?.company_name}
         backPath="/leads"
         primaryActions={primaryActions}
-        fileMenuActions={menuActions}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
         isLoading={isLoading}
