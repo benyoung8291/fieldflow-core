@@ -27,6 +27,7 @@ export interface DocumentAction {
   onClick: () => void;
   variant?: "default" | "outline" | "destructive" | "ghost";
   show?: boolean;
+  customRender?: ReactNode;
 }
 
 export interface FileMenuAction {
@@ -316,17 +317,21 @@ export default function DocumentDetailLayout({
             {/* Primary Actions */}
             {primaryActions
               .filter(action => action.show !== false)
-              .map((action, idx) => (
-                <Button
-                  key={idx}
-                  onClick={action.onClick}
-                  variant={action.variant || "default"}
-                  size="sm"
-                >
-                  {action.icon && <span className="mr-2">{action.icon}</span>}
-                  {action.label}
-                </Button>
-              ))}
+              .map((action, idx) => 
+                action.customRender ? (
+                  <div key={idx}>{action.customRender}</div>
+                ) : (
+                  <Button
+                    key={idx}
+                    onClick={action.onClick}
+                    variant={action.variant || "default"}
+                    size="sm"
+                  >
+                    {action.icon && <span className="mr-2">{action.icon}</span>}
+                    {action.label}
+                  </Button>
+                )
+              )}
           </div>
         </div>
 
