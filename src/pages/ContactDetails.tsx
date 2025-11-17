@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit } from "lucide-react";
+import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit, Archive, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
 import { useState } from "react";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 export default function ContactDetails() {
   const { id } = useParams();
@@ -19,6 +20,8 @@ export default function ContactDetails() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [conversionNotes, setConversionNotes] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", id],
@@ -113,13 +116,32 @@ export default function ContactDetails() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("contacts")
+        .update({ status: "inactive" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact", id] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Contact archived successfully");
+    },
+    onError: (error) => {
+      console.error("Error archiving contact:", error);
+      toast.error("Failed to archive contact");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("contacts").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Contact deleted successfully");
+      toast.success("Contact deleted permanently");
       navigate("/contacts");
     },
     onError: (error) => {
@@ -127,6 +149,18 @@ export default function ContactDetails() {
       toast.error("Failed to delete contact");
     },
   });
+
+  const handleDeleteClick = () => {
+    setDeleteConfirmText("");
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirmText.toLowerCase() === "delete") {
+      deleteMutation.mutate();
+      setDeleteDialogOpen(false);
+    }
+  };
 
   const getContactTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -180,9 +214,15 @@ export default function ContactDetails() {
       variant: "default" as const,
     }] : []),
     {
+      label: "Archive",
+      icon: <Archive className="h-4 w-4" />,
+      onClick: () => archiveMutation.mutate(),
+      variant: "outline" as const,
+    },
+    {
       label: "Delete",
-      icon: <FileText className="h-4 w-4" />,
-      onClick: () => deleteMutation.mutate(),
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: handleDeleteClick,
       variant: "destructive" as const,
     },
   ];
@@ -454,6 +494,43 @@ export default function ContactDetails() {
             </Button>
             <Button onClick={() => convertToLeadMutation.mutate()}>
               Convert to Lead
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Contact</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the contact from the system.
+              If you want to keep historic data, use the Archive button instead.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirm">
+                Type <span className="font-mono font-bold">delete</span> to confirm
+              </Label>
+              <Input
+                id="delete-confirm"
+                placeholder="Type 'delete' to confirm"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteConfirm}
+              disabled={deleteConfirmText.toLowerCase() !== "delete"}
+            >
+              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>
