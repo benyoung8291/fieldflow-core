@@ -787,9 +787,9 @@ export default function QuoteDetails() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     try {
-      // Log deletion to audit trail before deleting
+      // Log archiving to audit trail
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -803,10 +803,10 @@ export default function QuoteDetails() {
           await supabase.from("audit_logs").insert({
             table_name: "quotes",
             record_id: id!,
-            action: "delete",
-            field_name: null,
-            old_value: quote?.title || null,
-            new_value: null,
+            action: "update",
+            field_name: "status",
+            old_value: quote?.status || null,
+            new_value: "archived",
             user_id: user.id,
             user_name: userName,
             tenant_id: profile.tenant_id,
@@ -814,15 +814,21 @@ export default function QuoteDetails() {
         }
       }
 
-      const { error } = await supabase.from("quotes").delete().eq("id", id);
+      const { error } = await supabase
+        .from("quotes")
+        .update({ 
+          status: "archived",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
 
       if (error) throw error;
 
-      toast({ title: "Quote deleted successfully" });
+      toast({ title: "Quote archived successfully" });
       navigate("/quotes");
     } catch (error: any) {
       toast({
-        title: "Error deleting quote",
+        title: "Error archiving quote",
         description: error.message,
         variant: "destructive",
       });
@@ -930,10 +936,10 @@ export default function QuoteDetails() {
 
   if (isDraft && !isConverted) {
     actionButtons.push({
-      label: "Delete Quote",
+      label: "Archive Quote",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: () => setDeleteDialogOpen(true),
-      variant: "destructive",
+      variant: "outline",
     });
   }
 
@@ -1487,15 +1493,15 @@ export default function QuoteDetails() {
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Quote</AlertDialogTitle>
+                <AlertDialogTitle>Archive Quote</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this quote? This action cannot be undone.
+                  Are you sure you want to archive this quote? You can restore it later if needed.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Delete
+                <AlertDialogAction onClick={handleArchive}>
+                  Archive
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
