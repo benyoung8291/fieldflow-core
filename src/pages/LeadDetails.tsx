@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, MapPin, Building2, User, FileText, TrendingUp, Edit, Trash2, Archive } from "lucide-react";
 import { toast } from "sonner";
 import LeadDialog from "@/components/leads/LeadDialog";
+import CustomerDialog from "@/components/customers/CustomerDialog";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
@@ -22,7 +23,7 @@ export default function LeadDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -107,45 +108,16 @@ export default function LeadDetails() {
     },
   });
 
-  const convertToCustomerMutation = useMutation({
-    mutationFn: async () => {
-      if (!lead) return;
-
+  const handleCustomerCreated = async (customerId: string) => {
+    try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.tenant_id) throw new Error("Tenant not found");
-
-      // Create customer from lead
-      const { data: newCustomer, error: customerError } = await supabase
-        .from("customers")
-        .insert([{
-          tenant_id: profile.tenant_id,
-          name: lead.company_name || lead.name,
-          email: lead.email,
-          phone: lead.phone,
-          address: lead.address,
-          city: lead.city,
-          state: lead.state,
-          postcode: lead.postcode,
-          notes: lead.notes,
-        }])
-        .select()
-        .single();
-
-      if (customerError) throw customerError;
 
       // Update lead with conversion info
       const { error: updateError } = await supabase
         .from("leads")
         .update({
-          converted_to_customer_id: newCustomer.id,
+          converted_to_customer_id: customerId,
           converted_at: new Date().toISOString(),
           converted_by: user.id,
         })
@@ -158,7 +130,7 @@ export default function LeadDetails() {
         const { error: contactsError } = await supabase
           .from("contacts")
           .update({
-            customer_id: newCustomer.id,
+            customer_id: customerId,
             contact_type: "customer",
             status: "active",
           })
@@ -171,7 +143,7 @@ export default function LeadDetails() {
       const { error: quotesError } = await supabase
         .from("quotes")
         .update({
-          customer_id: newCustomer.id,
+          customer_id: customerId,
           lead_id: null,
           is_for_lead: false,
         })
@@ -179,20 +151,15 @@ export default function LeadDetails() {
 
       if (quotesError) throw quotesError;
 
-      return newCustomer;
-    },
-    onSuccess: (newCustomer) => {
       queryClient.invalidateQueries({ queryKey: ["lead", id] });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast.success("Lead converted to customer successfully");
-      setConvertDialogOpen(false);
-      navigate(`/customers/${newCustomer.id}`);
-    },
-    onError: (error) => {
+      navigate(`/customers/${customerId}`);
+    } catch (error) {
       console.error("Error converting lead:", error);
-      toast.error("Failed to convert lead to customer");
-    },
-  });
+      toast.error("Failed to complete lead conversion");
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -296,7 +263,7 @@ export default function LeadDetails() {
     {
       label: "Convert to Customer",
       icon: <TrendingUp className="h-4 w-4" />,
-      onClick: () => setConvertDialogOpen(true),
+      onClick: () => setCustomerDialogOpen(true),
       variant: "default" as const,
       show: !lead?.converted_to_customer_id && !lead?.is_archived,
     },
@@ -610,28 +577,13 @@ export default function LeadDetails() {
         leadId={id}
       />
 
-      <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Convert Lead to Customer</DialogTitle>
-            <DialogDescription>
-              This will create a new customer record from this lead and transfer all quotes{contacts.length > 0 && ' and linked contacts'}.
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => convertToCustomerMutation.mutate()}
-              disabled={convertToCustomerMutation.isPending}
-            >
-              Convert to Customer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CustomerDialog
+        open={customerDialogOpen}
+        onOpenChange={setCustomerDialogOpen}
+        leadId={id}
+        leadData={lead}
+        onCustomerCreated={handleCustomerCreated}
+      />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
