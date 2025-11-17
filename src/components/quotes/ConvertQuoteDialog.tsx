@@ -158,45 +158,33 @@ export default function ConvertQuoteDialog({
     }
 
     // If quote already has a customer, use it directly
-    if (hasCustomer) {
+    if (quote?.customer_id) {
       handleConvert();
       return;
     }
 
-    // Check if lead has already been converted to a customer
-    if (hasLead) {
-      // First check if lead has converted_to_customer_id
-      if (leadData?.converted_to_customer_id) {
+    // If quote has a lead, check if lead has already been converted
+    if (hasLead && leadData) {
+      if (leadData.converted_to_customer_id) {
+        // Lead already converted - use that customer
+        console.log('Using existing customer from converted lead:', leadData.converted_to_customer_id);
         setCreatedCustomerId(leadData.converted_to_customer_id);
+        // Update this quote with the customer_id before converting
+        await supabase
+          .from('quotes')
+          .update({ customer_id: leadData.converted_to_customer_id })
+          .eq('id', quote.id);
         handleConvert();
         return;
-      }
-      
-      // Also check if a customer already exists with this lead_id in quotes
-      // (in case previous conversion didn't update lead properly)
-      const { data: existingQuotes } = await supabase
-        .from('quotes')
-        .select('customer_id')
-        .eq('lead_id', quote.lead_id)
-        .not('customer_id', 'is', null)
-        .limit(1);
-      
-      if (existingQuotes && existingQuotes.length > 0 && existingQuotes[0].customer_id) {
-        // Found existing customer from previous conversion
-        setCreatedCustomerId(existingQuotes[0].customer_id);
-        handleConvert();
-        return;
-      }
-      
-      // No existing customer found, need to convert lead to customer first
-      if (!createdCustomerId) {
+      } else {
+        // Lead not converted yet - show customer creation dialog
         setPendingConversion(true);
         setCustomerDialogOpen(true);
         return;
       }
     }
     
-    // Can convert directly
+    // Can convert directly (shouldn't normally reach here)
     handleConvert();
   };
 
@@ -209,8 +197,8 @@ export default function ConvertQuoteDialog({
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle();
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
-      // Use customer from quote or newly created customer
-      const customerId = createdCustomerId || quote.customer_id;
+      // Use customer from quote, newly created customer, or lead's converted customer
+      const customerId = createdCustomerId || quote.customer_id || leadData?.converted_to_customer_id;
       if (!customerId) throw new Error('No customer found');
 
       // Create project
@@ -411,8 +399,8 @@ export default function ConvertQuoteDialog({
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle();
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
-      // Use customer from quote or newly created customer
-      const customerId = createdCustomerId || quote.customer_id;
+      // Use customer from quote, newly created customer, or lead's converted customer
+      const customerId = createdCustomerId || quote.customer_id || leadData?.converted_to_customer_id;
       if (!customerId) throw new Error('No customer found');
 
       // Generate order number
@@ -595,8 +583,8 @@ export default function ConvertQuoteDialog({
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle();
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
-      // Use customer from quote or newly created customer
-      const customerId = createdCustomerId || quote.customer_id;
+      // Use customer from quote, newly created customer, or lead's converted customer
+      const customerId = createdCustomerId || quote.customer_id || leadData?.converted_to_customer_id;
       if (!customerId) throw new Error('No customer found');
 
       // Generate contract number
@@ -794,7 +782,7 @@ export default function ConvertQuoteDialog({
             </Alert>
           )}
 
-          {hasLead && !hasCustomer && !createdCustomerId && (
+          {hasLead && !quote?.customer_id && !leadData?.converted_to_customer_id && !createdCustomerId && (
             <Alert>
               <UserPlus className="h-4 w-4" />
               <AlertDescription>
