@@ -86,9 +86,11 @@ export default function ServiceOrders() {
           customer_id,
           status,
           priority,
-          total_cost,
-          scheduled_date,
-          completion_date,
+          actual_cost,
+          cost_of_labor,
+          cost_of_materials,
+          other_costs,
+          completed_date,
           created_at,
           customers!service_orders_customer_id_fkey(name)
         `)

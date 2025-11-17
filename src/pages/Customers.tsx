@@ -48,6 +48,7 @@ export default function Customers() {
           customer_type,
           is_active,
           parent_customer_id,
+          trading_name,
           created_at
         `)
         .order("name")
