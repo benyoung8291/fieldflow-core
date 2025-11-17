@@ -940,6 +940,17 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
       queryClient.invalidateQueries({ queryKey: ["quote", savedQuoteId] });
       queryClient.invalidateQueries({ queryKey: ["quote-line-items"] });
+      
+      // Invalidate lead-specific quotes if this quote is for a lead
+      if (isForLead && formData.lead_id) {
+        queryClient.invalidateQueries({ queryKey: ["lead-quotes", formData.lead_id] });
+      }
+      
+      // Invalidate customer-specific quotes if this quote is for a customer
+      if (!isForLead && formData.customer_id) {
+        queryClient.invalidateQueries({ queryKey: ["customer-quotes", formData.customer_id] });
+      }
+      
       onOpenChange(false);
       
       // Navigate to quote details page after creation
