@@ -10,6 +10,7 @@ import { Loader2, Trash2, Copy } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface QuoteDescriptionTemplateDialogProps {
   open: boolean;
@@ -31,15 +32,19 @@ export default function QuoteDescriptionTemplateDialog({
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
   const [tenantId, setTenantId] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
-  // Fetch tenant ID when dialog opens
+  // Fetch tenant ID and current user ID when dialog opens
   useEffect(() => {
-    const fetchTenantId = async () => {
+    const fetchUserData = async () => {
       if (open) {
-        console.log('[QuoteDescriptionTemplateDialog] Dialog opened, fetching tenant ID...');
+        console.log('[QuoteDescriptionTemplateDialog] Dialog opened, fetching user data...');
         const { data: { user } } = await supabase.auth.getUser();
         console.log('[QuoteDescriptionTemplateDialog] User:', user?.id);
         if (user) {
+          setCurrentUserId(user.id);
           const { data: profile, error } = await supabase
             .from("profiles")
             .select("tenant_id")
@@ -53,11 +58,14 @@ export default function QuoteDescriptionTemplateDialog({
           }
         }
       } else {
-        // Reset tenant ID when dialog closes
+        // Reset state when dialog closes
         setTenantId("");
+        setCurrentUserId("");
+        setDeleteTemplateId(null);
+        setDeleteConfirmText("");
       }
     };
-    fetchTenantId();
+    fetchUserData();
   }, [open]);
 
   // Fetch templates
@@ -180,15 +188,27 @@ export default function QuoteDescriptionTemplateDialog({
     onOpenChange(false);
   };
 
-  const handleDeleteTemplate = async (templateId: string) => {
-    if (confirm("Are you sure you want to delete this template?")) {
-      await deleteTemplateMutation.mutateAsync(templateId);
+  const handleDeleteTemplate = (templateId: string) => {
+    setDeleteTemplateId(templateId);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirmText.toLowerCase() === "delete" && deleteTemplateId) {
+      await deleteTemplateMutation.mutateAsync(deleteTemplateId);
+      setDeleteTemplateId(null);
+      setDeleteConfirmText("");
+    } else {
+      toast({
+        title: "Invalid confirmation",
+        description: 'Please type "delete" to confirm',
+        variant: "destructive",
+      });
     }
   };
 
-  const getCurrentUserId = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id;
+  const cancelDelete = () => {
+    setDeleteTemplateId(null);
+    setDeleteConfirmText("");
   };
 
   return (
@@ -200,7 +220,7 @@ export default function QuoteDescriptionTemplateDialog({
 
         <Tabs defaultValue="templates" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="templates">My Templates</TabsTrigger>
+            <TabsTrigger value="templates">All Templates</TabsTrigger>
             <TabsTrigger value="quotes">Copy from Quotes</TabsTrigger>
             <TabsTrigger value="save">Save New Template</TabsTrigger>
           </TabsList>
@@ -240,14 +260,16 @@ export default function QuoteDescriptionTemplateDialog({
                             <Copy className="mr-2 h-4 w-4" />
                             Use
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteTemplate(template.id)}
-                            disabled={deleteTemplateMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {template.created_by === currentUserId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteTemplate(template.id)}
+                              disabled={deleteTemplateMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -343,6 +365,32 @@ export default function QuoteDescriptionTemplateDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={!!deleteTemplateId} onOpenChange={(open) => !open && cancelDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Type "delete" to confirm deletion.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder='Type "delete" to confirm'
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteConfirmText.toLowerCase() !== "delete"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
