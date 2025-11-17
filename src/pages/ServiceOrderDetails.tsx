@@ -744,7 +744,10 @@ export default function ServiceOrderDetails() {
                       <FileText className="h-3 w-3" />
                       Description
                     </div>
-                    <div className="text-sm">{order.description || "No description"}</div>
+                    <div 
+                      className="text-sm prose prose-sm max-w-none dark:prose-invert"
+                      dangerouslySetInnerHTML={{ __html: order.description || "No description" }}
+                    />
                   </div>
 
                   {(order as any).is_recurring && (
