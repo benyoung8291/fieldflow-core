@@ -37,7 +37,7 @@ export default function QuoteDescriptionTemplateDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quote_description_templates")
-        .select("*, profiles:created_by(full_name)")
+        .select("*, profiles:created_by(first_name, last_name)")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       
@@ -198,7 +198,7 @@ export default function QuoteDescriptionTemplateDialog({
                     {templates.map((template: any) => (
                       <TableRow key={template.id}>
                         <TableCell className="font-medium">{template.name}</TableCell>
-                        <TableCell>{template.profiles?.full_name || "Unknown"}</TableCell>
+                        <TableCell>{template.profiles ? `${template.profiles.first_name || ''} ${template.profiles.last_name || ''}`.trim() : "Unknown"}</TableCell>
                         <TableCell>{new Date(template.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button
