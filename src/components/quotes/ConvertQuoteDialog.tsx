@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -23,8 +23,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Briefcase, ClipboardList, FileCheck } from 'lucide-react';
+import { Loader2, Briefcase, ClipboardList, FileCheck, AlertCircle, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
+import CustomerDialog from '@/components/customers/CustomerDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface LineItem {
   id?: string;
@@ -61,6 +63,30 @@ export default function ConvertQuoteDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [conversionType, setConversionType] = useState<'project' | 'service_order' | 'contract'>('project');
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [pendingConversion, setPendingConversion] = useState(false);
+  const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
+
+  // Check if quote has already been converted
+  const isConverted = !!(quote?.converted_to_service_order_id || quote?.converted_to_project_id || quote?.converted_to_contract_id);
+  const hasCustomer = !!quote?.customer_id;
+  const hasLead = !!quote?.lead_id;
+
+  // Fetch lead data if quote is for a lead
+  const { data: leadData } = useQuery({
+    queryKey: ['lead', quote?.lead_id],
+    queryFn: async () => {
+      if (!quote?.lead_id) return null;
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', quote.lead_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!quote?.lead_id && open,
+  });
 
   // Project form data
   const [projectData, setProjectData] = useState({
@@ -99,6 +125,36 @@ export default function ConvertQuoteDialog({
     }))
   );
 
+  // Handle successful customer creation
+  useEffect(() => {
+    if (createdCustomerId && pendingConversion) {
+      // Proceed with conversion now that customer exists
+      handleConvert();
+      setPendingConversion(false);
+    }
+  }, [createdCustomerId, pendingConversion]);
+
+  // Initialize conversion when dialog opens
+  const initiateConversion = () => {
+    if (isConverted) {
+      toast({
+        title: "Already Converted",
+        description: "This quote has already been converted. Delete the linked document to convert again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (hasLead && !createdCustomerId) {
+      // Need to convert lead to customer first
+      setPendingConversion(true);
+      setCustomerDialogOpen(true);
+    } else {
+      // Can convert directly
+      handleConvert();
+    }
+  };
+
   // Convert to Project mutation
   const convertToProjectMutation = useMutation({
     mutationFn: async () => {
@@ -108,12 +164,16 @@ export default function ConvertQuoteDialog({
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle();
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
+      // Use customer from quote or newly created customer
+      const customerId = createdCustomerId || quote.customer_id;
+      if (!customerId) throw new Error('No customer found');
+
       // Create project
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           tenant_id: profile.tenant_id,
-          customer_id: quote.customer_id,
+          customer_id: customerId,
           name: projectData.name,
           description: projectData.description,
           start_date: projectData.start_date,
@@ -201,10 +261,21 @@ export default function ConvertQuoteDialog({
         .update({ 
           converted_to_project_id: project.id,
           crm_status: 'won',
+          customer_id: customerId, // Update customer_id if converted from lead
         } as any)
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
+
+      // Link quote to project in helpdesk_linked_documents
+      await supabase.from('helpdesk_linked_documents').insert({
+        tenant_id: profile.tenant_id,
+        ticket_id: project.id,
+        document_id: quote.id,
+        document_type: 'quote',
+        document_number: quote.quote_number,
+        created_by: user.id,
+      });
 
       // Add audit log for conversion
       const userName = user.user_metadata?.first_name 
@@ -281,6 +352,10 @@ export default function ConvertQuoteDialog({
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle();
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
+      // Use customer from quote or newly created customer
+      const customerId = createdCustomerId || quote.customer_id;
+      if (!customerId) throw new Error('No customer found');
+
       // Generate order number
       const orderNumber = `SO-${Date.now()}`;
 
@@ -289,7 +364,7 @@ export default function ConvertQuoteDialog({
         .from('service_orders')
         .insert({
           tenant_id: profile.tenant_id,
-          customer_id: quote.customer_id,
+          customer_id: customerId,
           order_number: orderNumber,
           title: serviceOrderData.title,
           description: serviceOrderData.description,
@@ -355,10 +430,21 @@ export default function ConvertQuoteDialog({
         .update({ 
           converted_to_service_order_id: serviceOrder.id,
           crm_status: 'won',
+          customer_id: customerId, // Update customer_id if converted from lead
         } as any)
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
+
+      // Link quote to service order in helpdesk_linked_documents
+      await supabase.from('helpdesk_linked_documents').insert({
+        tenant_id: profile.tenant_id,
+        ticket_id: serviceOrder.id,
+        document_id: quote.id,
+        document_type: 'quote',
+        document_number: quote.quote_number,
+        created_by: user.id,
+      });
 
       // Add audit log for conversion
       const userName = user.user_metadata?.first_name 
@@ -434,6 +520,10 @@ export default function ConvertQuoteDialog({
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle();
       if (!profile?.tenant_id) throw new Error('No tenant found');
 
+      // Use customer from quote or newly created customer
+      const customerId = createdCustomerId || quote.customer_id;
+      if (!customerId) throw new Error('No customer found');
+
       // Generate contract number
       const contractNumber = `SC-${Date.now()}`;
 
@@ -445,7 +535,7 @@ export default function ConvertQuoteDialog({
         .from('service_contracts' as any)
         .insert({
           tenant_id: profile.tenant_id,
-          customer_id: quote.customer_id,
+          customer_id: customerId,
           contract_number: contractNumber,
           title: contractData.title,
           description: contractData.description,
@@ -490,10 +580,21 @@ export default function ConvertQuoteDialog({
         .update({ 
           converted_to_contract_id: (contract as any).id,
           crm_status: 'won',
+          customer_id: customerId, // Update customer_id if converted from lead
         } as any)
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
+
+      // Link quote to contract in helpdesk_linked_documents
+      await supabase.from('helpdesk_linked_documents').insert({
+        tenant_id: profile.tenant_id,
+        ticket_id: (contract as any).id,
+        document_id: quote.id,
+        document_type: 'quote',
+        document_number: quote.quote_number,
+        created_by: user.id,
+      });
 
       // Add audit log for conversion
       const userName = user.user_metadata?.first_name 
@@ -581,30 +682,54 @@ export default function ConvertQuoteDialog({
                     convertToContractMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Convert Quote</DialogTitle>
-          <DialogDescription>
-            Convert this quote into a project, service order, or service contract
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Convert Quote</DialogTitle>
+            <DialogDescription>
+              Convert this quote into a project, service order, or service contract
+            </DialogDescription>
+          </DialogHeader>
 
-        <Tabs value={conversionType} onValueChange={(v: any) => setConversionType(v)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="project">
-              <Briefcase className="mr-2 h-4 w-4" />
-              Project
-            </TabsTrigger>
-            <TabsTrigger value="service_order">
-              <ClipboardList className="mr-2 h-4 w-4" />
-              Service Order
-            </TabsTrigger>
-            <TabsTrigger value="contract">
-              <FileCheck className="mr-2 h-4 w-4" />
-              Service Contract
-            </TabsTrigger>
-          </TabsList>
+          {isConverted && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This quote has already been converted to a{' '}
+                {quote?.converted_to_service_order_id && 'service order'}
+                {quote?.converted_to_project_id && 'project'}
+                {quote?.converted_to_contract_id && 'contract'}
+                . Delete the linked document to convert again.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {hasLead && !createdCustomerId && (
+            <Alert>
+              <UserPlus className="h-4 w-4" />
+              <AlertDescription>
+                This quote is for a lead. You must convert the lead to a customer before creating a{' '}
+                {conversionType === 'project' ? 'project' : conversionType === 'service_order' ? 'service order' : 'contract'}.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Tabs value={conversionType} onValueChange={(v: any) => setConversionType(v)} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="project" disabled={isConverted}>
+                <Briefcase className="mr-2 h-4 w-4" />
+                Project
+              </TabsTrigger>
+              <TabsTrigger value="service_order" disabled={isConverted}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Service Order
+              </TabsTrigger>
+              <TabsTrigger value="contract" disabled={isConverted}>
+                <FileCheck className="mr-2 h-4 w-4" />
+                Service Contract
+              </TabsTrigger>
+            </TabsList>
 
           <TabsContent value="project" className="space-y-4">
             <div className="space-y-4">
@@ -874,12 +999,31 @@ export default function ConvertQuoteDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleConvert} disabled={isLoading}>
+          <Button onClick={initiateConversion} disabled={isLoading || isConverted}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Convert to {conversionType === 'project' ? 'Project' : conversionType === 'service_order' ? 'Service Order' : 'Contract'}
+            {hasLead && !createdCustomerId ? (
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Convert Lead to Customer
+              </>
+            ) : (
+              <>Convert to {conversionType === 'project' ? 'Project' : conversionType === 'service_order' ? 'Service Order' : 'Contract'}</>
+            )}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+
+    <CustomerDialog
+      open={customerDialogOpen}
+      onOpenChange={setCustomerDialogOpen}
+      leadId={quote?.lead_id}
+      leadData={leadData}
+      onCustomerCreated={(customerId) => {
+        setCreatedCustomerId(customerId);
+        setCustomerDialogOpen(false);
+      }}
+    />
+    </>
   );
 }
