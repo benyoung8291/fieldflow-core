@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -65,6 +66,7 @@ export default function ConvertQuoteDialog({
 }: ConvertQuoteDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [conversionType, setConversionType] = useState<'project' | 'service_order' | 'contract'>(initialType || 'project');
   
   // Update conversion type when initialType changes
@@ -392,7 +394,7 @@ export default function ConvertQuoteDialog({
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast({ title: 'Quote converted to project successfully' });
       onOpenChange(false);
-      window.open(`/projects/${project.id}`, '_blank');
+      navigate(`/projects/${project.id}`);
     },
     onError: (error: any) => {
       toast({
@@ -579,11 +581,12 @@ export default function ConvertQuoteDialog({
 
       return serviceOrder;
     },
-    onSuccess: () => {
+    onSuccess: (serviceOrder) => {
       queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast({ title: 'Quote converted to service order successfully' });
       onOpenChange(false);
+      navigate(`/service-orders/${serviceOrder.id}`);
     },
     onError: (error: any) => {
       toast({
@@ -742,11 +745,12 @@ export default function ConvertQuoteDialog({
 
       return contract;
     },
-    onSuccess: () => {
+    onSuccess: (contract) => {
       queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast({ title: 'Quote converted to service contract successfully' });
       onOpenChange(false);
+      navigate(`/service-contracts/${(contract as any).id}`);
     },
     onError: (error: any) => {
       toast({
