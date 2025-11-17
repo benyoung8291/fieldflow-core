@@ -36,7 +36,9 @@ export default function QuoteDescriptionTemplateDialog({
   useEffect(() => {
     const fetchTenantId = async () => {
       if (open && !tenantId) {
+        console.log('[QuoteDescriptionTemplateDialog] Fetching tenant ID...');
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('[QuoteDescriptionTemplateDialog] User:', user?.id);
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -44,7 +46,9 @@ export default function QuoteDescriptionTemplateDialog({
             .eq("id", user.id)
             .single();
           
+          console.log('[QuoteDescriptionTemplateDialog] Profile data:', profile);
           if (profile) {
+            console.log('[QuoteDescriptionTemplateDialog] Setting tenant ID:', profile.tenant_id);
             setTenantId(profile.tenant_id);
           }
         }
@@ -57,12 +61,14 @@ export default function QuoteDescriptionTemplateDialog({
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
     queryKey: ["quote-description-templates", tenantId],
     queryFn: async () => {
+      console.log('[QuoteDescriptionTemplateDialog] Fetching templates for tenant:', tenantId);
       const { data, error } = await supabase
         .from("quote_description_templates")
         .select("*, profiles:created_by(first_name, last_name)")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       
+      console.log('[QuoteDescriptionTemplateDialog] Templates query result:', { data, error });
       if (error) throw error;
       return data;
     },
