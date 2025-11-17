@@ -549,6 +549,31 @@ export default function QuoteDetails() {
 
       if (error) throw error;
 
+      // Log status change to audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id, first_name, last_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile) {
+          const userName = `${profile.first_name} ${profile.last_name}`;
+          await supabase.from("audit_logs").insert({
+            table_name: "quotes",
+            record_id: id!,
+            action: "update",
+            field_name: "status",
+            old_value: quote?.status || null,
+            new_value: newStatus,
+            user_id: user.id,
+            user_name: userName,
+            tenant_id: profile.tenant_id,
+          });
+        }
+      }
+
       toast({ title: `Quote ${newStatus} successfully` });
       queryClient.invalidateQueries({ queryKey: ["quote", id] });
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
@@ -563,6 +588,8 @@ export default function QuoteDetails() {
 
   const updatePipelineStage = async (field: 'pipeline_id' | 'stage_id', value: string) => {
     try {
+      const oldValue = field === 'pipeline_id' ? quote?.pipeline_id : quote?.stage_id;
+      
       const updates: any = { [field]: value };
       
       // If updating pipeline, reset stage
@@ -573,6 +600,31 @@ export default function QuoteDetails() {
       const { error } = await supabase.from("quotes").update(updates).eq("id", id);
 
       if (error) throw error;
+
+      // Log pipeline/stage change to audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id, first_name, last_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile) {
+          const userName = `${profile.first_name} ${profile.last_name}`;
+          await supabase.from("audit_logs").insert({
+            table_name: "quotes",
+            record_id: id!,
+            action: "update",
+            field_name: field,
+            old_value: oldValue || null,
+            new_value: value,
+            user_id: user.id,
+            user_name: userName,
+            tenant_id: profile.tenant_id,
+          });
+        }
+      }
 
       toast({ title: `Quote ${field === 'pipeline_id' ? 'pipeline' : 'stage'} updated` });
       queryClient.invalidateQueries({ queryKey: ["quote", id] });
@@ -596,11 +648,35 @@ export default function QuoteDetails() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, first_name, last_name")
         .eq("id", user.id)
         .maybeSingle();
 
       if (!profile) throw new Error("Profile not found");
+
+      const userName = `${profile.first_name} ${profile.last_name}`;
+
+      // Track changes for audit logging
+      const changedFields: { field: string; oldValue: any; newValue: any }[] = [];
+      
+      if (quote) {
+        // Check each editable field for changes
+        if (editedFields.title !== quote.title) {
+          changedFields.push({ field: 'title', oldValue: quote.title, newValue: editedFields.title });
+        }
+        if (editedFields.description !== quote.description) {
+          changedFields.push({ field: 'description', oldValue: quote.description, newValue: editedFields.description });
+        }
+        if (editedFields.notes !== quote.notes) {
+          changedFields.push({ field: 'notes', oldValue: quote.notes, newValue: editedFields.notes });
+        }
+        if (editedFields.terms_conditions !== quote.terms_conditions) {
+          changedFields.push({ field: 'terms_conditions', oldValue: quote.terms_conditions, newValue: editedFields.terms_conditions });
+        }
+        if (editedFields.internal_notes !== quote.internal_notes) {
+          changedFields.push({ field: 'internal_notes', oldValue: quote.internal_notes, newValue: editedFields.internal_notes });
+        }
+      }
 
       // Update quote fields
       const { error: quoteError } = await supabase
@@ -609,6 +685,21 @@ export default function QuoteDetails() {
         .eq("id", id);
 
       if (quoteError) throw quoteError;
+
+      // Create audit log entries for changed fields
+      for (const change of changedFields) {
+        await supabase.from("audit_logs").insert({
+          table_name: "quotes",
+          record_id: id!,
+          action: "update",
+          field_name: change.field,
+          old_value: change.oldValue?.toString() || null,
+          new_value: change.newValue?.toString() || null,
+          user_id: user.id,
+          user_name: userName,
+          tenant_id: profile.tenant_id,
+        });
+      }
 
       // Update line items - delete all and recreate
       await supabase.from("quote_line_items").delete().eq("quote_id", id);
@@ -698,6 +789,31 @@ export default function QuoteDetails() {
 
   const handleDelete = async () => {
     try {
+      // Log deletion to audit trail before deleting
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id, first_name, last_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile) {
+          const userName = `${profile.first_name} ${profile.last_name}`;
+          await supabase.from("audit_logs").insert({
+            table_name: "quotes",
+            record_id: id!,
+            action: "delete",
+            field_name: null,
+            old_value: quote?.title || null,
+            new_value: null,
+            user_id: user.id,
+            user_name: userName,
+            tenant_id: profile.tenant_id,
+          });
+        }
+      }
+
       const { error } = await supabase.from("quotes").delete().eq("id", id);
 
       if (error) throw error;
