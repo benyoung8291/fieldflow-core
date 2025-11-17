@@ -4840,6 +4840,7 @@ export type Database = {
           fixed_amount: number | null
           id: string
           is_recurring: boolean | null
+          key_number: string | null
           location_id: string | null
           order_number: string
           other_costs: number | null
@@ -4887,6 +4888,7 @@ export type Database = {
           fixed_amount?: number | null
           id?: string
           is_recurring?: boolean | null
+          key_number?: string | null
           location_id?: string | null
           order_number: string
           other_costs?: number | null
@@ -4934,6 +4936,7 @@ export type Database = {
           fixed_amount?: number | null
           id?: string
           is_recurring?: boolean | null
+          key_number?: string | null
           location_id?: string | null
           order_number?: string
           other_costs?: number | null

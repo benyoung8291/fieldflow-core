@@ -217,6 +217,7 @@ serve(async (req) => {
             estimated_hours: estimatedHours,
             priority: "normal",
             location_id: locationId !== 'no-location' ? locationId : null,
+            key_number: items.length === 1 ? items[0].key_number : null,
             notes: `Auto-generated from contract ${contract.contract_number}`,
           })
           .select()

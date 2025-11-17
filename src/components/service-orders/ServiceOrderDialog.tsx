@@ -119,6 +119,7 @@ export default function ServiceOrderDialog({
     description: "",
     work_order_number: "",
     purchase_order_number: "",
+    key_number: "",
     status: "draft",
     priority: "normal",
     skill_required: "",
@@ -247,6 +248,7 @@ export default function ServiceOrderDialog({
           description: orderData.description || "",
           work_order_number: orderData.work_order_number || "",
           purchase_order_number: orderData.purchase_order_number || "",
+          key_number: orderData.key_number || "",
           status: orderData.status || "draft",
           priority: orderData.priority || "normal",
           skill_required: orderData.skill_required || "",
@@ -298,6 +300,7 @@ export default function ServiceOrderDialog({
       description: "",
       work_order_number: "",
       purchase_order_number: "",
+      key_number: "",
       status: "draft",
       priority: "normal",
       skill_required: "",
@@ -526,6 +529,7 @@ export default function ServiceOrderDialog({
         description: formData.description,
         work_order_number: formData.work_order_number || null,
         purchase_order_number: formData.purchase_order_number || null,
+        key_number: formData.key_number || null,
         status: formData.status,
         priority: formData.priority,
         skill_required: formData.skill_required || null,
@@ -911,6 +915,22 @@ export default function ServiceOrderDialog({
                     </div>
                   </FieldPresenceWrapper>
                 </div>
+
+                <FieldPresenceWrapper fieldName="key_number" onlineUsers={onlineUsers}>
+                  <div className="space-y-2">
+                    <Label htmlFor="key_number">Key Number</Label>
+                    <Input
+                      id="key_number"
+                      value={formData.key_number}
+                      onChange={(e) => setFormData({ ...formData, key_number: e.target.value })}
+                      onFocus={() => {
+                        setCurrentField("key_number");
+                        updateField("key_number");
+                      }}
+                      placeholder="Enter key number"
+                    />
+                  </div>
+                </FieldPresenceWrapper>
 
                 <div className="grid grid-cols-3 gap-4">
                   <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
