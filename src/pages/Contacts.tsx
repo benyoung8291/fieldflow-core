@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, MapPin, User, Building2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, User, Building2, Archive } from "lucide-react";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,10 +19,11 @@ export default function Contacts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
   const isMobile = useIsMobile();
 
   const { data: contacts, isLoading } = useQuery({
-    queryKey: ["contacts", activeTab],
+    queryKey: ["contacts", activeTab, showArchived],
     queryFn: async () => {
       let query = supabase
         .from("contacts")
@@ -34,6 +35,14 @@ export default function Contacts() {
         `)
         .order("created_at", { ascending: false });
 
+      // Filter by archived status
+      if (showArchived) {
+        query = query.eq("status", "inactive");
+      } else {
+        query = query.neq("status", "inactive");
+      }
+
+      // Filter by contact type
       if (activeTab !== "all") {
         query = query.eq("contact_type", activeTab);
       }
@@ -117,10 +126,19 @@ export default function Contacts() {
               Manage your contacts throughout their entire lifecycle
             </p>
           </div>
-          <Button onClick={handleAdd}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Contact
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant={showArchived ? "default" : "outline"} 
+              onClick={() => setShowArchived(!showArchived)}
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              {showArchived ? "Show Active" : "Show Archived"}
+            </Button>
+            <Button onClick={handleAdd}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Contact
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
