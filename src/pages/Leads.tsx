@@ -36,9 +36,22 @@ export default function Leads() {
     queryFn: async () => {
       let query = supabase
         .from("leads")
-        .select("*")
+        .select(`
+          id,
+          name,
+          company_name,
+          email,
+          phone,
+          status,
+          rating,
+          source,
+          estimated_value,
+          created_at,
+          converted_to_customer_id
+        `)
         .eq("is_active", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);

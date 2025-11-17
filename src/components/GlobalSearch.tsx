@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Command,
   CommandEmpty,
@@ -40,6 +41,7 @@ interface GlobalSearchProps {
 export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: GlobalSearchProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const navigate = useNavigate();
 
   const open = externalOpen ?? internalOpen;
@@ -57,82 +59,103 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Fetch all data
+  // Fetch all data - only when search query is present
   const { data: customers } = useQuery({
-    queryKey: ["search-customers"],
+    queryKey: ["search-customers", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("customers")
         .select("id, name, email")
-        .limit(200);
+        .or(`name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: locations } = useQuery({
-    queryKey: ["search-locations"],
+    queryKey: ["search-locations", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("customer_locations")
         .select("id, name, customer_id, customers(name)")
-        .limit(200);
+        .ilike("name", `%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: quotes } = useQuery({
-    queryKey: ["search-quotes"],
+    queryKey: ["search-quotes", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("quotes")
         .select("id, quote_number, customer_id, customers(name)")
-        .limit(200);
+        .ilike("quote_number", `%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: invoices } = useQuery({
-    queryKey: ["search-invoices"],
+    queryKey: ["search-invoices", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("invoices")
         .select("id, invoice_number, customer_id, customers(name)")
-        .limit(200);
+        .ilike("invoice_number", `%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: projects } = useQuery({
-    queryKey: ["search-projects"],
+    queryKey: ["search-projects", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("projects")
         .select("id, name, customer_id, customers(name)")
-        .limit(200);
+        .ilike("name", `%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: serviceOrders } = useQuery({
-    queryKey: ["search-service-orders"],
+    queryKey: ["search-service-orders", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("service_orders")
         .select("id, order_number, customer_id, customers(name)")
-        .limit(200);
+        .ilike("order_number", `%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: contracts } = useQuery({
-    queryKey: ["search-contracts"],
+    queryKey: ["search-contracts", debouncedSearch],
     queryFn: async () => {
+      if (!debouncedSearch) return [];
       const { data } = await supabase
         .from("service_contracts")
         .select("id, contract_number, customer_id, customers(name)")
-        .limit(200);
+        .ilike("contract_number", `%${debouncedSearch}%`)
+        .limit(50);
       return data || [];
     },
+    enabled: debouncedSearch.length > 0,
   });
 
   const { data: helpdesk } = useQuery({
