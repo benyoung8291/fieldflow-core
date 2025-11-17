@@ -191,8 +191,8 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Remote Cursors Overlay - Disabled on certain pages */}
-      {!disablePresence && <RemoteCursors />}
+      {/* Remote Cursors Overlay - DISABLED for performance */}
+      {false && !disablePresence && <RemoteCursors />}
       
       {/* Sidebar - Desktop only, completely hidden in mobile view */}
       {!isMobile && (

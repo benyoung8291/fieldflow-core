@@ -52,25 +52,35 @@ export default function Quotes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("*")
+        .select(`
+          id,
+          quote_number,
+          title,
+          total_amount,
+          status,
+          valid_until,
+          created_at,
+          is_archived,
+          customer_id,
+          lead_id,
+          converted_to_service_order_id,
+          converted_to_project_id,
+          converted_to_contract_id,
+          customers(name),
+          leads(name)
+        `)
         .eq("is_archived", showArchived)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100); // Add pagination limit
 
       if (error) throw error;
-
-      const quotesWithCustomers = await Promise.all(
-        (data || []).map(async (quote: any) => {
-          const { data: customer } = await supabase
-            .from("customers")
-            .select("name")
-            .eq("id", quote.customer_id)
-            .single();
-
-          return { ...quote, customer };
-        })
-      );
-
-      return quotesWithCustomers;
+      
+      // Transform to match expected format
+      return (data || []).map(quote => ({
+        ...quote,
+        customer: quote.customers ? { name: quote.customers.name } : null,
+        lead: quote.leads ? { name: quote.leads.name } : null
+      }));
     },
   });
 
