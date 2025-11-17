@@ -100,6 +100,32 @@ export default function ConvertQuoteDialog({
     enabled: !!quote?.lead_id && open,
   });
 
+  // Fetch primary contact from lead or customer
+  const { data: primaryContact } = useQuery({
+    queryKey: ['primary-contact', quote?.lead_id, quote?.customer_id, createdCustomerId],
+    queryFn: async () => {
+      const customerId = createdCustomerId || quote?.customer_id;
+      const leadId = quote?.lead_id;
+      
+      if (!customerId && !leadId) return null;
+
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id')
+        .or(
+          customerId 
+            ? `customer_id.eq.${customerId},lead_id.eq.${leadId || 'null'}`
+            : `lead_id.eq.${leadId}`
+        )
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!(quote?.lead_id || quote?.customer_id || createdCustomerId) && open,
+  });
+
   // Project form data
   const [projectData, setProjectData] = useState({
     name: quote?.title || '',
@@ -209,6 +235,7 @@ export default function ConvertQuoteDialog({
         .insert({
           tenant_id: profile.tenant_id,
           customer_id: customerId,
+          contact_id: primaryContact?.id || null,
           name: projectData.name,
           description: projectData.description,
           start_date: projectData.start_date,
@@ -428,6 +455,7 @@ export default function ConvertQuoteDialog({
         .insert({
           tenant_id: profile.tenant_id,
           customer_id: customerId,
+          contact_id: primaryContact?.id || null,
           order_number: orderNumber,
           title: serviceOrderData.title,
           description: serviceOrderData.description,
@@ -624,6 +652,7 @@ export default function ConvertQuoteDialog({
         .insert({
           tenant_id: profile.tenant_id,
           customer_id: customerId,
+          contact_id: primaryContact?.id || null,
           contract_number: contractNumber,
           title: contractData.title,
           description: contractData.description,
