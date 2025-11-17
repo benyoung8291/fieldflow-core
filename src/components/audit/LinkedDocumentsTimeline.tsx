@@ -204,7 +204,7 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
           }
         }
 
-        // Fetch linked service contracts
+      // Fetch linked service contracts
         const { data: contracts } = await supabase
           .from("service_contracts")
           .select("id, contract_number, title, status, created_at, created_by")
@@ -222,6 +222,121 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
               createdBy,
               status: contract.status,
               route: `/service-contracts/${contract.id}`,
+            });
+          }
+        }
+      }
+
+      // Fetch linked documents from helpdesk_linked_documents table
+      const { data: linkedDocs } = await supabase
+        .from("helpdesk_linked_documents")
+        .select("*")
+        .eq("document_type", documentType)
+        .eq("document_id", documentId);
+
+      if (linkedDocs) {
+        for (const link of linkedDocs) {
+          // Fetch the actual helpdesk ticket
+          const { data: ticket } = await supabase
+            .from("helpdesk_tickets")
+            .select("id, ticket_number, subject, status, created_at")
+            .eq("id", link.ticket_id)
+            .single();
+
+          if (ticket) {
+            allDocuments.push({
+              id: ticket.id,
+              type: "Help Desk Ticket",
+              number: ticket.ticket_number,
+              title: ticket.subject,
+              createdAt: new Date(ticket.created_at),
+              createdBy: "System",
+              status: ticket.status,
+              route: `/help-desk?ticketId=${ticket.id}`,
+            });
+          }
+        }
+      }
+
+      // Also fetch documents that link TO this document (reverse lookup)
+      const { data: reverseLinks } = await supabase
+        .from("helpdesk_linked_documents")
+        .select("*")
+        .eq("ticket_id", documentId);
+
+      if (reverseLinks) {
+        for (const link of reverseLinks) {
+          // Determine what type of document is linked
+          let docData = null;
+          let docType = "";
+          let route = "";
+          
+          if (link.document_type === "quote") {
+            const { data } = await supabase
+              .from("quotes")
+              .select("id, quote_number, title, status, created_at")
+              .eq("id", link.document_id)
+              .single();
+            docData = data;
+            docType = "Quote";
+            route = `/quotes/${link.document_id}`;
+          } else if (link.document_type === "service_order") {
+            const { data } = await supabase
+              .from("service_orders")
+              .select("id, order_number, title, status, created_at")
+              .eq("id", link.document_id)
+              .single();
+            docData = data;
+            docType = "Service Order";
+            route = `/service-orders/${link.document_id}`;
+          } else if (link.document_type === "project") {
+            const { data } = await supabase
+              .from("projects")
+              .select("id, project_number, name, status, created_at")
+              .eq("id", link.document_id)
+              .single();
+            docData = data;
+            docType = "Project";
+            route = `/projects/${link.document_id}`;
+          } else if (link.document_type === "purchase_order") {
+            const { data } = await supabase
+              .from("purchase_orders")
+              .select("id, po_number, status, created_at")
+              .eq("id", link.document_id)
+              .single();
+            docData = data;
+            docType = "Purchase Order";
+            route = `/purchase-orders/${link.document_id}`;
+          } else if (link.document_type === "invoice") {
+            const { data } = await supabase
+              .from("invoices")
+              .select("id, invoice_number, status, created_at")
+              .eq("id", link.document_id)
+              .single();
+            docData = data;
+            docType = "Invoice";
+            route = `/invoices/${link.document_id}`;
+          } else if (link.document_type === "contract") {
+            const { data } = await supabase
+              .from("service_contracts")
+              .select("id, contract_number, title, status, created_at")
+              .eq("id", link.document_id)
+              .single();
+            docData = data;
+            docType = "Service Contract";
+            route = `/service-contracts/${link.document_id}`;
+          }
+
+          if (docData) {
+            allDocuments.push({
+              id: docData.id,
+              type: docType,
+              number: link.document_number || docData.quote_number || docData.order_number || docData.project_number || docData.po_number || docData.invoice_number || docData.contract_number || "N/A",
+              title: docData.title || docData.name || docData.subject || "Untitled",
+              createdAt: new Date(docData.created_at),
+              createdBy: "System",
+              status: docData.status,
+              route,
             });
           }
         }
@@ -265,6 +380,10 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
         return <User className="h-4 w-4" />;
       case "Contact":
         return <UserCircle className="h-4 w-4" />;
+      case "Help Desk Ticket":
+        return <FileText className="h-4 w-4" />;
+      case "Purchase Order":
+        return <FileText className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
