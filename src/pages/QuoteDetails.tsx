@@ -1036,6 +1036,13 @@ export default function QuoteDetails() {
   // Key info section
   const keyInfoSection = quote && (
     <>
+      {/* Status Change Dropdown */}
+      {statusChangeDropdown && (
+        <div className="mb-4 flex items-center gap-4 p-3 bg-muted/30 rounded-lg border">
+          {statusChangeDropdown}
+        </div>
+      )}
+      
       <div className="grid gap-4 md:grid-cols-4">
         <KeyInfoCard
           icon={User}

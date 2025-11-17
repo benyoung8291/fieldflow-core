@@ -70,14 +70,26 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
 
       if (error) throw error;
 
-      // For now, open HTML in new tab (in production, would download PDF)
+      // Create a blob from the HTML and trigger download
+      const blob = new Blob([data.html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `quote-${quoteId}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      // Also open in new tab for preview
       const newWindow = window.open();
       if (newWindow) {
         newWindow.document.write(data.html);
         newWindow.document.close();
       }
 
-      toast.success("PDF generated successfully");
+      toast.success("PDF generated and downloaded successfully");
+      onOpenChange(false);
     } catch (error: any) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to generate PDF: " + error.message);
