@@ -51,6 +51,7 @@ import ExpenseDetails from "@/pages/ExpenseDetails";
 import CreditCardReconciliation from "@/pages/CreditCardReconciliation";
 import UnassignedTransactions from "@/pages/UnassignedTransactions";
 import Contacts from "@/pages/Contacts";
+import ContactDetails from "@/pages/ContactDetails";
 import Workflows from "@/pages/Workflows";
 import WorkflowBuilder from "@/pages/WorkflowBuilder";
 import WorkflowTemplateSelector from "@/pages/WorkflowTemplateSelector";
@@ -215,6 +216,7 @@ const App = () => {
             <Route path="/workflows/templates" element={isAuthenticated ? <WorkflowTemplateSelector /> : <Navigate to="/auth" replace />} />
             <Route path="/workflows/:id" element={isAuthenticated ? <WorkflowBuilder /> : <Navigate to="/auth" replace />} />
             <Route path="/contacts" element={isAuthenticated ? <Contacts /> : <Navigate to="/auth" replace />} />
+            <Route path="/contacts/:id" element={isAuthenticated ? <ContactDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
             <Route path="/crm-hub" element={isAuthenticated ? <CRMHub /> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
