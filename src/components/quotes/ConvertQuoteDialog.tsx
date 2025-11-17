@@ -157,6 +157,14 @@ export default function ConvertQuoteDialog({
       return;
     }
 
+    // Check if lead has already been converted to a customer
+    if (hasLead && leadData?.converted_to_customer_id) {
+      // Use existing customer from previous conversion
+      setCreatedCustomerId(leadData.converted_to_customer_id);
+      handleConvert();
+      return;
+    }
+
     if (hasLead && !createdCustomerId) {
       // Need to convert lead to customer first
       setPendingConversion(true);
