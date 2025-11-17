@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ interface LineItem {
 export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: QuoteDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
@@ -939,6 +941,11 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       queryClient.invalidateQueries({ queryKey: ["quote", savedQuoteId] });
       queryClient.invalidateQueries({ queryKey: ["quote-line-items"] });
       onOpenChange(false);
+      
+      // Navigate to quote details page after creation
+      if (!quoteId && savedQuoteId) {
+        navigate(`/quotes/${savedQuoteId}`);
+      }
     } catch (error: any) {
       toast({
         title: "Error saving quote",
