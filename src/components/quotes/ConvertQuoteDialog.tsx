@@ -392,6 +392,7 @@ export default function ConvertQuoteDialog({
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['linked-documents-timeline', 'quote', quote.id] });
       toast({ title: 'Quote converted to project successfully' });
       onOpenChange(false);
       navigate(`/projects/${project.id}`);
@@ -584,6 +585,7 @@ export default function ConvertQuoteDialog({
     onSuccess: (serviceOrder) => {
       queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['linked-documents-timeline', 'quote', quote.id] });
       toast({ title: 'Quote converted to service order successfully' });
       onOpenChange(false);
       navigate(`/service-orders/${serviceOrder.id}`);
@@ -748,6 +750,7 @@ export default function ConvertQuoteDialog({
     onSuccess: (contract) => {
       queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['linked-documents-timeline', 'quote', quote.id] });
       toast({ title: 'Quote converted to service contract successfully' });
       onOpenChange(false);
       navigate(`/service-contracts/${(contract as any).id}`);
