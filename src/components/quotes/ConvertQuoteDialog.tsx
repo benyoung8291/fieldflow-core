@@ -306,7 +306,6 @@ export default function ConvertQuoteDialog({
         .from('quotes')
         .update({ 
           converted_to_project_id: project.id,
-          crm_status: 'won',
           customer_id: customerId, // Update customer_id if converted from lead
           ...(closedWonStageId && { stage_id: closedWonStageId }), // Set to Closed Won stage
         } as any)
@@ -491,7 +490,6 @@ export default function ConvertQuoteDialog({
         .from('quotes')
         .update({ 
           converted_to_service_order_id: serviceOrder.id,
-          crm_status: 'won',
           customer_id: customerId, // Update customer_id if converted from lead
           ...(closedWonStageId && { stage_id: closedWonStageId }), // Set to Closed Won stage
         } as any)
@@ -655,7 +653,6 @@ export default function ConvertQuoteDialog({
         .from('quotes')
         .update({ 
           converted_to_contract_id: (contract as any).id,
-          crm_status: 'won',
           customer_id: customerId, // Update customer_id if converted from lead
           ...(closedWonStageId && { stage_id: closedWonStageId }), // Set to Closed Won stage
         } as any)
