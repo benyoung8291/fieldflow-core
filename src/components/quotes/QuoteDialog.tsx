@@ -98,6 +98,11 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
     stage_id: "",
   });
 
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('[QuoteDialog] State update - isForLead:', isForLead, 'leads:', leads.length, 'customers:', customers.length, 'formData.lead_id:', formData.lead_id, 'formData.customer_id:', formData.customer_id);
+  }, [isForLead, leads, customers, formData.lead_id, formData.customer_id]);
+
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
 
@@ -190,6 +195,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
   });
 
   useEffect(() => {
+    console.log('[QuoteDialog] useEffect triggered - open:', open, 'quoteId:', quoteId, 'leadId:', leadId);
     if (open) {
       fetchTenantId();
       fetchCustomersAndLeads();
@@ -202,6 +208,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         
         // If leadId is provided, initialize form with lead selected
         if (leadId) {
+          console.log('[QuoteDialog] Setting form for lead:', leadId);
           setIsForLead(true);
           setFormData({
             customer_id: "",
@@ -217,6 +224,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
             stage_id: "",
           });
         } else {
+          console.log('[QuoteDialog] Resetting form for new quote');
           // Reset form for new quote without lead
           resetForm();
           setFormData(prev => ({
@@ -253,6 +261,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
   };
 
   const fetchCustomersAndLeads = async () => {
+    console.log('[QuoteDialog] Fetching customers and leads...');
     const { data: customersData, error: customersError } = await supabase
       .from("customers")
       .select("id, name")
@@ -260,8 +269,10 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       .order("name");
 
     if (customersError) {
+      console.error('[QuoteDialog] Error fetching customers:', customersError);
       toast({ title: "Error fetching customers", variant: "destructive" });
     } else {
+      console.log('[QuoteDialog] Customers fetched:', customersData?.length);
       setCustomers(customersData || []);
     }
 
@@ -273,8 +284,10 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       .order("name");
 
     if (leadsError) {
+      console.error('[QuoteDialog] Error fetching leads:', leadsError);
       toast({ title: "Error fetching leads", variant: "destructive" });
     } else {
+      console.log('[QuoteDialog] Leads fetched:', leadsData?.length, leadsData);
       setLeads(leadsData || []);
     }
   };
@@ -985,10 +998,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
                 </div>
                 <Select
                   value={isForLead ? formData.lead_id : formData.customer_id}
-                  onValueChange={(value) => setFormData({ 
-                    ...formData, 
-                    [isForLead ? "lead_id" : "customer_id"]: value 
-                  })}
+                  onValueChange={(value) => {
+                    console.log('[QuoteDialog] Select onValueChange:', value, 'isForLead:', isForLead);
+                    setFormData({ 
+                      ...formData, 
+                      [isForLead ? "lead_id" : "customer_id"]: value 
+                    });
+                  }}
                   disabled={!!leadId}
                 >
                   <SelectTrigger className={errors.customer_id ? "border-red-500" : ""}>
