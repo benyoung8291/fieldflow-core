@@ -476,8 +476,8 @@ export default function QuoteDetails() {
     try {
       // Validate line items if changing status away from draft
       if (quote?.status === "draft" && newStatus !== "draft") {
-        // Check if there are any line items
-        if (!lineItems || lineItems.length === 0) {
+        // Check if there are any line items (use editedLineItems for current state)
+        if (!editedLineItems || editedLineItems.length === 0) {
           toast({
             title: "Cannot change status",
             description: "Please add at least one line item before changing status",
@@ -486,10 +486,10 @@ export default function QuoteDetails() {
           return;
         }
 
-        // Validate all line items are complete
+        // Validate all line items are complete (use editedLineItems, not lineItems)
         const incompleteItems: string[] = [];
         
-        lineItems.forEach((item: any, index: number) => {
+        editedLineItems.forEach((item: any, index: number) => {
           const issues: string[] = [];
           
           if (!item.description || item.description.trim() === "") {
@@ -517,7 +517,7 @@ export default function QuoteDetails() {
         });
 
         // Check for sub-items (nested line items with parent_line_item_id)
-        const subItems = lineItems.filter((item: any) => item.parent_line_item_id);
+        const subItems = editedLineItems.filter((item: any) => item.parent_line_item_id);
         subItems.forEach((subItem: any, subIndex: number) => {
           const subIssues: string[] = [];
           
