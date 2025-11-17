@@ -46,6 +46,8 @@ import {
   Eye,
   Tag,
   AlertCircle,
+  Briefcase,
+  FolderKanban,
 } from "lucide-react";
 import InlineQuoteLineItems from "@/components/quotes/InlineQuoteLineItems";
 import QuoteDialog from "@/components/quotes/QuoteDialog";
@@ -86,6 +88,7 @@ export default function QuoteDetails() {
   const [emailMode, setEmailMode] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversionType, setConversionType] = useState<'project' | 'service_order' | 'contract' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   
@@ -887,9 +890,32 @@ export default function QuoteDetails() {
   
   if (isApproved && !isConverted) {
     actionButtons.push({
-      label: hasLead ? "Convert (Lead to Customer Required)" : "Convert to Service Order / Project",
-      icon: <RefreshCw className="h-4 w-4" />,
-      onClick: () => setConvertDialogOpen(true),
+      label: "Convert to Service Order",
+      icon: <Briefcase className="h-4 w-4" />,
+      onClick: () => {
+        setConversionType('service_order');
+        setConvertDialogOpen(true);
+      },
+      variant: "default",
+    });
+    
+    actionButtons.push({
+      label: "Convert to Service Contract",
+      icon: <FileText className="h-4 w-4" />,
+      onClick: () => {
+        setConversionType('contract');
+        setConvertDialogOpen(true);
+      },
+      variant: "default",
+    });
+    
+    actionButtons.push({
+      label: "Convert to Project",
+      icon: <FolderKanban className="h-4 w-4" />,
+      onClick: () => {
+        setConversionType('project');
+        setConvertDialogOpen(true);
+      },
       variant: "default",
     });
   }
@@ -1485,9 +1511,13 @@ export default function QuoteDetails() {
 
           <ConvertQuoteDialog
             open={convertDialogOpen}
-            onOpenChange={setConvertDialogOpen}
+            onOpenChange={(open) => {
+              setConvertDialogOpen(open);
+              if (!open) setConversionType(null);
+            }}
             quote={quote}
             lineItems={lineItems || []}
+            initialType={conversionType}
           />
 
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
