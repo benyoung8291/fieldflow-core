@@ -1095,7 +1095,7 @@ export default function ConvertQuoteDialog({
           </Button>
           <Button onClick={initiateConversion} disabled={isLoading || isConverted}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {hasLead && !createdCustomerId ? (
+            {hasLead && !quote?.customer_id && !leadData?.converted_to_customer_id && !createdCustomerId ? (
               <>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Convert Lead to Customer
