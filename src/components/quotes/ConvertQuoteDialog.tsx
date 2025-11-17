@@ -874,8 +874,48 @@ export default function ConvertQuoteDialog({
               <div className="rounded-lg bg-muted p-4">
                 <p className="text-sm text-muted-foreground">
                   <strong>Note:</strong> A new project will be created with status "Planning". 
-                  Quote line items will need to be manually added to project tasks if needed.
+                  All quote line items will be automatically transferred to the project.
                 </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Line Items to Transfer</Label>
+                  <Badge variant="secondary">
+                    {lineItems.length} items
+                  </Badge>
+                </div>
+                
+                <div className="rounded-lg border bg-card p-4 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2">
+                    {lineItems.map((item, index) => (
+                      <div key={index} className="space-y-1">
+                        <div className="flex justify-between items-start py-2 border-b last:border-0">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Qty: {item.quantity} × ${item.unit_price.toFixed(2)} = ${item.line_total.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                        {(item as any).subItems && (item as any).subItems.length > 0 && (
+                          <div className="ml-4 space-y-1">
+                            {(item as any).subItems.map((subItem: any, subIndex: number) => (
+                              <div key={subIndex} className="flex justify-between items-start py-1 pl-4 border-l-2">
+                                <div className="flex-1">
+                                  <p className="text-sm">{subItem.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Qty: {subItem.quantity} × ${(subItem.unit_price || subItem.sell_price || 0).toFixed(2)} = ${subItem.line_total.toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -950,8 +990,48 @@ export default function ConvertQuoteDialog({
               <div className="rounded-lg bg-muted p-4">
                 <p className="text-sm text-muted-foreground">
                   <strong>Note:</strong> A new service order will be created with status "Waiting". 
-                  You can assign workers and update details after creation.
+                  All quote line items will be automatically transferred to the service order.
                 </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Line Items to Transfer</Label>
+                  <Badge variant="secondary">
+                    {lineItems.length} items
+                  </Badge>
+                </div>
+                
+                <div className="rounded-lg border bg-card p-4 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2">
+                    {lineItems.map((item, index) => (
+                      <div key={index} className="space-y-1">
+                        <div className="flex justify-between items-start py-2 border-b last:border-0">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Qty: {item.quantity} × ${item.unit_price.toFixed(2)} = ${item.line_total.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                        {(item as any).subItems && (item as any).subItems.length > 0 && (
+                          <div className="ml-4 space-y-1">
+                            {(item as any).subItems.map((subItem: any, subIndex: number) => (
+                              <div key={subIndex} className="flex justify-between items-start py-1 pl-4 border-l-2">
+                                <div className="flex-1">
+                                  <p className="text-sm">{subItem.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Qty: {subItem.quantity} × ${(subItem.unit_price || subItem.sell_price || 0).toFixed(2)} = ${subItem.line_total.toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
