@@ -33,10 +33,14 @@ export default function PurchaseOrders() {
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Purchase orders fetch error:", error);
+        throw error;
+      }
       setPurchaseOrders(data || []);
     } catch (error: any) {
-      toast.error("Failed to load purchase orders");
+      console.error("Failed to load purchase orders:", error);
+      toast.error("Failed to load purchase orders: " + (error.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
