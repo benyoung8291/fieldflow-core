@@ -35,18 +35,32 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
   const { data: invoice, isLoading } = useQuery({
     queryKey: ['ap-invoice-matching', invoiceId],
     queryFn: async () => {
-      // @ts-ignore - Types will update after migration
       const { data, error } = await supabase
         .from('invoices')
         .select(`
           *,
-          purchase_order:purchase_orders(*),
           supplier:suppliers(*),
           line_items:invoice_line_items(*),
           matching_data:ap_invoice_line_matching(*)
         `)
         .eq('id', invoiceId)
         .single();
+
+      if (error) throw error;
+      if (!data) return null;
+
+      // Fetch PO separately using RPC if it exists
+      const invoiceData = data as any;
+      if (invoiceData.purchase_order_id) {
+        const { data: po } = await supabase
+          .rpc('get_purchase_order_with_links', { p_po_id: invoiceData.purchase_order_id });
+        
+        if (po && po.length > 0) {
+          return { ...data, purchase_order: po[0] };
+        }
+      }
+
+      return data;
 
       if (error) throw error;
       return data;
