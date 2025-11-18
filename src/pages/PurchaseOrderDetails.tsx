@@ -191,39 +191,37 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkServiceOrder = async (serviceOrderId: string) => {
     try {
-      const { error } = await supabase
-        .from("purchase_orders")
-        .update({ 
-          service_order_id: serviceOrderId || null,
-          project_id: null // Clear project if linking to service order
-        })
-        .eq("id", id);
+      const { error } = await supabase.rpc("update_purchase_order_linkage", {
+        p_po_id: id,
+        p_service_order_id: serviceOrderId || null,
+        p_project_id: null // Clear project if linking to service order
+      });
 
       if (error) throw error;
 
       toast.success("Purchase order linked to service order");
       fetchPurchaseOrder();
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Failed to link service order:", error);
+      toast.error(`Failed to link: ${error.message}`);
     }
   };
 
   const handleLinkProject = async (projectId: string) => {
     try {
-      const { error } = await supabase
-        .from("purchase_orders")
-        .update({ 
-          project_id: projectId || null,
-          service_order_id: null // Clear service order if linking to project
-        })
-        .eq("id", id);
+      const { error } = await supabase.rpc("update_purchase_order_linkage", {
+        p_po_id: id,
+        p_service_order_id: null, // Clear service order if linking to project
+        p_project_id: projectId || null
+      });
 
       if (error) throw error;
 
       toast.success("Purchase order linked to project");
       fetchPurchaseOrder();
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Failed to link project:", error);
+      toast.error(`Failed to link: ${error.message}`);
     }
   };
 
