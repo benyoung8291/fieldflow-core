@@ -425,34 +425,28 @@ export function PurchaseOrderDialog({
         const nextNum = settings?.next_number || 1;
         const poNumber = (settings?.prefix || "PO-") + String(nextNum).padStart(settings?.number_length || 6, "0");
 
-        // Direct insert with service_order_id and project_id included
-        const insertData: any = {
-          tenant_id: profile?.tenant_id,
-          supplier_id: poData.supplier_id,
-          po_number: poNumber,
-          po_date: poData.po_date,
-          expected_delivery_date: poData.expected_delivery_date,
-          notes: poData.notes || '',
-          internal_notes: poData.internal_notes || '',
-          tax_rate: poData.tax_rate,
-          subtotal: poData.subtotal,
-          tax_amount: poData.tax_amount,
-          total_amount: poData.total_amount,
-          created_by: poData.created_by,
-          status: 'draft',
-        };
-
-        // Add linkage fields if provided
-        if (selectedServiceOrderId) insertData.service_order_id = selectedServiceOrderId;
-        if (selectedProjectId) insertData.project_id = selectedProjectId;
-
-        const { data: newPO, error: insertError } = await supabase
-          .from("purchase_orders")
-          .insert(insertData)
-          .select()
-          .single();
+        // Use database function to bypass schema cache issues
+        const { data: poId, error: insertError } = await supabase
+          .rpc('create_purchase_order_with_linkage', {
+            p_tenant_id: profile?.tenant_id,
+            p_supplier_id: poData.supplier_id,
+            p_po_number: poNumber,
+            p_po_date: poData.po_date,
+            p_expected_delivery_date: poData.expected_delivery_date,
+            p_notes: poData.notes || '',
+            p_internal_notes: poData.internal_notes || '',
+            p_tax_rate: poData.tax_rate,
+            p_subtotal: poData.subtotal,
+            p_tax_amount: poData.tax_amount,
+            p_total_amount: poData.total_amount,
+            p_created_by: poData.created_by,
+            p_status: 'draft',
+            p_service_order_id: selectedServiceOrderId || null,
+            p_project_id: selectedProjectId || null
+          });
 
         if (insertError) throw insertError;
+        if (!poId) throw new Error("Failed to create PO");
 
         // Update the sequential number
         await supabase
@@ -460,8 +454,6 @@ export function PurchaseOrderDialog({
           .update({ next_number: nextNum + 1 })
           .eq("tenant_id", profile?.tenant_id)
           .eq("entity_type", "purchase_order");
-
-        poId = newPO.id;
       }
 
       // Insert line items
