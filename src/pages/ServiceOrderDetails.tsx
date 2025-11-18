@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
+import DocumentDetailLayout, { DocumentAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAttachments";
 import ServiceOrderPurchaseOrdersTab from "@/components/service-orders/ServiceOrderPurchaseOrdersTab";
@@ -70,6 +70,8 @@ export default function ServiceOrderDetails() {
   const [appointmentEndTime, setAppointmentEndTime] = useState("17:00");
   const [addToInvoiceDialogOpen, setAddToInvoiceDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [purchaseOrderDialogOpen, setPurchaseOrderDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
@@ -488,7 +490,7 @@ export default function ServiceOrderDetails() {
     },
   ];
 
-  // Primary actions
+  // Primary actions - Now includes all actions (file menu removed)
   const primaryActions: DocumentAction[] = [
     {
       label: "Complete Order",
@@ -511,37 +513,39 @@ export default function ServiceOrderDetails() {
       variant: "outline",
       show: order?.status === "completed" && order?.billing_status !== "billed",
     },
-  ];
-
-  // File menu actions
-  const fileMenuActions: FileMenuAction[] = [
     {
-      label: "Edit Order",
+      label: "Edit",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
+      variant: "outline",
+      show: true,
     },
     {
       label: "Duplicate",
       icon: <Copy className="h-4 w-4" />,
       onClick: () => {/* Duplicate order */},
+      variant: "outline",
+      show: true,
     },
     {
       label: "Set to Waiting",
       onClick: () => updateOrderStatusMutation.mutate("draft"),
-      separator: true,
+      variant: "outline",
+      show: true,
     },
     {
       label: "Cancel Order",
       icon: <XCircle className="h-4 w-4" />,
-      onClick: () => updateOrderStatusMutation.mutate("cancelled"),
-      destructive: false,
+      onClick: () => setCancelConfirmOpen(true),
+      variant: "outline",
+      show: true,
     },
     {
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: handleDelete,
-      destructive: true,
-      separator: true,
+      variant: "destructive",
+      show: true,
     },
   ];
 
@@ -1046,7 +1050,6 @@ export default function ServiceOrderDetails() {
         backPath="/service-orders"
         statusBadges={statusBadges}
         primaryActions={primaryActions}
-        fileMenuActions={fileMenuActions}
         auditTableName="service_orders"
         auditRecordId={id!}
         keyInfoSection={keyInfoSection}
@@ -1126,20 +1129,62 @@ export default function ServiceOrderDetails() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Cancel Order Confirmation */}
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Service Order</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Service Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this service order? This action cannot be undone.
-              The original quote (if any) will be unlocked for editing.
+              Are you sure you want to cancel this service order? This will mark the order as cancelled.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => deleteServiceOrderMutation.mutate()}
+              onClick={() => {
+                updateOrderStatusMutation.mutate("cancelled");
+                setCancelConfirmOpen(false);
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) setDeleteConfirmText("");
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The original quote (if any) will be unlocked for editing.
+              <br /><br />
+              Please type <span className="font-bold text-foreground">delete</span> to confirm.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Type 'delete' to confirm"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (deleteConfirmText.toLowerCase() === "delete") {
+                  deleteServiceOrderMutation.mutate();
+                  setDeleteDialogOpen(false);
+                  setDeleteConfirmText("");
+                }
+              }}
+              disabled={deleteConfirmText.toLowerCase() !== "delete"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             >
               Delete
             </AlertDialogAction>
