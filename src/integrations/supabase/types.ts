@@ -6394,6 +6394,14 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: undefined
       }
+      link_purchase_order_to_project: {
+        Args: { p_po_id: string; p_project_id: string }
+        Returns: undefined
+      }
+      link_purchase_order_to_service_order: {
+        Args: { p_po_id: string; p_service_order_id: string }
+        Returns: undefined
+      }
       perform_three_way_match: {
         Args: { p_invoice_id: string; p_tolerance_percentage?: number }
         Returns: Json
