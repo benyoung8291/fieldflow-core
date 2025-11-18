@@ -144,7 +144,7 @@ export function PurchaseOrderDialog({
     }
   };
 
-  // Pre-populate line items when creating from service order (only once)
+  // Pre-populate line items when creating from service order
   useEffect(() => {
     if (open && !purchaseOrder && serviceOrderId && sourceLineItems.length > 0 && !hasPopulatedLineItems) {
       const importedItems: LineItem[] = sourceLineItems.map(item => ({
@@ -158,7 +158,7 @@ export function PurchaseOrderDialog({
       setLineItems(importedItems);
       setHasPopulatedLineItems(true);
     }
-  }, [open, purchaseOrder, serviceOrderId, hasPopulatedLineItems]); // Removed sourceLineItems to prevent reset on parent re-render
+  }, [open, purchaseOrder, serviceOrderId, sourceLineItems, hasPopulatedLineItems]);
 
   useEffect(() => {
     if (purchaseOrder) {
@@ -375,6 +375,7 @@ export function PurchaseOrderDialog({
 
       const poData = {
         ...values,
+        expected_delivery_date: values.expected_delivery_date || null,
         tenant_id: profile?.tenant_id,
         created_by: (await supabase.auth.getUser()).data.user?.id,
         subtotal: totals.subtotal,
@@ -629,7 +630,11 @@ export function PurchaseOrderDialog({
                   <FormItem>
                     <FormLabel>Expected Delivery Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        value={field.value || ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
