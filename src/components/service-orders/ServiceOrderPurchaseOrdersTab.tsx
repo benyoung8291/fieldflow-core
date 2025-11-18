@@ -31,19 +31,38 @@ export default function ServiceOrderPurchaseOrdersTab({
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ["service-order-purchase-orders", serviceOrderId],
     queryFn: async () => {
-      // Fetch all POs and filter client-side to bypass PostgREST schema cache issues
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(`
-          *,
-          suppliers(name, abn)
-        `)
-        .order("created_at", { ascending: false });
+      // Get tenant_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      // Use RPC function to get all POs, then filter
+      const { data: pos, error } = await supabase
+        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
 
       if (error) throw error;
       
-      // Filter client-side for service_order_id match
-      return data?.filter(po => po.service_order_id === serviceOrderId) || [];
+      // Filter for service_order_id match and fetch suppliers
+      const filteredPos = pos?.filter(po => po.service_order_id === serviceOrderId) || [];
+      
+      if (filteredPos.length === 0) return [];
+
+      // Fetch supplier details
+      const supplierIds = [...new Set(filteredPos.map(po => po.supplier_id).filter(Boolean))];
+      const { data: suppliers } = await supabase
+        .from("suppliers")
+        .select("id, name, abn")
+        .in("id", supplierIds);
+
+      // Merge supplier data
+      return filteredPos.map(po => ({
+        ...po,
+        suppliers: suppliers?.find(s => s.id === po.supplier_id)
+      }));
     },
   });
 

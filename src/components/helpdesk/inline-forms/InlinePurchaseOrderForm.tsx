@@ -31,17 +31,36 @@ export function InlinePurchaseOrderForm({ parsedData, ticket, onSuccess, onCance
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from('purchase_orders' as any)
-        .insert({
-          po_number: formData.po_number,
-          order_date: formData.order_date,
-          expected_delivery_date: formData.expected_delivery || null,
-          notes: formData.description,
-          status: 'draft',
-        })
-        .select()
+      // Get tenant and user info
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
         .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      // Use RPC function to create PO without schema cache issues
+      const { data: poId, error } = await supabase.rpc('create_purchase_order_with_linkage', {
+        p_tenant_id: profile.tenant_id,
+        p_supplier_id: null, // Will need to be set later
+        p_po_number: formData.po_number,
+        p_po_date: formData.order_date,
+        p_expected_delivery_date: formData.expected_delivery || null,
+        p_notes: formData.description || '',
+        p_internal_notes: '',
+        p_tax_rate: 10,
+        p_subtotal: 0,
+        p_tax_amount: 0,
+        p_total_amount: 0,
+        p_created_by: user.id,
+        p_status: 'draft',
+        p_service_order_id: null,
+        p_project_id: null
+      });
 
       if (error) throw error;
 
@@ -50,7 +69,7 @@ export function InlinePurchaseOrderForm({ parsedData, ticket, onSuccess, onCance
         description: "PO has been created successfully.",
       });
 
-      onSuccess((data as any).id);
+      onSuccess(poId);
     } catch (error) {
       console.error("Error creating PO:", error);
       toast({

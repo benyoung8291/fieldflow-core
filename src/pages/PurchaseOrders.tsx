@@ -24,20 +24,48 @@ export default function PurchaseOrders() {
 
   const fetchPurchaseOrders = async () => {
     try {
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(`
-          *,
-          suppliers(name, gst_registered),
-          profiles:created_by(first_name, last_name)
-        `)
-        .order("created_at", { ascending: false });
+      // Get tenant_id first
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
 
-      if (error) {
-        console.error("Purchase orders fetch error:", error);
-        throw error;
+      if (!profile?.tenant_id) {
+        throw new Error("No tenant found");
       }
-      setPurchaseOrders(data || []);
+
+      // Use RPC function to bypass PostgREST schema cache
+      const { data: pos, error: posError } = await supabase
+        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
+
+      if (posError) {
+        console.error("Purchase orders fetch error:", posError);
+        throw posError;
+      }
+
+      // Fetch supplier details separately
+      const supplierIds = [...new Set(pos?.map(po => po.supplier_id).filter(Boolean))];
+      const { data: suppliers } = await supabase
+        .from("suppliers")
+        .select("id, name, gst_registered")
+        .in("id", supplierIds);
+
+      // Fetch creator details separately
+      const creatorIds = [...new Set(pos?.map(po => po.created_by).filter(Boolean))];
+      const { data: creators } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", creatorIds);
+
+      // Merge the data
+      const enrichedPos = pos?.map(po => ({
+        ...po,
+        suppliers: suppliers?.find(s => s.id === po.supplier_id),
+        profiles: creators?.find(c => c.id === po.created_by)
+      }));
+
+      setPurchaseOrders(enrichedPos || []);
     } catch (error: any) {
       console.error("Failed to load purchase orders:", error);
       toast.error("Failed to load purchase orders: " + (error.message || "Unknown error"));
