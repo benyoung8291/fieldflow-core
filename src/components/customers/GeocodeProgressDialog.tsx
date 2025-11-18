@@ -43,7 +43,7 @@ export default function GeocodeProgressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
@@ -51,7 +51,7 @@ export default function GeocodeProgressDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col min-h-0">
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span>{currentIndex + 1} of {locations.length} locations processed</span>
@@ -122,7 +122,7 @@ export default function GeocodeProgressDialog({
             </div>
           )}
 
-          <ScrollArea className="h-[300px] border rounded-lg">
+          <ScrollArea className="flex-1 border rounded-lg min-h-0">
             <div className="p-4 space-y-2">
               {locations.map((location) => (
                 <div
