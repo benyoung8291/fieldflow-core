@@ -789,25 +789,41 @@ export default function ServiceContractDetails() {
                   lineItems.forEach((item: any) => {
                     if (!item.is_active || !item.next_generation_date) return;
                     
-                    const getDaysToAdd = (freq: string) => {
+                    const advanceDate = (date: Date, freq: string) => {
+                      const newDate = new Date(date);
                       switch(freq) {
-                        case "daily": return 1;
-                        case "weekly": return 7;
-                        case "bi_weekly": return 14;
-                        case "monthly": return 30;
-                        case "semi_annually": return 180;
-                        case "quarterly": return 90;
-                        case "annually": return 365;
-                        default: return 30;
+                        case "daily":
+                          newDate.setDate(newDate.getDate() + 1);
+                          break;
+                        case "weekly":
+                          newDate.setDate(newDate.getDate() + 7);
+                          break;
+                        case "bi_weekly":
+                          newDate.setDate(newDate.getDate() + 14);
+                          break;
+                        case "monthly":
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          break;
+                        case "quarterly":
+                          newDate.setMonth(newDate.getMonth() + 3);
+                          break;
+                        case "semi_annually":
+                          newDate.setMonth(newDate.getMonth() + 6);
+                          break;
+                        case "annually":
+                          newDate.setFullYear(newDate.getFullYear() + 1);
+                          break;
+                        default:
+                          newDate.setMonth(newDate.getMonth() + 1);
                       }
+                      return newDate;
                     };
                     
-                    const daysInterval = getDaysToAdd(item.recurrence_frequency);
                     let currentDate = new Date(item.next_generation_date);
                     
                     // Fast-forward to first occurrence on or after today
                     while (currentDate < today) {
-                      currentDate.setDate(currentDate.getDate() + daysInterval);
+                      currentDate = advanceDate(currentDate, item.recurrence_frequency);
                     }
                     
                     // Generate upcoming dates within rolling 12 months from today
@@ -827,7 +843,7 @@ export default function ServiceContractDetails() {
                       );
                       
                       // Move to next occurrence
-                      currentDate.setDate(currentDate.getDate() + daysInterval);
+                      currentDate = advanceDate(currentDate, item.recurrence_frequency);
                     }
                   });
                   
