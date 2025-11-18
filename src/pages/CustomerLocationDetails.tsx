@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, MapPin, Phone, Mail, FileText, Calendar, Package, Navigation } from "lucide-react";
 import { format, parseISO, isFuture } from "date-fns";
-import { geocodeCustomerLocations } from "@/utils/geocodeCustomerLocations";
+import { geocodeCustomerLocationsWithProgress } from "@/utils/geocodeCustomerLocations";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
+import { toast } from "sonner";
 
 export default function CustomerLocationDetails() {
   const { id } = useParams();
@@ -171,8 +172,23 @@ export default function CustomerLocationDetails() {
     
     setIsGeocoding(true);
     try {
-      await geocodeCustomerLocations(location.customer_id);
+      const toastId = toast.loading("Geocoding location...");
+      
+      await geocodeCustomerLocationsWithProgress(location.customer_id, {
+        onProgress: (locations, currentIndex) => {
+          const current = locations.find(l => l.id === id);
+          if (current?.latitude && current?.longitude) {
+            toast.success(
+              `Location geocoded: ${current.latitude.toFixed(6)}, ${current.longitude.toFixed(6)}`,
+              { id: toastId }
+            );
+          }
+        }
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['customer-location', id] });
+    } catch (error: any) {
+      toast.error(`Failed to geocode: ${error.message}`);
     } finally {
       setIsGeocoding(false);
     }
