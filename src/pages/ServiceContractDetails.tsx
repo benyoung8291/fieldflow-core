@@ -39,6 +39,8 @@ export default function ServiceContractDetails() {
   const [cellValue, setCellValue] = useState<any>("");
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [locationStateFilter, setLocationStateFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],
@@ -303,6 +305,29 @@ export default function ServiceContractDetails() {
 
   const lineItems = contract.service_contract_line_items || [];
   
+  // Get unique location states for filter
+  const locationStates = Array.from(new Set(
+    lineItems
+      .map((item: any) => item.customer_locations?.state)
+      .filter(Boolean)
+  )).sort();
+  
+  // Filter and sort line items
+  const filteredAndSortedLineItems = lineItems
+    .filter((item: any) => {
+      if (locationStateFilter === "all") return true;
+      return item.customer_locations?.state === locationStateFilter;
+    })
+    .sort((a: any, b: any) => {
+      const aDesc = a.description || "";
+      const bDesc = b.description || "";
+      return sortOrder === "asc" 
+        ? aDesc.localeCompare(bDesc)
+        : bDesc.localeCompare(aDesc);
+    });
+  
+  const isEditingLocked = contract.auto_generate;
+  
   // Calculate total annual contract value based on frequencies
   const totalValue = lineItems.reduce((sum: number, item: any) => {
     const frequencyMultiplier = {
@@ -320,10 +345,10 @@ export default function ServiceContractDetails() {
   }, 0);
 
   const toggleSelectAll = () => {
-    if (selectedItems.size === lineItems.length) {
+    if (selectedItems.size === filteredAndSortedLineItems.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(lineItems.map((item: any) => item.id)));
+      setSelectedItems(new Set(filteredAndSortedLineItems.map((item: any) => item.id)));
     }
   };
 
@@ -338,6 +363,10 @@ export default function ServiceContractDetails() {
   };
 
   const startEditingCell = (itemId: string, field: string, currentValue: any) => {
+    if (isEditingLocked) {
+      toast.error("Line items are locked while auto-generation is enabled");
+      return;
+    }
     setEditingCell({ id: itemId, field });
     setCellValue(currentValue);
   };
@@ -433,6 +462,16 @@ export default function ServiceContractDetails() {
           </TabsList>
 
           <TabsContent value="line-items" className="space-y-4">
+            {isEditingLocked && (
+              <Card className="bg-muted/50 border-yellow-500/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-semibold">🔒 Line items are locked</span>
+                    <span>- Turn off auto-generation to enable editing</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -443,13 +482,32 @@ export default function ServiceContractDetails() {
                       : "Manage line items and generation schedules"}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <Select value={locationStateFilter} onValueChange={setLocationStateFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All States</SelectItem>
+                      {locationStates.map((state: string) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  >
+                    Sort {sortOrder === "asc" ? "A-Z" : "Z-A"}
+                  </Button>
                   {selectedItems.size > 0 ? (
                     <>
                       <Button 
                         variant="destructive"
                         size="sm"
                         onClick={() => setShowBulkDeleteDialog(true)}
+                        disabled={isEditingLocked}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete Selected
@@ -468,26 +526,30 @@ export default function ServiceContractDetails() {
                         variant="outline"
                         size="sm"
                         onClick={() => setIsImportDialogOpen(true)}
+                        disabled={isEditingLocked}
                       >
                         <FileUp className="h-4 w-4 mr-2" />
                         Import CSV
                       </Button>
-                      <Button onClick={() => {
-                        setEditingLineItem({
-                          description: "",
-                          quantity: 1,
-                          unit_price: 0,
-                          line_total: 0,
-                          estimated_hours: 0,
-                          location_id: "",
-                          first_generation_date: "",
-                          recurrence_frequency: "monthly",
-                          is_active: true,
-                          key_number: "",
-                          notes: "",
-                        });
-                        setAddingLineItem(true);
-                      }}>
+                      <Button 
+                        onClick={() => {
+                          setEditingLineItem({
+                            description: "",
+                            quantity: 1,
+                            unit_price: 0,
+                            line_total: 0,
+                            estimated_hours: 0,
+                            location_id: "",
+                            first_generation_date: "",
+                            recurrence_frequency: "monthly",
+                            is_active: true,
+                            key_number: "",
+                            notes: "",
+                          });
+                          setAddingLineItem(true);
+                        }}
+                        disabled={isEditingLocked}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Line Item
                       </Button>
@@ -502,9 +564,10 @@ export default function ServiceContractDetails() {
                       <TableHead className="w-12">
                         <input
                           type="checkbox"
-                          checked={selectedItems.size === lineItems.length && lineItems.length > 0}
+                          checked={filteredAndSortedLineItems.length > 0 && filteredAndSortedLineItems.every((item: any) => selectedItems.has(item.id))}
                           onChange={toggleSelectAll}
                           className="cursor-pointer"
+                          disabled={isEditingLocked}
                         />
                       </TableHead>
                       <TableHead>Description</TableHead>
@@ -521,7 +584,7 @@ export default function ServiceContractDetails() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems.map((item: any) => (
+                    {filteredAndSortedLineItems.map((item: any) => (
                       <TableRow key={item.id} className={selectedItems.has(item.id) ? "bg-muted/50" : ""}>
                         <TableCell>
                           <input
@@ -529,6 +592,7 @@ export default function ServiceContractDetails() {
                             checked={selectedItems.has(item.id)}
                             onChange={() => toggleSelectItem(item.id)}
                             className="cursor-pointer"
+                            disabled={isEditingLocked}
                           />
                         </TableCell>
                         <TableCell className="font-medium">
@@ -682,6 +746,7 @@ export default function ServiceContractDetails() {
                           <Switch 
                             checked={item.is_active} 
                             onCheckedChange={(checked) => updateCellMutation.mutate({ itemId: item.id, field: "is_active", value: checked })}
+                            disabled={isEditingLocked}
                           />
                         </TableCell>
                         <TableCell>
@@ -689,10 +754,20 @@ export default function ServiceContractDetails() {
                             <Button variant="ghost" size="icon" onClick={() => setViewingLineItemHistory(item.id)}>
                               <History className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => { setEditingLineItem({ ...item }); setAddingLineItem(false); }}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => { setEditingLineItem({ ...item }); setAddingLineItem(false); }}
+                              disabled={isEditingLocked}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => { if (confirm("Delete this line item?")) deleteLineItemMutation.mutate(item.id); }}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => { if (confirm("Delete this line item?")) deleteLineItemMutation.mutate(item.id); }}
+                              disabled={isEditingLocked}
+                            >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
