@@ -26,7 +26,7 @@ const formSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
   po_number: z.string().min(1, "PO number is required"),
   po_date: z.string(),
-  expected_delivery_date: z.string().optional(),
+  expected_delivery_date: z.string().optional().transform(val => val === "" ? undefined : val),
   notes: z.string().optional(),
   internal_notes: z.string().optional(),
   tax_rate: z.number().min(0).max(100),
