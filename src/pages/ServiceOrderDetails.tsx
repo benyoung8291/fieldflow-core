@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart } from "lucide-react";
+import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
+import QuickContactDialog from "@/components/customers/QuickContactDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +71,8 @@ export default function ServiceOrderDetails() {
   const [addToInvoiceDialogOpen, setAddToInvoiceDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [purchaseOrderDialogOpen, setPurchaseOrderDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
 
   // Fetch project integration setting
   const { data: integrationSettings } = useQuery({
@@ -93,12 +96,24 @@ export default function ServiceOrderDetails() {
           *,
           customers!service_orders_customer_id_fkey(name, email, phone),
           customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
+          service_contracts!service_orders_contract_id_fkey(id, contract_number, title),
           projects(id, name)
         `)
         .eq("id", id)
         .maybeSingle();
 
       if (error) throw error;
+      
+      // Fetch contact separately if contact_id exists
+      if (data?.customer_contact_id) {
+        const { data: contact } = await supabase
+          .from("contacts")
+          .select("id, first_name, last_name, email, phone, mobile, position")
+          .eq("id", data.customer_contact_id)
+          .single();
+        return { ...data, contacts: contact };
+      }
+      
       return data;
     },
   });
@@ -573,6 +588,47 @@ export default function ServiceOrderDetails() {
                       </div>
                     </div>
                   </div>
+                </>
+              )}
+              
+              {(order.contacts || !order.customer_contact_id) && (
+                <>
+                  <Separator />
+                  {order.contacts ? (
+                    <div className="flex items-start gap-3">
+                      <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {order.contacts.first_name} {order.contacts.last_name}
+                        </div>
+                        {order.contacts.position && (
+                          <div className="text-xs text-muted-foreground">{order.contacts.position}</div>
+                        )}
+                        {order.contacts.email && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <Mail className="h-3 w-3" />
+                            {order.contacts.email}
+                          </div>
+                        )}
+                        {(order.contacts.phone || order.contacts.mobile) && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <Phone className="h-3 w-3" />
+                            {order.contacts.mobile || order.contacts.phone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setContactDialogOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Link or Create Contact
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>
@@ -1131,6 +1187,7 @@ export default function ServiceOrderDetails() {
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price || 0,
+          cost_price: item.cost_price || 0,
           line_total: item.line_total || 0,
         }))}
         onSuccess={() => {

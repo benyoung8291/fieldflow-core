@@ -192,14 +192,17 @@ export default function ServiceContractDialog({
       // Create line items
       const lineItemsToInsert = data.line_items.map((item, index) => ({
         contract_id: newContract.id,
+        tenant_id: profile?.tenant_id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
+        cost_price: 0,
         line_total: item.quantity * item.unit_price,
         recurrence_frequency: item.recurrence_frequency as any,
         first_generation_date: item.first_generation_date,
         next_generation_date: data.auto_generate ? item.first_generation_date : null,
         location_id: item.location_id || null,
+        estimated_hours: null,
         notes: item.notes,
         item_order: index,
         is_active: true,

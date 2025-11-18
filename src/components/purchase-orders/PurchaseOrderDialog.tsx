@@ -49,6 +49,7 @@ interface SourceLineItem {
   description: string;
   quantity: number;
   unit_price?: number;
+  cost_price?: number;
   line_total?: number;
 }
 
@@ -108,8 +109,8 @@ export function PurchaseOrderDialog({
       const importedItems: LineItem[] = sourceLineItems.map(item => ({
         description: item.description,
         quantity: item.quantity,
-        unit_price: item.unit_price || 0,
-        line_total: (item.unit_price || 0) * item.quantity,
+        unit_price: item.cost_price || 0,
+        line_total: (item.cost_price || 0) * item.quantity,
         is_gst_free: false,
         notes: "",
       }));
