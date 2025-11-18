@@ -31,17 +31,19 @@ export default function ServiceOrderPurchaseOrdersTab({
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ["service-order-purchase-orders", serviceOrderId],
     queryFn: async () => {
+      // Fetch all POs and filter client-side to bypass PostgREST schema cache issues
       const { data, error } = await supabase
         .from("purchase_orders")
         .select(`
           *,
           suppliers(name, abn)
         `)
-        .eq("service_order_id", serviceOrderId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Filter client-side for service_order_id match
+      return data?.filter(po => po.service_order_id === serviceOrderId) || [];
     },
   });
 
