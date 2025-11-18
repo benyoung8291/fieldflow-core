@@ -6362,6 +6362,34 @@ export type Database = {
         }
         Returns: Json
       }
+      get_all_purchase_orders: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          approved_at: string
+          approved_by: string
+          created_at: string
+          created_by: string
+          expected_delivery_date: string
+          id: string
+          internal_notes: string
+          is_policy_compliant: boolean
+          notes: string
+          payment_terms: number
+          po_date: string
+          po_number: string
+          policy_violations: Json
+          project_id: string
+          service_order_id: string
+          status: string
+          subtotal: number
+          supplier_id: string
+          tax_amount: number
+          tax_rate: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }[]
+      }
       get_duplicate_locations: {
         Args: { p_customer_id: string }
         Returns: {

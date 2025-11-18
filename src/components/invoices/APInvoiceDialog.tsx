@@ -38,15 +38,37 @@ export default function APInvoiceDialog({
   const { data: purchaseOrders = [] } = useQuery({
     queryKey: ['purchase-orders-for-ap'],
     queryFn: async () => {
-      // @ts-ignore - Types will update after migration
-      const { data, error } = await supabase
-        .from('purchase_orders')
-        .select('*, supplier:suppliers(name)')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
+      // Get tenant_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      // Use RPC to get all POs, then filter for approved
+      const { data: pos, error } = await supabase
+        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
 
       if (error) throw error;
-      return data;
+
+      const approvedPOs = pos?.filter(po => po.status === 'approved') || [];
+      
+      if (approvedPOs.length === 0) return [];
+
+      // Fetch supplier details
+      const supplierIds = [...new Set(approvedPOs.map(po => po.supplier_id).filter(Boolean))];
+      const { data: suppliers } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .in("id", supplierIds);
+
+      // Merge supplier data
+      return approvedPOs.map(po => ({
+        ...po,
+        supplier: suppliers?.find(s => s.id === po.supplier_id)
+      }));
     },
   });
 
@@ -59,18 +81,35 @@ export default function APInvoiceDialog({
 
   const fetchPODetails = async (poId: string) => {
     try {
-      // @ts-ignore - Types will update after migration
-      const { data: po, error: poError } = await supabase
-        .from('purchase_orders')
-        .select('*, supplier:suppliers(*), line_items:purchase_order_line_items(*)')
-        .eq('id', poId)
-        .single();
+      // Use RPC function to get PO details
+      const { data: poData, error: poError } = await supabase
+        .rpc('get_purchase_order_with_links', { p_po_id: poId });
 
       if (poError) throw poError;
+      if (!poData || poData.length === 0) throw new Error("PO not found");
+
+      const po = poData[0];
+
+      // Fetch supplier details
+      const { data: supplier, error: supplierError } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('id', po.supplier_id)
+        .single();
+
+      if (supplierError) throw supplierError;
+
+      // Fetch line items
+      const { data: poLineItems, error: lineItemsError } = await supabase
+        .from('purchase_order_line_items')
+        .select('*')
+        .eq('po_id', poId)
+        .order('item_order');
+
+      if (lineItemsError) throw lineItemsError;
 
       // Pre-populate line items from PO
-      // @ts-ignore - Types will update after migration
-      const items = po.line_items?.map((line: any) => ({
+      const items = poLineItems?.map((line: any) => ({
         description: line.description,
         quantity: line.quantity,
         unit_price: line.unit_price,
