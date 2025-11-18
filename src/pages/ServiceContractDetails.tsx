@@ -659,6 +659,7 @@ export default function ServiceContractDetails() {
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="fortnightly">Fortnightly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="6_monthly">6 Monthly</SelectItem>
                         <SelectItem value="quarterly">Quarterly</SelectItem>
                         <SelectItem value="yearly">Yearly</SelectItem>
                       </SelectContent>
