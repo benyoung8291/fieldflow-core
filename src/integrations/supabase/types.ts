@@ -6316,6 +6316,23 @@ export type Database = {
         }
         Returns: string
       }
+      create_purchase_order: {
+        Args: {
+          p_expected_delivery_date: string
+          p_internal_notes: string
+          p_notes: string
+          p_po_date: string
+          p_po_number: string
+          p_project_id?: string
+          p_service_order_id?: string
+          p_subtotal: number
+          p_supplier_id: string
+          p_tax_amount: number
+          p_tax_rate: number
+          p_total_amount: number
+        }
+        Returns: string
+      }
       generate_service_orders_from_contracts: {
         Args: {
           p_end_date: string

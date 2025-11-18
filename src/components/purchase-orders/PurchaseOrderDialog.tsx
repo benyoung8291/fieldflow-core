@@ -414,30 +414,24 @@ export function PurchaseOrderDialog({
           p_entity_type: "purchase_order",
         });
 
-        const { data, error } = await supabase
-          .from("purchase_orders")
-          .insert({
-            supplier_id: poData.supplier_id,
-            po_number: nextNumber || poData.po_number,
-            po_date: poData.po_date,
-            expected_delivery_date: poData.expected_delivery_date || null,
-            notes: poData.notes,
-            internal_notes: poData.internal_notes,
-            tax_rate: poData.tax_rate,
-            subtotal: poData.subtotal,
-            tax_amount: poData.tax_amount,
-            total_amount: poData.total_amount,
-            tenant_id: poData.tenant_id,
-            created_by: poData.created_by,
-            status: 'draft',
-            service_order_id: serviceOrderId ?? null,
-            project_id: projectId ?? null,
-          })
-          .select()
-          .single();
+        // Use database function to bypass PostgREST schema cache issues
+        const { data, error } = await supabase.rpc("create_purchase_order", {
+          p_supplier_id: poData.supplier_id,
+          p_po_number: nextNumber || poData.po_number,
+          p_po_date: poData.po_date,
+          p_expected_delivery_date: poData.expected_delivery_date || null,
+          p_notes: poData.notes || '',
+          p_internal_notes: poData.internal_notes || '',
+          p_tax_rate: poData.tax_rate,
+          p_subtotal: poData.subtotal,
+          p_tax_amount: poData.tax_amount,
+          p_total_amount: poData.total_amount,
+          p_service_order_id: serviceOrderId ?? null,
+          p_project_id: projectId ?? null,
+        });
 
         if (error) throw error;
-        poId = data.id;
+        poId = data;
       }
 
       // Insert line items
