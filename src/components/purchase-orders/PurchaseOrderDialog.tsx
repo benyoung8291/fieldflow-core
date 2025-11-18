@@ -182,9 +182,11 @@ export function PurchaseOrderDialog({
       .order("name");
 
     if (error) {
-      toast.error("Failed to load suppliers");
+      console.error("Supplier fetch error:", error);
+      toast.error("Failed to load suppliers: " + error.message);
       return;
     }
+    console.log("Loaded suppliers:", data);
     setSuppliers(data || []);
   };
 
