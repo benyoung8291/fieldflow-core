@@ -91,13 +91,17 @@ export default function GeocodeProgressDialog({
                 </div>
               </div>
               
-              <div className="bg-background rounded p-3 mb-3 space-y-1 text-sm">
+              <div className="bg-background rounded p-3 mb-3 space-y-2 text-sm">
                 <p className="font-medium">{currentLocation.name}</p>
                 <p className="text-muted-foreground">{currentLocation.address}</p>
-                {currentLocation.error && (
-                  <p className="text-destructive text-xs mt-2">Error: {currentLocation.error}</p>
-                )}
               </div>
+              
+              {currentLocation.error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded p-3 mb-3">
+                  <p className="text-destructive text-sm font-medium">Error Details:</p>
+                  <p className="text-destructive text-xs mt-1">{currentLocation.error}</p>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button
