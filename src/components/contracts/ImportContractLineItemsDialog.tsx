@@ -95,28 +95,28 @@ export default function ImportContractLineItemsDialog({
           for (const header of headers) {
             const normalizedHeader = header.toLowerCase().replace(/[_\s]/g, "");
             
-            if (field.value === "description" && (normalizedHeader.includes("description") || normalizedHeader.includes("item"))) {
+            if (field.value === "description" && (normalizedHeader.includes("description") || normalizedHeader.includes("item") || normalizedHeader.includes("scope"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "quantity" && (normalizedHeader.includes("quantity") || normalizedHeader === "qty")) {
+            } else if (field.value === "quantity" && (normalizedHeader.includes("quantity") || normalizedHeader === "qty" || normalizedHeader === "q")) {
               matchingColumn = header;
               break;
-            } else if (field.value === "unit_price" && (normalizedHeader.includes("price") || normalizedHeader.includes("cost"))) {
+            } else if (field.value === "unit_price" && (normalizedHeader.includes("price") || normalizedHeader.includes("cost") || normalizedHeader.includes("rate") || normalizedHeader.includes("unitprice"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "estimated_hours" && (normalizedHeader.includes("hour") || normalizedHeader.includes("time"))) {
+            } else if (field.value === "estimated_hours" && (normalizedHeader.includes("hour") || normalizedHeader.includes("time") || normalizedHeader.includes("duration"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "frequency" && (normalizedHeader.includes("frequency") || normalizedHeader.includes("recurrence"))) {
+            } else if (field.value === "frequency" && (normalizedHeader.includes("frequency") || normalizedHeader.includes("recurrence") || normalizedHeader.includes("freq") || normalizedHeader.includes("schedule"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "first_date" && (normalizedHeader.includes("firstdate") || normalizedHeader.includes("startdate"))) {
+            } else if (field.value === "first_date" && (normalizedHeader.includes("firstdate") || normalizedHeader.includes("startdate") || normalizedHeader.includes("start") || normalizedHeader.includes("first"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "next_date" && normalizedHeader.includes("nextdate")) {
+            } else if (field.value === "next_date" && (normalizedHeader.includes("nextdate") || normalizedHeader.includes("next"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "location_name" && (normalizedHeader.includes("locationname") || normalizedHeader === "location")) {
+            } else if (field.value === "location_name" && (normalizedHeader.includes("locationname") || normalizedHeader === "location" || normalizedHeader.includes("site"))) {
               matchingColumn = header;
               break;
             } else if (field.value === "location_id" && normalizedHeader.includes("locationid")) {
@@ -125,7 +125,7 @@ export default function ImportContractLineItemsDialog({
             } else if (field.value === "key_number" && (normalizedHeader.includes("key") || normalizedHeader.includes("keynumber"))) {
               matchingColumn = header;
               break;
-            } else if (field.value === "line_total" && (normalizedHeader.includes("total") || normalizedHeader.includes("amount"))) {
+            } else if (field.value === "line_total" && (normalizedHeader.includes("total") || normalizedHeader.includes("amount") || normalizedHeader.includes("linetotal"))) {
               matchingColumn = header;
               break;
             }
@@ -285,7 +285,7 @@ export default function ImportContractLineItemsDialog({
 
         // Format data for database
         const quantity = parseFloat(mappedRow.quantity) || 1;
-        const unitPrice = parseFloat(mappedRow.unit_price) || 0;
+        const unitPrice = parseFloat(String(mappedRow.unit_price || "0").replace(/[^0-9.-]/g, "")) || 0;
         
         const firstDate = parseDate(mappedRow.first_date);
         const nextDate = mappedRow.next_date ? parseDate(mappedRow.next_date) : firstDate;
@@ -296,7 +296,7 @@ export default function ImportContractLineItemsDialog({
           quantity,
           unit_price: unitPrice,
           line_total: mappedRow.line_total 
-            ? parseFloat(mappedRow.line_total) 
+            ? parseFloat(String(mappedRow.line_total).replace(/[^0-9.-]/g, "")) 
             : quantity * unitPrice,
           estimated_hours: parseFloat(mappedRow.estimated_hours) || 0,
           recurrence_frequency: parseFrequency(mappedRow.frequency),
