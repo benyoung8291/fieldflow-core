@@ -162,12 +162,39 @@ export default function ServiceOrderDetails() {
   const { data: purchaseOrders = [] } = useQuery({
     queryKey: ["service-order-purchase-orders", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select("*, purchase_order_line_items(*)")
-        .eq("service_order_id", id);
-      if (error) throw error;
-      return data;
+      // @ts-ignore - Complex Supabase types cause TS depth issues
+      const user = await supabase.auth.getUser();
+      // @ts-ignore
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.data.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      const posResult: any = await supabase
+        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
+      
+      if (posResult.error) throw posResult.error;
+      
+      // Filter for service_order_id match
+      const filteredPos = (posResult.data as any[])?.filter((po: any) => po.service_order_id === id) || [];
+      
+      if (filteredPos.length === 0) return [];
+
+      // Fetch line items separately
+      const lineItemsQuery: any = await (supabase as any)
+        .from("purchase_order_line_items")
+        .select("*")
+        .in("purchase_order_id", filteredPos.map((po: any) => po.id));
+      const lineItems = lineItemsQuery.data;
+
+      // Merge line items with POs
+      return filteredPos.map((po: any) => ({
+        ...po,
+        purchase_order_line_items: lineItems?.filter((li: any) => li.purchase_order_id === po.id) || []
+      }));
     },
   });
 

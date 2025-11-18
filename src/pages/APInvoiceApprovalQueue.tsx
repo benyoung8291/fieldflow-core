@@ -45,18 +45,43 @@ export default function APInvoiceApprovalQueue() {
   const { data: pendingInvoices = [], isLoading } = useQuery({
     queryKey: ['ap-invoice-approval-queue'],
     queryFn: async () => {
-      // @ts-ignore - Types will update after migration
+      // @ts-ignore - Complex Supabase types cause TS depth issues
       const { data, error } = await supabase
         .from('invoices')
         .select(`
           *,
-          suppliers (name),
-          purchase_orders (po_number)
+          suppliers (name)
         `)
         .eq('invoice_type', 'AP')
         .eq('requires_manager_approval', true)
         .eq('approval_status', 'pending')
         .order('approval_requested_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data) return [];
+
+      // Get tenant and fetch POs
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user?.id)
+        .single();
+
+      if (!profile?.tenant_id) return data;
+
+      const posResult: any = await supabase
+        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
+      const pos = posResult.data;
+
+      // Merge PO data
+      return data.map((invoice: any) => {
+        const po = pos?.find((p: any) => p.id === invoice.purchase_order_id);
+        return {
+          ...invoice,
+          purchase_orders: po ? { po_number: po.po_number } : undefined
+        };
+      });
 
       if (error) throw error;
 
