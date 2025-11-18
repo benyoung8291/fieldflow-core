@@ -100,8 +100,38 @@ export function PurchaseOrderDialog({
       fetchVendors();
       fetchServiceOrders();
       fetchProjects();
+      
+      // Fetch next PO number for new purchase orders
+      if (!purchaseOrder) {
+        fetchNextPONumber();
+      }
     }
-  }, [open]);
+  }, [open, purchaseOrder]);
+
+  const fetchNextPONumber = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile?.tenant_id) return;
+
+      const { data, error } = await supabase.rpc("get_next_sequential_number", {
+        p_tenant_id: profile.tenant_id,
+        p_entity_type: "purchase_order",
+      });
+
+      if (error) throw error;
+      if (data) {
+        form.setValue("po_number", data);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch next PO number:", error);
+      toast.error("Failed to generate PO number");
+    }
+  };
 
   // Pre-populate line items when creating from service order
   useEffect(() => {
