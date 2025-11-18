@@ -31,6 +31,7 @@ import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderD
 import { ReceiptDialog } from "@/components/purchase-orders/ReceiptDialog";
 import { DeleteConfirmDialog } from "@/components/purchase-orders/DeleteConfirmDialog";
 import { InlineEditableField } from "@/components/purchase-orders/InlineEditableField";
+import { InlineLineItemRow } from "@/components/purchase-orders/InlineLineItemRow";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import { canApplyGST, getGSTWarning } from "@/lib/gstCompliance";
 
@@ -145,24 +146,18 @@ export default function PurchaseOrderDetails() {
       }
       setLineItems(items || []);
 
-      // Fetch receipts
+       // Fetch receipts - simplified query
       const { data: receiptData, error: receiptsError } = await supabase
         .from("po_receipts")
-        .select(`
-          *,
-          po_receipt_line_items(
-            *,
-            purchase_order_line_items(description)
-          )
-        `)
+        .select("*")
         .eq("po_id", id)
         .order("receipt_date", { ascending: false });
 
       if (receiptsError) {
         console.error("Receipts fetch error:", receiptsError);
-        throw receiptsError;
+      } else {
+        setReceipts(receiptData || []);
       }
-      setReceipts(receiptData || []);
     } catch (error: any) {
       console.error("Failed to load purchase order:", error);
       toast.error("Failed to load purchase order: " + (error.message || "Unknown error"));
@@ -245,6 +240,22 @@ export default function PurchaseOrderDetails() {
       navigate("/purchase-orders");
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  const handleDeleteLineItem = async (lineItemId: string) => {
+    try {
+      const { error } = await supabase
+        .from("purchase_order_line_items")
+        .delete()
+        .eq("id", lineItemId);
+
+      if (error) throw error;
+
+      toast.success("Line item deleted");
+      fetchPurchaseOrder();
+    } catch (error: any) {
+      toast.error("Failed to delete line item");
     }
   };
 
@@ -427,37 +438,18 @@ export default function PurchaseOrderDetails() {
                   <TableHead>Unit Price</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>GST Status</TableHead>
+                  {canEdit && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {lineItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div>
-                        {item.description}
-                        {item.notes && (
-                          <div className="text-sm text-muted-foreground">{item.notes}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={item.quantity_received >= item.quantity ? "default" : "outline"}
-                      >
-                        {item.quantity_received}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>${item.unit_price?.toFixed(2)}</TableCell>
-                    <TableCell>${item.line_total?.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {item.is_gst_free ? (
-                        <Badge variant="outline">GST Free</Badge>
-                      ) : (
-                        <Badge>Incl. GST</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                  <InlineLineItemRow
+                    key={item.id}
+                    item={item}
+                    canEdit={canEdit}
+                    onUpdate={fetchPurchaseOrder}
+                    onDelete={handleDeleteLineItem}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -505,28 +497,9 @@ export default function PurchaseOrderDetails() {
                       </div>
                     </div>
 
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Quantity Received</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {receipt.po_receipt_line_items?.map((item: any) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              {item.purchase_order_line_items?.description}
-                            </TableCell>
-                            <TableCell>{item.quantity_received}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-
                     {receipt.notes && (
-                      <div className="mt-4 p-3 bg-muted rounded-md text-sm">
-                        {receipt.notes}
+                      <div className="p-3 bg-muted rounded-md text-sm">
+                        <span className="text-muted-foreground">Notes:</span> {receipt.notes}
                       </div>
                     )}
                   </Card>
