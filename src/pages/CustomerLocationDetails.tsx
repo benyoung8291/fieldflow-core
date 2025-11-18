@@ -7,12 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, MapPin, Phone, Mail, FileText, Calendar, Package } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, FileText, Calendar, Package, Navigation } from "lucide-react";
 import { format, parseISO, isFuture } from "date-fns";
+import { geocodeCustomerLocations } from "@/utils/geocodeCustomerLocations";
+import { useQueryClient } from "@tanstack/react-query";
+import React from "react";
 
 export default function CustomerLocationDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isGeocoding, setIsGeocoding] = React.useState(false);
 
   const { data: location, isLoading: locationLoading } = useQuery({
     queryKey: ["customer-location", id],
@@ -161,6 +166,18 @@ export default function CustomerLocationDetails() {
     isFuture(parseISO(apt.start_time))
   ) || [];
 
+  const handleGeocode = async () => {
+    if (!id || !location) return;
+    
+    setIsGeocoding(true);
+    try {
+      await geocodeCustomerLocations(location.customer_id);
+      queryClient.invalidateQueries({ queryKey: ['customer-location', id] });
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
   if (locationLoading) {
     return (
       <DashboardLayout>
@@ -216,6 +233,17 @@ export default function CustomerLocationDetails() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {!location.latitude && (
+                <Button
+                  onClick={handleGeocode}
+                  disabled={isGeocoding}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Navigation className="h-4 w-4 mr-2" />
+                  {isGeocoding ? "Geocoding..." : "Geocode Location"}
+                </Button>
+              )}
               {location.is_primary && (
                 <Badge variant="secondary">Primary Location</Badge>
               )}
