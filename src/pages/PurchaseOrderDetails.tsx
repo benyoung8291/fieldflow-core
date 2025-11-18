@@ -191,18 +191,32 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkServiceOrder = async (serviceOrderId: string) => {
     try {
-      const { error } = await supabase.rpc("update_purchase_order_linkage", {
+      console.log("Attempting to link PO to service order:", { 
+        po_id: id, 
+        service_order_id: serviceOrderId 
+      });
+      
+      const { data, error } = await supabase.rpc("update_purchase_order_linkage", {
         p_po_id: id,
         p_service_order_id: serviceOrderId || null,
-        p_project_id: null // Clear project if linking to service order
+        p_project_id: null
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("RPC error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
 
+      console.log("Successfully linked to service order");
       toast.success("Purchase order linked to service order");
       fetchPurchaseOrder();
     } catch (error: any) {
-      console.error("Failed to link service order:", error);
+      console.error("Failed to link service order - full error:", error);
       toast.error(`Failed to link: ${error.message}`);
     }
   };
