@@ -33,6 +33,11 @@ export default function ServiceContractDetails() {
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [viewingLineItemHistory, setViewingLineItemHistory] = useState<string | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
+  const [cellValue, setCellValue] = useState<any>("");
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],
@@ -194,6 +199,44 @@ export default function ServiceContractDetails() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (itemIds: string[]) => {
+      const { error } = await supabase
+        .from("service_contract_line_items")
+        .delete()
+        .in("id", itemIds);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
+      setSelectedItems(new Set());
+      toast.success("Line items deleted");
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete line items: ${error.message}`);
+    },
+  });
+
+  const updateCellMutation = useMutation({
+    mutationFn: async ({ itemId, field, value }: { itemId: string; field: string; value: any }) => {
+      const { error } = await supabase
+        .from("service_contract_line_items")
+        .update({ [field]: value })
+        .eq("id", itemId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
+      setEditingCell(null);
+      toast.success("Updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update: ${error.message}`);
+    },
+  });
+
   const toggleAutoGenerateMutation = useMutation({
     mutationFn: async (autoGenerate: boolean) => {
       const { error } = await supabase
@@ -259,6 +302,46 @@ export default function ServiceContractDetails() {
 
   const lineItems = contract.service_contract_line_items || [];
   const totalValue = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.line_total || 0), 0);
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === lineItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(lineItems.map((item: any) => item.id)));
+    }
+  };
+
+  const toggleSelectItem = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const startEditingCell = (itemId: string, field: string, currentValue: any) => {
+    setEditingCell({ id: itemId, field });
+    setCellValue(currentValue);
+  };
+
+  const saveCell = () => {
+    if (!editingCell) return;
+    updateCellMutation.mutate({
+      itemId: editingCell.id,
+      field: editingCell.field,
+      value: cellValue,
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (deleteConfirmText === "delete") {
+      bulkDeleteMutation.mutate(Array.from(selectedItems));
+      setShowBulkDeleteDialog(false);
+      setDeleteConfirmText("");
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -337,42 +420,76 @@ export default function ServiceContractDetails() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Contract Line Items</CardTitle>
-                  <CardDescription>Manage line items and generation schedules</CardDescription>
+                  <CardDescription>
+                    {selectedItems.size > 0 
+                      ? `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`
+                      : "Manage line items and generation schedules"}
+                  </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsImportDialogOpen(true)}
-                  >
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Import CSV
-                  </Button>
-                  <Button onClick={() => {
-                    setEditingLineItem({
-                      description: "",
-                      quantity: 1,
-                      unit_price: 0,
-                      line_total: 0,
-                      estimated_hours: 0,
-                      location_id: "",
-                      first_generation_date: "",
-                      recurrence_frequency: "monthly",
-                      is_active: true,
-                      key_number: "",
-                      notes: "",
-                    });
-                    setAddingLineItem(true);
-                  }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Line Item
-                  </Button>
+                  {selectedItems.size > 0 ? (
+                    <>
+                      <Button 
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowBulkDeleteDialog(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Selected
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedItems(new Set())}
+                      >
+                        Clear Selection
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsImportDialogOpen(true)}
+                      >
+                        <FileUp className="h-4 w-4 mr-2" />
+                        Import CSV
+                      </Button>
+                      <Button onClick={() => {
+                        setEditingLineItem({
+                          description: "",
+                          quantity: 1,
+                          unit_price: 0,
+                          line_total: 0,
+                          estimated_hours: 0,
+                          location_id: "",
+                          first_generation_date: "",
+                          recurrence_frequency: "monthly",
+                          is_active: true,
+                          key_number: "",
+                          notes: "",
+                        });
+                        setAddingLineItem(true);
+                      }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Line Item
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.size === lineItems.length && lineItems.length > 0}
+                          onChange={toggleSelectAll}
+                          className="cursor-pointer"
+                        />
+                      </TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Key Number</TableHead>
@@ -388,8 +505,31 @@ export default function ServiceContractDetails() {
                   </TableHeader>
                   <TableBody>
                     {lineItems.map((item: any) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.description}</TableCell>
+                      <TableRow key={item.id} className={selectedItems.has(item.id) ? "bg-muted/50" : ""}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(item.id)}
+                            onChange={() => toggleSelectItem(item.id)}
+                            className="cursor-pointer"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {editingCell?.id === item.id && editingCell?.field === "description" ? (
+                            <Input
+                              value={cellValue}
+                              onChange={(e) => setCellValue(e.target.value)}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "description", item.description)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
+                              {item.description}
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm">
                             <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -397,20 +537,134 @@ export default function ServiceContractDetails() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm text-muted-foreground">{item.key_number || "-"}</span>
+                          {editingCell?.id === item.id && editingCell?.field === "key_number" ? (
+                            <Input
+                              value={cellValue}
+                              onChange={(e) => setCellValue(e.target.value)}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8 w-24"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "key_number", item.key_number || "")} className="cursor-pointer hover:bg-accent px-2 py-1 rounded text-sm text-muted-foreground">
+                              {item.key_number || "-"}
+                            </span>
+                          )}
                         </TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>${parseFloat(item.unit_price).toFixed(2)}</TableCell>
-                        <TableCell>${parseFloat(item.line_total).toFixed(2)}</TableCell>
-                        <TableCell>{item.estimated_hours || 0}h</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{item.recurrence_frequency}</Badge>
+                          {editingCell?.id === item.id && editingCell?.field === "quantity" ? (
+                            <Input
+                              type="number"
+                              value={cellValue}
+                              onChange={(e) => setCellValue(parseFloat(e.target.value))}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8 w-20"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "quantity", item.quantity)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
+                              {item.quantity}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
-                          {item.first_generation_date ? format(parseISO(item.first_generation_date), "PP") : "Not set"}
+                          {editingCell?.id === item.id && editingCell?.field === "unit_price" ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cellValue}
+                              onChange={(e) => setCellValue(parseFloat(e.target.value))}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8 w-24"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "unit_price", item.unit_price)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
+                              ${parseFloat(item.unit_price).toFixed(2)}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
-                          {item.is_active ? <Badge variant="default">Active</Badge> : <Badge variant="secondary">Paused</Badge>}
+                          {editingCell?.id === item.id && editingCell?.field === "line_total" ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cellValue}
+                              onChange={(e) => setCellValue(parseFloat(e.target.value))}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8 w-24"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "line_total", item.line_total)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
+                              ${parseFloat(item.line_total).toFixed(2)}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingCell?.id === item.id && editingCell?.field === "estimated_hours" ? (
+                            <Input
+                              type="number"
+                              step="0.5"
+                              value={cellValue}
+                              onChange={(e) => setCellValue(parseFloat(e.target.value))}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8 w-20"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "estimated_hours", item.estimated_hours || 0)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
+                              {item.estimated_hours || 0}h
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingCell?.id === item.id && editingCell?.field === "recurrence_frequency" ? (
+                            <Select value={cellValue} onValueChange={(value) => { setCellValue(value); updateCellMutation.mutate({ itemId: item.id, field: "recurrence_frequency", value }); setEditingCell(null); }}>
+                              <SelectTrigger className="h-8 w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="quarterly">Quarterly</SelectItem>
+                                <SelectItem value="annually">Annually</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="outline" onClick={() => startEditingCell(item.id, "recurrence_frequency", item.recurrence_frequency)} className="cursor-pointer">
+                              {item.recurrence_frequency}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingCell?.id === item.id && editingCell?.field === "first_generation_date" ? (
+                            <Input
+                              type="date"
+                              value={cellValue}
+                              onChange={(e) => setCellValue(e.target.value)}
+                              onBlur={saveCell}
+                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
+                              autoFocus
+                              className="h-8 w-36"
+                            />
+                          ) : (
+                            <span onClick={() => startEditingCell(item.id, "first_generation_date", item.first_generation_date)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded text-sm">
+                              {item.first_generation_date ? format(parseISO(item.first_generation_date), "PP") : "Not set"}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Switch 
+                            checked={item.is_active} 
+                            onCheckedChange={(checked) => updateCellMutation.mutate({ itemId: item.id, field: "is_active", value: checked })}
+                          />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
@@ -741,8 +995,42 @@ export default function ServiceContractDetails() {
           onOpenChange={setIsImportDialogOpen}
           contractId={id!}
           customerId={contract.customers.id}
-        />
-      </div>
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedItems.size} Line Items?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Type "delete" below to confirm deletion of {selectedItems.size} line item{selectedItems.size > 1 ? 's' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Type "delete" to confirm</Label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="delete"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowBulkDeleteDialog(false); setDeleteConfirmText(""); }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={deleteConfirmText !== "delete" || bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Items"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
     </DashboardLayout>
   );
 }
