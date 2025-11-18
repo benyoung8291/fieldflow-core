@@ -184,13 +184,17 @@ export default function ImportContractLineItemsDialog({
       if (!profile?.tenant_id) throw new Error("Tenant not found");
 
       // Fetch customer locations for reference
-      const { data: locations } = await supabase
+      const { data: existingLocations } = await supabase
         .from("customer_locations")
         .select("id, name, customer_location_id")
-        .eq("customer_id", customerId);
+        .eq("customer_id", customerId)
+        .eq("is_active", true);
 
-      // Transform CSV rows to line items using mappings
-      const lineItems = parsedData.rows.map((row: any, index: number) => {
+      // Process each row and create locations if needed
+      const lineItems = [];
+      
+      for (let index = 0; index < parsedData.rows.length; index++) {
+        const row = parsedData.rows[index];
         const mappedRow: any = {};
         
         columnMappings.forEach((mapping) => {
@@ -199,19 +203,46 @@ export default function ImportContractLineItemsDialog({
           }
         });
 
-        // Find location by name or customer_location_id
-        const location = locations?.find(
-          (loc) =>
-            loc.name === mappedRow.location_name ||
-            loc.customer_location_id === mappedRow.location_id
-        );
+        // Find or create location
+        let locationId = null;
+        
+        if (mappedRow.location_name) {
+          // Try to find existing location by name
+          let location = existingLocations?.find(
+            (loc) => loc.name.toLowerCase() === mappedRow.location_name.toLowerCase()
+          );
+
+          // If location doesn't exist, create it
+          if (!location) {
+            const { data: newLocation, error: locationError } = await supabase
+              .from("customer_locations")
+              .insert({
+                tenant_id: profile.tenant_id,
+                customer_id: customerId,
+                name: mappedRow.location_name,
+                is_active: true,
+              })
+              .select()
+              .single();
+
+            if (locationError) {
+              console.error("Failed to create location:", locationError);
+              toast.error(`Failed to create location: ${mappedRow.location_name}`);
+              continue; // Skip this line item if location creation fails
+            }
+
+            location = newLocation;
+            existingLocations?.push(newLocation); // Add to cache for subsequent rows
+          }
+
+          locationId = location.id;
+        }
 
         // Format data for database
         const quantity = parseFloat(mappedRow.quantity) || 1;
         const unitPrice = parseFloat(mappedRow.unit_price) || 0;
         
-        return {
-          tenant_id: profile.tenant_id,
+        lineItems.push({
           contract_id: contractId,
           description: mappedRow.description || "",
           quantity,
@@ -226,12 +257,16 @@ export default function ImportContractLineItemsDialog({
             mappedRow.next_date || 
             mappedRow.first_date || 
             new Date().toISOString().split("T")[0],
-          location_id: location?.id || null,
+          location_id: locationId,
           key_number: mappedRow.key_number || null,
           is_active: true,
           item_order: index,
-        };
-      });
+        });
+      }
+
+      if (lineItems.length === 0) {
+        throw new Error("No valid line items to import");
+      }
 
       const { error } = await supabase
         .from("service_contract_line_items")
