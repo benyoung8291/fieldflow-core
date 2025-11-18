@@ -4460,6 +4460,7 @@ export type Database = {
       service_contract_line_items: {
         Row: {
           contract_id: string
+          cost_price: number | null
           created_at: string | null
           description: string
           estimated_hours: number | null
@@ -4477,10 +4478,12 @@ export type Database = {
           notes: string | null
           quantity: number
           recurrence_frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          tenant_id: string
           unit_price: number
         }
         Insert: {
           contract_id: string
+          cost_price?: number | null
           created_at?: string | null
           description: string
           estimated_hours?: number | null
@@ -4498,10 +4501,12 @@ export type Database = {
           notes?: string | null
           quantity?: number
           recurrence_frequency?: Database["public"]["Enums"]["recurrence_frequency"]
+          tenant_id: string
           unit_price?: number
         }
         Update: {
           contract_id?: string
+          cost_price?: number | null
           created_at?: string | null
           description?: string
           estimated_hours?: number | null
@@ -4519,6 +4524,7 @@ export type Database = {
           notes?: string | null
           quantity?: number
           recurrence_frequency?: Database["public"]["Enums"]["recurrence_frequency"]
+          tenant_id?: string
           unit_price?: number
         }
         Relationships: [
@@ -4666,6 +4672,7 @@ export type Database = {
       service_order_line_items: {
         Row: {
           contract_line_item_id: string | null
+          cost_price: number | null
           created_at: string | null
           description: string
           estimated_hours: number
@@ -4686,6 +4693,7 @@ export type Database = {
         }
         Insert: {
           contract_line_item_id?: string | null
+          cost_price?: number | null
           created_at?: string | null
           description: string
           estimated_hours?: number
@@ -4706,6 +4714,7 @@ export type Database = {
         }
         Update: {
           contract_line_item_id?: string | null
+          cost_price?: number | null
           created_at?: string | null
           description?: string
           estimated_hours?: number
