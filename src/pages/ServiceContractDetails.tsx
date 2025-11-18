@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import AuditTimeline from "@/components/audit/AuditTimeline";
@@ -21,6 +21,7 @@ import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import DashboardLayout from "@/components/DashboardLayout";
 import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
+import ImportContractLineItemsDialog from "@/components/contracts/ImportContractLineItemsDialog";
 
 export default function ServiceContractDetails() {
   const { id } = useParams();
@@ -31,6 +32,7 @@ export default function ServiceContractDetails() {
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [viewingLineItemHistory, setViewingLineItemHistory] = useState<string | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],
@@ -337,25 +339,35 @@ export default function ServiceContractDetails() {
                   <CardTitle>Contract Line Items</CardTitle>
                   <CardDescription>Manage line items and generation schedules</CardDescription>
                 </div>
-                <Button onClick={() => {
-                  setEditingLineItem({
-                    description: "",
-                    quantity: 1,
-                    unit_price: 0,
-                    line_total: 0,
-                    estimated_hours: 0,
-                    location_id: "",
-                    first_generation_date: "",
-                    recurrence_frequency: "monthly",
-                    is_active: true,
-                    key_number: "",
-                    notes: "",
-                  });
-                  setAddingLineItem(true);
-                }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Line Item
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsImportDialogOpen(true)}
+                  >
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Import CSV
+                  </Button>
+                  <Button onClick={() => {
+                    setEditingLineItem({
+                      description: "",
+                      quantity: 1,
+                      unit_price: 0,
+                      line_total: 0,
+                      estimated_hours: 0,
+                      location_id: "",
+                      first_generation_date: "",
+                      recurrence_frequency: "monthly",
+                      is_active: true,
+                      key_number: "",
+                      notes: "",
+                    });
+                    setAddingLineItem(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Line Item
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -722,6 +734,13 @@ export default function ServiceContractDetails() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ImportContractLineItemsDialog
+          open={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+          contractId={id!}
+          customerId={contract.customers.id}
+        />
       </div>
     </DashboardLayout>
   );

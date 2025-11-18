@@ -325,6 +325,16 @@ export default function CustomerLocationDetails() {
                     </div>
                   </div>
                 )}
+
+                {(location.latitude && location.longitude) && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Coordinates</div>
+                    <div className="font-medium text-xs">
+                      <div>Latitude: {location.latitude.toFixed(6)}</div>
+                      <div>Longitude: {location.longitude.toFixed(6)}</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {location.location_notes && (

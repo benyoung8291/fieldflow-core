@@ -46,10 +46,14 @@ export default function GenerateServiceOrdersDialog({ open, onOpenChange }: Gene
 
       if (error) throw error;
 
+      if (!data || !data.summary) {
+        throw new Error("Invalid response from server");
+      }
+
       toast.success(
         `Generated ${data.summary.orders_created} service orders`,
         {
-          description: `${data.summary.total_line_items} line items processed`,
+          description: `${data.summary.total_line_items} line items processed, ${data.summary.already_generated || 0} already generated`,
         }
       );
 
