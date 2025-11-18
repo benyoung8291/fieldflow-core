@@ -440,19 +440,17 @@ export function PurchaseOrderDialog({
         poId = purchaseOrder.id;
 
         // Update linkage using RPC functions to bypass schema cache
-        const newServiceOrderId = selectedServiceOrderId ?? purchaseOrder.service_order_id ?? null;
-        const newProjectId = selectedProjectId ?? purchaseOrder.project_id ?? null;
-
-        if (newServiceOrderId) {
+        // For edits, we update links if user changed the selection
+        if (selectedServiceOrderId) {
           const { error: linkError } = await supabase.rpc('link_purchase_order_to_service_order', {
             p_po_id: poId,
-            p_service_order_id: newServiceOrderId
+            p_service_order_id: selectedServiceOrderId
           });
           if (linkError) throw linkError;
-        } else if (newProjectId) {
+        } else if (selectedProjectId) {
           const { error: linkError } = await supabase.rpc('link_purchase_order_to_project', {
             p_po_id: poId,
-            p_project_id: newProjectId
+            p_project_id: selectedProjectId
           });
           if (linkError) throw linkError;
         }
