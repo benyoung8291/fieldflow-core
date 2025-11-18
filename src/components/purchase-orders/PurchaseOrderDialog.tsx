@@ -377,15 +377,15 @@ export function PurchaseOrderDialog({
           supplier_id: poData.supplier_id,
           po_number: poData.po_number,
           po_date: poData.po_date,
-          expected_delivery_date: poData.expected_delivery_date,
+          expected_delivery_date: poData.expected_delivery_date || null,
           notes: poData.notes,
           internal_notes: poData.internal_notes,
           tax_rate: poData.tax_rate,
           subtotal: poData.subtotal,
           tax_amount: poData.tax_amount,
           total_amount: poData.total_amount,
-          service_order_id: serviceOrderId || purchaseOrder.service_order_id,
-          project_id: projectId || purchaseOrder.project_id,
+          service_order_id: serviceOrderId || purchaseOrder.service_order_id || null,
+          project_id: projectId || purchaseOrder.project_id || null,
         })
         .eq("id", purchaseOrder.id);
 
@@ -404,7 +404,7 @@ export function PurchaseOrderDialog({
             supplier_id: poData.supplier_id,
             po_number: poData.po_number,
             po_date: poData.po_date,
-            expected_delivery_date: poData.expected_delivery_date,
+            expected_delivery_date: poData.expected_delivery_date || null,
             notes: poData.notes,
             internal_notes: poData.internal_notes,
             tax_rate: poData.tax_rate,
@@ -414,8 +414,8 @@ export function PurchaseOrderDialog({
             tenant_id: poData.tenant_id,
             created_by: poData.created_by,
             status: 'draft',
-            service_order_id: serviceOrderId,
-            project_id: projectId,
+            service_order_id: serviceOrderId || null,
+            project_id: projectId || null,
           })
           .select()
           .single();
