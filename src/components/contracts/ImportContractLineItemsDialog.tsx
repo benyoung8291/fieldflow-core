@@ -86,37 +86,52 @@ export default function ImportContractLineItemsDialog({
 
         setParsedData({ headers, rows });
 
-        // Auto-detect column mappings based on header names
-        const autoMappings: ColumnMapping[] = headers.map((header) => {
-          const normalizedHeader = header.toLowerCase().replace(/[_\s]/g, "");
+        // Auto-detect column mappings - create mapping for each system field
+        const allFields = [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS.filter(f => f.value !== "ignore")];
+        const autoMappings: ColumnMapping[] = allFields.map((field) => {
+          // Find best matching CSV column for this system field
+          let matchingColumn = "";
           
-          let targetField = "ignore";
-          
-          if (normalizedHeader.includes("description") || normalizedHeader.includes("item")) {
-            targetField = "description";
-          } else if (normalizedHeader.includes("quantity") || normalizedHeader === "qty") {
-            targetField = "quantity";
-          } else if (normalizedHeader.includes("price") || normalizedHeader.includes("cost")) {
-            targetField = "unit_price";
-          } else if (normalizedHeader.includes("hour") || normalizedHeader.includes("time")) {
-            targetField = "estimated_hours";
-          } else if (normalizedHeader.includes("frequency") || normalizedHeader.includes("recurrence")) {
-            targetField = "frequency";
-          } else if (normalizedHeader.includes("firstdate") || normalizedHeader.includes("startdate")) {
-            targetField = "first_date";
-          } else if (normalizedHeader.includes("nextdate")) {
-            targetField = "next_date";
-          } else if (normalizedHeader.includes("locationname") || normalizedHeader === "location") {
-            targetField = "location_name";
-          } else if (normalizedHeader.includes("locationid")) {
-            targetField = "location_id";
-          } else if (normalizedHeader.includes("key") || normalizedHeader.includes("keynumber")) {
-            targetField = "key_number";
-          } else if (normalizedHeader.includes("total") || normalizedHeader.includes("amount")) {
-            targetField = "line_total";
+          for (const header of headers) {
+            const normalizedHeader = header.toLowerCase().replace(/[_\s]/g, "");
+            
+            if (field.value === "description" && (normalizedHeader.includes("description") || normalizedHeader.includes("item"))) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "quantity" && (normalizedHeader.includes("quantity") || normalizedHeader === "qty")) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "unit_price" && (normalizedHeader.includes("price") || normalizedHeader.includes("cost"))) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "estimated_hours" && (normalizedHeader.includes("hour") || normalizedHeader.includes("time"))) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "frequency" && (normalizedHeader.includes("frequency") || normalizedHeader.includes("recurrence"))) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "first_date" && (normalizedHeader.includes("firstdate") || normalizedHeader.includes("startdate"))) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "next_date" && normalizedHeader.includes("nextdate")) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "location_name" && (normalizedHeader.includes("locationname") || normalizedHeader === "location")) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "location_id" && normalizedHeader.includes("locationid")) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "key_number" && (normalizedHeader.includes("key") || normalizedHeader.includes("keynumber"))) {
+              matchingColumn = header;
+              break;
+            } else if (field.value === "line_total" && (normalizedHeader.includes("total") || normalizedHeader.includes("amount"))) {
+              matchingColumn = header;
+              break;
+            }
           }
-
-          return { csvColumn: header, targetField };
+          
+          return { csvColumn: matchingColumn, targetField: field.value };
         });
 
         setColumnMappings(autoMappings);
@@ -128,22 +143,23 @@ export default function ImportContractLineItemsDialog({
     });
   };
 
-  const updateMapping = (csvColumn: string, targetField: string) => {
+  const updateMapping = (targetField: string, csvColumn: string) => {
     setColumnMappings((prev) =>
-      prev.map((m) => (m.csvColumn === csvColumn ? { ...m, targetField } : m))
+      prev.map((m) => (m.targetField === targetField ? { ...m, csvColumn } : m))
     );
   };
 
   const validateMappings = (): boolean => {
-    const mappedFields = columnMappings
-      .filter((m) => m.targetField !== "ignore")
-      .map((m) => m.targetField);
-
     const requiredFields = REQUIRED_FIELDS.map((f) => f.value);
-    const missingFields = requiredFields.filter((f) => !mappedFields.includes(f));
+    const unmappedRequired = columnMappings
+      .filter((m) => requiredFields.includes(m.targetField) && !m.csvColumn)
+      .map((m) => {
+        const field = REQUIRED_FIELDS.find((f) => f.value === m.targetField);
+        return field?.label || m.targetField;
+      });
 
-    if (missingFields.length > 0) {
-      toast.error(`Missing required fields: ${missingFields.join(", ")}`);
+    if (unmappedRequired.length > 0) {
+      toast.error(`Please map all required fields: ${unmappedRequired.join(", ")}`);
       return false;
     }
 
@@ -178,7 +194,7 @@ export default function ImportContractLineItemsDialog({
         const mappedRow: any = {};
         
         columnMappings.forEach((mapping) => {
-          if (mapping.targetField !== "ignore") {
+          if (mapping.csvColumn && mapping.targetField) {
             mappedRow[mapping.targetField] = row[mapping.csvColumn];
           }
         });
@@ -321,50 +337,86 @@ export default function ImportContractLineItemsDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[200px]">System Field</TableHead>
                     <TableHead className="w-[200px]">CSV Column</TableHead>
-                    <TableHead className="w-[200px]">Maps To</TableHead>
                     <TableHead>Preview Data</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {columnMappings.map((mapping) => (
-                    <TableRow key={mapping.csvColumn}>
-                      <TableCell className="font-medium">
-                        {mapping.csvColumn}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={mapping.targetField}
-                          onValueChange={(value) =>
-                            updateMapping(mapping.csvColumn, value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {REQUIRED_FIELDS.map((field) => (
-                              <SelectItem key={field.value} value={field.value}>
-                                {field.label}
-                              </SelectItem>
-                            ))}
-                            {OPTIONAL_FIELDS.map((field) => (
-                              <SelectItem key={field.value} value={field.value}>
-                                {field.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {parsedData?.rows
-                          .slice(0, 5)
-                          .map((row: any) => row[mapping.csvColumn])
-                          .filter(Boolean)
-                          .join(", ") || "(empty)"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {REQUIRED_FIELDS.map((field) => {
+                    const mapping = columnMappings.find((m) => m.targetField === field.value);
+                    return (
+                      <TableRow key={field.value}>
+                        <TableCell className="font-medium">
+                          {field.label}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={mapping?.csvColumn || ""}
+                            onValueChange={(value) =>
+                              updateMapping(field.value, value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select CSV column" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">-- Not Mapped --</SelectItem>
+                              {parsedData?.headers.map((header) => (
+                                <SelectItem key={header} value={header}>
+                                  {header}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {mapping?.csvColumn && parsedData?.rows
+                            .slice(0, 5)
+                            .map((row: any) => row[mapping.csvColumn])
+                            .filter(Boolean)
+                            .join(", ") || "(not mapped)"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {OPTIONAL_FIELDS.filter((f) => f.value !== "ignore").map((field) => {
+                    const mapping = columnMappings.find((m) => m.targetField === field.value);
+                    return (
+                      <TableRow key={field.value}>
+                        <TableCell className="font-medium text-muted-foreground">
+                          {field.label}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={mapping?.csvColumn || ""}
+                            onValueChange={(value) =>
+                              updateMapping(field.value, value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select CSV column" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">-- Not Mapped --</SelectItem>
+                              {parsedData?.headers.map((header) => (
+                                <SelectItem key={header} value={header}>
+                                  {header}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {mapping?.csvColumn && parsedData?.rows
+                            .slice(0, 5)
+                            .map((row: any) => row[mapping.csvColumn])
+                            .filter(Boolean)
+                            .join(", ") || "(not mapped)"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </ScrollArea>
