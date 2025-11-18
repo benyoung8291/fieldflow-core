@@ -101,11 +101,6 @@ export function PurchaseOrderDialog({
       fetchVendors();
       fetchServiceOrders();
       fetchProjects();
-      
-      // Fetch next PO number for new purchase orders
-      if (!purchaseOrder) {
-        fetchNextPONumber();
-      }
     } else {
       // Reset state when dialog closes
       setLineItems([]);
@@ -413,11 +408,17 @@ export function PurchaseOrderDialog({
           .delete()
           .eq("po_id", poId);
       } else {
+        // Generate next PO number only when actually creating the PO
+        const { data: nextNumber } = await supabase.rpc("get_next_sequential_number", {
+          p_tenant_id: profile?.tenant_id,
+          p_entity_type: "purchase_order",
+        });
+
         const { data, error } = await supabase
           .from("purchase_orders")
           .insert({
             supplier_id: poData.supplier_id,
-            po_number: poData.po_number,
+            po_number: nextNumber || poData.po_number,
             po_date: poData.po_date,
             expected_delivery_date: poData.expected_delivery_date || null,
             notes: poData.notes,
