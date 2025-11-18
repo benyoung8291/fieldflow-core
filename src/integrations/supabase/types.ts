@@ -6406,6 +6406,14 @@ export type Database = {
         Args: { p_invoice_id: string; p_notes?: string }
         Returns: Json
       }
+      update_purchase_order_linkage: {
+        Args: {
+          p_po_id: string
+          p_project_id?: string
+          p_service_order_id?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_module:
