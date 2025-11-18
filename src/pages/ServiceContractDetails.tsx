@@ -307,10 +307,10 @@ export default function ServiceContractDetails() {
     const frequencyMultiplier = {
       'daily': 365,
       'weekly': 52,
-      'fortnightly': 26,
+      'bi_weekly': 26,
       'monthly': 12,
       'quarterly': 4,
-      'six_monthly': 2,
+      'semi_annually': 2,
       'annually': 1
     }[item.recurrence_frequency] || 1;
     
@@ -608,10 +608,10 @@ export default function ServiceContractDetails() {
                             const frequencyMultiplier = {
                               'daily': 365,
                               'weekly': 52,
-                              'fortnightly': 26,
+                              'bi_weekly': 26,
                               'monthly': 12,
                               'quarterly': 4,
-                              'six_monthly': 2,
+                              'semi_annually': 2,
                               'annually': 1
                             }[item.recurrence_frequency] || 1;
                             const annualRevenue = item.quantity * item.unit_price * frequencyMultiplier;
@@ -643,17 +643,20 @@ export default function ServiceContractDetails() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="six_monthly">6 Monthly</SelectItem>
-                                <SelectItem value="quarterly">Quarterly</SelectItem>
-                                <SelectItem value="annually">Annually</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="bi_weekly">Fortnightly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="semi_annually">6 Monthly</SelectItem>
+                <SelectItem value="quarterly">Quarterly</SelectItem>
+                <SelectItem value="annually">Annually</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (
                             <Badge variant="outline" onClick={() => startEditingCell(item.id, "recurrence_frequency", item.recurrence_frequency)} className="cursor-pointer">
-                              {item.recurrence_frequency === "six_monthly" ? "6 Monthly" : item.recurrence_frequency}
+                              {item.recurrence_frequency === "semi_annually" ? "6 Monthly" : 
+                               item.recurrence_frequency === "bi_weekly" ? "Fortnightly" :
+                               item.recurrence_frequency}
                             </Badge>
                           )}
                         </TableCell>
@@ -792,8 +795,9 @@ export default function ServiceContractDetails() {
                       switch(freq) {
                         case "daily": return 1;
                         case "weekly": return 7;
+                        case "bi_weekly": return 14;
                         case "monthly": return 30;
-                        case "six_monthly": return 180;
+                        case "semi_annually": return 180;
                         case "quarterly": return 90;
                         case "annually": return 365;
                         default: return 30;
@@ -927,7 +931,9 @@ export default function ServiceContractDetails() {
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline">
-                                    {gen.item.recurrence_frequency === "six_monthly" ? "6 Monthly" : gen.item.recurrence_frequency}
+                                    {gen.item.recurrence_frequency === "semi_annually" ? "6 Monthly" : 
+                                     gen.item.recurrence_frequency === "bi_weekly" ? "Fortnightly" :
+                                     gen.item.recurrence_frequency}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">${gen.revenue.toFixed(2)}</TableCell>
