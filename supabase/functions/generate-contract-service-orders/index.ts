@@ -84,16 +84,30 @@ serve(async (req) => {
 
     console.log(`Authenticated admin user: ${user.id}`);
 
-    console.log("Starting automated service order generation...");
+    // Parse request body for manual generation parameters
+    const body = await req.json().catch(() => ({}));
+    const { startDate: bodyStartDate, endDate: bodyEndDate, manualGeneration = false } = body;
 
-    // Get today's date (start of day)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
+    console.log("Starting service order generation...");
+    console.log(`Manual generation: ${manualGeneration}`);
 
-    console.log(`Checking for line items with generation date: ${todayStr}`);
+    // Determine date range
+    let startDate: string;
+    let endDate: string;
 
-    // Fetch active contract line items that need generation today
+    if (manualGeneration && bodyStartDate && bodyEndDate) {
+      startDate = bodyStartDate;
+      endDate = bodyEndDate;
+      console.log(`Manual generation for date range: ${startDate} to ${endDate}`);
+    } else {
+      // Automatic generation - use today's date
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      startDate = endDate = today.toISOString().split("T")[0];
+      console.log(`Automatic generation for date: ${startDate}`);
+    }
+
+    // Fetch active contract line items that need generation in the date range
     const { data: lineItems, error: lineItemsError } = await supabase
       .from("service_contract_line_items")
       .select(`
@@ -118,7 +132,8 @@ serve(async (req) => {
         )
       `)
       .eq("is_active", true)
-      .eq("next_generation_date", todayStr)
+      .gte("next_generation_date", startDate)
+      .lte("next_generation_date", endDate)
       .eq("service_contracts.status", "active")
       .eq("service_contracts.auto_generate", true);
 
@@ -131,15 +146,61 @@ serve(async (req) => {
 
     if (!lineItems || lineItems.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No service orders to generate today" }),
+        JSON.stringify({ message: "No service orders to generate in date range" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Group line items by location_id and next_generation_date
+    // Check which line items already have service orders generated
+    const lineItemIds = lineItems.map((item: any) => item.id);
+    const { data: existingGenerations, error: existingError } = await supabase
+      .from("service_order_line_items")
+      .select("contract_line_item_id, generation_date")
+      .in("contract_line_item_id", lineItemIds)
+      .not("contract_line_item_id", "is", null);
+
+    if (existingError) {
+      console.error("Error checking existing generations:", existingError);
+      throw existingError;
+    }
+
+    // Create a Set of already-generated combinations (lineItemId_date)
+    const generatedSet = new Set(
+      (existingGenerations || []).map((eg: any) => `${eg.contract_line_item_id}_${eg.generation_date}`)
+    );
+
+    console.log(`Found ${generatedSet.size} already-generated line item/date combinations`);
+
+    // Filter out line items that have already been generated for their next_generation_date
+    const filteredLineItems = lineItems.filter((item: any) => {
+      const key = `${item.id}_${item.next_generation_date}`;
+      const isGenerated = generatedSet.has(key);
+      if (isGenerated) {
+        console.log(`Skipping line item ${item.id} - already generated for ${item.next_generation_date}`);
+      }
+      return !isGenerated;
+    });
+
+    console.log(`${filteredLineItems.length} line items remaining after filtering already-generated`);
+
+    if (filteredLineItems.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          message: "All line items in date range have already been generated",
+          summary: {
+            total_line_items: lineItems.length,
+            already_generated: lineItems.length,
+            orders_created: 0,
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Group filtered line items by location_id and next_generation_date
     // This ensures multiple items for the same location and date are on one service order
     // But items for different locations get separate service orders
-    const groupedByLocationAndDate = lineItems.reduce((acc: any, item: any) => {
+    const groupedByLocationAndDate = filteredLineItems.reduce((acc: any, item: any) => {
       const locationId = item.location_id || 'no-location';
       const generationDate = item.next_generation_date;
       const groupKey = `${locationId}_${generationDate}`;
@@ -250,6 +311,8 @@ serve(async (req) => {
               estimated_hours: item.estimated_hours || 0,
               item_order: i,
               notes: `From contract line item`,
+              contract_line_item_id: item.id,
+              generation_date: item.next_generation_date,
             });
 
           if (lineItemError) {
@@ -270,7 +333,7 @@ serve(async (req) => {
             .from("service_contract_line_items")
             .update({
               next_generation_date: nextDate,
-              last_generated_date: todayStr,
+              last_generated_date: item.next_generation_date,
             })
             .eq("id", item.id);
 
@@ -306,6 +369,7 @@ serve(async (req) => {
         message: "Service order generation completed",
         summary: {
           total_line_items: lineItems.length,
+          already_generated: lineItems.length - filteredLineItems.length,
           groups_processed: Object.keys(groupedByLocationAndDate).length,
           orders_created: createdOrders.length,
           errors: errors.length,
