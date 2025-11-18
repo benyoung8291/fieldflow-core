@@ -4649,9 +4649,11 @@ export type Database = {
       }
       service_order_line_items: {
         Row: {
+          contract_line_item_id: string | null
           created_at: string | null
           description: string
           estimated_hours: number
+          generation_date: string | null
           id: string
           is_from_price_book: boolean | null
           is_gst_free: boolean | null
@@ -4667,9 +4669,11 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          contract_line_item_id?: string | null
           created_at?: string | null
           description: string
           estimated_hours?: number
+          generation_date?: string | null
           id?: string
           is_from_price_book?: boolean | null
           is_gst_free?: boolean | null
@@ -4685,9 +4689,11 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          contract_line_item_id?: string | null
           created_at?: string | null
           description?: string
           estimated_hours?: number
+          generation_date?: string | null
           id?: string
           is_from_price_book?: boolean | null
           is_gst_free?: boolean | null
@@ -4703,6 +4709,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "service_order_line_items_contract_line_item_id_fkey"
+            columns: ["contract_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "service_contract_line_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_order_line_items_service_order_id_fkey"
             columns: ["service_order_id"]

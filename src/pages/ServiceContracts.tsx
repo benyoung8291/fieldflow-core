@@ -15,6 +15,7 @@ import { useState } from "react";
 import RenewContractDialog from "@/components/quotes/RenewContractDialog";
 import ServiceContractDialog from "@/components/contracts/ServiceContractDialog";
 import ImportContractDialog from "@/components/contracts/ImportContractDialog";
+import GenerateServiceOrdersDialog from "@/components/contracts/GenerateServiceOrdersDialog";
 import DashboardLayout from "@/components/DashboardLayout";
 import { FileSpreadsheet } from "lucide-react";
 
@@ -25,6 +26,7 @@ export default function ServiceContracts() {
   const [renewingContract, setRenewingContract] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
@@ -174,6 +176,14 @@ export default function ServiceContracts() {
             <p className="text-muted-foreground">Manage active contracts and forecast revenue</p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsGenerateDialogOpen(true)} 
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Generate Orders
+            </Button>
             <Button 
               variant="outline" 
               onClick={() => setIsImportDialogOpen(true)} 
@@ -476,6 +486,11 @@ export default function ServiceContracts() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["service-contracts-dashboard"] });
           }}
+        />
+
+        <GenerateServiceOrdersDialog
+          open={isGenerateDialogOpen}
+          onOpenChange={setIsGenerateDialogOpen}
         />
       </div>
     </DashboardLayout>
