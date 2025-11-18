@@ -572,7 +572,6 @@ export function PurchaseOrderDialog({
                         <SelectValue placeholder="Select service order..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {serviceOrders.map((so) => (
                           <SelectItem key={so.id} value={so.id}>
                             {so.order_number} - {so.customers?.name || "N/A"}
@@ -596,7 +595,6 @@ export function PurchaseOrderDialog({
                         <SelectValue placeholder="Select project..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {projects.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name} - {project.customers?.name || "N/A"}
