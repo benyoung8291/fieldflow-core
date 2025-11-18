@@ -29,7 +29,7 @@ export default function PurchaseOrders() {
         .select(`
           *,
           suppliers(name, gst_registered),
-          profiles:created_by(full_name)
+          profiles:created_by(first_name, last_name)
         `)
         .order("created_at", { ascending: false });
 
