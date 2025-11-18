@@ -6286,6 +6286,15 @@ export type Database = {
         }
         Returns: string
       }
+      get_duplicate_locations: {
+        Args: { p_customer_id: string }
+        Returns: {
+          archived_status: boolean[]
+          customer_location_id: string
+          location_ids: string[]
+          name: string
+        }[]
+      }
       get_next_sequential_number: {
         Args: { p_entity_type: string; p_tenant_id: string }
         Returns: string
