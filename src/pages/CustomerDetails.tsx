@@ -12,6 +12,7 @@ import { ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Building2, FileText } from 
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
 import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
+import CustomerLinkedDocuments from "@/components/customers/CustomerLinkedDocuments";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
@@ -241,6 +242,7 @@ export default function CustomerDetails() {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="contacts">Contacts</TabsTrigger>
                 <TabsTrigger value="locations">Locations</TabsTrigger>
+                <TabsTrigger value="linked-documents">Linked Documents</TabsTrigger>
                 <TabsTrigger value="service-history">Service History</TabsTrigger>
                 <TabsTrigger value="sub-accounts">Sub-Accounts</TabsTrigger>
                 <TabsTrigger value="tasks">Tasks</TabsTrigger>
@@ -417,6 +419,10 @@ export default function CustomerDetails() {
                 {profile?.tenant_id && (
                   <CustomerLocationsTab customerId={id!} tenantId={profile.tenant_id} />
                 )}
+              </TabsContent>
+
+              <TabsContent value="linked-documents" className="space-y-4 mt-0">
+                <CustomerLinkedDocuments customerId={id!} />
               </TabsContent>
 
               <TabsContent value="service-history" className="space-y-4 mt-0">
