@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
@@ -394,7 +395,7 @@ export default function ServiceContractDetails() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalValue.toFixed(2)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
               <p className="text-xs text-muted-foreground">Ex-GST</p>
             </CardContent>
           </Card>
@@ -599,7 +600,7 @@ export default function ServiceContractDetails() {
                             />
                           ) : (
                             <span onClick={() => startEditingCell(item.id, "unit_price", item.unit_price)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
-                              ${parseFloat(item.unit_price).toFixed(2)}
+                              {formatCurrency(parseFloat(item.unit_price))}
                             </span>
                           )}
                         </TableCell>
@@ -615,7 +616,7 @@ export default function ServiceContractDetails() {
                               'annually': 1
                             }[item.recurrence_frequency] || 1;
                             const annualRevenue = item.quantity * item.unit_price * frequencyMultiplier;
-                            return <span className="px-2 py-1">${annualRevenue.toFixed(2)}</span>;
+                            return <span className="px-2 py-1">{formatCurrency(annualRevenue)}</span>;
                           })()}
                         </TableCell>
                         <TableCell>
@@ -850,7 +851,7 @@ export default function ServiceContractDetails() {
                               <CardTitle className="text-sm">Total Forecast</CardTitle>
                             </CardHeader>
                             <CardContent>
-                              <div className="text-2xl font-bold">${totalForecast.toFixed(2)}</div>
+                              <div className="text-2xl font-bold">{formatCurrency(totalForecast)}</div>
                               <p className="text-xs text-muted-foreground">Next 12 months</p>
                             </CardContent>
                           </Card>
@@ -859,7 +860,7 @@ export default function ServiceContractDetails() {
                               <CardTitle className="text-sm">Avg Monthly</CardTitle>
                             </CardHeader>
                             <CardContent>
-                              <div className="text-2xl font-bold">${(totalForecast / 12).toFixed(2)}</div>
+                              <div className="text-2xl font-bold">{formatCurrency(totalForecast / 12)}</div>
                               <p className="text-xs text-muted-foreground">Per month</p>
                             </CardContent>
                           </Card>
@@ -899,7 +900,7 @@ export default function ServiceContractDetails() {
                               return (
                                 <TableRow key={month}>
                                   <TableCell className="font-medium">{format(parseISO(month + "-01"), "MMMM yyyy")}</TableCell>
-                                  <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">{formatCurrency(revenue)}</TableCell>
                                   <TableCell className="text-right">{count}</TableCell>
                                 </TableRow>
                               );
@@ -938,7 +939,7 @@ export default function ServiceContractDetails() {
                                      gen.item.recurrence_frequency}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${gen.revenue.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(gen.revenue)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
