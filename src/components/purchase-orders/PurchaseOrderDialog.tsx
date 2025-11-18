@@ -161,7 +161,9 @@ export function PurchaseOrderDialog({
   }, [open, purchaseOrder, serviceOrderId, sourceLineItems, hasPopulatedLineItems]);
 
   useEffect(() => {
-    if (purchaseOrder) {
+    const loadPurchaseOrderData = async () => {
+      if (!purchaseOrder) return;
+      
       form.reset({
         supplier_id: purchaseOrder.supplier_id,
         po_number: purchaseOrder.po_number,
@@ -171,9 +173,40 @@ export function PurchaseOrderDialog({
         internal_notes: purchaseOrder.internal_notes || "",
         tax_rate: purchaseOrder.tax_rate || 10,
       });
+      
       fetchSupplierDetails(purchaseOrder.supplier_id);
-      // Load line items if editing
-    }
+      
+      // Fetch line items
+      try {
+        // @ts-ignore - Supabase type generation issue
+        const { data: items, error: itemsError } = await supabase
+          .from("purchase_order_line_items")
+          .select("*")
+          .eq("purchase_order_id", purchaseOrder.id)
+          .order("item_order");
+
+        if (itemsError) throw itemsError;
+        
+        if (items) {
+          const lineItemsData: LineItem[] = items.map((item: any) => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            line_total: item.line_total,
+            is_gst_free: item.is_gst_free || false,
+            notes: item.notes || "",
+          }));
+          
+          setLineItems(lineItemsData);
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch line items:", error);
+        toast.error("Failed to load line items");
+      }
+    };
+    
+    loadPurchaseOrderData();
   }, [purchaseOrder]);
 
   const fetchVendors = async () => {
