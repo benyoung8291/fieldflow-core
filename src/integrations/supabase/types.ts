@@ -4868,6 +4868,7 @@ export type Database = {
           description: string | null
           estimated_hours: number | null
           fixed_amount: number | null
+          generated_from_date: string | null
           id: string
           is_recurring: boolean | null
           key_number: string | null
@@ -4917,6 +4918,7 @@ export type Database = {
           description?: string | null
           estimated_hours?: number | null
           fixed_amount?: number | null
+          generated_from_date?: string | null
           id?: string
           is_recurring?: boolean | null
           key_number?: string | null
@@ -4966,6 +4968,7 @@ export type Database = {
           description?: string | null
           estimated_hours?: number | null
           fixed_amount?: number | null
+          generated_from_date?: string | null
           id?: string
           is_recurring?: boolean | null
           key_number?: string | null
@@ -6283,6 +6286,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      calculate_next_generation_date: {
+        Args: { p_current_date: string; p_frequency: string }
+        Returns: string
+      }
       check_variance_requires_approval: {
         Args: { p_invoice_id: string; p_total_variance: number }
         Returns: boolean
@@ -6298,6 +6305,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      generate_service_orders_from_contracts: {
+        Args: {
+          p_end_date: string
+          p_start_date: string
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       get_duplicate_locations: {
         Args: { p_customer_id: string }
