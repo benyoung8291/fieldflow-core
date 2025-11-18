@@ -310,10 +310,53 @@ export default function ServiceContracts() {
                 </TableHeader>
                 <TableBody>
                   {activeContracts.map((contract: any) => {
-                    // Calculate next generation date
+                    // Calculate next future generation date
+                    const advanceDate = (date: Date, freq: string) => {
+                      const newDate = new Date(date);
+                      switch(freq) {
+                        case "daily":
+                          newDate.setDate(newDate.getDate() + 1);
+                          break;
+                        case "weekly":
+                          newDate.setDate(newDate.getDate() + 7);
+                          break;
+                        case "bi_weekly":
+                          newDate.setDate(newDate.getDate() + 14);
+                          break;
+                        case "monthly":
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          break;
+                        case "quarterly":
+                          newDate.setMonth(newDate.getMonth() + 3);
+                          break;
+                        case "semi_annually":
+                          newDate.setMonth(newDate.getMonth() + 6);
+                          break;
+                        case "annually":
+                          newDate.setFullYear(newDate.getFullYear() + 1);
+                          break;
+                        default:
+                          newDate.setMonth(newDate.getMonth() + 1);
+                      }
+                      return newDate;
+                    };
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
                     const nextGenDates = (contract.service_contract_line_items || [])
                       .filter((item: any) => item.is_active && (item.next_generation_date || item.first_generation_date))
-                      .map((item: any) => parseISO(item.next_generation_date || item.first_generation_date));
+                      .map((item: any) => {
+                        let currentDate = parseISO(item.next_generation_date || item.first_generation_date);
+                        
+                        // Fast-forward to first occurrence on or after today
+                        while (currentDate < today) {
+                          currentDate = advanceDate(currentDate, item.recurrence_frequency);
+                        }
+                        
+                        return currentDate;
+                      });
+                    
                     const nextGenDate = nextGenDates.length > 0 ? new Date(Math.min(...nextGenDates.map(d => d.getTime()))) : null;
 
                     // Calculate annualized contract value using frequency multipliers
