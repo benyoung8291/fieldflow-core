@@ -283,9 +283,10 @@ export default function ImportContractLineItemsDialog({
           locationId = location.id;
         }
 
-        // Format data for database
-        const quantity = parseFloat(mappedRow.quantity) || 1;
+        // Format data for database - strip spaces and non-numeric chars from all numbers
+        const quantity = parseFloat(String(mappedRow.quantity || "1").replace(/[^0-9.-]/g, "")) || 1;
         const unitPrice = parseFloat(String(mappedRow.unit_price || "0").replace(/[^0-9.-]/g, "")) || 0;
+        const estimatedHours = parseFloat(String(mappedRow.estimated_hours || "0").replace(/[^0-9.-]/g, "")) || 0;
         
         const firstDate = parseDate(mappedRow.first_date);
         const nextDate = mappedRow.next_date ? parseDate(mappedRow.next_date) : firstDate;
@@ -298,7 +299,7 @@ export default function ImportContractLineItemsDialog({
           line_total: mappedRow.line_total 
             ? parseFloat(String(mappedRow.line_total).replace(/[^0-9.-]/g, "")) 
             : quantity * unitPrice,
-          estimated_hours: parseFloat(mappedRow.estimated_hours) || 0,
+          estimated_hours: estimatedHours,
           recurrence_frequency: parseFrequency(mappedRow.frequency),
           first_generation_date: firstDate,
           next_generation_date: nextDate,
