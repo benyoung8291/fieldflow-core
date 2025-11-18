@@ -90,28 +90,32 @@ export default function PurchaseOrderDetails() {
 
   const fetchPurchaseOrder = async () => {
     try {
-      const { data: po, error: poError } = await supabase
-        .from("purchase_orders")
-        .select(`
-          *,
-          suppliers(*)
-        `)
-        .eq("id", id)
-        .maybeSingle();
+      // Use RPC function to bypass PostgREST schema cache issues
+      const { data: poData, error: poError } = await supabase
+        .rpc('get_purchase_order_with_links', { p_po_id: id });
 
       if (poError) {
         console.error("Purchase order fetch error:", poError);
         throw poError;
       }
 
-      if (!po) {
+      if (!poData || poData.length === 0) {
         toast.error("Purchase order not found");
         setLoading(false);
         return;
       }
 
+      const po = poData[0];
+      
+      // Fetch supplier details separately
+      const { data: supplierData } = await supabase
+        .from("suppliers")
+        .select("*")
+        .eq("id", po.supplier_id)
+        .maybeSingle();
+
       setPurchaseOrder(po);
-      setSupplier(po.suppliers);
+      setSupplier(supplierData);
 
       // Fetch linked service order
       if (po.service_order_id) {
@@ -127,7 +131,7 @@ export default function PurchaseOrderDetails() {
       if (po.project_id) {
         const { data: projData } = await supabase
           .from("projects")
-          .select("id, project_number, name")
+          .select("id, name, status")
           .eq("id", po.project_id)
           .maybeSingle();
         setLinkedProject(projData);
