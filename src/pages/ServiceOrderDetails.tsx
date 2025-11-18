@@ -142,12 +142,29 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ["service-order-purchase-orders", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("*, purchase_order_line_items(*)")
+        .eq("service_order_id", id);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
   const totalCost = lineItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0) * item.quantity, 0);
   const totalRevenue = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
   const totalProfit = totalRevenue - totalCost;
   const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+  // Calculate pending purchase order costs (draft and approved POs not yet received)
+  const pendingPOCosts = purchaseOrders
+    .filter((po: any) => po.status === 'draft' || po.status === 'approved')
+    .reduce((sum: number, po: any) => sum + (po.total_amount || 0), 0);
 
   const allAppointmentsCompleteOrCancelled = appointments.length > 0 && 
     appointments.every((apt: any) => apt.status === "completed" || apt.status === "cancelled");
@@ -670,6 +687,7 @@ export default function ServiceOrderDetails() {
               costOfLabor={(order as any)?.cost_of_labor || 0}
               otherCosts={(order as any)?.other_costs || 0}
               profitMargin={(order as any)?.profit_margin || 0}
+              pendingPOCosts={pendingPOCosts}
             />
           </div>
     </div>
