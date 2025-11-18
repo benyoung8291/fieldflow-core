@@ -301,7 +301,22 @@ export default function ServiceContractDetails() {
   }
 
   const lineItems = contract.service_contract_line_items || [];
-  const totalValue = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.line_total || 0), 0);
+  
+  // Calculate total annual contract value based on frequencies
+  const totalValue = lineItems.reduce((sum: number, item: any) => {
+    const frequencyMultiplier = {
+      'daily': 365,
+      'weekly': 52,
+      'fortnightly': 26,
+      'monthly': 12,
+      'quarterly': 4,
+      'six_monthly': 2,
+      'annually': 1
+    }[item.recurrence_frequency] || 1;
+    
+    const annualRevenue = item.quantity * item.unit_price * frequencyMultiplier;
+    return sum + annualRevenue;
+  }, 0);
 
   const toggleSelectAll = () => {
     if (selectedItems.size === lineItems.length) {
