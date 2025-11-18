@@ -200,7 +200,12 @@ export default function ImportContractLineItemsDialog({
     // Handle values like "6 monthly", "12 monthly", "weekly", etc.
     const normalized = frequencyValue.toLowerCase().trim();
     
-    // Extract just the frequency type (monthly, weekly, annually, etc.)
+    // Check for specific patterns first (before generic ones)
+    if (normalized.includes("6") && normalized.includes("month")) return "six_monthly";
+    if (normalized.includes("six") && normalized.includes("month")) return "six_monthly";
+    if (normalized.includes("fortnight")) return "fortnightly";
+    
+    // Then check generic patterns
     if (normalized.includes("month")) return "monthly";
     if (normalized.includes("week")) return "weekly";
     if (normalized.includes("year") || normalized.includes("annual")) return "annually";
