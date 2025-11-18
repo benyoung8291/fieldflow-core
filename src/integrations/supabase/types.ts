@@ -6274,6 +6274,7 @@ export type Database = {
       }
     }
     Functions: {
+      advance_past_generation_dates: { Args: never; Returns: Json }
       approve_reject_ap_invoice_variance: {
         Args: { p_approve: boolean; p_invoice_id: string; p_notes: string }
         Returns: Json
