@@ -788,9 +788,6 @@ export default function ServiceContractDetails() {
                   lineItems.forEach((item: any) => {
                     if (!item.is_active || !item.next_generation_date) return;
                     
-                    const nextDate = new Date(item.next_generation_date);
-                    let currentDate = new Date(nextDate);
-                    
                     const getDaysToAdd = (freq: string) => {
                       switch(freq) {
                         case "daily": return 1;
@@ -804,27 +801,32 @@ export default function ServiceContractDetails() {
                       }
                     };
                     
-                    // Generate upcoming dates within next 12 months
+                    const daysInterval = getDaysToAdd(item.recurrence_frequency);
+                    let currentDate = new Date(item.next_generation_date);
+                    
+                    // Fast-forward to first occurrence on or after today
+                    while (currentDate < today) {
+                      currentDate.setDate(currentDate.getDate() + daysInterval);
+                    }
+                    
+                    // Generate upcoming dates within rolling 12 months from today
                     while (currentDate <= next12Months) {
-                      if (currentDate >= today) {
-                        const perOccurrenceRevenue = item.quantity * item.unit_price;
-                        upcomingGenerations.push({
-                          date: new Date(currentDate),
-                          item,
-                          revenue: perOccurrenceRevenue,
-                        });
-                        
-                        // Add to monthly revenue
-                        const monthKey = format(currentDate, "yyyy-MM");
-                        monthlyRevenue.set(
-                          monthKey,
-                          (monthlyRevenue.get(monthKey) || 0) + perOccurrenceRevenue
-                        );
-                      }
+                      const perOccurrenceRevenue = item.quantity * item.unit_price;
+                      upcomingGenerations.push({
+                        date: new Date(currentDate),
+                        item,
+                        revenue: perOccurrenceRevenue,
+                      });
+                      
+                      // Add to monthly revenue
+                      const monthKey = format(currentDate, "yyyy-MM");
+                      monthlyRevenue.set(
+                        monthKey,
+                        (monthlyRevenue.get(monthKey) || 0) + perOccurrenceRevenue
+                      );
                       
                       // Move to next occurrence
-                      currentDate = new Date(currentDate);
-                      currentDate.setDate(currentDate.getDate() + getDaysToAdd(item.recurrence_frequency));
+                      currentDate.setDate(currentDate.getDate() + daysInterval);
                     }
                   });
                   
