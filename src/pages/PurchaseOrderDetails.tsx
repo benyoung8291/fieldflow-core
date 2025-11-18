@@ -96,9 +96,18 @@ export default function PurchaseOrderDetails() {
           suppliers(*)
         `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
-      if (poError) throw poError;
+      if (poError) {
+        console.error("Purchase order fetch error:", poError);
+        throw poError;
+      }
+
+      if (!po) {
+        toast.error("Purchase order not found");
+        setLoading(false);
+        return;
+      }
 
       setPurchaseOrder(po);
       setSupplier(po.suppliers);
@@ -109,7 +118,7 @@ export default function PurchaseOrderDetails() {
           .from("service_orders")
           .select("id, order_number, title")
           .eq("id", po.service_order_id)
-          .single();
+          .maybeSingle();
         setLinkedServiceOrder(soData);
       }
 
@@ -119,7 +128,7 @@ export default function PurchaseOrderDetails() {
           .from("projects")
           .select("id, project_number, name")
           .eq("id", po.project_id)
-          .single();
+          .maybeSingle();
         setLinkedProject(projData);
       }
 
@@ -130,7 +139,10 @@ export default function PurchaseOrderDetails() {
         .eq("po_id", id)
         .order("item_order");
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Line items fetch error:", itemsError);
+        throw itemsError;
+      }
       setLineItems(items || []);
 
       // Fetch receipts
@@ -146,11 +158,14 @@ export default function PurchaseOrderDetails() {
         .eq("po_id", id)
         .order("receipt_date", { ascending: false });
 
-      if (receiptsError) throw receiptsError;
+      if (receiptsError) {
+        console.error("Receipts fetch error:", receiptsError);
+        throw receiptsError;
+      }
       setReceipts(receiptData || []);
     } catch (error: any) {
-      toast.error("Failed to load purchase order");
-      console.error(error);
+      console.error("Failed to load purchase order:", error);
+      toast.error("Failed to load purchase order: " + (error.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
