@@ -81,6 +81,7 @@ export function PurchaseOrderDialog({
   const [serviceOrders, setServiceOrders] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedSourceItems, setSelectedSourceItems] = useState<Set<string>>(new Set());
+  const [hasPopulatedLineItems, setHasPopulatedLineItems] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -105,6 +106,19 @@ export function PurchaseOrderDialog({
       if (!purchaseOrder) {
         fetchNextPONumber();
       }
+    } else {
+      // Reset state when dialog closes
+      setLineItems([]);
+      setHasPopulatedLineItems(false);
+      form.reset({
+        supplier_id: "",
+        po_number: "PO-",
+        po_date: new Date().toISOString().split("T")[0],
+        expected_delivery_date: "",
+        notes: "",
+        internal_notes: "",
+        tax_rate: 10,
+      });
     }
   }, [open, purchaseOrder]);
 
@@ -133,9 +147,9 @@ export function PurchaseOrderDialog({
     }
   };
 
-  // Pre-populate line items when creating from service order
+  // Pre-populate line items when creating from service order (only once)
   useEffect(() => {
-    if (open && !purchaseOrder && serviceOrderId && sourceLineItems.length > 0) {
+    if (open && !purchaseOrder && serviceOrderId && sourceLineItems.length > 0 && !hasPopulatedLineItems) {
       const importedItems: LineItem[] = sourceLineItems.map(item => ({
         description: item.description,
         quantity: item.quantity,
@@ -145,8 +159,9 @@ export function PurchaseOrderDialog({
         notes: "",
       }));
       setLineItems(importedItems);
+      setHasPopulatedLineItems(true);
     }
-  }, [open, purchaseOrder, serviceOrderId, sourceLineItems]);
+  }, [open, purchaseOrder, serviceOrderId, sourceLineItems, hasPopulatedLineItems]);
 
   useEffect(() => {
     if (purchaseOrder) {
