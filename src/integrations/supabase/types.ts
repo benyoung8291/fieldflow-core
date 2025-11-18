@@ -1015,6 +1015,7 @@ export type Database = {
           created_at: string | null
           customer_id: string
           customer_location_id: string | null
+          formatted_address: string | null
           id: string
           is_active: boolean | null
           is_primary: boolean | null
@@ -1038,6 +1039,7 @@ export type Database = {
           created_at?: string | null
           customer_id: string
           customer_location_id?: string | null
+          formatted_address?: string | null
           id?: string
           is_active?: boolean | null
           is_primary?: boolean | null
@@ -1061,6 +1063,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string
           customer_location_id?: string | null
+          formatted_address?: string | null
           id?: string
           is_active?: boolean | null
           is_primary?: boolean | null
