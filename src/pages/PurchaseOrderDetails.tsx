@@ -191,13 +191,10 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkServiceOrder = async (serviceOrderId: string) => {
     try {
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({ 
-          service_order_id: serviceOrderId,
-          project_id: null 
-        })
-        .eq('id', id);
+      const { error } = await supabase.rpc('link_purchase_order_to_service_order', {
+        p_po_id: id,
+        p_service_order_id: serviceOrderId
+      });
 
       if (error) throw error;
 
@@ -211,13 +208,10 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkProject = async (projectId: string) => {
     try {
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({ 
-          project_id: projectId,
-          service_order_id: null 
-        })
-        .eq('id', id);
+      const { error } = await supabase.rpc('link_purchase_order_to_project', {
+        p_po_id: id,
+        p_project_id: projectId
+      });
 
       if (error) throw error;
 
