@@ -100,18 +100,29 @@ export default function MergeLocationsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Merge Locations</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
           <p className="text-sm text-muted-foreground">
             Select which values to keep for each field. Location "{location1.name}" will be kept,
             and "{location2.name}" will be archived. All related documents will be relinked.
           </p>
+        </DialogHeader>
 
-          <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-[200px_1fr_1fr] gap-4">
+            {/* Header Row */}
+            <div className="font-semibold text-sm sticky top-0 bg-background z-10 py-2">
+              Field
+            </div>
+            <div className="font-semibold text-sm sticky top-0 bg-background z-10 py-2 border-l pl-4">
+              {location1.name}
+            </div>
+            <div className="font-semibold text-sm sticky top-0 bg-background z-10 py-2 border-l pl-4">
+              {location2.name}
+            </div>
+
+            {/* Field Rows */}
             {fields.map((field) => {
               const value1 = location1[field.key];
               const value2 = location2[field.key];
@@ -120,47 +131,52 @@ export default function MergeLocationsDialog({
               if (!value1 && !value2) return null;
 
               return (
-                <div key={field.key} className="border rounded-lg p-4">
-                  <Label className="font-semibold mb-3 block">{field.label}</Label>
-                  <RadioGroup
-                    value={selectedFields[field.key]}
-                    onValueChange={(value) =>
-                      setSelectedFields((prev) => ({ ...prev, [field.key]: value }))
-                    }
-                  >
-                    <div className="flex items-start space-x-2 mb-2">
-                      <RadioGroupItem value={location1.id} id={`${field.key}-1`} />
-                      <Label
-                        htmlFor={`${field.key}-1`}
-                        className="font-normal cursor-pointer flex-1"
-                      >
-                        {value1 || <span className="text-muted-foreground italic">Empty</span>}
-                      </Label>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <RadioGroupItem value={location2.id} id={`${field.key}-2`} />
-                      <Label
-                        htmlFor={`${field.key}-2`}
-                        className="font-normal cursor-pointer flex-1"
-                      >
-                        {value2 || <span className="text-muted-foreground italic">Empty</span>}
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                <>
+                  <div key={`${field.key}-label`} className="text-sm font-medium py-3 flex items-start">
+                    {field.label}
+                  </div>
+                  <div key={`${field.key}-1`} className="border-l pl-4 py-3">
+                    <button
+                      onClick={() =>
+                        setSelectedFields((prev) => ({ ...prev, [field.key]: location1.id }))
+                      }
+                      className={`w-full text-left p-3 rounded-md transition-colors ${
+                        selectedFields[field.key] === location1.id
+                          ? "bg-primary/10 border-2 border-primary"
+                          : "bg-muted/50 border-2 border-transparent hover:border-muted-foreground/20"
+                      }`}
+                    >
+                      {value1 || <span className="text-muted-foreground italic">Empty</span>}
+                    </button>
+                  </div>
+                  <div key={`${field.key}-2`} className="border-l pl-4 py-3">
+                    <button
+                      onClick={() =>
+                        setSelectedFields((prev) => ({ ...prev, [field.key]: location2.id }))
+                      }
+                      className={`w-full text-left p-3 rounded-md transition-colors ${
+                        selectedFields[field.key] === location2.id
+                          ? "bg-primary/10 border-2 border-primary"
+                          : "bg-muted/50 border-2 border-transparent hover:border-muted-foreground/20"
+                      }`}
+                    >
+                      {value2 || <span className="text-muted-foreground italic">Empty</span>}
+                    </button>
+                  </div>
+                </>
               );
             })}
           </div>
+        </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
-            </Button>
-            <Button onClick={handleMerge} disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Merge Locations
-            </Button>
-          </div>
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleMerge} disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Merge Locations
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
