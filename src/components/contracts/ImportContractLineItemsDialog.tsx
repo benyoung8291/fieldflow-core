@@ -152,7 +152,7 @@ export default function ImportContractLineItemsDialog({
   const validateMappings = (): boolean => {
     const requiredFields = REQUIRED_FIELDS.map((f) => f.value);
     const unmappedRequired = columnMappings
-      .filter((m) => requiredFields.includes(m.targetField) && !m.csvColumn)
+      .filter((m) => requiredFields.includes(m.targetField) && (!m.csvColumn || m.csvColumn === "__none__"))
       .map((m) => {
         const field = REQUIRED_FIELDS.find((f) => f.value === m.targetField);
         return field?.label || m.targetField;
@@ -194,7 +194,7 @@ export default function ImportContractLineItemsDialog({
         const mappedRow: any = {};
         
         columnMappings.forEach((mapping) => {
-          if (mapping.csvColumn && mapping.targetField) {
+          if (mapping.csvColumn && mapping.csvColumn !== "__none__" && mapping.targetField) {
             mappedRow[mapping.targetField] = row[mapping.csvColumn];
           }
         });
@@ -352,7 +352,7 @@ export default function ImportContractLineItemsDialog({
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={mapping?.csvColumn || ""}
+                            value={mapping?.csvColumn || "__none__"}
                             onValueChange={(value) =>
                               updateMapping(field.value, value)
                             }
@@ -361,7 +361,7 @@ export default function ImportContractLineItemsDialog({
                               <SelectValue placeholder="Select CSV column" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">-- Not Mapped --</SelectItem>
+                              <SelectItem value="__none__">-- Not Mapped --</SelectItem>
                               {parsedData?.headers.map((header) => (
                                 <SelectItem key={header} value={header}>
                                   {header}
@@ -371,7 +371,7 @@ export default function ImportContractLineItemsDialog({
                           </Select>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {mapping?.csvColumn && parsedData?.rows
+                          {mapping?.csvColumn && mapping.csvColumn !== "__none__" && parsedData?.rows
                             .slice(0, 5)
                             .map((row: any) => row[mapping.csvColumn])
                             .filter(Boolean)
@@ -389,7 +389,7 @@ export default function ImportContractLineItemsDialog({
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={mapping?.csvColumn || ""}
+                            value={mapping?.csvColumn || "__none__"}
                             onValueChange={(value) =>
                               updateMapping(field.value, value)
                             }
@@ -398,7 +398,7 @@ export default function ImportContractLineItemsDialog({
                               <SelectValue placeholder="Select CSV column" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">-- Not Mapped --</SelectItem>
+                              <SelectItem value="__none__">-- Not Mapped --</SelectItem>
                               {parsedData?.headers.map((header) => (
                                 <SelectItem key={header} value={header}>
                                   {header}
@@ -408,7 +408,7 @@ export default function ImportContractLineItemsDialog({
                           </Select>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {mapping?.csvColumn && parsedData?.rows
+                          {mapping?.csvColumn && mapping.csvColumn !== "__none__" && parsedData?.rows
                             .slice(0, 5)
                             .map((row: any) => row[mapping.csvColumn])
                             .filter(Boolean)
