@@ -347,11 +347,10 @@ export default function ServiceContracts() {
                     const nextGenDates = (contract.service_contract_line_items || [])
                       .filter((item: any) => item.is_active && (item.next_generation_date || item.first_generation_date))
                       .map((item: any) => {
-                        let currentDate = parseISO(item.next_generation_date || item.first_generation_date);
-                        currentDate.setHours(0, 0, 0, 0); // Normalize to midnight for comparison
+                        let currentDate = new Date(item.next_generation_date || item.first_generation_date);
                         
-                        // Fast-forward to first occurrence on or after today
-                        while (currentDate < today) {
+                        // Fast-forward to first occurrence after today
+                        while (currentDate <= today) {
                           currentDate = advanceDate(currentDate, item.recurrence_frequency);
                         }
                         
