@@ -12,7 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import CustomerLocationDialog from "./CustomerLocationDialog";
 import ImportLocationsDialog from "./ImportLocationsDialog";
 import MergeLocationsDialog from "./MergeLocationsDialog";
-import { geocodeCustomerLocations } from "@/utils/geocodeCustomerLocations";
+import GeocodeProgressDialog from "./GeocodeProgressDialog";
+import { geocodeCustomerLocationsWithProgress, type LocationProgress } from "@/utils/geocodeCustomerLocations";
 
 interface CustomerLocationsTabProps {
   customerId: string;
@@ -30,6 +31,10 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
   const [isGeocodingLocations, setIsGeocodingLocations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedForMerge, setSelectedForMerge] = useState<string[]>([]);
+  const [geocodeProgress, setGeocodeProgress] = useState<LocationProgress[]>([]);
+  const [geocodeCurrentIndex, setGeocodeCurrentIndex] = useState(0);
+  const [showGeocodeDialog, setShowGeocodeDialog] = useState(false);
+  const [geocodeComplete, setGeocodeComplete] = useState(false);
 
   const { data: locations } = useQuery({
     queryKey: ["customer-locations", customerId, showArchived],
@@ -62,14 +67,70 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
 
   const handleGeocodeLocations = async () => {
     setIsGeocodingLocations(true);
+    setShowGeocodeDialog(true);
+    setGeocodeComplete(false);
+    setGeocodeProgress([]);
+    setGeocodeCurrentIndex(0);
+
     try {
-      await geocodeCustomerLocations(customerId);
+      await geocodeCustomerLocationsWithProgress(customerId, {
+        onProgress: (locations, currentIndex) => {
+          setGeocodeProgress([...locations]);
+          setGeocodeCurrentIndex(currentIndex);
+        },
+        onLocationNeedsConfirmation: async (locationId, error) => {
+          // Set the location as needing confirmation
+          setGeocodeProgress(prev => 
+            prev.map(loc => 
+              loc.id === locationId 
+                ? { ...loc, needsConfirmation: true, error }
+                : loc
+            )
+          );
+
+          // Wait for user decision
+          return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+              setGeocodeProgress(prev => {
+                const loc = prev.find(l => l.id === locationId);
+                if (loc && !loc.needsConfirmation) {
+                  clearInterval(checkInterval);
+                  resolve(loc.status !== 'skipped');
+                }
+                return prev;
+              });
+            }, 100);
+          });
+        }
+      });
+
+      setGeocodeComplete(true);
       queryClient.invalidateQueries({ queryKey: ["customer-locations", customerId, showArchived] });
     } catch (error) {
       // Error handling is done in the utility function
     } finally {
       setIsGeocodingLocations(false);
     }
+  };
+
+  const handleConfirmLocation = (locationId: string) => {
+    setGeocodeProgress(prev =>
+      prev.map(loc =>
+        loc.id === locationId
+          ? { ...loc, needsConfirmation: false, status: 'processing' as const }
+          : loc
+      )
+    );
+  };
+
+  const handleSkipLocation = (locationId: string) => {
+    setGeocodeProgress(prev =>
+      prev.map(loc =>
+        loc.id === locationId
+          ? { ...loc, needsConfirmation: false, status: 'skipped' as const }
+          : loc
+      )
+    );
   };
 
   const handleArchiveLocation = async (locationId: string) => {
@@ -322,6 +383,16 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
         location1={location1}
         location2={location2}
         onMergeComplete={handleMergeComplete}
+      />
+
+      <GeocodeProgressDialog
+        open={showGeocodeDialog}
+        onOpenChange={setShowGeocodeDialog}
+        locations={geocodeProgress}
+        currentIndex={geocodeCurrentIndex}
+        onConfirmLocation={handleConfirmLocation}
+        onSkipLocation={handleSkipLocation}
+        isComplete={geocodeComplete}
       />
     </div>
   );

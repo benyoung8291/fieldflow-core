@@ -70,6 +70,7 @@ serve(async (req) => {
     const geocodedAddresses = new Map();
     let successCount = 0;
     let failCount = 0;
+    const results = [];
 
     for (const location of locations) {
       const addressKey = `${location.address}, ${location.city || ''}, ${location.state || ''}, ${location.postcode || ''}`.trim();
@@ -127,19 +128,41 @@ serve(async (req) => {
 
           if (updateError) {
             console.error(`Failed to update location ${location.id}:`, updateError);
+            results.push({
+              locationId: location.id,
+              success: false,
+              error: updateError.message
+            });
             failCount++;
           } else {
             console.log(`Geocoded: ${addressKey} -> lat: ${geoLocation.lat}, lng: ${geoLocation.lng}`);
+            results.push({
+              locationId: location.id,
+              success: true,
+              latitude: geoLocation.lat,
+              longitude: geoLocation.lng,
+              formatted_address: result.formatted_address
+            });
             successCount++;
           }
         } else {
           console.warn(`Geocoding failed for: ${addressKey} - Status: ${geocodeData.status}`);
           geocodedAddresses.set(addressKey, { success: false });
+          results.push({
+            locationId: location.id,
+            success: false,
+            error: `Geocoding failed: ${geocodeData.status}`
+          });
           failCount++;
         }
       } catch (geocodeError) {
         console.error(`Error geocoding address ${addressKey}:`, geocodeError);
         geocodedAddresses.set(addressKey, { success: false });
+        results.push({
+          locationId: location.id,
+          success: false,
+          error: geocodeError instanceof Error ? geocodeError.message : 'Unknown error'
+        });
         failCount++;
       }
 
@@ -154,7 +177,8 @@ serve(async (req) => {
         success: true,
         geocoded: successCount,
         failed: failCount,
-        total: locations.length
+        total: locations.length,
+        results: results
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
