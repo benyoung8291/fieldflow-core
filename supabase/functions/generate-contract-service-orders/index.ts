@@ -6,38 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ContractLineItem {
-  id: string;
-  contract_id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  line_total: number;
-  estimated_hours: number;
-  recurrence_frequency: string;
-  next_generation_date: string;
-  first_generation_date: string;
-  location_id: string;
-  service_contracts: {
-    id: string;
-    contract_number: string;
-    title: string;
-    customer_id: string;
-    tenant_id: string;
-    customers: {
-      name: string;
-    };
-  };
-  customer_locations?: {
-    id: string;
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-    postcode: string;
-  };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -67,13 +35,27 @@ serve(async (req) => {
       );
     }
 
+    // Get user's tenant_id
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tenant_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.tenant_id) {
+      return new Response(
+        JSON.stringify({ error: 'User has no tenant' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify user has tenant_admin role
     const { data: adminRole, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'tenant_admin')
-      .single();
+      .maybeSingle();
 
     if (roleError || !adminRole) {
       return new Response(
@@ -82,14 +64,14 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Authenticated admin user: ${user.id}`);
+    console.log(`✅ Authenticated admin user: ${user.id}`);
 
     // Parse request body for manual generation parameters
     const body = await req.json().catch(() => ({}));
     const { startDate: bodyStartDate, endDate: bodyEndDate, manualGeneration = false } = body;
 
-    console.log("Starting service order generation...");
-    console.log(`Manual generation: ${manualGeneration}`);
+    console.log("🚀 Starting service order generation...");
+    console.log(`📋 Manual generation: ${manualGeneration}`);
 
     // Determine date range
     let startDate: string;
@@ -98,298 +80,45 @@ serve(async (req) => {
     if (manualGeneration && bodyStartDate && bodyEndDate) {
       startDate = bodyStartDate;
       endDate = bodyEndDate;
-      console.log(`Manual generation for date range: ${startDate} to ${endDate}`);
+      console.log(`📅 Manual generation for date range: ${startDate} to ${endDate}`);
     } else {
       // Automatic generation - use today's date
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       startDate = endDate = today.toISOString().split("T")[0];
-      console.log(`Automatic generation for date: ${startDate}`);
+      console.log(`📅 Automatic generation for date: ${startDate}`);
     }
 
-    // Fetch active contract line items that need generation in the date range
-    const { data: lineItems, error: lineItemsError } = await supabase
-      .from("service_contract_line_items")
-      .select(`
-        *,
-        service_contracts!inner (
-          id,
-          contract_number,
-          title,
-          customer_id,
-          tenant_id,
-          status,
-          auto_generate,
-          customers (name)
-        ),
-        customer_locations (
-          id,
-          name,
-          address,
-          city,
-          state,
-          postcode
-        )
-      `)
-      .eq("is_active", true)
-      .gte("next_generation_date", startDate)
-      .lte("next_generation_date", endDate)
-      .eq("service_contracts.status", "active")
-      .eq("service_contracts.auto_generate", true);
-
-    if (lineItemsError) {
-      console.error("Error fetching line items:", lineItemsError);
-      throw lineItemsError;
-    }
-
-    console.log(`Found ${lineItems?.length || 0} line items to process`);
-
-    if (!lineItems || lineItems.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No service orders to generate in date range" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check which line items already have service orders generated
-    const lineItemIds = lineItems.map((item: any) => item.id);
-    const { data: existingGenerations, error: existingError } = await supabase
-      .from("service_order_line_items")
-      .select("contract_line_item_id, generation_date")
-      .in("contract_line_item_id", lineItemIds)
-      .not("contract_line_item_id", "is", null);
-
-    if (existingError) {
-      console.error("Error checking existing generations:", existingError);
-      throw existingError;
-    }
-
-    // Create a Set of already-generated combinations (lineItemId_date)
-    const generatedSet = new Set(
-      (existingGenerations || []).map((eg: any) => `${eg.contract_line_item_id}_${eg.generation_date}`)
-    );
-
-    console.log(`Found ${generatedSet.size} already-generated line item/date combinations`);
-
-    // Filter out line items that have already been generated for their next_generation_date
-    const filteredLineItems = lineItems.filter((item: any) => {
-      const key = `${item.id}_${item.next_generation_date}`;
-      const isGenerated = generatedSet.has(key);
-      if (isGenerated) {
-        console.log(`Skipping line item ${item.id} - already generated for ${item.next_generation_date}`);
-      }
-      return !isGenerated;
+    // Call the database function to generate service orders
+    console.log("📞 Calling database function...");
+    
+    const { data, error } = await supabase.rpc('generate_service_orders_from_contracts', {
+      p_start_date: startDate,
+      p_end_date: endDate,
+      p_tenant_id: profile.tenant_id,
+      p_user_id: user.id
     });
 
-    console.log(`${filteredLineItems.length} line items remaining after filtering already-generated`);
-
-    if (filteredLineItems.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          message: "All line items in date range have already been generated",
-          summary: {
-            total_line_items: lineItems.length,
-            already_generated: lineItems.length,
-            orders_created: 0,
-          }
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (error) {
+      console.error("❌ Error calling database function:", error);
+      throw error;
     }
 
-    // Group filtered line items by location_id and next_generation_date
-    // This ensures multiple items for the same location and date are on one service order
-    // But items for different locations get separate service orders
-    const groupedByLocationAndDate = filteredLineItems.reduce((acc: any, item: any) => {
-      const locationId = item.location_id || 'no-location';
-      const generationDate = item.next_generation_date;
-      const groupKey = `${locationId}_${generationDate}`;
-      
-      if (!acc[groupKey]) {
-        acc[groupKey] = {
-          locationId: item.location_id,
-          location: item.customer_locations,
-          generationDate: generationDate,
-          contract: item.service_contracts,
-          customerId: item.service_contracts.customer_id,
-          tenantId: item.service_contracts.tenant_id,
-          items: [],
-        };
-      }
-      acc[groupKey].items.push(item);
-      return acc;
-    }, {});
-
-    console.log(`Grouped into ${Object.keys(groupedByLocationAndDate).length} service orders (by location + date)`);
-
-    const createdOrders: any[] = [];
-    const errors: any[] = [];
-
-    // Create service orders for each location+date group
-    for (const [groupKey, data] of Object.entries(groupedByLocationAndDate) as any) {
-      try {
-        const { locationId, location, contract, customerId, tenantId, items } = data;
-        
-        console.log(`Processing group ${groupKey} with ${items.length} items`);
-
-        // Generate service order number
-        const { data: latestOrder } = await supabase
-          .from("service_orders")
-          .select("order_number")
-          .eq("tenant_id", tenantId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const lastNumber = latestOrder?.order_number?.match(/\d+$/)?.[0] || "0";
-        const newOrderNumber = `SO-${String(parseInt(lastNumber) + 1).padStart(5, "0")}`;
-
-        // Calculate total estimated hours from contract line items
-        const estimatedHours = items.reduce((sum: number, item: any) => {
-          return sum + (parseFloat(item.estimated_hours) || 0);
-        }, 0);
-
-        const fixedAmount = items.reduce((sum: number, item: any) => {
-          return sum + parseFloat(item.line_total);
-        }, 0);
-
-        // Create service order title
-        const title = items.length === 1
-          ? items[0].description
-          : `${contract.title} - Multiple Services`;
-
-        const description = items.map((item: any) => 
-          `${item.description} (Qty: ${item.quantity}${item.estimated_hours ? `, Est. Hours: ${item.estimated_hours}` : ''})`
-        ).join("\n");
-        
-        // Create the service order
-        const { data: newOrder, error: orderError } = await supabase
-          .from("service_orders")
-          .insert({
-            tenant_id: tenantId,
-            customer_id: customerId,
-            contract_id: items[0].contract_id,
-            order_number: newOrderNumber,
-            title,
-            description,
-            status: "draft",
-            billing_type: "fixed",
-            fixed_amount: fixedAmount,
-            estimated_hours: estimatedHours,
-            priority: "normal",
-            location_id: locationId !== 'no-location' ? locationId : null,
-            key_number: items.length === 1 ? items[0].key_number : null,
-            notes: `Auto-generated from contract ${contract.contract_number}`,
-          })
-          .select()
-          .single();
-
-        if (orderError) {
-          console.error(`Error creating service order for group ${groupKey}:`, orderError);
-          errors.push({
-            groupKey,
-            error: orderError.message,
-          });
-          continue;
-        }
-
-        console.log(`Created service order ${newOrderNumber} with ${items.length} line items`);
-
-        // Create service order line items for each contract line item
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          
-          const { error: lineItemError } = await supabase
-            .from("service_order_line_items")
-            .insert({
-              tenant_id: tenantId,
-              service_order_id: newOrder.id,
-              description: item.description,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              line_total: item.line_total,
-              estimated_hours: item.estimated_hours || 0,
-              item_order: i,
-              notes: `From contract line item`,
-              contract_line_item_id: item.id,
-              generation_date: item.next_generation_date,
-            });
-
-          if (lineItemError) {
-            console.error(`Error creating line item for service order ${newOrderNumber}:`, lineItemError);
-          } else {
-            console.log(`Created line item ${i + 1} for service order ${newOrderNumber}`);
-          }
-        }
-
-        // Update next_generation_date for each line item
-        for (const item of items) {
-          const nextDate = calculateNextGenerationDate(
-            item.next_generation_date,
-            item.recurrence_frequency
-          );
-
-          const { error: updateError } = await supabase
-            .from("service_contract_line_items")
-            .update({
-              next_generation_date: nextDate,
-              last_generated_date: item.next_generation_date,
-            })
-            .eq("id", item.id);
-
-          if (updateError) {
-            console.error(`Error updating line item ${item.id}:`, updateError);
-          } else {
-            console.log(`Updated line item ${item.id} - next generation: ${nextDate}`);
-          }
-        }
-
-        createdOrders.push({
-          orderNumber: newOrderNumber,
-          contract: contract.contract_number,
-          customer: contract.customers.name,
-          location: location ? `${location.name} - ${location.address}` : 'No location',
-          itemCount: items.length,
-          amount: fixedAmount,
-          estimatedHours,
-        });
-      } catch (error: any) {
-        console.error(`Error processing group ${groupKey}:`, error);
-        errors.push({
-          groupKey,
-          error: error.message,
-        });
-      }
-    }
-
-    console.log(`Generation complete: ${createdOrders.length} orders created, ${errors.length} errors`);
+    console.log("✅ Generation complete");
+    console.log(`📊 Results: ${data.summary.orders_created} orders created, ${data.summary.total_line_items} items processed`);
 
     return new Response(
-      JSON.stringify({
-        message: "Service order generation completed",
-        summary: {
-          total_line_items: lineItems.length,
-          already_generated: lineItems.length - filteredLineItems.length,
-          groups_processed: Object.keys(groupedByLocationAndDate).length,
-          orders_created: createdOrders.length,
-          errors: errors.length,
-        },
-        created_orders: createdOrders,
-        errors: errors.length > 0 ? errors : undefined,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify(data),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Error in generate-contract-service-orders:", error);
+    console.error("❌ Error in service order generation:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({
+        error: error.message,
+        details: error,
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
