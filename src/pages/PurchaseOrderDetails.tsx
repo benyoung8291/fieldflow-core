@@ -17,7 +17,16 @@ import {
   Send,
   Package,
   AlertTriangle,
+  Link2,
+  ExternalLink,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,12 +49,47 @@ export default function PurchaseOrderDetails() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [serviceOrders, setServiceOrders] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [linkedServiceOrder, setLinkedServiceOrder] = useState<any>(null);
+  const [linkedProject, setLinkedProject] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
       fetchPurchaseOrder();
+      fetchServiceOrders();
+      fetchProjects();
     }
   }, [id]);
+
+  const fetchServiceOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("id, order_number, title, status")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      setServiceOrders(data || []);
+    } catch (error: any) {
+      console.error("Failed to fetch service orders:", error);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, project_number, name, status")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error: any) {
+      console.error("Failed to fetch projects:", error);
+    }
+  };
 
   const fetchPurchaseOrder = async () => {
     try {
@@ -62,6 +106,26 @@ export default function PurchaseOrderDetails() {
 
       setPurchaseOrder(po);
       setSupplier(po.suppliers);
+
+      // Fetch linked service order
+      if (po.service_order_id) {
+        const { data: soData } = await supabase
+          .from("service_orders")
+          .select("id, order_number, title")
+          .eq("id", po.service_order_id)
+          .single();
+        setLinkedServiceOrder(soData);
+      }
+
+      // Fetch linked project
+      if (po.project_id) {
+        const { data: projData } = await supabase
+          .from("projects")
+          .select("id, project_number, name")
+          .eq("id", po.project_id)
+          .single();
+        setLinkedProject(projData);
+      }
 
       // Fetch line items
       const { data: items, error: itemsError } = await supabase
@@ -113,6 +177,44 @@ export default function PurchaseOrderDetails() {
       if (error) throw error;
 
       toast.success(`Purchase order ${newStatus}`);
+      fetchPurchaseOrder();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleLinkServiceOrder = async (serviceOrderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({ 
+          service_order_id: serviceOrderId || null,
+          project_id: null // Clear project if linking to service order
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Purchase order linked to service order");
+      fetchPurchaseOrder();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleLinkProject = async (projectId: string) => {
+    try {
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({ 
+          project_id: projectId || null,
+          service_order_id: null // Clear service order if linking to project
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Purchase order linked to project");
       fetchPurchaseOrder();
     } catch (error: any) {
       toast.error(error.message);
@@ -469,6 +571,99 @@ export default function PurchaseOrderDetails() {
                 </div>
               </div>
             )}
+
+            {/* Linked Documents Section */}
+            <div>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Link2 className="h-4 w-4" />
+                Linked Documents
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">
+                    Service Order
+                  </label>
+                  {linkedServiceOrder ? (
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 justify-start"
+                        onClick={() => navigate(`/service-orders/${linkedServiceOrder.id}`)}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {linkedServiceOrder.order_number}: {linkedServiceOrder.title}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLinkServiceOrder("")}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select 
+                      value={purchaseOrder.service_order_id || "none"}
+                      onValueChange={handleLinkServiceOrder}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service order" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {serviceOrders.map((so) => (
+                          <SelectItem key={so.id} value={so.id}>
+                            {so.order_number}: {so.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">
+                    Project
+                  </label>
+                  {linkedProject ? (
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 justify-start"
+                        onClick={() => navigate(`/projects/${linkedProject.id}`)}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {linkedProject.project_number}: {linkedProject.name}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLinkProject("")}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select 
+                      value={purchaseOrder.project_id || "none"}
+                      onValueChange={handleLinkProject}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {projects.map((proj) => (
+                          <SelectItem key={proj.id} value={proj.id}>
+                            {proj.project_number}: {proj.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+            </div>
           </Card>
         </TabsContent>
 
