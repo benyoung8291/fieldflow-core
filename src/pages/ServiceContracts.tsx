@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, getMelbourneNow, toMelbourneTime } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -51,7 +51,7 @@ export default function ServiceContracts() {
     if (!contracts) return [];
     
     const generations: any[] = [];
-    const now = new Date();
+    const now = getMelbourneNow();
     const endDate = addMonths(now, 12);
 
     contracts.forEach((contract: any) => {
@@ -63,7 +63,7 @@ export default function ServiceContracts() {
         const startDate = item.next_generation_date || item.first_generation_date;
         if (!startDate) return;
 
-        let currentDate = parseISO(startDate);
+        let currentDate = toMelbourneTime(startDate);
         
         while (currentDate <= endDate) {
           if (currentDate >= now) {
@@ -100,7 +100,7 @@ export default function ServiceContracts() {
           }
 
           // Check if contract has ended
-          if (contract.end_date && currentDate > parseISO(contract.end_date)) {
+          if (contract.end_date && currentDate > toMelbourneTime(contract.end_date)) {
             break;
           }
         }
@@ -341,13 +341,14 @@ export default function ServiceContracts() {
                       return newDate;
                     };
 
-                    const today = new Date();
+                    const today = getMelbourneNow();
                     today.setHours(0, 0, 0, 0);
                     
                     const nextGenDates = (contract.service_contract_line_items || [])
                       .filter((item: any) => item.is_active && (item.next_generation_date || item.first_generation_date))
                       .map((item: any) => {
-                        let currentDate = new Date(item.next_generation_date || item.first_generation_date);
+                        let currentDate = toMelbourneTime(item.next_generation_date || item.first_generation_date);
+                        currentDate.setHours(0, 0, 0, 0);
                         
                         // Fast-forward to first occurrence after today
                         while (currentDate <= today) {
