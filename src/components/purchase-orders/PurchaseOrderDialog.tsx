@@ -425,24 +425,30 @@ export function PurchaseOrderDialog({
         const nextNum = settings?.next_number || 1;
         const poNumber = (settings?.prefix || "PO-") + String(nextNum).padStart(settings?.number_length || 6, "0");
 
-        // Simple direct insert
+        // Direct insert with service_order_id and project_id included
+        const insertData: any = {
+          tenant_id: profile?.tenant_id,
+          supplier_id: poData.supplier_id,
+          po_number: poNumber,
+          po_date: poData.po_date,
+          expected_delivery_date: poData.expected_delivery_date,
+          notes: poData.notes || '',
+          internal_notes: poData.internal_notes || '',
+          tax_rate: poData.tax_rate,
+          subtotal: poData.subtotal,
+          tax_amount: poData.tax_amount,
+          total_amount: poData.total_amount,
+          created_by: poData.created_by,
+          status: 'draft',
+        };
+
+        // Add linkage fields if provided
+        if (selectedServiceOrderId) insertData.service_order_id = selectedServiceOrderId;
+        if (selectedProjectId) insertData.project_id = selectedProjectId;
+
         const { data: newPO, error: insertError } = await supabase
           .from("purchase_orders")
-          .insert({
-            tenant_id: profile?.tenant_id,
-            supplier_id: poData.supplier_id,
-            po_number: poNumber,
-            po_date: poData.po_date,
-            expected_delivery_date: poData.expected_delivery_date,
-            notes: poData.notes || '',
-            internal_notes: poData.internal_notes || '',
-            tax_rate: poData.tax_rate,
-            subtotal: poData.subtotal,
-            tax_amount: poData.tax_amount,
-            total_amount: poData.total_amount,
-            created_by: poData.created_by,
-            status: 'draft',
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -456,22 +462,6 @@ export function PurchaseOrderDialog({
           .eq("entity_type", "purchase_order");
 
         poId = newPO.id;
-
-        // Link to service order or project using separate update
-        if (selectedServiceOrderId || selectedProjectId) {
-          const { error: linkError } = await supabase
-            .from("purchase_orders")
-            .update({
-              service_order_id: selectedServiceOrderId || null,
-              project_id: selectedProjectId || null,
-            })
-            .eq("id", newPO.id);
-          
-          if (linkError) {
-            console.error("Failed to link PO:", linkError);
-            // Don't throw - PO is created, just not linked
-          }
-        }
       }
 
       // Insert line items
