@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getMelbourneNow, toMelbourneTime } from "@/lib/utils";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
@@ -258,7 +258,7 @@ export default function ServiceContractDetails() {
       const { error } = await supabase
         .from("service_contracts" as any)
         .update({ 
-          archived_at: new Date().toISOString(),
+          archived_at: getMelbourneNow().toISOString(),
           auto_generate: false 
         })
         .eq("id", id);
@@ -778,7 +778,7 @@ export default function ServiceContractDetails() {
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const today = new Date();
+                  const today = getMelbourneNow();
                   const next12Months = new Date(today);
                   next12Months.setMonth(today.getMonth() + 12);
                   
@@ -819,7 +819,8 @@ export default function ServiceContractDetails() {
                       return newDate;
                     };
                     
-                    let currentDate = new Date(item.next_generation_date);
+                    let currentDate = toMelbourneTime(item.next_generation_date);
+                    currentDate.setHours(0, 0, 0, 0);
                     
                     // Fast-forward to first occurrence on or after today
                     while (currentDate < today) {

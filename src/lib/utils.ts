@@ -1,8 +1,27 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { toZonedTime } from "date-fns-tz";
+
+// Melbourne, Australia timezone
+export const MELBOURNE_TZ = "Australia/Melbourne";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Get current date/time in Melbourne timezone
+ */
+export function getMelbourneNow(): Date {
+  return toZonedTime(new Date(), MELBOURNE_TZ);
+}
+
+/**
+ * Convert a date string or Date object to Melbourne timezone
+ */
+export function toMelbourneTime(date: string | Date): Date {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  return toZonedTime(dateObj, MELBOURNE_TZ);
 }
 
 /**
