@@ -182,7 +182,7 @@ export function PurchaseOrderDialog({
         const { data: items, error: itemsError } = await supabase
           .from("purchase_order_line_items")
           .select("*")
-          .eq("purchase_order_id", purchaseOrder.id)
+          .eq("po_id", purchaseOrder.id)
           .order("item_order");
 
         if (itemsError) throw itemsError;
