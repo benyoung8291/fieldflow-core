@@ -156,7 +156,7 @@ export function PurchaseOrderDialog({
       setLineItems(importedItems);
       setHasPopulatedLineItems(true);
     }
-  }, [open, purchaseOrder, serviceOrderId, sourceLineItems, hasPopulatedLineItems]);
+  }, [open, purchaseOrder, serviceOrderId, hasPopulatedLineItems]); // Removed sourceLineItems to prevent reset on parent re-render
 
   useEffect(() => {
     if (purchaseOrder) {
@@ -460,10 +460,19 @@ export function PurchaseOrderDialog({
       if (lineItemsError) throw lineItemsError;
 
       toast.success(purchaseOrder ? "Purchase order updated" : "Purchase order created");
+      
+      // Reset form state before closing
+      form.reset();
+      setLineItems([]);
+      setHasPopulatedLineItems(false);
+      setSelectedVendor(null);
+      
+      // Close dialog and trigger success callback
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("PO creation error:", error);
+      toast.error(error.message || "Failed to save purchase order");
     } finally {
       setLoading(false);
     }
