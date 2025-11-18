@@ -3,10 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Phone, Mail, Edit, Plus, ExternalLink, Navigation } from "lucide-react";
+import { MapPin, Phone, Mail, Edit, Plus, ExternalLink, Navigation, FileUp } from "lucide-react";
 import CustomerLocationDialog from "./CustomerLocationDialog";
+import ImportLocationsDialog from "./ImportLocationsDialog";
 import { geocodeCustomerLocations } from "@/utils/geocodeCustomerLocations";
 
 interface CustomerLocationsTabProps {
@@ -18,6 +19,7 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [isGeocodingLocations, setIsGeocodingLocations] = useState(false);
 
@@ -71,6 +73,15 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
             <Navigation className="h-4 w-4" />
             {isGeocodingLocations ? "Geocoding..." : "Geocode All"}
           </Button>
+          <Button 
+            onClick={() => setIsImportDialogOpen(true)} 
+            size="sm" 
+            variant="outline"
+            className="gap-2"
+          >
+            <FileUp className="h-4 w-4" />
+            Import CSV
+          </Button>
           <Button onClick={handleAdd} size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
             Add Location
@@ -79,103 +90,107 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
       </div>
 
       {locations && locations.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">No locations added yet</p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-8 text-muted-foreground">
+          <p>No locations added yet</p>
+        </div>
       ) : (
-        <div className="space-y-3">
-          {locations?.map((location: any) => (
-            <Card key={location.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 
-                        className="font-semibold hover:text-primary cursor-pointer"
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Coordinates</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {locations?.map((location: any) => (
+                <TableRow key={location.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-medium hover:text-primary cursor-pointer"
                         onClick={() => navigate(`/customer-locations/${location.id}`)}
                       >
                         {location.name}
-                      </h4>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => navigate(`/customer-locations/${location.id}`)}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
+                      </span>
                       {location.is_primary && (
-                        <Badge variant="secondary">Primary</Badge>
-                      )}
-                      {!location.is_active && (
-                        <Badge variant="outline">Inactive</Badge>
+                        <Badge variant="secondary" className="text-xs">Primary</Badge>
                       )}
                     </div>
-                    
                     {location.customer_location_id && (
-                      <div className="text-xs text-muted-foreground mb-2">
+                      <div className="text-xs text-muted-foreground mt-1">
                         ID: {location.customer_location_id}
                       </div>
                     )}
-                    
-                    <div className="space-y-2 text-sm">
-                      {location.address && (
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            {location.address}
-                            {(location.city || location.state || location.postcode) && (
-                              <div>
-                                {[location.city, location.state, location.postcode]
-                                  .filter(Boolean)
-                                  .join(", ")}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {location.contact_name && (
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {location.address && <div>{location.address}</div>}
+                      {(location.city || location.state || location.postcode) && (
                         <div className="text-muted-foreground">
-                          Contact: {location.contact_name}
-                        </div>
-                      )}
-
-                      {location.contact_phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          {location.contact_phone}
-                        </div>
-                      )}
-
-                      {location.contact_email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {location.contact_email}
-                        </div>
-                      )}
-
-                      {location.location_notes && (
-                        <div className="mt-2 p-2 bg-muted rounded text-xs">
-                          {location.location_notes}
+                          {[location.city, location.state, location.postcode]
+                            .filter(Boolean)
+                            .join(", ")}
                         </div>
                       )}
                     </div>
-                  </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(location)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm space-y-1">
+                      {location.contact_name && (
+                        <div>{location.contact_name}</div>
+                      )}
+                      {location.contact_phone && (
+                        <div className="text-muted-foreground">{location.contact_phone}</div>
+                      )}
+                      {location.contact_email && (
+                        <div className="text-muted-foreground">{location.contact_email}</div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {location.latitude && location.longitude ? (
+                      <div className="text-xs text-muted-foreground">
+                        <div>Lat: {location.latitude.toFixed(6)}</div>
+                        <div>Lng: {location.longitude.toFixed(6)}</div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Not geocoded</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {location.is_active ? (
+                      <Badge variant="secondary">Active</Badge>
+                    ) : (
+                      <Badge variant="outline">Inactive</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/customer-locations/${location.id}`)}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(location)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -185,6 +200,12 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
         customerId={customerId}
         tenantId={tenantId}
         location={selectedLocation}
+      />
+
+      <ImportLocationsDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        customerId={customerId}
       />
     </div>
   );
