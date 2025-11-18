@@ -348,6 +348,7 @@ export default function ServiceContracts() {
                       .filter((item: any) => item.is_active && (item.next_generation_date || item.first_generation_date))
                       .map((item: any) => {
                         let currentDate = parseISO(item.next_generation_date || item.first_generation_date);
+                        currentDate.setHours(0, 0, 0, 0); // Normalize to midnight for comparison
                         
                         // Fast-forward to first occurrence on or after today
                         while (currentDate < today) {
