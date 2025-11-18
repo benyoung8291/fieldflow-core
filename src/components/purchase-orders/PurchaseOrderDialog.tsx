@@ -549,19 +549,7 @@ export function PurchaseOrderDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="po_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>PO Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Auto-generated" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* PO Number is auto-generated and hidden */}
 
               <FormField
                 control={form.control}
