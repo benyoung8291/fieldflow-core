@@ -194,6 +194,23 @@ export default function ImportContractLineItemsDialog({
     return new Date().toISOString().split("T")[0];
   };
 
+  const parseFrequency = (frequencyValue: string): string => {
+    if (!frequencyValue) return "monthly";
+    
+    // Handle values like "6 monthly", "12 monthly", "weekly", etc.
+    const normalized = frequencyValue.toLowerCase().trim();
+    
+    // Extract just the frequency type (monthly, weekly, annually, etc.)
+    if (normalized.includes("month")) return "monthly";
+    if (normalized.includes("week")) return "weekly";
+    if (normalized.includes("year") || normalized.includes("annual")) return "annually";
+    if (normalized.includes("day") || normalized.includes("daily")) return "daily";
+    if (normalized.includes("quarter")) return "quarterly";
+    
+    // Default to the normalized value if it's already clean
+    return normalized;
+  };
+
   const handleImport = async () => {
     if (!validateMappings() || !parsedData) {
       return;
@@ -282,7 +299,7 @@ export default function ImportContractLineItemsDialog({
             ? parseFloat(mappedRow.line_total) 
             : quantity * unitPrice,
           estimated_hours: parseFloat(mappedRow.estimated_hours) || 0,
-          recurrence_frequency: mappedRow.frequency?.toLowerCase() || "monthly",
+          recurrence_frequency: parseFrequency(mappedRow.frequency),
           first_generation_date: firstDate,
           next_generation_date: nextDate,
           location_id: locationId,
