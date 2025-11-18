@@ -496,7 +496,7 @@ export default function ServiceContractDetails() {
                       <TableHead>Key Number</TableHead>
                       <TableHead>Qty</TableHead>
                       <TableHead>Unit Price</TableHead>
-                      <TableHead>Total</TableHead>
+                      <TableHead>Annual Revenue</TableHead>
                       <TableHead>Est. Hours</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>First Gen</TableHead>
@@ -589,22 +589,19 @@ export default function ServiceContractDetails() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {editingCell?.id === item.id && editingCell?.field === "line_total" ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={cellValue}
-                              onChange={(e) => setCellValue(parseFloat(e.target.value))}
-                              onBlur={saveCell}
-                              onKeyDown={(e) => e.key === "Enter" && saveCell()}
-                              autoFocus
-                              className="h-8 w-24"
-                            />
-                          ) : (
-                            <span onClick={() => startEditingCell(item.id, "line_total", item.line_total)} className="cursor-pointer hover:bg-accent px-2 py-1 rounded">
-                              ${parseFloat(item.line_total).toFixed(2)}
-                            </span>
-                          )}
+                          {(() => {
+                            const frequencyMultiplier = {
+                              'daily': 365,
+                              'weekly': 52,
+                              'fortnightly': 26,
+                              'monthly': 12,
+                              'quarterly': 4,
+                              'six_monthly': 2,
+                              'annually': 1
+                            }[item.recurrence_frequency] || 1;
+                            const annualRevenue = item.quantity * item.unit_price * frequencyMultiplier;
+                            return <span className="px-2 py-1">${annualRevenue.toFixed(2)}</span>;
+                          })()}
                         </TableCell>
                         <TableCell>
                           {editingCell?.id === item.id && editingCell?.field === "estimated_hours" ? (
@@ -791,17 +788,18 @@ export default function ServiceContractDetails() {
                     // Generate upcoming dates within next 12 months
                     while (currentDate <= next12Months) {
                       if (currentDate >= today) {
+                        const perOccurrenceRevenue = item.quantity * item.unit_price;
                         upcomingGenerations.push({
                           date: new Date(currentDate),
                           item,
-                          revenue: parseFloat(item.line_total || 0),
+                          revenue: perOccurrenceRevenue,
                         });
                         
                         // Add to monthly revenue
                         const monthKey = format(currentDate, "yyyy-MM");
                         monthlyRevenue.set(
                           monthKey,
-                          (monthlyRevenue.get(monthKey) || 0) + parseFloat(item.line_total || 0)
+                          (monthlyRevenue.get(monthKey) || 0) + perOccurrenceRevenue
                         );
                       }
                       
