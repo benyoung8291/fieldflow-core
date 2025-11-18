@@ -343,20 +343,16 @@ export default function ImportContractLineItemsDialog({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <optgroup label="Required Fields">
-                              {REQUIRED_FIELDS.map((field) => (
-                                <SelectItem key={field.value} value={field.value}>
-                                  {field.label}
-                                </SelectItem>
-                              ))}
-                            </optgroup>
-                            <optgroup label="Optional Fields">
-                              {OPTIONAL_FIELDS.map((field) => (
-                                <SelectItem key={field.value} value={field.value}>
-                                  {field.label}
-                                </SelectItem>
-                              ))}
-                            </optgroup>
+                            {REQUIRED_FIELDS.map((field) => (
+                              <SelectItem key={field.value} value={field.value}>
+                                {field.label}
+                              </SelectItem>
+                            ))}
+                            {OPTIONAL_FIELDS.map((field) => (
+                              <SelectItem key={field.value} value={field.value}>
+                                {field.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
