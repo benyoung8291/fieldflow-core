@@ -4856,6 +4856,7 @@ export type Database = {
           billing_status: Database["public"]["Enums"]["billing_status"] | null
           billing_type: string | null
           completed_date: string | null
+          contract_id: string | null
           cost_of_labor: number | null
           cost_of_materials: number | null
           created_at: string | null
@@ -4904,6 +4905,7 @@ export type Database = {
           billing_status?: Database["public"]["Enums"]["billing_status"] | null
           billing_type?: string | null
           completed_date?: string | null
+          contract_id?: string | null
           cost_of_labor?: number | null
           cost_of_materials?: number | null
           created_at?: string | null
@@ -4952,6 +4954,7 @@ export type Database = {
           billing_status?: Database["public"]["Enums"]["billing_status"] | null
           billing_type?: string | null
           completed_date?: string | null
+          contract_id?: string | null
           cost_of_labor?: number | null
           cost_of_materials?: number | null
           created_at?: string | null
@@ -4995,6 +4998,13 @@ export type Database = {
           work_order_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "service_orders_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_orders_customer_id_fkey"
             columns: ["customer_id"]
