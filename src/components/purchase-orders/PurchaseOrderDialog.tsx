@@ -414,30 +414,64 @@ export function PurchaseOrderDialog({
           .delete()
           .eq("po_id", poId);
       } else {
-        // Generate next PO number only when actually creating the PO
-        const { data: nextNumber } = await supabase.rpc("get_next_sequential_number", {
-          p_tenant_id: profile?.tenant_id,
-          p_entity_type: "purchase_order",
-        });
+        // Generate next PO number
+        const { data: settings } = await supabase
+          .from("sequential_number_settings")
+          .select("*")
+          .eq("tenant_id", profile?.tenant_id)
+          .eq("entity_type", "purchase_order")
+          .single();
 
-        // Use database function to bypass PostgREST schema cache issues
-        const { data: newPoId, error } = await supabase.rpc("create_purchase_order", {
-          p_supplier_id: poData.supplier_id,
-          p_po_number: nextNumber || poData.po_number,
-          p_po_date: poData.po_date,
-          p_expected_delivery_date: poData.expected_delivery_date,
-          p_notes: poData.notes || '',
-          p_internal_notes: poData.internal_notes || '',
-          p_tax_rate: poData.tax_rate,
-          p_subtotal: poData.subtotal,
-          p_tax_amount: poData.tax_amount,
-          p_total_amount: poData.total_amount,
-          p_service_order_id: selectedServiceOrderId ?? null,
-          p_project_id: selectedProjectId ?? null,
-        });
+        const nextNum = settings?.next_number || 1;
+        const poNumber = (settings?.prefix || "PO-") + String(nextNum).padStart(settings?.number_length || 6, "0");
 
-        if (error) throw error;
-        poId = newPoId;
+        // Simple direct insert
+        const { data: newPO, error: insertError } = await supabase
+          .from("purchase_orders")
+          .insert({
+            tenant_id: profile?.tenant_id,
+            supplier_id: poData.supplier_id,
+            po_number: poNumber,
+            po_date: poData.po_date,
+            expected_delivery_date: poData.expected_delivery_date,
+            notes: poData.notes || '',
+            internal_notes: poData.internal_notes || '',
+            tax_rate: poData.tax_rate,
+            subtotal: poData.subtotal,
+            tax_amount: poData.tax_amount,
+            total_amount: poData.total_amount,
+            created_by: poData.created_by,
+            status: 'draft',
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Update the sequential number
+        await supabase
+          .from("sequential_number_settings")
+          .update({ next_number: nextNum + 1 })
+          .eq("tenant_id", profile?.tenant_id)
+          .eq("entity_type", "purchase_order");
+
+        poId = newPO.id;
+
+        // Link to service order or project using separate update
+        if (selectedServiceOrderId || selectedProjectId) {
+          const { error: linkError } = await supabase
+            .from("purchase_orders")
+            .update({
+              service_order_id: selectedServiceOrderId || null,
+              project_id: selectedProjectId || null,
+            })
+            .eq("id", newPO.id);
+          
+          if (linkError) {
+            console.error("Failed to link PO:", linkError);
+            // Don't throw - PO is created, just not linked
+          }
+        }
       }
 
       // Insert line items
