@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
-  MoreVertical, 
   Edit, 
   Trash2, 
   CheckCircle, 
@@ -19,6 +18,7 @@ import {
   AlertTriangle,
   Link2,
   ExternalLink,
+  X,
 } from "lucide-react";
 import {
   Select,
@@ -27,15 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
 import { ReceiptDialog } from "@/components/purchase-orders/ReceiptDialog";
+import { DeleteConfirmDialog } from "@/components/purchase-orders/DeleteConfirmDialog";
+import { InlineEditableField } from "@/components/purchase-orders/InlineEditableField";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import { canApplyGST, getGSTWarning } from "@/lib/gstCompliance";
 
@@ -49,6 +44,7 @@ export default function PurchaseOrderDetails() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceOrders, setServiceOrders] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [linkedServiceOrder, setLinkedServiceOrder] = useState<any>(null);
@@ -222,8 +218,6 @@ export default function PurchaseOrderDetails() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this purchase order?")) return;
-
     try {
       const { error } = await supabase
         .from("purchase_orders")
@@ -236,6 +230,23 @@ export default function PurchaseOrderDetails() {
       navigate("/purchase-orders");
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  const handleUpdateField = async (field: string, value: string) => {
+    try {
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({ [field]: value || null })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Purchase order updated");
+      fetchPurchaseOrder();
+    } catch (error: any) {
+      toast.error(error.message);
+      throw error;
     }
   };
 
@@ -296,6 +307,12 @@ export default function PurchaseOrderDetails() {
         </div>
 
         <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
           {canApprove && (
             <Button onClick={() => handleStatusChange("approved")}>
               <CheckCircle className="h-4 w-4 mr-2" />
@@ -314,34 +331,24 @@ export default function PurchaseOrderDetails() {
               Record Receipt
             </Button>
           )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canEdit && (
-                <>
-                  <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem onClick={() => handleStatusChange("cancelled")} className="text-destructive">
-                Cancel PO
-              </DropdownMenuItem>
-              {purchaseOrder.status === "draft" && (
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button 
+            variant="outline" 
+            onClick={() => handleStatusChange("cancelled")}
+            className="text-destructive hover:bg-destructive/10"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Cancel PO
+          </Button>
+          {purchaseOrder.status === "draft" && (
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(true)}
+              className="text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 
@@ -542,35 +549,67 @@ export default function PurchaseOrderDetails() {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Purchase Order Details</h3>
-                <div className="space-y-1 text-sm">
-                  <div><span className="text-muted-foreground">PO Number:</span> {purchaseOrder.po_number}</div>
-                  <div><span className="text-muted-foreground">Status:</span> {purchaseOrder.status}</div>
-                  <div><span className="text-muted-foreground">Created:</span> {new Date(purchaseOrder.created_at).toLocaleDateString()}</div>
+                <h3 className="font-semibold mb-4">Purchase Order Details</h3>
+                <div className="space-y-3">
+                  <InlineEditableField
+                    label="PO Date"
+                    value={purchaseOrder.po_date}
+                    onSave={(value) => handleUpdateField("po_date", value)}
+                    type="date"
+                    readOnly={!canEdit}
+                  />
+                  <InlineEditableField
+                    label="Expected Delivery Date"
+                    value={purchaseOrder.expected_delivery_date}
+                    onSave={(value) => handleUpdateField("expected_delivery_date", value)}
+                    type="date"
+                    readOnly={!canEdit}
+                  />
+                  <div className="p-2">
+                    <div className="text-xs text-muted-foreground mb-1">PO Number</div>
+                    <div className="text-sm">{purchaseOrder.po_number}</div>
+                  </div>
+                  <div className="p-2">
+                    <div className="text-xs text-muted-foreground mb-1">Status</div>
+                    <div className="text-sm">{purchaseOrder.status}</div>
+                  </div>
+                  <div className="p-2">
+                    <div className="text-xs text-muted-foreground mb-1">Created</div>
+                    <div className="text-sm">{new Date(purchaseOrder.created_at).toLocaleDateString()}</div>
+                  </div>
                   {purchaseOrder.approved_at && (
-                    <div><span className="text-muted-foreground">Approved:</span> {new Date(purchaseOrder.approved_at).toLocaleDateString()}</div>
+                    <div className="p-2">
+                      <div className="text-xs text-muted-foreground mb-1">Approved</div>
+                      <div className="text-sm">{new Date(purchaseOrder.approved_at).toLocaleDateString()}</div>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {purchaseOrder.notes && (
+            {purchaseOrder.notes || canEdit ? (
               <div>
-                <h3 className="font-semibold mb-2">Notes</h3>
-                <div className="p-3 bg-muted rounded-md text-sm">
-                  {purchaseOrder.notes}
-                </div>
+                <InlineEditableField
+                  label="Notes"
+                  value={purchaseOrder.notes}
+                  onSave={(value) => handleUpdateField("notes", value)}
+                  type="textarea"
+                  readOnly={!canEdit}
+                />
               </div>
-            )}
+            ) : null}
 
-            {purchaseOrder.internal_notes && (
+            {purchaseOrder.internal_notes || canEdit ? (
               <div>
-                <h3 className="font-semibold mb-2">Internal Notes</h3>
-                <div className="p-3 bg-muted rounded-md text-sm">
-                  {purchaseOrder.internal_notes}
-                </div>
+                <InlineEditableField
+                  label="Internal Notes"
+                  value={purchaseOrder.internal_notes}
+                  onSave={(value) => handleUpdateField("internal_notes", value)}
+                  type="textarea"
+                  readOnly={!canEdit}
+                />
               </div>
-            )}
+            ) : null}
 
             {/* Linked Documents Section */}
             <div>
@@ -686,6 +725,13 @@ export default function PurchaseOrderDetails() {
         onOpenChange={setReceiptDialogOpen}
         purchaseOrder={purchaseOrder}
         onSuccess={fetchPurchaseOrder}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        itemName={purchaseOrder.po_number}
       />
       </div>
     </DashboardLayout>
