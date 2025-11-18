@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -129,13 +129,25 @@ export default function ServiceContracts() {
   const upcomingGenerations = calculateUpcomingGenerations().slice(0, 20);
   const monthlyRevenue = calculateMonthlyRevenue();
   
-  // Calculate total value from line items
+  // Calculate total annualized value from line items using frequency multipliers
   const totalContractValue = activeContracts.reduce((sum: number, c: any) => {
-    const lineItemsTotal = (c.service_contract_line_items || []).reduce(
-      (itemSum: number, item: any) => itemSum + parseFloat(item.line_total || 0),
+    const contractValue = (c.service_contract_line_items || []).reduce(
+      (itemSum: number, item: any) => {
+        const frequencyMultiplier = {
+          'daily': 365,
+          'weekly': 52,
+          'bi_weekly': 26,
+          'monthly': 12,
+          'quarterly': 4,
+          'semi_annually': 2,
+          'annually': 1
+        }[item.recurrence_frequency] || 1;
+        
+        return itemSum + ((item.quantity || 0) * (item.unit_price || 0) * frequencyMultiplier);
+      },
       0
     );
-    return sum + lineItemsTotal;
+    return sum + contractValue;
   }, 0);
 
   const upcomingRenewals = contracts?.filter((c: any) => {
@@ -304,9 +316,20 @@ export default function ServiceContracts() {
                       .map((item: any) => parseISO(item.next_generation_date || item.first_generation_date));
                     const nextGenDate = nextGenDates.length > 0 ? new Date(Math.min(...nextGenDates.map(d => d.getTime()))) : null;
 
-                    // Calculate 12-month value for this contract
-                    const contractGenerations = calculateUpcomingGenerations().filter((gen: any) => gen.contractId === contract.id);
-                    const twelveMonthValue = contractGenerations.reduce((sum: number, gen: any) => sum + parseFloat(gen.amount), 0);
+                    // Calculate annualized contract value using frequency multipliers
+                    const annualizedValue = (contract.service_contract_line_items || []).reduce((sum: number, item: any) => {
+                      const frequencyMultiplier = {
+                        'daily': 365,
+                        'weekly': 52,
+                        'bi_weekly': 26,
+                        'monthly': 12,
+                        'quarterly': 4,
+                        'semi_annually': 2,
+                        'annually': 1
+                      }[item.recurrence_frequency] || 1;
+                      
+                      return sum + ((item.quantity || 0) * (item.unit_price || 0) * frequencyMultiplier);
+                    }, 0);
 
                     return (
                       <TableRow 
@@ -319,7 +342,7 @@ export default function ServiceContracts() {
                         <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
                         <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
                         <TableCell>{nextGenDate ? format(nextGenDate, "PP") : "N/A"}</TableCell>
-                        <TableCell className="font-semibold">${twelveMonthValue.toFixed(2)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(annualizedValue)}</TableCell>
                         <TableCell>
                           <Badge variant="default">{contract.status}</Badge>
                         </TableCell>
