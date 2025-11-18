@@ -504,14 +504,14 @@ export default function ServiceOrderDetails() {
       icon: <Receipt className="h-4 w-4" />,
       onClick: () => navigate("/invoices/create", { state: { serviceOrderId: id } }),
       variant: "outline",
-      show: order?.status === "completed" && order?.billing_status !== "billed",
+      show: order?.billing_status !== "billed",
     },
     {
       label: "Add to Draft Invoice",
       icon: <FileText className="h-4 w-4" />,
       onClick: () => setAddToInvoiceDialogOpen(true),
       variant: "outline",
-      show: order?.status === "completed" && order?.billing_status !== "billed",
+      show: order?.billing_status !== "billed",
     },
     {
       label: "Edit",
