@@ -166,6 +166,34 @@ export default function ImportContractLineItemsDialog({
     return true;
   };
 
+  const parseDate = (dateValue: string): string => {
+    if (!dateValue) return new Date().toISOString().split("T")[0];
+    
+    // Try parsing as standard date format first
+    const standardDate = new Date(dateValue);
+    if (!isNaN(standardDate.getTime())) {
+      return standardDate.toISOString().split("T")[0];
+    }
+    
+    // Handle abbreviated month names (e.g., "Jul", "Aug")
+    const monthMap: { [key: string]: number } = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    };
+    
+    const normalizedValue = dateValue.toLowerCase().trim();
+    const monthIndex = monthMap[normalizedValue];
+    
+    if (monthIndex !== undefined) {
+      const currentYear = new Date().getFullYear();
+      const date = new Date(currentYear, monthIndex, 1);
+      return date.toISOString().split("T")[0];
+    }
+    
+    // Fallback to current date if parsing fails
+    return new Date().toISOString().split("T")[0];
+  };
+
   const handleImport = async () => {
     if (!validateMappings() || !parsedData) {
       return;
@@ -242,6 +270,9 @@ export default function ImportContractLineItemsDialog({
         const quantity = parseFloat(mappedRow.quantity) || 1;
         const unitPrice = parseFloat(mappedRow.unit_price) || 0;
         
+        const firstDate = parseDate(mappedRow.first_date);
+        const nextDate = mappedRow.next_date ? parseDate(mappedRow.next_date) : firstDate;
+
         lineItems.push({
           contract_id: contractId,
           description: mappedRow.description || "",
@@ -252,11 +283,8 @@ export default function ImportContractLineItemsDialog({
             : quantity * unitPrice,
           estimated_hours: parseFloat(mappedRow.estimated_hours) || 0,
           recurrence_frequency: mappedRow.frequency?.toLowerCase() || "monthly",
-          first_generation_date: mappedRow.first_date || new Date().toISOString().split("T")[0],
-          next_generation_date: 
-            mappedRow.next_date || 
-            mappedRow.first_date || 
-            new Date().toISOString().split("T")[0],
+          first_generation_date: firstDate,
+          next_generation_date: nextDate,
           location_id: locationId,
           key_number: mappedRow.key_number || null,
           is_active: true,
