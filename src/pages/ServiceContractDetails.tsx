@@ -408,6 +408,7 @@ export default function ServiceContractDetails() {
         <Tabs defaultValue="line-items" className="space-y-4">
           <TabsList>
             <TabsTrigger value="line-items">Line Items</TabsTrigger>
+            <TabsTrigger value="upcoming-generations">Upcoming Generations</TabsTrigger>
             <TabsTrigger value="service-orders">Service Orders</TabsTrigger>
             <TabsTrigger value="linked-documents">Linked Documents</TabsTrigger>
             <TabsTrigger value="details">Contract Details</TabsTrigger>
@@ -633,13 +634,14 @@ export default function ServiceContractDetails() {
                                 <SelectItem value="daily">Daily</SelectItem>
                                 <SelectItem value="weekly">Weekly</SelectItem>
                                 <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="six_monthly">6 Monthly</SelectItem>
                                 <SelectItem value="quarterly">Quarterly</SelectItem>
                                 <SelectItem value="annually">Annually</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (
                             <Badge variant="outline" onClick={() => startEditingCell(item.id, "recurrence_frequency", item.recurrence_frequency)} className="cursor-pointer">
-                              {item.recurrence_frequency}
+                              {item.recurrence_frequency === "six_monthly" ? "6 Monthly" : item.recurrence_frequency}
                             </Badge>
                           )}
                         </TableCell>
@@ -748,6 +750,182 @@ export default function ServiceContractDetails() {
                 {(!contract.quotes) && (
                   <p className="text-sm text-muted-foreground">No linked quote found.</p>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="upcoming-generations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Upcoming Service Order Generations</CardTitle>
+                <CardDescription>Scheduled service order generations and revenue forecast for the next 12 months</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const today = new Date();
+                  const next12Months = new Date(today);
+                  next12Months.setMonth(today.getMonth() + 12);
+                  
+                  // Calculate upcoming generations
+                  const upcomingGenerations: any[] = [];
+                  const monthlyRevenue = new Map<string, number>();
+                  
+                  lineItems.forEach((item: any) => {
+                    if (!item.is_active || !item.next_generation_date) return;
+                    
+                    const nextDate = new Date(item.next_generation_date);
+                    let currentDate = new Date(nextDate);
+                    
+                    const getDaysToAdd = (freq: string) => {
+                      switch(freq) {
+                        case "daily": return 1;
+                        case "weekly": return 7;
+                        case "monthly": return 30;
+                        case "six_monthly": return 180;
+                        case "quarterly": return 90;
+                        case "annually": return 365;
+                        default: return 30;
+                      }
+                    };
+                    
+                    // Generate upcoming dates within next 12 months
+                    while (currentDate <= next12Months) {
+                      if (currentDate >= today) {
+                        upcomingGenerations.push({
+                          date: new Date(currentDate),
+                          item,
+                          revenue: parseFloat(item.line_total || 0),
+                        });
+                        
+                        // Add to monthly revenue
+                        const monthKey = format(currentDate, "yyyy-MM");
+                        monthlyRevenue.set(
+                          monthKey,
+                          (monthlyRevenue.get(monthKey) || 0) + parseFloat(item.line_total || 0)
+                        );
+                      }
+                      
+                      // Move to next occurrence
+                      currentDate = new Date(currentDate);
+                      currentDate.setDate(currentDate.getDate() + getDaysToAdd(item.recurrence_frequency));
+                    }
+                  });
+                  
+                  // Sort by date
+                  upcomingGenerations.sort((a, b) => a.date.getTime() - b.date.getTime());
+                  
+                  // Get monthly forecast sorted by month
+                  const monthlyForecast = Array.from(monthlyRevenue.entries())
+                    .map(([month, revenue]) => ({ month, revenue }))
+                    .sort((a, b) => a.month.localeCompare(b.month));
+                  
+                  const totalForecast = monthlyForecast.reduce((sum, m) => sum + m.revenue, 0);
+                  
+                  return (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">12-Month Revenue Forecast</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">Total Forecast</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">${totalForecast.toFixed(2)}</div>
+                              <p className="text-xs text-muted-foreground">Next 12 months</p>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">Avg Monthly</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">${(totalForecast / 12).toFixed(2)}</div>
+                              <p className="text-xs text-muted-foreground">Per month</p>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">Active Items</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">{lineItems.filter((i: any) => i.is_active).length}</div>
+                              <p className="text-xs text-muted-foreground">Line items</p>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">Next Generation</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-lg font-bold">
+                                {upcomingGenerations.length > 0 ? format(upcomingGenerations[0].date, "PP") : "None"}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Upcoming</p>
+                            </CardContent>
+                          </Card>
+                        </div>
+                        
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Month</TableHead>
+                              <TableHead className="text-right">Forecast Revenue</TableHead>
+                              <TableHead className="text-right">Service Orders</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {monthlyForecast.map(({ month, revenue }) => {
+                              const count = upcomingGenerations.filter(g => format(g.date, "yyyy-MM") === month).length;
+                              return (
+                                <TableRow key={month}>
+                                  <TableCell className="font-medium">{format(parseISO(month + "-01"), "MMMM yyyy")}</TableCell>
+                                  <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">{count}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">Upcoming Generations (Next 30)</h3>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Generation Date</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Location</TableHead>
+                              <TableHead>Frequency</TableHead>
+                              <TableHead className="text-right">Value</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {upcomingGenerations.slice(0, 30).map((gen, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">{format(gen.date, "PP")}</TableCell>
+                                <TableCell>{gen.item.description}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-sm">
+                                    <MapPin className="h-3 w-3 text-muted-foreground" />
+                                    {gen.item.customer_locations?.name || "No location"}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {gen.item.recurrence_frequency === "six_monthly" ? "6 Monthly" : gen.item.recurrence_frequency}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">${gen.revenue.toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
