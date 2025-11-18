@@ -102,6 +102,21 @@ export function PurchaseOrderDialog({
     }
   }, [open]);
 
+  // Pre-populate line items when creating from service order
+  useEffect(() => {
+    if (open && !purchaseOrder && serviceOrderId && sourceLineItems.length > 0) {
+      const importedItems: LineItem[] = sourceLineItems.map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price || 0,
+        line_total: (item.unit_price || 0) * item.quantity,
+        is_gst_free: false,
+        notes: "",
+      }));
+      setLineItems(importedItems);
+    }
+  }, [open, purchaseOrder, serviceOrderId, sourceLineItems]);
+
   useEffect(() => {
     if (purchaseOrder) {
       form.reset({

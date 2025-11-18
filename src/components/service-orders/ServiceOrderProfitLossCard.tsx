@@ -8,6 +8,7 @@ interface ServiceOrderProfitLossCardProps {
   costOfLabor: number;
   otherCosts: number;
   profitMargin: number;
+  pendingPOCosts?: number;
 }
 
 export default function ServiceOrderProfitLossCard({
@@ -17,6 +18,7 @@ export default function ServiceOrderProfitLossCard({
   costOfLabor,
   otherCosts,
   profitMargin,
+  pendingPOCosts = 0,
 }: ServiceOrderProfitLossCardProps) {
   const grossProfit = totalRevenue - actualCost;
   const isPositive = grossProfit >= 0;
@@ -65,6 +67,16 @@ export default function ServiceOrderProfitLossCard({
               <span className="text-xs">Other</span>
               <span className="text-xs font-medium">
                 ${otherCosts.toFixed(2)}
+              </span>
+            </div>
+          )}
+          
+          {/* Pending PO Costs */}
+          {pendingPOCosts > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-muted-foreground">Pending</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                ${pendingPOCosts.toFixed(2)}
               </span>
             </div>
           )}
