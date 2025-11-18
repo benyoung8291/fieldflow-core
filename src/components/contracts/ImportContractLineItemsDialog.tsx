@@ -166,13 +166,18 @@ export default function ImportContractLineItemsDialog({
     return true;
   };
 
-  const parseDate = (dateValue: string): string => {
+  const parseDate = (dateValue: string, contractStartDate?: string): string => {
     if (!dateValue) return new Date().toISOString().split("T")[0];
     
     // Try parsing as standard date format first
     const standardDate = new Date(dateValue);
     if (!isNaN(standardDate.getTime())) {
-      return standardDate.toISOString().split("T")[0];
+      const parsed = standardDate.toISOString().split("T")[0];
+      // If contract start date provided, ensure parsed date is not before it
+      if (contractStartDate && parsed < contractStartDate) {
+        return contractStartDate;
+      }
+      return parsed;
     }
     
     // Handle abbreviated month names (e.g., "Jul", "Aug")
@@ -186,12 +191,25 @@ export default function ImportContractLineItemsDialog({
     
     if (monthIndex !== undefined) {
       const currentYear = new Date().getFullYear();
-      const date = new Date(currentYear, monthIndex, 1);
-      return date.toISOString().split("T")[0];
+      // Use UTC to avoid timezone shifts - format as YYYY-MM-DD
+      const year = currentYear;
+      const month = String(monthIndex + 1).padStart(2, '0');
+      const day = '01';
+      const parsed = `${year}-${month}-${day}`;
+      
+      // If contract start date provided, ensure parsed date is not before it
+      if (contractStartDate && parsed < contractStartDate) {
+        return contractStartDate;
+      }
+      return parsed;
     }
     
     // Fallback to current date if parsing fails
-    return new Date().toISOString().split("T")[0];
+    const fallback = new Date().toISOString().split("T")[0];
+    if (contractStartDate && fallback < contractStartDate) {
+      return contractStartDate;
+    }
+    return fallback;
   };
 
   const parseFrequency = (frequencyValue: string): string => {
@@ -232,6 +250,15 @@ export default function ImportContractLineItemsDialog({
         .single();
 
       if (!profile?.tenant_id) throw new Error("Tenant not found");
+
+      // Fetch contract start date for validation
+      const { data: contract } = await supabase
+        .from("service_contracts")
+        .select("start_date")
+        .eq("id", contractId)
+        .single();
+
+      const contractStartDate = contract?.start_date;
 
       // Fetch customer locations for reference
       const { data: existingLocations } = await supabase
@@ -293,8 +320,8 @@ export default function ImportContractLineItemsDialog({
         const unitPrice = parseFloat(String(mappedRow.unit_price || "0").replace(/[^0-9.-]/g, "")) || 0;
         const estimatedHours = parseFloat(String(mappedRow.estimated_hours || "0").replace(/[^0-9.-]/g, "")) || 0;
         
-        const firstDate = parseDate(mappedRow.first_date);
-        const nextDate = mappedRow.next_date ? parseDate(mappedRow.next_date) : firstDate;
+        const firstDate = parseDate(mappedRow.first_date, contractStartDate);
+        const nextDate = mappedRow.next_date ? parseDate(mappedRow.next_date, contractStartDate) : firstDate;
 
         lineItems.push({
           contract_id: contractId,
