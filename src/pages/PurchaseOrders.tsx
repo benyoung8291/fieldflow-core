@@ -28,7 +28,7 @@ export default function PurchaseOrders() {
         .from("purchase_orders")
         .select(`
           *,
-          vendors(name, gst_registered),
+          suppliers(name, gst_registered),
           profiles:created_by(full_name)
         `)
         .order("created_at", { ascending: false });
@@ -46,7 +46,7 @@ export default function PurchaseOrders() {
     const searchLower = searchTerm.toLowerCase();
     return (
       po.po_number?.toLowerCase().includes(searchLower) ||
-      po.vendors?.name?.toLowerCase().includes(searchLower) ||
+      po.suppliers?.name?.toLowerCase().includes(searchLower) ||
       po.status?.toLowerCase().includes(searchLower)
     );
   });
@@ -132,7 +132,7 @@ export default function PurchaseOrders() {
                     <Badge className={getStatusColor(po.status)}>
                       {po.status?.replace("_", " ").toUpperCase()}
                     </Badge>
-                    {po.vendors?.gst_registered && (
+                    {po.suppliers?.gst_registered && (
                       <Badge variant="outline">GST Registered</Badge>
                     )}
                   </div>
@@ -140,7 +140,7 @@ export default function PurchaseOrders() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Supplier:</span>
-                        <span className="ml-2 font-medium">{po.vendors?.name}</span>
+                        <span className="ml-2 font-medium">{po.suppliers?.name}</span>
                       </div>
                     <div>
                       <span className="text-muted-foreground">PO Date:</span>
