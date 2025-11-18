@@ -591,38 +591,40 @@ export default function ServiceOrderDetails() {
                 </>
               )}
               
-              {(order.contacts || !order.customer_contact_id) && (
-                <>
-                  <Separator />
-                  {order.contacts ? (
-                    <div className="flex items-start gap-3">
-                      <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {order.contacts.first_name} {order.contacts.last_name}
+              {(() => {
+                const contact = (order as any).contacts;
+                return (contact || !order.customer_contact_id) && (
+                  <>
+                    <Separator />
+                    {contact ? (
+                      <div className="flex items-start gap-3">
+                        <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {contact.first_name} {contact.last_name}
+                          </div>
+                          {contact.position && (
+                            <div className="text-xs text-muted-foreground">{contact.position}</div>
+                          )}
+                          {contact.email && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Mail className="h-3 w-3" />
+                              {contact.email}
+                            </div>
+                          )}
+                          {(contact.phone || contact.mobile) && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Phone className="h-3 w-3" />
+                              {contact.mobile || contact.phone}
+                            </div>
+                          )}
                         </div>
-                        {order.contacts.position && (
-                          <div className="text-xs text-muted-foreground">{order.contacts.position}</div>
-                        )}
-                        {order.contacts.email && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <Mail className="h-3 w-3" />
-                            {order.contacts.email}
-                          </div>
-                        )}
-                        {(order.contacts.phone || order.contacts.mobile) && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <Phone className="h-3 w-3" />
-                            {order.contacts.mobile || order.contacts.phone}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
                       onClick={() => setContactDialogOpen(true)}
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -630,7 +632,8 @@ export default function ServiceOrderDetails() {
                     </Button>
                   )}
                 </>
-              )}
+              );
+            })()}
             </CardContent>
           </Card>
 
