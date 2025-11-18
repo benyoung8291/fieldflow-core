@@ -77,7 +77,7 @@ export default function PurchaseOrderDetails() {
     try {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, project_number, name, status")
+        .select("id, name, status")
         .eq("status", "active")
         .order("created_at", { ascending: false });
       
@@ -191,43 +191,33 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkServiceOrder = async (serviceOrderId: string) => {
     try {
-      console.log("Attempting to link PO to service order:", { 
-        po_id: id, 
-        service_order_id: serviceOrderId 
-      });
-      
-      const { data, error } = await supabase.rpc("update_purchase_order_linkage", {
-        p_po_id: id,
-        p_service_order_id: serviceOrderId || null,
-        p_project_id: null
-      });
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({ 
+          service_order_id: serviceOrderId,
+          project_id: null 
+        })
+        .eq('id', id);
 
-      if (error) {
-        console.error("RPC error details:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log("Successfully linked to service order");
       toast.success("Purchase order linked to service order");
       fetchPurchaseOrder();
     } catch (error: any) {
-      console.error("Failed to link service order - full error:", error);
+      console.error("Failed to link service order:", error);
       toast.error(`Failed to link: ${error.message}`);
     }
   };
 
   const handleLinkProject = async (projectId: string) => {
     try {
-      const { error } = await supabase.rpc("update_purchase_order_linkage", {
-        p_po_id: id,
-        p_service_order_id: null, // Clear service order if linking to project
-        p_project_id: projectId || null
-      });
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({ 
+          project_id: projectId,
+          service_order_id: null 
+        })
+        .eq('id', id);
 
       if (error) throw error;
 
