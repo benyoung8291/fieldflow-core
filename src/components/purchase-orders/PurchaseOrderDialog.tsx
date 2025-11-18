@@ -82,6 +82,8 @@ export function PurchaseOrderDialog({
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedSourceItems, setSelectedSourceItems] = useState<Set<string>>(new Set());
   const [hasPopulatedLineItems, setHasPopulatedLineItems] = useState(false);
+  const [selectedServiceOrderId, setSelectedServiceOrderId] = useState<string | undefined>(serviceOrderId);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(projectId);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -194,7 +196,7 @@ export function PurchaseOrderDialog({
     const { data, error } = await supabase
       .from("service_orders")
       .select("*, customers(name)")
-      .eq("status", "completed")
+      .in("status", ["draft", "scheduled", "in_progress"])
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -207,6 +209,7 @@ export function PurchaseOrderDialog({
     const { data, error } = await supabase
       .from("projects")
       .select("*, customers(name)")
+      .in("status", ["planning", "active", "on_hold"])
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -396,8 +399,8 @@ export function PurchaseOrderDialog({
             subtotal: poData.subtotal,
             tax_amount: poData.tax_amount,
             total_amount: poData.total_amount,
-            service_order_id: serviceOrderId ?? purchaseOrder.service_order_id ?? null,
-            project_id: projectId ?? purchaseOrder.project_id ?? null,
+            service_order_id: selectedServiceOrderId ?? purchaseOrder.service_order_id ?? null,
+            project_id: selectedProjectId ?? purchaseOrder.project_id ?? null,
           })
           .eq("id", purchaseOrder.id);
 
@@ -433,8 +436,8 @@ export function PurchaseOrderDialog({
             total_amount: poData.total_amount,
             created_by: poData.created_by,
             status: 'draft',
-            service_order_id: serviceOrderId ?? null,
-            project_id: projectId ?? null,
+            service_order_id: selectedServiceOrderId ?? null,
+            project_id: selectedProjectId ?? null,
           })
           .select()
           .single();
@@ -551,6 +554,59 @@ export function PurchaseOrderDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Service Order and Project selectors - only show when not pre-linked */}
+              {!serviceOrderId && !projectId && (
+                <>
+                  <div className="col-span-2">
+                    <FormLabel>Link to Service Order (Optional)</FormLabel>
+                    <Select 
+                      value={selectedServiceOrderId} 
+                      onValueChange={(value) => {
+                        setSelectedServiceOrderId(value || undefined);
+                        if (value) setSelectedProjectId(undefined); // Clear project if SO selected
+                      }}
+                      disabled={!!selectedProjectId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service order..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {serviceOrders.map((so) => (
+                          <SelectItem key={so.id} value={so.id}>
+                            {so.order_number} - {so.customers?.name || "N/A"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-2">
+                    <FormLabel>Link to Project (Optional)</FormLabel>
+                    <Select 
+                      value={selectedProjectId} 
+                      onValueChange={(value) => {
+                        setSelectedProjectId(value || undefined);
+                        if (value) setSelectedServiceOrderId(undefined); // Clear SO if project selected
+                      }}
+                      disabled={!!selectedServiceOrderId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name} - {project.customers?.name || "N/A"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               {/* PO Number is auto-generated and hidden */}
 
