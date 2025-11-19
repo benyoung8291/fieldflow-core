@@ -146,6 +146,13 @@ async function syncToAcumatica(invoice: any, integration: any) {
   });
 
   // Authenticate
+  console.log("Attempting Acumatica authentication:", {
+    url: `${integration.acumatica_instance_url}/entity/auth/login`,
+    username: username,
+    company: integration.acumatica_company_name,
+    hasPassword: !!password
+  });
+
   const authResponse = await fetch(`${integration.acumatica_instance_url}/entity/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -156,14 +163,28 @@ async function syncToAcumatica(invoice: any, integration: any) {
     }),
   });
 
+  console.log("Auth response:", {
+    status: authResponse.status,
+    statusText: authResponse.statusText,
+    hasCookies: !!authResponse.headers.get("set-cookie")
+  });
+
   if (!authResponse.ok) {
-    throw new Error("Failed to authenticate with Acumatica");
+    const authErrorText = await authResponse.text();
+    console.error("Acumatica authentication failed:", {
+      status: authResponse.status,
+      statusText: authResponse.statusText,
+      error: authErrorText
+    });
+    throw new Error(`Failed to authenticate with Acumatica (${authResponse.status}): ${authErrorText || authResponse.statusText}`);
   }
 
   const cookies = authResponse.headers.get("set-cookie");
   if (!cookies) {
-    throw new Error("No authentication cookies received");
+    throw new Error("No authentication cookies received from Acumatica");
   }
+
+  console.log("Authentication successful, cookies received");
 
   // Create Sales Invoice in Acumatica
   const acumaticaInvoice = {
