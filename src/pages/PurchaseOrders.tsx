@@ -45,18 +45,28 @@ export default function PurchaseOrders() {
       }
 
       // Fetch supplier details separately
-      const supplierIds = [...new Set(pos?.map(po => po.supplier_id).filter(Boolean))];
-      const { data: suppliers } = await supabase
-        .from("suppliers")
-        .select("id, name, gst_registered")
-        .in("id", supplierIds);
+      const supplierIds = pos && pos.length > 0 
+        ? [...new Set(pos.map(po => po.supplier_id).filter(Boolean))]
+        : [];
+      
+      const { data: suppliers } = supplierIds.length > 0 
+        ? await supabase
+            .from("suppliers")
+            .select("id, name, gst_registered")
+            .in("id", supplierIds)
+        : { data: [] };
 
       // Fetch creator details separately
-      const creatorIds = [...new Set(pos?.map(po => po.created_by).filter(Boolean))];
-      const { data: creators } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .in("id", creatorIds);
+      const creatorIds = pos && pos.length > 0
+        ? [...new Set(pos.map(po => po.created_by).filter(Boolean))]
+        : [];
+      
+      const { data: creators } = creatorIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", creatorIds)
+        : { data: [] };
 
       // Merge the data
       const enrichedPos = pos?.map(po => ({
