@@ -169,20 +169,26 @@ serve(async (req) => {
 
       // Fetch chart of accounts
       console.log("Fetching accounts with cookie...");
-      const accountsResponse = await fetch(
-        `${instanceUrl}/entity/Default/23.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`,
-        {
-          headers: {
-            "Cookie": cookies,
-            "Accept": "application/json",
-          },
-        }
-      );
+      const accountsUrl = `${instanceUrl}/entity/Default/23.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`;
+      console.log("Accounts URL:", accountsUrl);
+      
+      const accountsResponse = await fetch(accountsUrl, {
+        method: "GET",
+        headers: {
+          "Cookie": cookies,
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+      });
 
+      console.log("Accounts response status:", accountsResponse.status);
+      
       if (!accountsResponse.ok) {
         const errorText = await accountsResponse.text();
-        console.error("Failed to fetch accounts:", accountsResponse.status, errorText);
-        throw new Error(`Failed to fetch chart of accounts: ${accountsResponse.status} - ${errorText.substring(0, 200)}`);
+        console.error("Failed to fetch accounts:", accountsResponse.status);
+        console.error("Full error response:", errorText);
+        console.error("Response headers:", Object.fromEntries(accountsResponse.headers.entries()));
+        throw new Error(`Failed to fetch chart of accounts: ${accountsResponse.status} - ${errorText.substring(0, 500)}`);
       }
 
       console.log("Successfully fetched accounts");
@@ -191,15 +197,17 @@ serve(async (req) => {
       
       // Fetch sub-accounts
       console.log("Fetching sub-accounts...");
-      const subAccountsResponse = await fetch(
-        `${instanceUrl}/entity/Default/23.200.001/Subaccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`,
-        {
-          headers: {
-            "Cookie": cookies,
-            "Accept": "application/json",
-          },
-        }
-      );
+      const subAccountsUrl = `${instanceUrl}/entity/Default/23.200.001/Subaccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`;
+      console.log("Sub-accounts URL:", subAccountsUrl);
+      
+      const subAccountsResponse = await fetch(subAccountsUrl, {
+        method: "GET",
+        headers: {
+          "Cookie": cookies,
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+      });
 
       let subAccounts = [];
       if (subAccountsResponse.ok) {
