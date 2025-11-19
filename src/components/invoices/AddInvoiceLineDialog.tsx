@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils";
+import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 interface AddInvoiceLineDialogProps {
   open: boolean;
@@ -20,6 +21,8 @@ export default function AddInvoiceLineDialog({
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [unitPrice, setUnitPrice] = useState("0");
+  const [accountCode, setAccountCode] = useState("");
+  const [subAccount, setSubAccount] = useState("");
 
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
@@ -36,12 +39,16 @@ export default function AddInvoiceLineDialog({
       quantity: qty,
       unit_price: price,
       line_total: qty * price,
+      account_code: accountCode,
+      sub_account: subAccount,
     });
     
     // Reset form
     setDescription("");
     setQuantity("1");
     setUnitPrice("0");
+    setAccountCode("");
+    setSubAccount("");
     onOpenChange(false);
   };
 
@@ -89,6 +96,15 @@ export default function AddInvoiceLineDialog({
                 onChange={(e) => setUnitPrice(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <ChartOfAccountsSelector
+              accountCode={accountCode}
+              subAccount={subAccount}
+              onAccountChange={setAccountCode}
+              onSubAccountChange={setSubAccount}
+            />
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t">
