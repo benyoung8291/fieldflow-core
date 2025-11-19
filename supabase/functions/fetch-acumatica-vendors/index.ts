@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
@@ -7,38 +8,72 @@ serve(async (req) => {
   }
 
   try {
-    const username = Deno.env.get("ACUMATICA_USERNAME");
-    const password = Deno.env.get("ACUMATICA_PASSWORD");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    if (!username || !password) {
-      console.error("Missing Acumatica credentials");
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header");
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Get user's tenant
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.tenant_id) {
+      throw new Error("User has no tenant");
+    }
+
+    // Get Acumatica integration settings including credentials
+    const { data: integration, error: integrationError } = await supabase
+      .from("accounting_integrations")
+      .select("*")
+      .eq("tenant_id", profile.tenant_id)
+      .eq("provider", "myob_acumatica")
+      .eq("is_enabled", true)
+      .single();
+
+    if (integrationError || !integration) {
+      console.error("No Acumatica integration found");
       return new Response(
         JSON.stringify({ error: "Acumatica integration not configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    const { instanceUrl, companyName } = await req.json();
+    const { acumatica_username, acumatica_password, acumatica_instance_url, acumatica_company_name } = integration;
     
-    if (!instanceUrl || !companyName) {
+    if (!acumatica_username || !acumatica_password || !acumatica_instance_url || !acumatica_company_name) {
+      console.error("Missing Acumatica credentials or configuration");
       return new Response(
-        JSON.stringify({ error: "Instance URL and company name are required" }),
+        JSON.stringify({ error: "Acumatica integration not fully configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    console.log("Fetching vendors from Acumatica:", { instanceUrl, companyName });
+    console.log("Fetching vendors from Acumatica:", { instanceUrl: acumatica_instance_url, companyName: acumatica_company_name });
 
     // Authenticate with Acumatica
-    const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
+    const authResponse = await fetch(`${acumatica_instance_url}/entity/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: username,
-        password: password,
-        company: companyName,
+        name: acumatica_username,
+        password: acumatica_password,
+        company: acumatica_company_name,
       }),
     });
 
@@ -54,7 +89,7 @@ serve(async (req) => {
 
     // Fetch vendors
     const vendorsResponse = await fetch(
-      `${instanceUrl}/entity/Default/20.200.001/Vendor?$select=VendorID,VendorName,Status,MainContact,Email,Phone1&$filter=Status eq 'Active' or Status eq 'OneTime'&$expand=MainContact`,
+      `${acumatica_instance_url}/entity/Default/20.200.001/Vendor?$select=VendorID,VendorName,Status,MainContact,Email,Phone1&$filter=Status eq 'Active' or Status eq 'OneTime'&$expand=MainContact`,
       {
         headers: {
           "Cookie": cookies,
@@ -71,7 +106,7 @@ serve(async (req) => {
     const vendorsData = await vendorsResponse.json();
 
     // Logout
-    await fetch(`${instanceUrl}/entity/auth/logout`, {
+    await fetch(`${acumatica_instance_url}/entity/auth/logout`, {
       method: "POST",
       headers: {
         "Cookie": cookies,

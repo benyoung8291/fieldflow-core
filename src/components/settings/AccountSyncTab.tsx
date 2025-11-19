@@ -84,12 +84,7 @@ export default function AccountSyncTab() {
           ? 'fetch-acumatica-customers' 
           : 'fetch-acumatica-vendors';
           
-        const { data, error } = await supabase.functions.invoke(functionName, {
-          body: {
-            instanceUrl: integrationSettings.acumatica_instance_url,
-            companyName: integrationSettings.acumatica_company_name,
-          },
-        });
+        const { data, error } = await supabase.functions.invoke(functionName);
         
         if (error) throw error;
         
