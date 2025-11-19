@@ -119,133 +119,168 @@ serve(async (req) => {
 
     console.log("Fetching accounts from Acumatica:", { instanceUrl, companyName });
 
-    // Authenticate with Acumatica
-    const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: acumatica_username,
-        password: acumatica_password,
-        company: companyName,
-      }),
-    });
-
-    if (!authResponse.ok) {
-      const errorText = await authResponse.text();
-      console.error("Acumatica auth failed:", authResponse.status, errorText);
-      throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
-    }
-
-    const cookies = authResponse.headers.get("set-cookie");
-    console.log("Received cookies:", cookies ? "Yes" : "No");
-    if (!cookies) {
-      throw new Error("No authentication cookies received");
-    }
-
-    // Fetch chart of accounts
-    console.log("Fetching accounts with cookie...");
-    const accountsResponse = await fetch(
-      `${instanceUrl}/entity/Default/20.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`,
-      {
-        headers: {
-          "Cookie": cookies,
-          "Accept": "application/json",
-        },
-      }
-    );
-
-    if (!accountsResponse.ok) {
-      const errorText = await accountsResponse.text();
-      console.error("Failed to fetch accounts:", accountsResponse.status, errorText);
-      throw new Error(`Failed to fetch chart of accounts: ${accountsResponse.status}`);
-    }
-
-    console.log("Successfully fetched accounts");
-
-    const accountsData = await accountsResponse.json();
+    let cookies: string | null = null;
     
-    // Fetch sub-accounts
-    const subAccountsResponse = await fetch(
-      `${instanceUrl}/entity/Default/20.200.001/SubAccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`,
-      {
-        headers: {
-          "Cookie": cookies,
-          "Accept": "application/json",
-        },
+    try {
+      // Authenticate with Acumatica with retry logic for concurrent session limits
+      let authResponse;
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: acumatica_username,
+            password: acumatica_password,
+            company: companyName,
+          }),
+        });
+
+        if (authResponse.ok) {
+          break;
+        }
+
+        const errorText = await authResponse.text();
+        
+        // Check if it's a concurrent session limit error
+        if (errorText.includes("concurrent") || errorText.includes("session limit")) {
+          console.log(`Concurrent session limit hit, retry ${retryCount + 1}/${maxRetries}`);
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+            continue;
+          }
+        }
+        
+        console.error("Acumatica auth failed:", authResponse.status, errorText);
+        throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status} - ${errorText.substring(0, 200)}`);
       }
-    );
 
-    let subAccounts = [];
-    if (subAccountsResponse.ok) {
-      const subAccountsData = await subAccountsResponse.json();
-      subAccounts = subAccountsData.value || subAccountsData;
-    }
+      cookies = authResponse!.headers.get("set-cookie");
+      console.log("Received cookies:", cookies ? "Yes" : "No");
+      
+      if (!cookies) {
+        throw new Error("No authentication cookies received from Acumatica");
+      }
 
-    // Logout
-    await fetch(`${instanceUrl}/entity/auth/logout`, {
-      method: "POST",
-      headers: {
-        "Cookie": cookies,
-      },
-    });
+      // Fetch chart of accounts
+      console.log("Fetching accounts with cookie...");
+      const accountsResponse = await fetch(
+        `${instanceUrl}/entity/Default/20.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`,
+        {
+          headers: {
+            "Cookie": cookies,
+            "Accept": "application/json",
+          },
+        }
+      );
 
-    console.log(`Fetched ${accountsData.value?.length || 0} accounts and ${subAccounts.length} sub-accounts`);
+      if (!accountsResponse.ok) {
+        const errorText = await accountsResponse.text();
+        console.error("Failed to fetch accounts:", accountsResponse.status, errorText);
+        throw new Error(`Failed to fetch chart of accounts: ${accountsResponse.status} - ${errorText.substring(0, 200)}`);
+      }
 
-    // Cache the data
-    const accounts = accountsData.value || accountsData;
-    
-    // Delete old cache for this tenant/provider
-    await supabase
-      .from("chart_of_accounts_cache")
-      .delete()
-      .eq("tenant_id", tenantId)
-      .eq("provider", "myob_acumatica");
+      console.log("Successfully fetched accounts");
 
-    await supabase
-      .from("sub_accounts_cache")
-      .delete()
-      .eq("tenant_id", tenantId)
-      .eq("provider", "myob_acumatica");
+      const accountsData = await accountsResponse.json();
+      
+      // Fetch sub-accounts
+      console.log("Fetching sub-accounts...");
+      const subAccountsResponse = await fetch(
+        `${instanceUrl}/entity/Default/20.200.001/SubAccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`,
+        {
+          headers: {
+            "Cookie": cookies,
+            "Accept": "application/json",
+          },
+        }
+      );
 
-    // Insert new cache
-    if (accounts && accounts.length > 0) {
-      const accountsToCache = accounts.map((account: any) => ({
-        tenant_id: tenantId,
-        provider: "myob_acumatica",
-        account_code: account.AccountCD?.value || account.AccountCD,
-        description: account.Description?.value || account.Description,
-        account_type: account.Type?.value || account.Type,
-        is_active: account.Active?.value !== false,
-      }));
+      let subAccounts = [];
+      if (subAccountsResponse.ok) {
+        const subAccountsData = await subAccountsResponse.json();
+        subAccounts = subAccountsData.value || subAccountsData;
+        console.log(`Successfully fetched ${subAccounts.length} sub-accounts`);
+      } else {
+        console.warn("Failed to fetch sub-accounts:", subAccountsResponse.status);
+      }
 
+      console.log(`Fetched ${accountsData.value?.length || 0} accounts and ${subAccounts.length} sub-accounts`);
+
+      // Cache the data
+      const accounts = accountsData.value || accountsData;
+      
+      // Delete old cache for this tenant/provider
       await supabase
         .from("chart_of_accounts_cache")
-        .insert(accountsToCache);
-    }
-
-    if (subAccounts && subAccounts.length > 0) {
-      const subAccountsToCache = subAccounts.map((subAccount: any) => ({
-        tenant_id: tenantId,
-        provider: "myob_acumatica",
-        sub_account_code: subAccount.SubAccountCD?.value || subAccount.SubAccountCD,
-        description: subAccount.Description?.value || subAccount.Description,
-        is_active: subAccount.Active?.value !== false,
-      }));
+        .delete()
+        .eq("tenant_id", tenantId)
+        .eq("provider", "myob_acumatica");
 
       await supabase
         .from("sub_accounts_cache")
-        .insert(subAccountsToCache);
-    }
+        .delete()
+        .eq("tenant_id", tenantId)
+        .eq("provider", "myob_acumatica");
 
-    return new Response(
-      JSON.stringify({ 
-        accounts: accounts,
-        subAccounts: subAccounts
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+      // Insert new cache
+      if (accounts && accounts.length > 0) {
+        const accountsToCache = accounts.map((account: any) => ({
+          tenant_id: tenantId,
+          provider: "myob_acumatica",
+          account_code: account.AccountCD?.value || account.AccountCD,
+          description: account.Description?.value || account.Description,
+          account_type: account.Type?.value || account.Type,
+          is_active: account.Active?.value !== false,
+        }));
+
+        await supabase
+          .from("chart_of_accounts_cache")
+          .insert(accountsToCache);
+      }
+
+      if (subAccounts && subAccounts.length > 0) {
+        const subAccountsToCache = subAccounts.map((subAccount: any) => ({
+          tenant_id: tenantId,
+          provider: "myob_acumatica",
+          sub_account_code: subAccount.SubAccountCD?.value || subAccount.SubAccountCD,
+          description: subAccount.Description?.value || subAccount.Description,
+          is_active: subAccount.Active?.value !== false,
+        }));
+
+        await supabase
+          .from("sub_accounts_cache")
+          .insert(subAccountsToCache);
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          accounts: accounts,
+          subAccounts: subAccounts
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    } finally {
+      // Always logout to prevent session accumulation
+      if (cookies) {
+        try {
+          await fetch(`${instanceUrl}/entity/auth/logout`, {
+            method: "POST",
+            headers: {
+              "Cookie": cookies,
+            },
+          });
+          console.log("Logged out from Acumatica");
+        } catch (logoutError) {
+          console.error("Error during logout:", logoutError);
+        }
+      }
+    }
   } catch (error) {
     console.error("Error fetching Acumatica accounts:", error);
     return new Response(
