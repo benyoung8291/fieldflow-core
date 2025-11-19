@@ -57,6 +57,8 @@ export type Database = {
         Row: {
           acumatica_company_name: string | null
           acumatica_instance_url: string | null
+          acumatica_password: string | null
+          acumatica_username: string | null
           created_at: string | null
           id: string
           is_enabled: boolean
@@ -77,6 +79,8 @@ export type Database = {
         Insert: {
           acumatica_company_name?: string | null
           acumatica_instance_url?: string | null
+          acumatica_password?: string | null
+          acumatica_username?: string | null
           created_at?: string | null
           id?: string
           is_enabled?: boolean
@@ -97,6 +101,8 @@ export type Database = {
         Update: {
           acumatica_company_name?: string | null
           acumatica_instance_url?: string | null
+          acumatica_password?: string | null
+          acumatica_username?: string | null
           created_at?: string | null
           id?: string
           is_enabled?: boolean

@@ -29,24 +29,40 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
+    // Get user's tenant
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.tenant_id) {
+      throw new Error("User has no tenant");
+    }
+
     const { username, password } = await req.json();
 
     if (!username || !password) {
       throw new Error("Username and password are required");
     }
 
-    // Store credentials in Supabase secrets/vault
-    // Note: In a production environment, you would use Supabase Vault or
-    // the Management API to securely store these. For now, we'll use
-    // environment variables which are set at the project level.
-    
-    // The actual storage mechanism depends on your deployment setup.
-    // This is a placeholder that demonstrates the pattern.
-    // In reality, you'd use Supabase's Management API or Vault API.
-    
-    console.log("Credentials would be stored securely here");
-    console.log("Username length:", username.length);
-    console.log("Password length:", password.length);
+    // Update the accounting_integrations table with credentials
+    const { error: updateError } = await supabase
+      .from("accounting_integrations")
+      .update({
+        acumatica_username: username,
+        acumatica_password: password,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", profile.tenant_id)
+      .eq("provider", "myob_acumatica");
+
+    if (updateError) {
+      console.error("Error storing credentials:", updateError);
+      throw new Error("Failed to store credentials");
+    }
+
+    console.log("Credentials stored successfully for tenant:", profile.tenant_id);
 
     return new Response(
       JSON.stringify({ success: true, message: "Credentials stored securely" }),

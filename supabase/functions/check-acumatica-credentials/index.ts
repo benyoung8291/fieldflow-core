@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,10 +12,42 @@ serve(async (req) => {
   }
 
   try {
-    const username = Deno.env.get("ACUMATICA_USERNAME");
-    const password = Deno.env.get("ACUMATICA_PASSWORD");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header");
+    }
 
-    const configured = !!(username && password);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Get user's tenant
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.tenant_id) {
+      throw new Error("User has no tenant");
+    }
+
+    // Check if Acumatica credentials exist in database
+    const { data: integration } = await supabase
+      .from("accounting_integrations")
+      .select("acumatica_username, acumatica_password")
+      .eq("tenant_id", profile.tenant_id)
+      .eq("provider", "myob_acumatica")
+      .single();
+
+    const configured = !!(integration?.acumatica_username && integration?.acumatica_password);
 
     return new Response(
       JSON.stringify({ configured }),
