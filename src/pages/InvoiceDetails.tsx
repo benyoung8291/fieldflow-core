@@ -133,21 +133,34 @@ export default function InvoiceDetails() {
 
       // If status is approved, trigger integration sync
       if (status === "approved") {
-        // Call edge function to sync with accounting systems
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-invoice-to-accounting`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-          body: JSON.stringify({ invoice_id: id }),
-        });
+        console.log("Invoice approved, triggering accounting sync for invoice:", id);
+        try {
+          const { data, error: syncError } = await supabase.functions.invoke(
+            "sync-invoice-to-accounting",
+            {
+              body: { invoice_id: id },
+            }
+          );
+
+          if (syncError) {
+            console.error("Accounting sync error:", syncError);
+            toast.error("Invoice approved but sync to accounting failed: " + syncError.message);
+          } else {
+            console.log("Accounting sync response:", data);
+            toast.success("Invoice approved and synced to accounting system");
+          }
+        } catch (syncError: any) {
+          console.error("Accounting sync exception:", syncError);
+          toast.error("Invoice approved but sync to accounting failed: " + syncError.message);
+        }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, status) => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
-      toast.success("Invoice status updated successfully");
+      if (status !== "approved") {
+        toast.success("Invoice status updated successfully");
+      }
     },
     onError: () => {
       toast.error("Failed to update invoice status");
