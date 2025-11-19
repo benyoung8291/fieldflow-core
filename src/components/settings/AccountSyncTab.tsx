@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "sonner";
-import { Download, Upload, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { Download, Upload, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle, Link as LinkIcon, Unlink } from "lucide-react";
 
 interface ExternalAccount {
   id: string;
@@ -33,6 +35,9 @@ export default function AccountSyncTab() {
   const [accountType, setAccountType] = useState<'customers' | 'suppliers'>('customers');
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [selectedAppAccount, setSelectedAppAccount] = useState<string>("");
+  const [selectedXeroAccount, setSelectedXeroAccount] = useState<string>("");
   const queryClient = useQueryClient();
 
   // Fetch integration settings
@@ -197,6 +202,48 @@ export default function AccountSyncTab() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to export ${accountType}: ${error.message}`);
+    },
+  });
+
+  // Manual account mapping mutation
+  const linkAccountMutation = useMutation({
+    mutationFn: async ({ appAccountId, xeroContactId }: { appAccountId: string; xeroContactId: string }) => {
+      const table = accountType === 'customers' ? 'customers' : 'suppliers';
+      
+      const { error } = await supabase
+        .from(table)
+        .update({ xero_contact_id: xeroContactId })
+        .eq('id', appAccountId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Account linked successfully");
+      queryClient.invalidateQueries({ queryKey: ["app-accounts", accountType] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to link account: ${error.message}`);
+    },
+  });
+
+  // Unlink account mutation
+  const unlinkAccountMutation = useMutation({
+    mutationFn: async (appAccountId: string) => {
+      const table = accountType === 'customers' ? 'customers' : 'suppliers';
+      
+      const { error } = await supabase
+        .from(table)
+        .update({ xero_contact_id: null })
+        .eq('id', appAccountId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Account unlinked successfully");
+      queryClient.invalidateQueries({ queryKey: ["app-accounts", accountType] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to unlink account: ${error.message}`);
     },
   });
 
@@ -572,6 +619,175 @@ export default function AccountSyncTab() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Manual Account Mapping */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Manual Account Mapping</CardTitle>
+          <CardDescription>
+            Link existing app {accountType} to Xero contacts without importing or exporting
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Use this to manually map existing accounts between your app and Xero. 
+                This is useful when you already have accounts in both systems.
+              </AlertDescription>
+            </Alert>
+
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>App Account</TableHead>
+                    <TableHead>Xero Contact</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-32">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!appAccounts ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : appAccounts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No {accountType} found in app
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    appAccounts.map((appAccount) => {
+                      const linkedXeroAccount = externalAccounts?.find(
+                        ext => ext.id === appAccount.xero_contact_id
+                      );
+
+                      return (
+                        <TableRow key={appAccount.id}>
+                          <TableCell className="font-medium">{appAccount.name}</TableCell>
+                          <TableCell>
+                            {linkedXeroAccount ? (
+                              <div className="flex items-center gap-2">
+                                <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                {linkedXeroAccount.name}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Not linked</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {linkedXeroAccount ? (
+                              <Badge variant="default" className="gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                Linked
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="gap-1">
+                                <XCircle className="h-3 w-3" />
+                                Not Linked
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {linkedXeroAccount ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => unlinkAccountMutation.mutate(appAccount.id)}
+                                disabled={unlinkAccountMutation.isPending}
+                              >
+                                {unlinkAccountMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Unlink className="h-4 w-4" />
+                                )}
+                              </Button>
+                            ) : (
+                              <Dialog open={linkDialogOpen && selectedAppAccount === appAccount.id} onOpenChange={(open) => {
+                                setLinkDialogOpen(open);
+                                if (!open) {
+                                  setSelectedAppAccount("");
+                                  setSelectedXeroAccount("");
+                                }
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setSelectedAppAccount(appAccount.id)}
+                                  >
+                                    <LinkIcon className="h-4 w-4 mr-1" />
+                                    Link
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Link to Xero Contact</DialogTitle>
+                                    <DialogDescription>
+                                      Select a Xero contact to link with {appAccount.name}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label>Xero Contact</Label>
+                                      <Select
+                                        value={selectedXeroAccount}
+                                        onValueChange={setSelectedXeroAccount}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select a Xero contact" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {externalAccounts?.map((xeroAccount) => (
+                                            <SelectItem key={xeroAccount.id} value={xeroAccount.id}>
+                                              {xeroAccount.name} {xeroAccount.email && `(${xeroAccount.email})`}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <Button
+                                      className="w-full"
+                                      onClick={() => {
+                                        if (selectedXeroAccount) {
+                                          linkAccountMutation.mutate({
+                                            appAccountId: appAccount.id,
+                                            xeroContactId: selectedXeroAccount,
+                                          });
+                                          setLinkDialogOpen(false);
+                                          setSelectedAppAccount("");
+                                          setSelectedXeroAccount("");
+                                        }
+                                      }}
+                                      disabled={!selectedXeroAccount || linkAccountMutation.isPending}
+                                    >
+                                      {linkAccountMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      ) : (
+                                        <LinkIcon className="h-4 w-4 mr-2" />
+                                      )}
+                                      Link Accounts
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
