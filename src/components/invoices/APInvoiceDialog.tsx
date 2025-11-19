@@ -8,46 +8,91 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, FileText, AlertCircle } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 interface APInvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   purchaseOrderId?: string;
+  serviceOrderId?: string;
+  projectId?: string;
   onSuccess?: () => void;
+}
+
+interface LineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  account_code: string;
+  sub_account?: string;
+  is_gst_free?: boolean;
 }
 
 export default function APInvoiceDialog({
   open,
   onOpenChange,
   purchaseOrderId,
+  serviceOrderId,
+  projectId,
   onSuccess,
 }: APInvoiceDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [supplierId, setSupplierId] = useState("");
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState("");
   const [selectedReceiptId, setSelectedReceiptId] = useState("");
+  const [selectedServiceOrderId, setSelectedServiceOrderId] = useState(serviceOrderId || "");
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId || "");
   const [notes, setNotes] = useState("");
-  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+
+  // Fetch suppliers
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers-for-ap'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .eq("tenant_id", profile.tenant_id)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Fetch purchase receipts
   const { data: receipts = [] } = useQuery({
     queryKey: ['purchase-receipts-for-ap'],
     queryFn: async () => {
-      // Get tenant_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("tenant_id")
-        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .eq("id", user.id)
         .single();
 
       if (!profile?.tenant_id) return [];
 
-      // Fetch receipts
       const { data: receiptsData, error: receiptsError } = await supabase
         .from("po_receipts")
         .select("*")
@@ -57,10 +102,7 @@ export default function APInvoiceDialog({
       if (receiptsError) throw receiptsError;
       if (!receiptsData || receiptsData.length === 0) return [];
 
-      // Get unique PO IDs
       const poIds = [...new Set(receiptsData.map(r => r.po_id))];
-
-      // Fetch purchase orders
       const { data: posData, error: posError } = await supabase
         .from("purchase_orders")
         .select("id, po_number, supplier_id")
@@ -68,10 +110,7 @@ export default function APInvoiceDialog({
 
       if (posError) throw posError;
 
-      // Get unique supplier IDs
       const supplierIds = [...new Set((posData || []).map(po => po.supplier_id).filter(Boolean))];
-
-      // Fetch suppliers
       const { data: suppliersData, error: suppliersError } = await supabase
         .from("suppliers")
         .select("id, name")
@@ -79,7 +118,6 @@ export default function APInvoiceDialog({
 
       if (suppliersError) throw suppliersError;
 
-      // Map data together
       const posMap = new Map(posData?.map(po => [po.id, po]) || []);
       const suppliersMap = new Map(suppliersData?.map(s => [s.id, s]) || []);
 
@@ -93,15 +131,58 @@ export default function APInvoiceDialog({
     },
   });
 
-  // If purchaseOrderId is provided, find and pre-select its receipt
-  useEffect(() => {
-    if (purchaseOrderId && receipts.length > 0) {
-      const receipt = receipts.find((r: any) => r.po_id === purchaseOrderId);
-      if (receipt) {
-        setSelectedReceiptId(receipt.id);
-      }
-    }
-  }, [purchaseOrderId, receipts]);
+  // Fetch service orders
+  const { data: serviceOrders = [] } = useQuery({
+    queryKey: ['service-orders-for-ap'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("id, order_number, title")
+        .eq("tenant_id", profile.tenant_id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch projects
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects-for-ap'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, project_number, name")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Fetch receipt details when selected
   useEffect(() => {
@@ -112,17 +193,27 @@ export default function APInvoiceDialog({
 
   const fetchReceiptDetails = async (receiptId: string) => {
     try {
-      // Fetch receipt
       const { data: receipt, error: receiptError } = await supabase
         .from('po_receipts')
-        .select('*')
+        .select('po_id')
         .eq('id', receiptId)
         .single();
 
       if (receiptError) throw receiptError;
       if (!receipt) throw new Error("Receipt not found");
 
-      // Fetch receipt line items
+      // Get PO to get supplier
+      const { data: po, error: poError } = await supabase
+        .from('purchase_orders')
+        .select('supplier_id')
+        .eq('id', receipt.po_id)
+        .single();
+
+      if (poError) throw poError;
+      if (po?.supplier_id) {
+        setSupplierId(po.supplier_id);
+      }
+
       const { data: receiptLineItems, error: lineItemsError } = await supabase
         .from('po_receipt_line_items')
         .select('*')
@@ -135,10 +226,7 @@ export default function APInvoiceDialog({
         return;
       }
 
-      // Get unique PO line item IDs
       const poLineItemIds = [...new Set(receiptLineItems.map(line => line.po_line_item_id))];
-
-      // Fetch PO line items
       const { data: poLineItems, error: poLineItemsError } = await supabase
         .from('purchase_order_line_items')
         .select('id, description, unit_price, is_gst_free')
@@ -146,10 +234,8 @@ export default function APInvoiceDialog({
 
       if (poLineItemsError) throw poLineItemsError;
 
-      // Map PO line items by ID
       const poLineItemsMap = new Map(poLineItems?.map(line => [line.id, line]) || []);
 
-      // Pre-populate line items from receipt
       const items = receiptLineItems.map((line: any) => {
         const poLineItem = poLineItemsMap.get(line.po_line_item_id);
         return {
@@ -157,7 +243,8 @@ export default function APInvoiceDialog({
           quantity: line.quantity_received,
           unit_price: poLineItem?.unit_price || 0,
           line_total: line.quantity_received * (poLineItem?.unit_price || 0),
-          po_line_id: line.po_line_item_id,
+          account_code: '',
+          sub_account: '',
           is_gst_free: poLineItem?.is_gst_free || false,
         };
       });
@@ -169,11 +256,39 @@ export default function APInvoiceDialog({
     }
   };
 
+  const addLineItem = () => {
+    setLineItems([...lineItems, {
+      description: '',
+      quantity: 1,
+      unit_price: 0,
+      line_total: 0,
+      account_code: '',
+      sub_account: '',
+      is_gst_free: false,
+    }]);
+  };
+
+  const removeLineItem = (index: number) => {
+    setLineItems(lineItems.filter((_, i) => i !== index));
+  };
+
+  const updateLineItem = (index: number, field: keyof LineItem, value: any) => {
+    const newItems = [...lineItems];
+    newItems[index] = { ...newItems[index], [field]: value };
+    
+    // Recalculate line total if quantity or unit_price changed
+    if (field === 'quantity' || field === 'unit_price') {
+      newItems[index].line_total = newItems[index].quantity * newItems[index].unit_price;
+    }
+    
+    setLineItems(newItems);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedReceiptId) {
-      toast.error('Please select a purchase receipt');
+    if (!supplierId) {
+      toast.error('Please select a supplier');
       return;
     }
 
@@ -182,99 +297,71 @@ export default function APInvoiceDialog({
       return;
     }
 
+    // Validate line items have account codes
+    const missingAccounts = lineItems.some(item => !item.account_code);
+    if (missingAccounts) {
+      toast.error('Please select chart of accounts for all line items');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // @ts-ignore - Types will update after migration
       const { data: profile } = await supabase
         .from('profiles')
         .select('tenant_id')
         .eq('id', user.id)
         .single();
 
-      // Get receipt and PO details
-      // @ts-ignore - Types will update after migration
-      const { data: receipt } = await supabase
-        .from('po_receipts')
-        .select('po_id, purchase_orders(supplier_id)')
-        .eq('id', selectedReceiptId)
-        .single();
-
       // Get next invoice number
-      // @ts-ignore - Types will update after migration
-      const invoiceNumber = await supabase.rpc('get_next_sequential_number', {
+      const { data: invoiceNumberData } = await supabase.rpc('get_next_sequential_number', {
         p_tenant_id: profile?.tenant_id,
         p_entity_type: 'ap_invoice'
-      }).then(res => res.data);
+      });
 
       const totalAmount = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
 
       // Create AP invoice
-      // @ts-ignore - Types will update after migration
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({
-          // @ts-ignore - Types will update after migration
-          invoice_type: 'AP',
-          // @ts-ignore - Types will update after migration
-          supplier_invoice_number: supplierInvoiceNumber,
-          // @ts-ignore - Types will update after migration
-          purchase_order_id: receipt?.po_id,
-          // @ts-ignore - Types will update after migration
-          supplier_id: receipt?.purchase_orders?.supplier_id,
-          invoice_number: invoiceNumber,
+        .insert([{
+          tenant_id: profile.tenant_id,
+          invoice_number: invoiceNumberData || 'AP-001',
+          customer_id: supplierId,
           invoice_date: invoiceDate,
           due_date: dueDate,
           total_amount: totalAmount,
-          status: 'pending',
-          notes: notes,
-          // @ts-ignore - Types will update after migration
-          customer_id: receipt?.purchase_orders?.supplier_id, // Required field, using supplier as placeholder
+          status: 'draft',
+          notes: `AP Invoice - Supplier Invoice #: ${supplierInvoiceNumber}\n${notes}`,
           created_by: user.id,
-        })
+        }])
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
 
       // Create line items
-      // @ts-ignore - Types will update after migration
       const lineItemsData = lineItems.map((item, index) => ({
+        tenant_id: profile.tenant_id,
         invoice_id: invoice.id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
         line_total: item.line_total,
-        // @ts-ignore - Types will update after migration
-        line_number: index + 1,
-        // @ts-ignore - Types will update after migration
-        item_code: item.item_code,
+        item_order: index,
+        account_code: item.account_code,
+        sub_account: item.sub_account || null,
       }));
 
-      // @ts-ignore - Types will update after migration
       const { error: linesError } = await supabase
         .from('invoice_line_items')
-        // @ts-ignore - Types will update after migration
         .insert(lineItemsData);
 
       if (linesError) throw linesError;
 
-      // Perform 3-way matching
-      // @ts-ignore - Types will update after migration
-      const { data: matchResult } = await supabase.rpc('perform_three_way_match', {
-        p_invoice_id: invoice.id,
-        p_tolerance_percentage: 5.0
-      });
-
       toast.success('AP Invoice created successfully');
-      
-      // @ts-ignore - Types will update after migration
-      if (matchResult?.matching_status === 'variance') {
-        toast.warning('Variances detected - review required');
-      }
-
       onSuccess?.();
       onOpenChange(false);
       resetForm();
@@ -287,19 +374,20 @@ export default function APInvoiceDialog({
   };
 
   const resetForm = () => {
+    setSupplierId("");
     setSupplierInvoiceNumber("");
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setDueDate("");
     setNotes("");
     setLineItems([]);
-    if (!purchaseOrderId) {
-      setSelectedReceiptId("");
-    }
+    setSelectedReceiptId("");
+    setSelectedServiceOrderId(serviceOrderId || "");
+    setSelectedProjectId(projectId || "");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create AP Invoice</DialogTitle>
         </DialogHeader>
@@ -307,26 +395,26 @@ export default function APInvoiceDialog({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            AP (Accounts Payable) invoices are for bills received from suppliers. The system will automatically perform 3-way matching with the purchase order and receipts.
+            AP (Accounts Payable) invoices are for bills received from suppliers. You can create an invoice from a purchase receipt, or enter it manually.
           </AlertDescription>
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchase-receipt">Purchase Receipt *</Label>
+              <Label htmlFor="supplier">Supplier *</Label>
               <Select
-                value={selectedReceiptId}
-                onValueChange={setSelectedReceiptId}
-                disabled={!!purchaseOrderId}
+                value={supplierId}
+                onValueChange={setSupplierId}
+                disabled={!!selectedReceiptId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Receipt" />
+                  <SelectValue placeholder="Select Supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {receipts.map((receipt: any) => (
-                    <SelectItem key={receipt.id} value={receipt.id}>
-                      {receipt.receipt_number} - {receipt.purchase_orders?.suppliers?.name} ({new Date(receipt.receipt_date).toLocaleDateString()})
+                  {suppliers.map((supplier: any) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -367,6 +455,67 @@ export default function APInvoiceDialog({
             </div>
           </div>
 
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="purchase-receipt">From Purchase Receipt (Optional)</Label>
+              <Select
+                value={selectedReceiptId}
+                onValueChange={setSelectedReceiptId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Receipt (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {receipts.map((receipt: any) => (
+                    <SelectItem key={receipt.id} value={receipt.id}>
+                      {receipt.receipt_number} - {receipt.purchase_orders?.suppliers?.name} ({new Date(receipt.receipt_date).toLocaleDateString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-order">Link to Service Order (Optional)</Label>
+              <Select
+                value={selectedServiceOrderId}
+                onValueChange={setSelectedServiceOrderId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Service Order (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {serviceOrders.map((so: any) => (
+                    <SelectItem key={so.id} value={so.id}>
+                      {so.order_number} - {so.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="project">Link to Project (Optional)</Label>
+              <Select
+                value={selectedProjectId}
+                onValueChange={setSelectedProjectId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Project (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {projects.map((project: any) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.project_number} - {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -381,79 +530,98 @@ export default function APInvoiceDialog({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Line Items</Label>
-              <Badge variant="secondary">
-                {lineItems.length} items
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {lineItems.length} items
+                </Badge>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addLineItem}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Line Item
+                </Button>
+              </div>
             </div>
 
             <Card>
               <CardContent className="p-4">
                 {lineItems.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    Select a purchase order to load line items
+                    No line items. Click "Add Line Item" or select a purchase receipt to load line items.
                   </p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {lineItems.map((item, index) => (
-                      <div key={index} className="flex gap-3 items-start p-3 border rounded-lg">
-                        <div className="flex-1 grid grid-cols-4 gap-3">
-                          <div className="col-span-2">
-                            <Label className="text-xs">Description</Label>
+                      <div key={index} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex justify-between items-start">
+                          <span className="text-sm font-medium">Line Item {index + 1}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => removeLineItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="col-span-3">
+                            <Label className="text-xs">Description *</Label>
                             <Input
                               value={item.description}
-                              onChange={(e) => {
-                                const newItems = [...lineItems];
-                                newItems[index].description = e.target.value;
-                                setLineItems(newItems);
-                              }}
+                              onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                               className="h-8"
+                              placeholder="Item description"
+                              required
                             />
                           </div>
+
                           <div>
-                            <Label className="text-xs">Quantity</Label>
+                            <Label className="text-xs">Quantity *</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={item.quantity}
-                              onChange={(e) => {
-                                const newItems = [...lineItems];
-                                newItems[index].quantity = parseFloat(e.target.value) || 0;
-                                newItems[index].line_total = newItems[index].quantity * newItems[index].unit_price;
-                                setLineItems(newItems);
-                              }}
+                              onChange={(e) => updateLineItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                               className="h-8"
+                              required
                             />
                           </div>
+
                           <div>
-                            <Label className="text-xs">Unit Price</Label>
+                            <Label className="text-xs">Unit Price *</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={item.unit_price}
-                              onChange={(e) => {
-                                const newItems = [...lineItems];
-                                newItems[index].unit_price = parseFloat(e.target.value) || 0;
-                                newItems[index].line_total = newItems[index].quantity * newItems[index].unit_price;
-                                setLineItems(newItems);
-                              }}
+                              onChange={(e) => updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                               className="h-8"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-xs">Line Total</Label>
+                            <Input
+                              type="text"
+                              value={`$${item.line_total.toFixed(2)}`}
+                              className="h-8"
+                              disabled
                             />
                           </div>
                         </div>
-                        <div className="text-sm font-medium pt-5">
-                          ${item.line_total?.toFixed(2) || '0.00'}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 mt-5"
-                          onClick={() => {
-                            setLineItems(lineItems.filter((_, i) => i !== index));
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
+                        <ChartOfAccountsSelector
+                          accountCode={item.account_code}
+                          subAccount={item.sub_account}
+                          onAccountChange={(code) => updateLineItem(index, 'account_code', code)}
+                          onSubAccountChange={(sub) => updateLineItem(index, 'sub_account', sub)}
+                        />
                       </div>
                     ))}
                     
@@ -478,7 +646,7 @@ export default function APInvoiceDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !selectedReceiptId || lineItems.length === 0}>
+            <Button type="submit" disabled={loading || !supplierId || lineItems.length === 0}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create AP Invoice
             </Button>
