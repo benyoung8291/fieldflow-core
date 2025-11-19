@@ -403,6 +403,19 @@ export default function IntegrationsTab() {
                 )}
               </AlertDescription>
             </Alert>
+            <Alert>
+              <AlertDescription>
+                <strong>Redirect URI for Xero OAuth App:</strong>
+                <br />
+                <code className="text-sm bg-muted px-2 py-1 rounded mt-1 inline-block">
+                  {import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-oauth-callback
+                </code>
+                <br />
+                <span className="text-xs text-muted-foreground mt-1 inline-block">
+                  Use this redirect URI when configuring your Xero OAuth application
+                </span>
+              </AlertDescription>
+            </Alert>
           </div>
           <div className="flex gap-2">
             <Button
