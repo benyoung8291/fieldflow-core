@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, Trash2, ChevronRight } from "lucide-react";
+import { Plus, DollarSign, Trash2, ChevronRight, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Settings as SettingsIcon, 
@@ -44,6 +44,7 @@ import { TemplatesTab } from "@/components/settings/TemplatesTab";
 import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
 import NumberingTab from "@/components/settings/NumberingTab";
 import IntegrationsTab from "@/components/settings/IntegrationsTab";
+import AccountSyncTab from "@/components/settings/AccountSyncTab";
 import ProjectIntegrationTab from "@/components/settings/ProjectIntegrationTab";
 import UserProfileTab from "@/components/settings/UserProfileTab";
 import BrandColorsTab from "@/components/settings/BrandColorsTab";
@@ -102,6 +103,7 @@ const settingsNavigation: SettingsNavGroup[] = [
     group: "Integrations",
     items: [
       { title: "Integrations", value: "integrations", icon: Plug },
+      { title: "Account Sync", value: "account-sync", icon: RefreshCw },
       { title: "Accounting", value: "accounting", icon: Calculator },
     ]
   },
@@ -392,6 +394,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <IntegrationsTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "account-sync" && (
+              <Card>
+                <CardContent className="pt-6">
+                  <AccountSyncTab />
                 </CardContent>
               </Card>
             )}
