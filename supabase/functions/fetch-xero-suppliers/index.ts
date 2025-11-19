@@ -185,7 +185,7 @@ serve(async (req) => {
     console.log("Fetching suppliers from Xero for tenant:", integration.xero_tenant_id);
 
     // Fetch contacts (suppliers) from Xero
-    const suppliersResponse = await fetch(
+    let suppliersResponse = await fetch(
       "https://api.xero.com/api.xro/2.0/Contacts?where=IsSupplier==true",
       {
         headers: {
@@ -196,13 +196,61 @@ serve(async (req) => {
       }
     );
 
+    // If we get 401, try refreshing the token and retry once
+    if (suppliersResponse.status === 401) {
+      console.log("🔄 Got 401, attempting token refresh and retry...");
+      
+      const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: integration.xero_refresh_token,
+        }),
+      });
+
+      if (tokenResponse.ok) {
+        const tokens = await tokenResponse.json();
+        accessToken = tokens.access_token;
+        console.log("✅ Token refreshed, retrying API call");
+
+        // Update tokens in database
+        await supabase
+          .from("accounting_integrations")
+          .update({
+            xero_access_token: tokens.access_token,
+            xero_refresh_token: tokens.refresh_token,
+            xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          })
+          .eq("tenant_id", profile.tenant_id)
+          .eq("provider", "xero");
+
+        // Retry the API call with new token
+        suppliersResponse = await fetch(
+          "https://api.xero.com/api.xro/2.0/Contacts?where=IsSupplier==true",
+          {
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "xero-tenant-id": integration.xero_tenant_id,
+              "Accept": "application/json",
+            },
+          }
+        );
+      }
+    }
+
     if (!suppliersResponse.ok) {
       const errorText = await suppliersResponse.text();
       console.error("❌ Failed to fetch Xero suppliers:", suppliersResponse.status, errorText);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Xero API error (${suppliersResponse.status}): ${errorText}` 
+          error: suppliersResponse.status === 401 
+            ? "Xero connection expired. Please reconnect to Xero in Settings > Integrations to re-authorize access."
+            : `Xero API error (${suppliersResponse.status}): ${errorText}` 
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
