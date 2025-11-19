@@ -108,13 +108,30 @@ serve(async (req) => {
         throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
       }
 
-      cookies = authResponse.headers.get("set-cookie");
-      if (!cookies) {
+      // Get all Set-Cookie headers (there may be multiple)
+      const setCookieHeaders = authResponse.headers.getSetCookie?.() || [];
+      console.log("Number of Set-Cookie headers:", setCookieHeaders.length);
+      
+      // Fallback to single header if getSetCookie not available
+      if (setCookieHeaders.length === 0) {
+        const singleCookie = authResponse.headers.get("set-cookie");
+        if (singleCookie) {
+          setCookieHeaders.push(singleCookie);
+        }
+      }
+      
+      if (setCookieHeaders.length === 0) {
         console.error("No authentication cookies received");
         throw new Error("No authentication cookies received");
       }
 
+      // Join all cookies into a single Cookie header value
+      cookies = setCookieHeaders
+        .map(cookie => cookie.split(';')[0]) // Take only the name=value part
+        .join('; ');
+      
       console.log("Authentication successful, cookies received");
+      console.log("Cookie header value:", cookies.substring(0, 50) + "...");
 
       // Fetch customers with proper expansion
       const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Status,MainContact`;
@@ -181,12 +198,14 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in fetch-acumatica-customers:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
     
-    const sanitizedMessage = sanitizeError(error, "fetch-acumatica-customers");
-    
+    // For development/debugging, return more detailed error
+    // In production, you'd use sanitizeError
     return new Response(
       JSON.stringify({ 
-        error: sanitizedMessage
+        error: error instanceof Error ? error.message : String(error),
+        type: error instanceof Error ? error.constructor.name : typeof error
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
