@@ -103,10 +103,15 @@ export function PurchaseOrderDialog({
       fetchVendors();
       fetchServiceOrders();
       fetchProjects();
+      // Initialize selected IDs from props
+      setSelectedServiceOrderId(serviceOrderId);
+      setSelectedProjectId(projectId);
     } else {
       // Reset state when dialog closes
       setLineItems([]);
       setHasPopulatedLineItems(false);
+      setSelectedServiceOrderId(undefined);
+      setSelectedProjectId(undefined);
       form.reset({
         supplier_id: "",
         po_number: "PO-",
@@ -117,7 +122,7 @@ export function PurchaseOrderDialog({
         tax_rate: 10,
       });
     }
-  }, [open, purchaseOrder]);
+  }, [open, serviceOrderId, projectId]);
 
   const fetchNextPONumber = async () => {
     try {
@@ -461,19 +466,17 @@ export function PurchaseOrderDialog({
           .delete()
           .eq("po_id", poId);
       } else {
-        // Generate next PO number
-        const { data: settings } = await supabase
-          .from("sequential_number_settings")
-          .select("*")
-          .eq("tenant_id", profile?.tenant_id)
-          .eq("entity_type", "purchase_order")
-          .single();
+        // Use the RPC function to get next sequential number
+        const { data: poNumber, error: numberError } = await supabase.rpc('get_next_sequential_number', {
+          p_tenant_id: profile?.tenant_id,
+          p_entity_type: 'purchase_order'
+        });
 
-        const nextNum = settings?.next_number || 1;
-        const poNumber = (settings?.prefix || "PO-") + String(nextNum).padStart(settings?.number_length || 6, "0");
+        if (numberError) throw numberError;
+        if (!poNumber) throw new Error("Failed to generate PO number");
 
         // Use database function to bypass schema cache issues
-        const { data: poId, error: insertError } = await supabase
+        const { data: newPoId, error: insertError } = await supabase
           .rpc('create_purchase_order_with_linkage', {
             p_tenant_id: profile?.tenant_id,
             p_supplier_id: poData.supplier_id,
@@ -493,14 +496,9 @@ export function PurchaseOrderDialog({
           });
 
         if (insertError) throw insertError;
-        if (!poId) throw new Error("Failed to create PO");
-
-        // Update the sequential number
-        await supabase
-          .from("sequential_number_settings")
-          .update({ next_number: nextNum + 1 })
-          .eq("tenant_id", profile?.tenant_id)
-          .eq("entity_type", "purchase_order");
+        if (!newPoId) throw new Error("Failed to create PO");
+        
+        poId = newPoId;
       }
 
       // Insert line items

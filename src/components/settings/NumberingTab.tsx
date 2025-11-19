@@ -23,6 +23,7 @@ export default function NumberingTab() {
     service_order: { prefix: "SO-", next_number: 1, number_length: 6 },
     quote: { prefix: "Q-", next_number: 1, number_length: 6 },
     invoice: { prefix: "INV-", next_number: 1, number_length: 6 },
+    purchase_order: { prefix: "PO-", next_number: 1, number_length: 6 },
   });
 
   const { data: existingSettings, isLoading } = useQuery({
@@ -39,6 +40,7 @@ export default function NumberingTab() {
         service_order: { prefix: "SO-", next_number: 1, number_length: 6 },
         quote: { prefix: "Q-", next_number: 1, number_length: 6 },
         invoice: { prefix: "INV-", next_number: 1, number_length: 6 },
+        purchase_order: { prefix: "PO-", next_number: 1, number_length: 6 },
       };
       
       data?.forEach((setting: any) => {
@@ -195,7 +197,7 @@ export default function NumberingTab() {
       <div>
         <h3 className="text-lg font-medium mb-1">Sequential Numbering & Costing</h3>
         <p className="text-sm text-muted-foreground">
-          Configure automatic sequential numbering for service orders, quotes, and invoices. 
+          Configure automatic sequential numbering for service orders, quotes, invoices, and purchase orders. 
           Set overhead percentage for time log cost calculations.
         </p>
       </div>
