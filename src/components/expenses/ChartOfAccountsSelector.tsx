@@ -104,7 +104,16 @@ export function ChartOfAccountsSelector({
 
       // If we have cache, use it
       if (cachedAccounts && cachedAccounts.length > 0) {
-        console.log("Using cached chart of accounts data");
+        console.log("✅ Using cached chart of accounts data");
+        console.log("📊 Cached accounts:", cachedAccounts.length);
+        console.log("📊 Cached sub-accounts:", cachedSubAccounts?.length || 0);
+        
+        if (cachedSubAccounts && cachedSubAccounts.length > 0) {
+          console.log("📋 Sample sub-account:", cachedSubAccounts[0]);
+        } else {
+          console.warn("⚠️ No sub-accounts in cache, will fetch from API");
+        }
+        
         return {
           accounts: cachedAccounts.map(a => ({
             AccountCD: { value: a.account_code },
@@ -122,7 +131,7 @@ export function ChartOfAccountsSelector({
         };
       }
 
-      console.log("No cache found, fetching from API");
+      console.log("⚠️ No cache found or cache empty, fetching from API with forceRefresh=true");
       // No cache or stale - fetch from API
       if (provider === "myob_acumatica") {
         if (!instanceUrl || !companyName) {
@@ -130,14 +139,23 @@ export function ChartOfAccountsSelector({
           return null;
         }
 
+        console.log("🔄 Calling fetch-acumatica-accounts...");
         const { data, error } = await supabase.functions.invoke("fetch-acumatica-accounts", {
-          body: { instanceUrl, companyName, forceRefresh: false },
+          body: { instanceUrl, companyName, forceRefresh: true },
         });
 
         if (error) {
-          console.error("Error fetching accounts:", error);
+          console.error("❌ Error fetching accounts:", error);
           throw error;
         }
+        
+        console.log("✅ Received data from API:");
+        console.log("📊 Accounts:", data?.accounts?.length || 0);
+        console.log("📊 Sub-accounts:", data?.subAccounts?.length || 0);
+        if (data?.subAccounts && data.subAccounts.length > 0) {
+          console.log("📋 Sample sub-account from API:", data.subAccounts[0]);
+        }
+        
         return data;
       } else if (provider === "xero") {
         if (!xeroTenantId) {
@@ -176,6 +194,18 @@ export function ChartOfAccountsSelector({
 
   const accounts = accountsData?.accounts || [];
   const subAccounts = accountsData?.subAccounts || [];
+  
+  console.log("📊 ChartOfAccountsSelector render:");
+  console.log("  - Accounts available:", accounts.length);
+  console.log("  - Sub-accounts available:", subAccounts.length);
+  console.log("  - Selected account:", accountCode);
+  console.log("  - Selected sub-account:", subAccount);
+  
+  if (subAccounts.length > 0) {
+    console.log("  - Sample sub-account:", subAccounts[0]);
+  } else {
+    console.warn("  ⚠️ No sub-accounts loaded!");
+  }
 
   return (
     <div className="space-y-4">
