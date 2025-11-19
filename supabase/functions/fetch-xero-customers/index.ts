@@ -89,52 +89,61 @@ serve(async (req) => {
 
     let accessToken = integration.xero_access_token;
 
-    // Check if token needs refresh
-    if (integration.xero_token_expires_at) {
-      const expiresAt = new Date(integration.xero_token_expires_at);
-      if (expiresAt <= new Date()) {
-        // Refresh token
-        const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
-          },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            refresh_token: integration.xero_refresh_token,
+    // Check if token needs refresh (always refresh if no expiry set or if expired)
+    const needsRefresh = !integration.xero_token_expires_at || 
+                         new Date(integration.xero_token_expires_at) <= new Date();
+    
+    if (needsRefresh) {
+      console.log("🔄 Refreshing Xero access token...");
+      
+      // Refresh token
+      const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: integration.xero_refresh_token,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error("❌ Token refresh failed:", tokenResponse.status, errorText);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Failed to refresh Xero token. Please reconnect to Xero in Settings > Integrations." 
           }),
-        });
-
-        if (!tokenResponse.ok) {
-          const errorText = await tokenResponse.text();
-          console.error("Token refresh failed:", errorText);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: "Failed to refresh token. Please reconnect to Xero." 
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-              status: 400,
-            }
-          );
-        }
-
-        const tokens = await tokenResponse.json();
-        accessToken = tokens.access_token;
-
-        // Update tokens
-        await supabase
-          .from("accounting_integrations")
-          .update({
-            xero_access_token: tokens.access_token,
-            xero_refresh_token: tokens.refresh_token,
-            xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-          })
-          .eq("tenant_id", profile.tenant_id)
-          .eq("provider", "xero");
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 401,
+          }
+        );
       }
+
+      const tokens = await tokenResponse.json();
+      accessToken = tokens.access_token;
+      console.log("✅ Token refreshed successfully");
+
+      // Update tokens in database
+      const { error: updateError } = await supabase
+        .from("accounting_integrations")
+        .update({
+          xero_access_token: tokens.access_token,
+          xero_refresh_token: tokens.refresh_token,
+          xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        })
+        .eq("tenant_id", profile.tenant_id)
+        .eq("provider", "xero");
+      
+      if (updateError) {
+        console.error("⚠️ Failed to update tokens in database:", updateError);
+      }
+    } else {
+      console.log("✅ Using existing valid access token");
     }
 
     console.log("Fetching customers from Xero for tenant:", integration.xero_tenant_id);
@@ -152,8 +161,18 @@ serve(async (req) => {
     );
 
     if (!customersResponse.ok) {
-      console.error("Failed to fetch Xero customers:", customersResponse.status);
-      throw new Error("Failed to fetch customers from Xero");
+      const errorText = await customersResponse.text();
+      console.error("❌ Failed to fetch Xero customers:", customersResponse.status, errorText);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Xero API error (${customersResponse.status}): ${errorText}` 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: customersResponse.status,
+        }
+      );
     }
 
     const customersData = await customersResponse.json();
