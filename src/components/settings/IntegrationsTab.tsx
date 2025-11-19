@@ -56,7 +56,15 @@ export default function IntegrationsTab() {
         setXeroIntegrationId(xero.id);
         setXeroClientId(xero.xero_client_id || "");
         setXeroClientSecret(xero.xero_client_secret || "");
-        setXeroConnected(!!(xero.xero_refresh_token && xero.xero_tenant_id));
+        // Check if we have both refresh token AND tenant ID to consider it connected
+        const isConnected = !!(xero.xero_refresh_token && xero.xero_tenant_id);
+        setXeroConnected(isConnected);
+        console.log("Xero connection status:", { 
+          hasRefreshToken: !!xero.xero_refresh_token, 
+          hasTenantId: !!xero.xero_tenant_id,
+          tenantId: xero.xero_tenant_id,
+          isConnected 
+        });
       }
 
       return data;
@@ -186,6 +194,45 @@ export default function IntegrationsTab() {
       toast.error("Failed to connect to Xero");
     } finally {
       setConnectingXero(false);
+    }
+  };
+
+  const disconnectXero = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      const { error } = await supabase
+        .from("accounting_integrations")
+        .update({
+          xero_access_token: null,
+          xero_refresh_token: null,
+          xero_token_expires_at: null,
+          xero_tenant_id: null,
+          is_enabled: false,
+        })
+        .eq("tenant_id", profile.tenant_id)
+        .eq("provider", "xero");
+
+      if (error) throw error;
+
+      // Reset local state
+      setXeroTenantId("");
+      setXeroEnabled(false);
+      setXeroConnected(false);
+      toast.success("Disconnected from Xero");
+      queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+    } catch (error) {
+      console.error("Error disconnecting:", error);
+      toast.error("Failed to disconnect from Xero");
     }
   };
 
@@ -568,6 +615,12 @@ export default function IntegrationsTab() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Test Connection
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={disconnectXero}
+                >
+                  Disconnect
                 </Button>
               </>
             )}
