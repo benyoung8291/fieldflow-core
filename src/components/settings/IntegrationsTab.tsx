@@ -186,6 +186,9 @@ export default function IntegrationsTab() {
           toast.success("Connected! Please select your organization.");
           window.removeEventListener('message', handleMessage);
           
+          // Refresh the integrations data
+          await queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+          
           // Fetch available organizations
           await fetchXeroOrganizations();
         }
