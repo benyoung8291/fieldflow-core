@@ -643,7 +643,8 @@ export default function InvoiceDetails() {
                     <TableHead>Description</TableHead>
                     <TableHead>Work Order</TableHead>
                     <TableHead>PO</TableHead>
-                    <TableHead>Project Date</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Sub-Account</TableHead>
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Total</TableHead>
@@ -698,9 +699,10 @@ export default function InvoiceDetails() {
                             : "-"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {sourceDoc?.type === "project" && sourceDoc.start_date
-                            ? format(new Date(sourceDoc.start_date), "dd MMM yyyy")
-                            : "-"}
+                          {item.account_code || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {item.sub_account || "-"}
                         </TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
                         <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
