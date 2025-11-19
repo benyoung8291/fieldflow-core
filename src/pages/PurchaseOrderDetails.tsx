@@ -227,6 +227,24 @@ export default function PurchaseOrderDetails() {
     }
   };
 
+  const handleUnlink = async () => {
+    try {
+      const { error } = await supabase.rpc('update_purchase_order_linkage', {
+        p_po_id: id,
+        p_service_order_id: null,
+        p_project_id: null
+      });
+
+      if (error) throw error;
+
+      toast.success("Purchase order unlinked");
+      fetchPurchaseOrder();
+    } catch (error: any) {
+      console.error("Failed to unlink:", error);
+      toast.error(`Failed to unlink: ${error.message}`);
+    }
+  };
+
   const handleDelete = async () => {
     try {
       const { error } = await supabase
@@ -623,7 +641,7 @@ export default function PurchaseOrderDetails() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleLinkServiceOrder("")}
+                        onClick={handleUnlink}
                       >
                         Clear
                       </Button>
@@ -665,7 +683,7 @@ export default function PurchaseOrderDetails() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleLinkProject("")}
+                        onClick={handleUnlink}
                       >
                         Clear
                       </Button>
