@@ -133,16 +133,19 @@ serve(async (req) => {
     });
 
     if (!authResponse.ok) {
-      console.error("Acumatica auth failed:", authResponse.status);
-      throw new Error("Failed to authenticate with Acumatica");
+      const errorText = await authResponse.text();
+      console.error("Acumatica auth failed:", authResponse.status, errorText);
+      throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
     }
 
     const cookies = authResponse.headers.get("set-cookie");
+    console.log("Received cookies:", cookies ? "Yes" : "No");
     if (!cookies) {
       throw new Error("No authentication cookies received");
     }
 
     // Fetch chart of accounts
+    console.log("Fetching accounts with cookie...");
     const accountsResponse = await fetch(
       `${instanceUrl}/entity/Default/20.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`,
       {
@@ -154,9 +157,12 @@ serve(async (req) => {
     );
 
     if (!accountsResponse.ok) {
-      console.error("Failed to fetch accounts:", accountsResponse.status);
-      throw new Error("Failed to fetch chart of accounts");
+      const errorText = await accountsResponse.text();
+      console.error("Failed to fetch accounts:", accountsResponse.status, errorText);
+      throw new Error(`Failed to fetch chart of accounts: ${accountsResponse.status}`);
     }
+
+    console.log("Successfully fetched accounts");
 
     const accountsData = await accountsResponse.json();
     
