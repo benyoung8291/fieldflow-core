@@ -171,6 +171,9 @@ async function syncToAcumatica(invoice: any, integration: any) {
     CustomerID: { value: invoice.customers?.xero_contact_id || invoice.customers?.name?.substring(0, 30) },
     Date: { value: invoice.invoice_date },
     DueDate: { value: invoice.due_date },
+    Terms: { value: "NET30DAYS" },
+    Project: { value: "X" },
+    Location: { value: "MAIN" }, // Default location - will be overridden by customer's default location
     Description: { value: invoice.description || `Invoice ${invoice.invoice_number}` },
     CustomerOrder: { value: invoice.invoice_number },
     Details: invoice.invoice_line_items?.map((item: any) => ({
