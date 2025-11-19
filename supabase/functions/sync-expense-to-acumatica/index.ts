@@ -81,24 +81,31 @@ serve(async (req) => {
       throw new Error("No authentication cookies received");
     }
 
-    // Create AP Invoice in Acumatica
-    const apInvoiceData = {
-      Type: { value: "Invoice" },
-      ReferenceNbr: { value: expense.expense_number },
+    // Get vendor details
+    const { data: vendor } = await supabase
+      .from("suppliers")
+      .select("*")
+      .eq("id", expense.supplier_id)
+      .single();
+
+    // Create AP Bill in Acumatica
+    const acumaticaBill = {
+      Type: { value: "Bill" },
+      VendorID: { value: vendor?.xero_contact_id || vendor?.name?.substring(0, 30) || "VENDOR" },
       Date: { value: expense.expense_date },
-      Vendor: { value: expense.vendor?.abn || "VENDOR" }, // Use vendor code
-      Description: { value: expense.description },
+      VendorRef: { value: expense.expense_number },
+      Description: { value: expense.description || `Expense ${expense.expense_number}` },
       Details: [
         {
           Account: { value: expense.account_code || "5000" },
           SubAccount: expense.sub_account ? { value: expense.sub_account } : undefined,
-          TransactionDescription: { value: expense.description },
+          TransactionDescription: { value: expense.description || "" },
           Amount: { value: parseFloat(expense.amount) },
         },
       ],
     };
 
-    const createInvoiceResponse = await fetch(
+    const createBillResponse = await fetch(
       `${instanceUrl}/entity/Default/20.200.001/Bill`,
       {
         method: "PUT",
@@ -107,17 +114,36 @@ serve(async (req) => {
           "Content-Type": "application/json",
           "Accept": "application/json",
         },
-        body: JSON.stringify(apInvoiceData),
+        body: JSON.stringify(acumaticaBill),
       }
     );
 
-    if (!createInvoiceResponse.ok) {
-      const errorText = await createInvoiceResponse.text();
-      throw new Error(`Failed to create AP Invoice: ${errorText}`);
+    if (!createBillResponse.ok) {
+      const errorText = await createBillResponse.text();
+      console.error("Failed to create AP Bill in Acumatica:", errorText);
+      
+      // Update expense with error
+      await supabase
+        .from("expenses")
+        .update({
+          sync_status: "error",
+          sync_error: `Acumatica sync failed: ${errorText}`,
+        })
+        .eq("id", expenseId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to create bill in Acumatica: ${errorText}` 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
 
-    const createdInvoice = await createInvoiceResponse.json();
-    const externalReference = createdInvoice.ReferenceNbr?.value || createdInvoice.id;
+    const createdBill = await createBillResponse.json();
+    const externalReference = createdBill.ReferenceNbr?.value;
+
+    console.log("Successfully created AP Bill in Acumatica:", externalReference);
 
     // Logout from Acumatica
     await fetch(`${instanceUrl}/entity/auth/logout`, {
@@ -143,8 +169,8 @@ serve(async (req) => {
       sync_type: "expense",
       status: "success",
       external_reference: externalReference,
-      request_data: apInvoiceData,
-      response_data: createdInvoice,
+      request_data: acumaticaBill,
+      response_data: createdBill,
     });
 
     console.log("Expense synced successfully:", externalReference);

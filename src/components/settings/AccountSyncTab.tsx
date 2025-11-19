@@ -67,22 +67,43 @@ export default function AccountSyncTab() {
     },
   });
 
-  // Fetch external accounts from accounting system
   const { data: externalAccounts, isLoading: isLoadingExternal, refetch: refetchExternal } = useQuery({
     queryKey: ["external-accounts", integrationSettings?.provider, accountType],
     queryFn: async () => {
       if (!integrationSettings) return [];
 
-      const functionName = integrationSettings.provider === 'xero' 
-        ? `fetch-xero-${accountType}`
-        : `fetch-acumatica-${accountType}`;
-
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: {},
-      });
-
-      if (error) throw error;
-      return (data.accounts || []) as ExternalAccount[];
+      if (integrationSettings.provider === 'xero') {
+        const functionName = `fetch-xero-${accountType}`;
+        const { data, error } = await supabase.functions.invoke(functionName);
+        if (error) throw error;
+        return (data?.contacts || []) as ExternalAccount[];
+      }
+      
+      if (integrationSettings.provider === 'myob_acumatica') {
+        const functionName = accountType === 'customers' 
+          ? 'fetch-acumatica-customers' 
+          : 'fetch-acumatica-vendors';
+          
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: {
+            instanceUrl: integrationSettings.acumatica_instance_url,
+            companyName: integrationSettings.acumatica_company_name,
+          },
+        });
+        
+        if (error) throw error;
+        
+        // Map Acumatica format to ExternalAccount format
+        const accounts = (accountType === 'customers' ? data?.customers : data?.vendors) || [];
+        return accounts.map((acc: any) => ({
+          id: acc.CustomerID?.value || acc.VendorID?.value,
+          name: acc.CustomerName?.value || acc.VendorName?.value,
+          email: acc.MainContact?.Email?.value || acc.Email?.value || "",
+          type: accountType === 'customers' ? 'customer' : 'supplier',
+        })) as ExternalAccount[];
+      }
+      
+      return [];
     },
     enabled: !!integrationSettings,
   });

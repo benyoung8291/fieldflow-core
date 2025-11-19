@@ -19,7 +19,6 @@ export default function IntegrationsTab() {
   const [acumaticaCompany, setAcumaticaCompany] = useState("");
   const [acumaticaUsername, setAcumaticaUsername] = useState("");
   const [acumaticaPassword, setAcumaticaPassword] = useState("");
-  const [acumaticaCredentialsSet, setAcumaticaCredentialsSet] = useState(false);
   
   const [xeroEnabled, setXeroEnabled] = useState(false);
   const [xeroTenantId, setXeroTenantId] = useState("");
@@ -352,7 +351,6 @@ export default function IntegrationsTab() {
 
         setAcumaticaUsername("");
         setAcumaticaPassword("");
-        setAcumaticaCredentialsSet(true);
       }
     },
     onSuccess: () => {
@@ -539,12 +537,6 @@ export default function IntegrationsTab() {
               <Key className="h-4 w-4" />
               <AlertDescription>
                 API credentials are stored securely in encrypted storage and never exposed.
-                {acumaticaCredentialsSet && (
-                  <span className="flex items-center gap-2 mt-2 text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Credentials configured
-                  </span>
-                )}
               </AlertDescription>
             </Alert>
           </div>

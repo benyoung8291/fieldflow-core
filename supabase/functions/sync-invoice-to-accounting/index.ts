@@ -131,27 +131,27 @@ serve(async (req) => {
 });
 
 async function syncToAcumatica(invoice: any, integration: any) {
-  // Get credentials from secrets
   const username = Deno.env.get("ACUMATICA_USERNAME");
   const password = Deno.env.get("ACUMATICA_PASSWORD");
-
+  
   if (!username || !password) {
     throw new Error("Acumatica credentials not configured");
   }
 
-  const baseUrl = integration.acumatica_instance_url;
-  const company = integration.acumatica_company_name;
+  console.log("Syncing AR invoice to Acumatica:", {
+    instanceUrl: integration.acumatica_instance_url,
+    companyName: integration.acumatica_company_name,
+    invoiceNumber: invoice.invoice_number
+  });
 
-  // Authenticate with Acumatica
-  const authResponse = await fetch(`${baseUrl}/entity/auth/login`, {
+  // Authenticate
+  const authResponse = await fetch(`${integration.acumatica_instance_url}/entity/auth/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: username,
       password: password,
-      company: company,
+      company: integration.acumatica_company_name,
     }),
   });
 
@@ -160,50 +160,60 @@ async function syncToAcumatica(invoice: any, integration: any) {
   }
 
   const cookies = authResponse.headers.get("set-cookie");
+  if (!cookies) {
+    throw new Error("No authentication cookies received");
+  }
 
-  // Create invoice in Acumatica
-  const invoiceData = {
+  // Create Sales Invoice in Acumatica
+  const acumaticaInvoice = {
     Type: { value: "Invoice" },
-    ReferenceNbr: { value: invoice.invoice_number },
+    CustomerID: { value: invoice.customers?.xero_contact_id || invoice.customers?.name?.substring(0, 30) },
     Date: { value: invoice.invoice_date },
     DueDate: { value: invoice.due_date },
-    CustomerID: { value: invoice.customers?.name },
-    Amount: { value: invoice.total_amount },
-    Details: invoice.invoice_line_items.map((item: any) => ({
-      Description: { value: item.description },
-      Qty: { value: item.quantity },
+    Description: { value: invoice.description || `Invoice ${invoice.invoice_number}` },
+    CustomerOrder: { value: invoice.invoice_number },
+    Details: invoice.invoice_line_items?.map((item: any) => ({
+      InventoryID: { value: item.description?.substring(0, 30) || "MISC" },
+      TransactionDescription: { value: item.description || "" },
+      Quantity: { value: item.quantity },
       UnitPrice: { value: item.unit_price },
       Amount: { value: item.line_total },
-    })),
+      AccountID: item.account_code ? { value: item.account_code } : undefined,
+      SubAccount: item.sub_account ? { value: item.sub_account } : undefined,
+    })) || [],
   };
 
-  const createResponse = await fetch(`${baseUrl}/entity/Default/23.200.001/SalesInvoice`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Cookie": cookies || "",
-    },
-    body: JSON.stringify(invoiceData),
+  const invoiceResponse = await fetch(
+    `${integration.acumatica_instance_url}/entity/Default/20.200.001/SalesInvoice`,
+    {
+      method: "PUT",
+      headers: {
+        "Cookie": cookies,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(acumaticaInvoice),
+    }
+  );
+
+  // Logout
+  await fetch(`${integration.acumatica_instance_url}/entity/auth/logout`, {
+    method: "POST",
+    headers: { "Cookie": cookies },
   });
 
-  if (!createResponse.ok) {
-    const errorText = await createResponse.text();
+  if (!invoiceResponse.ok) {
+    const errorText = await invoiceResponse.text();
+    console.error("Acumatica invoice creation failed:", errorText);
     throw new Error(`Failed to create invoice in Acumatica: ${errorText}`);
   }
 
-  const result = await createResponse.json();
-
-  // Logout
-  await fetch(`${baseUrl}/entity/auth/logout`, {
-    method: "POST",
-    headers: {
-      "Cookie": cookies || "",
-    },
-  });
-
+  const createdInvoice = await invoiceResponse.json();
+  console.log("Successfully created Acumatica invoice:", createdInvoice.ReferenceNbr?.value);
+  
   return {
-    external_id: result.ReferenceNbr?.value,
-    response: result,
+    external_id: createdInvoice.ReferenceNbr?.value,
+    response: createdInvoice,
   };
 }
 
