@@ -51,6 +51,8 @@ export default function IntegrationsTab() {
         setAcumaticaEnabled(acumatica.is_enabled);
         setAcumaticaUrl(acumatica.acumatica_instance_url || "");
         setAcumaticaCompany(acumatica.acumatica_company_name || "");
+        setAcumaticaUsername(acumatica.acumatica_username || "");
+        setAcumaticaPassword(acumatica.acumatica_password || "");
       }
 
       const xero = data.find((i) => i.provider === "xero");
