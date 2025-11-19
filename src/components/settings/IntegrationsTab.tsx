@@ -39,7 +39,12 @@ export default function IntegrationsTab() {
         .from("accounting_integrations")
         .select("*");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching integrations:", error);
+        throw error;
+      }
+      
+      console.log("Fetched integrations:", data);
 
       // Populate form with existing data
       const acumatica = data.find((i) => i.provider === "myob_acumatica");
@@ -50,6 +55,7 @@ export default function IntegrationsTab() {
       }
 
       const xero = data.find((i) => i.provider === "xero");
+      console.log("Found Xero integration:", xero);
       if (xero) {
         setXeroEnabled(xero.is_enabled);
         setXeroTenantId(xero.xero_tenant_id || "");
