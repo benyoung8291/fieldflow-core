@@ -170,7 +170,7 @@ serve(async (req) => {
       // Fetch chart of accounts
       console.log("Fetching accounts with cookie...");
       const accountsResponse = await fetch(
-        `${instanceUrl}/entity/Default/20.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`,
+        `${instanceUrl}/entity/Default/23.200.001/Account?$select=AccountCD,Description,Active,Type&$filter=Active eq true`,
         {
           headers: {
             "Cookie": cookies,
@@ -192,7 +192,7 @@ serve(async (req) => {
       // Fetch sub-accounts
       console.log("Fetching sub-accounts...");
       const subAccountsResponse = await fetch(
-        `${instanceUrl}/entity/Default/20.200.001/SubAccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`,
+        `${instanceUrl}/entity/Default/23.200.001/Subaccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`,
         {
           headers: {
             "Cookie": cookies,
