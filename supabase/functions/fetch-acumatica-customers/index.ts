@@ -71,41 +71,62 @@ serve(async (req) => {
     console.log("Company:", acumatica_company_name);
 
     let cookies: string | null = null;
+    let retryCount = 0;
+    const maxRetries = 2;
+    const retryDelay = 2000; // 2 seconds
 
     try {
-      // Authenticate with Acumatica
-      console.log("Attempting authentication...");
-      const authUrl = `${baseUrl}/entity/auth/login`;
-      const authResponse = await fetch(authUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: acumatica_username,
-          password: acumatica_password,
-          company: acumatica_company_name,
-        }),
-      });
+      // Authenticate with Acumatica (with retry for concurrent session limit)
+      let authResponse: Response | null = null;
+      
+      while (retryCount <= maxRetries) {
+        console.log("Attempting authentication... (attempt " + (retryCount + 1) + ")");
+        const authUrl = `${baseUrl}/entity/auth/login`;
+        authResponse = await fetch(authUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: acumatica_username,
+            password: acumatica_password,
+            company: acumatica_company_name,
+          }),
+        });
 
-      console.log("Auth response status:", authResponse.status);
+        console.log("Auth response status:", authResponse.status);
 
-      if (!authResponse.ok) {
-        const errorText = await authResponse.text();
-        console.error("Acumatica auth failed:", authResponse.status, errorText);
-        
-        // Check for concurrent login limit error
-        if (errorText.includes("concurrent API logins")) {
-          return new Response(
-            JSON.stringify({ 
-              error: "Acumatica concurrent session limit reached. Please try again in a moment.",
-              retryable: true
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 503 }
-          );
+        if (!authResponse.ok) {
+          const errorText = await authResponse.text();
+          console.error("Acumatica auth failed:", authResponse.status, errorText);
+          
+          // Check for concurrent login limit error
+          if (errorText.includes("concurrent API logins")) {
+            if (retryCount < maxRetries) {
+              console.log(`Concurrent session limit hit, waiting ${retryDelay}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              retryCount++;
+              continue; // Retry
+            } else {
+              return new Response(
+                JSON.stringify({ 
+                  error: "Acumatica concurrent session limit reached. Please wait a few minutes or increase the API session limit in Acumatica user settings (System → Users → Number of Concurrent API Calls).",
+                  retryable: true
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 503 }
+              );
+            }
+          }
+          
+          throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
         }
         
-        throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
+        // Success - break out of retry loop
+        break;
+      }
+
+      if (!authResponse) {
+        throw new Error("Failed to authenticate after retries");
       }
 
       // Get all Set-Cookie headers (there may be multiple)
