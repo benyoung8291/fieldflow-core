@@ -26,6 +26,7 @@ export default function IntegrationsTab() {
   const [xeroClientSecret, setXeroClientSecret] = useState("");
   const [xeroRefreshToken, setXeroRefreshToken] = useState("");
   const [xeroCredentialsSet, setXeroCredentialsSet] = useState(false);
+  const [testingXeroConnection, setTestingXeroConnection] = useState(false);
 
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["accounting-integrations"],
@@ -90,6 +91,35 @@ export default function IntegrationsTab() {
       }
     } catch (error) {
       console.error("Error checking credentials status:", error);
+    }
+  };
+
+  const testXeroConnection = async () => {
+    setTestingXeroConnection(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-xero-connection`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`Connection successful! ${result.connections} organization(s) found.`);
+      } else {
+        toast.error(result.error || "Connection test failed");
+      }
+    } catch (error) {
+      console.error("Connection test error:", error);
+      toast.error("Failed to test connection");
+    } finally {
+      setTestingXeroConnection(false);
     }
   };
 
@@ -424,6 +454,14 @@ export default function IntegrationsTab() {
             >
               {saveXeroMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Settings
+            </Button>
+            <Button
+              variant="outline"
+              onClick={testXeroConnection}
+              disabled={testingXeroConnection || !xeroCredentialsSet || !xeroEnabled}
+            >
+              {testingXeroConnection && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Test Connection
             </Button>
           </div>
         </CardContent>
