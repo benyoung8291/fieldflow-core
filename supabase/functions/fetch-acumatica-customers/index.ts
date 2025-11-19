@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { sanitizeError, sanitizeAuthError } from "../_shared/errorHandler.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -69,94 +70,123 @@ serve(async (req) => {
     console.log("Instance URL:", baseUrl);
     console.log("Company:", acumatica_company_name);
 
-    // Authenticate with Acumatica
-    console.log("Attempting authentication...");
-    const authUrl = `${baseUrl}/entity/auth/login`;
-    const authResponse = await fetch(authUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: acumatica_username,
-        password: acumatica_password,
-        company: acumatica_company_name,
-      }),
-    });
+    let cookies: string | null = null;
 
-    console.log("Auth response status:", authResponse.status);
+    try {
+      // Authenticate with Acumatica
+      console.log("Attempting authentication...");
+      const authUrl = `${baseUrl}/entity/auth/login`;
+      const authResponse = await fetch(authUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: acumatica_username,
+          password: acumatica_password,
+          company: acumatica_company_name,
+        }),
+      });
 
-    if (!authResponse.ok) {
-      const errorText = await authResponse.text();
-      console.error("Acumatica auth failed:", authResponse.status, errorText);
-      throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status} ${errorText}`);
+      console.log("Auth response status:", authResponse.status);
+
+      if (!authResponse.ok) {
+        const errorText = await authResponse.text();
+        console.error("Acumatica auth failed:", authResponse.status, errorText);
+        
+        // Check for concurrent login limit error
+        if (errorText.includes("concurrent API logins")) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Acumatica concurrent session limit reached. Please try again in a moment.",
+              retryable: true
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 503 }
+          );
+        }
+        
+        throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
+      }
+
+      cookies = authResponse.headers.get("set-cookie");
+      if (!cookies) {
+        console.error("No authentication cookies received");
+        throw new Error("No authentication cookies received");
+      }
+
+      console.log("Authentication successful, cookies received");
+
+      // Fetch customers with proper expansion
+      const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Status,MainContact`;
+      console.log("Fetching customers from:", customersUrl);
+
+      const customersResponse = await fetch(customersUrl, {
+        headers: {
+          "Cookie": cookies,
+          "Accept": "application/json",
+        },
+      });
+
+      console.log("Customers response status:", customersResponse.status);
+
+      if (!customersResponse.ok) {
+        const errorText = await customersResponse.text();
+        console.error("Failed to fetch customers:", customersResponse.status, errorText);
+        
+        if (customersResponse.status === 401) {
+          throw new Error("Authentication expired or invalid. Please verify your Acumatica credentials.");
+        }
+        
+        throw new Error(`Failed to fetch customers: ${customersResponse.status}`);
+      }
+
+      const customersData = await customersResponse.json();
+      console.log("Raw response type:", typeof customersData);
+      console.log("Is array:", Array.isArray(customersData));
+      console.log("Response keys:", customersData ? Object.keys(customersData) : "null");
+
+      // Handle different response formats
+      let customers = [];
+      if (Array.isArray(customersData)) {
+        customers = customersData;
+      } else if (customersData && Array.isArray(customersData.value)) {
+        customers = customersData.value;
+      } else if (customersData && typeof customersData === 'object') {
+        customers = [customersData];
+      }
+
+      console.log(`Processed ${customers.length} customers`);
+
+      return new Response(
+        JSON.stringify({ customers }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    } finally {
+      // Always logout to prevent session accumulation
+      if (cookies) {
+        try {
+          console.log("Logging out...");
+          await fetch(`${baseUrl}/entity/auth/logout`, {
+            method: "POST",
+            headers: {
+              "Cookie": cookies,
+            },
+          });
+          console.log("Logout successful");
+        } catch (logoutError) {
+          console.error("Logout failed (non-critical):", logoutError);
+        }
+      }
     }
-
-    const cookies = authResponse.headers.get("set-cookie");
-    if (!cookies) {
-      console.error("No authentication cookies received");
-      throw new Error("No authentication cookies received");
-    }
-
-    console.log("Authentication successful, cookies received");
-
-    // Fetch customers with proper expansion
-    const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Status,MainContact`;
-    console.log("Fetching customers from:", customersUrl);
-
-    const customersResponse = await fetch(customersUrl, {
-      headers: {
-        "Cookie": cookies,
-        "Accept": "application/json",
-      },
-    });
-
-    console.log("Customers response status:", customersResponse.status);
-
-    if (!customersResponse.ok) {
-      const errorText = await customersResponse.text();
-      console.error("Failed to fetch customers:", customersResponse.status, errorText);
-      throw new Error(`Failed to fetch customers: ${customersResponse.status}`);
-    }
-
-    const customersData = await customersResponse.json();
-    console.log("Raw response type:", typeof customersData);
-    console.log("Is array:", Array.isArray(customersData));
-    console.log("Response keys:", customersData ? Object.keys(customersData) : "null");
-
-    // Handle different response formats
-    let customers = [];
-    if (Array.isArray(customersData)) {
-      customers = customersData;
-    } else if (customersData && Array.isArray(customersData.value)) {
-      customers = customersData.value;
-    } else if (customersData && typeof customersData === 'object') {
-      customers = [customersData];
-    }
-
-    console.log(`Processed ${customers.length} customers`);
-
-    // Logout
-    await fetch(`${baseUrl}/entity/auth/logout`, {
-      method: "POST",
-      headers: {
-        "Cookie": cookies,
-      },
-    });
-
-    console.log("Logout successful");
-
-    return new Response(
-      JSON.stringify({ customers }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
   } catch (error) {
     console.error("Error in fetch-acumatica-customers:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    
+    const sanitizedMessage = sanitizeError(error, "fetch-acumatica-customers");
+    
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error ? error.stack : undefined
+        error: sanitizedMessage
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
