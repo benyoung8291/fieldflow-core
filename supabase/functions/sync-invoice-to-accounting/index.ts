@@ -213,6 +213,12 @@ async function syncToAcumatica(invoice: any, integration: any) {
 
   console.log("Sending to Acumatica:", JSON.stringify(acumaticaInvoice, null, 2));
 
+  console.log("Making invoice creation request with cookies:", {
+    url: `${instanceUrl}/entity/Default/20.200.001/SalesInvoice`,
+    hasCookies: !!cookies,
+    cookieLength: cookies?.length
+  });
+
   const invoiceResponse = await fetch(
     `${instanceUrl}/entity/Default/20.200.001/SalesInvoice`,
     {
@@ -226,22 +232,37 @@ async function syncToAcumatica(invoice: any, integration: any) {
     }
   );
 
-  // Logout
-  await fetch(`${instanceUrl}/entity/auth/logout`, {
-    method: "POST",
-    headers: { "Cookie": cookies },
+  console.log("Invoice creation response:", {
+    status: invoiceResponse.status,
+    statusText: invoiceResponse.statusText,
+    headers: Object.fromEntries(invoiceResponse.headers.entries())
   });
 
   if (!invoiceResponse.ok) {
     const errorText = await invoiceResponse.text();
-    console.error("Acumatica API error:", {
+    console.error("Acumatica invoice creation failed:", {
       status: invoiceResponse.status,
       statusText: invoiceResponse.statusText,
       errorBody: errorText,
-      sentPayload: acumaticaInvoice
+      responseHeaders: Object.fromEntries(invoiceResponse.headers.entries()),
+      sentPayload: acumaticaInvoice,
+      cookiesUsed: cookies
     });
+    
+    // Logout even on error
+    await fetch(`${instanceUrl}/entity/auth/logout`, {
+      method: "POST",
+      headers: { "Cookie": cookies },
+    });
+    
     throw new Error(`Failed to create invoice in Acumatica (${invoiceResponse.status}): ${errorText || invoiceResponse.statusText}`);
   }
+
+  // Logout on success
+  await fetch(`${instanceUrl}/entity/auth/logout`, {
+    method: "POST",
+    headers: { "Cookie": cookies },
+  });
 
   const createdInvoice = await invoiceResponse.json();
   console.log("Successfully created Acumatica invoice:", createdInvoice.ReferenceNbr?.value);
