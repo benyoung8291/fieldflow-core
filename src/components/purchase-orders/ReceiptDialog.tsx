@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 
 const formSchema = z.object({
   receipt_date: z.string(),
@@ -21,7 +21,7 @@ const formSchema = z.object({
 });
 
 interface LineItemReceipt {
-  line_item_id: string;
+  line_item_id: string | null; // null for new items
   description: string;
   ordered_quantity: number;
   received_quantity: number;
@@ -29,6 +29,7 @@ interface LineItemReceipt {
   unit_price: number;
   original_unit_price: number;
   is_gst_free: boolean;
+  is_new?: boolean;
 }
 
 interface ReceiptDialogProps {
@@ -87,8 +88,14 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
 
   const updateQuantityToReceive = (index: number, value: number) => {
     const updated = [...lineItems];
-    const maxAllowed = updated[index].ordered_quantity - updated[index].received_quantity;
-    updated[index].quantity_to_receive = Math.min(Math.max(0, value), maxAllowed);
+    if (updated[index].is_new) {
+      // For new items, can receive up to ordered quantity
+      updated[index].quantity_to_receive = Math.min(Math.max(0, value), updated[index].ordered_quantity);
+    } else {
+      // For existing items, can only receive remaining quantity
+      const maxAllowed = updated[index].ordered_quantity - updated[index].received_quantity;
+      updated[index].quantity_to_receive = Math.min(Math.max(0, value), maxAllowed);
+    }
     setLineItems(updated);
   };
 
@@ -101,6 +108,32 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
   const updateLineItemQuantity = (index: number, value: number) => {
     const updated = [...lineItems];
     updated[index].ordered_quantity = Math.max(0, value);
+    setLineItems(updated);
+  };
+
+  const updateLineItemDescription = (index: number, value: string) => {
+    const updated = [...lineItems];
+    updated[index].description = value;
+    setLineItems(updated);
+  };
+
+  const addNewLineItem = () => {
+    const newItem: LineItemReceipt = {
+      line_item_id: null,
+      description: "",
+      ordered_quantity: 1,
+      received_quantity: 0,
+      quantity_to_receive: 1,
+      unit_price: 0,
+      original_unit_price: 0,
+      is_gst_free: false,
+      is_new: true,
+    };
+    setLineItems([...lineItems, newItem]);
+  };
+
+  const removeLineItem = (index: number) => {
+    const updated = lineItems.filter((_, i) => i !== index);
     setLineItems(updated);
   };
 
@@ -124,6 +157,13 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
     
     if (itemsToReceive.length === 0) {
       toast.error("Enter quantity to receive for at least one item");
+      return;
+    }
+
+    // Validate new items have descriptions
+    const invalidNewItems = lineItems.filter(item => item.is_new && !item.description.trim());
+    if (invalidNewItems.length > 0) {
+      toast.error("Please provide descriptions for all new line items");
       return;
     }
 
@@ -155,8 +195,43 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
 
       if (receiptError) throw receiptError;
 
+      // First, insert any new line items into the PO
+      for (const item of lineItems.filter(i => i.is_new)) {
+        const maxOrder = await supabase
+          .from("purchase_order_line_items")
+          .select("item_order")
+          .eq("po_id", purchaseOrder.id)
+          .order("item_order", { ascending: false })
+          .limit(1)
+          .single();
+
+        const nextOrder = (maxOrder.data?.item_order ?? -1) + 1;
+
+        const { data: newPOLine, error: insertError } = await supabase
+          .from("purchase_order_line_items")
+          .insert({
+            po_id: purchaseOrder.id,
+            tenant_id: profile?.tenant_id,
+            description: item.description,
+            quantity: item.ordered_quantity,
+            unit_price: item.unit_price,
+            quantity_received: item.quantity_to_receive,
+            is_gst_free: item.is_gst_free,
+            item_order: nextOrder,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        
+        // Update the item with the new line_item_id for receipt creation
+        item.line_item_id = newPOLine.id;
+      }
+
       // Create receipt line items and update quantities AND prices if changed
       for (const item of itemsToReceive) {
+        if (!item.line_item_id) continue; // Skip if somehow no ID
+
         // Insert receipt line item
         const { error: lineError } = await supabase
           .from("po_receipt_line_items")
@@ -169,17 +244,19 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
 
         if (lineError) throw lineError;
 
-        // Update PO line item with new quantity received AND new pricing if changed
-        const { error: updateError } = await supabase
-          .from("purchase_order_line_items")
-          .update({
-            quantity_received: item.received_quantity + item.quantity_to_receive,
-            quantity: item.ordered_quantity,
-            unit_price: item.unit_price,
-          })
-          .eq("id", item.line_item_id);
+        // Update PO line item with new quantity received AND new pricing if changed (only for existing items)
+        if (!item.is_new) {
+          const { error: updateError } = await supabase
+            .from("purchase_order_line_items")
+            .update({
+              quantity_received: item.received_quantity + item.quantity_to_receive,
+              quantity: item.ordered_quantity,
+              unit_price: item.unit_price,
+            })
+            .eq("id", item.line_item_id);
 
-        if (updateError) throw updateError;
+          if (updateError) throw updateError;
+        }
       }
 
       // Recalculate PO totals
@@ -291,26 +368,40 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Line Items</h3>
-                <Button
-                  type="button"
-                  variant={editMode ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditMode(!editMode)}
-                >
-                  {editMode ? "Lock Items" : "Unlock to Match Invoice"}
-                </Button>
+                <div className="flex gap-2">
+                  {editMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addNewLineItem}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Item
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant={editMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditMode(!editMode)}
+                  >
+                    {editMode ? "Lock Items" : "Unlock to Match Invoice"}
+                  </Button>
+                </div>
               </div>
               <div className="border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[30%]">Description</TableHead>
-                      <TableHead className="w-[12%]">Quantity</TableHead>
+                      <TableHead className="w-[25%]">Description</TableHead>
+                      <TableHead className="w-[10%]">Quantity</TableHead>
                       <TableHead className="w-[12%]">Unit Price</TableHead>
-                      <TableHead className="w-[12%]">Previously Received</TableHead>
-                      <TableHead className="w-[12%]">Remaining</TableHead>
-                      <TableHead className="w-[12%]">Receive Now</TableHead>
+                      <TableHead className="w-[10%]">Previously Received</TableHead>
+                      <TableHead className="w-[10%]">Remaining</TableHead>
+                      <TableHead className="w-[10%]">Receive Now</TableHead>
                       <TableHead className="w-[10%]">Line Total</TableHead>
+                      {editMode && <TableHead className="w-[8%]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -322,8 +413,20 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
                       const remaining = item.ordered_quantity - item.received_quantity;
 
                       return (
-                        <TableRow key={item.line_item_id} className={hasLineVariance ? "bg-warning/5" : ""}>
-                          <TableCell className="font-medium">{item.description}</TableCell>
+                        <TableRow key={item.line_item_id || `new-${index}`} className={hasLineVariance ? "bg-warning/5" : item.is_new ? "bg-accent/5" : ""}>
+                          <TableCell className="font-medium">
+                            {editMode && item.is_new ? (
+                              <Input
+                                type="text"
+                                value={item.description}
+                                onChange={(e) => updateLineItemDescription(index, e.target.value)}
+                                placeholder="Item description"
+                                className="w-full"
+                              />
+                            ) : (
+                              item.description
+                            )}
+                          </TableCell>
                           <TableCell>
                             {editMode ? (
                               <Input
@@ -364,16 +467,30 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
                             <Input
                               type="number"
                               min="0"
-                              max={Math.max(0, remaining)}
+                              max={item.is_new ? item.ordered_quantity : Math.max(0, remaining)}
                               value={item.quantity_to_receive}
                               onChange={(e) => updateQuantityToReceive(index, parseInt(e.target.value) || 0)}
                               className="w-20"
-                              disabled={remaining <= 0}
+                              disabled={!item.is_new && remaining <= 0}
                             />
                           </TableCell>
                           <TableCell className={hasLineVariance ? "text-warning font-semibold" : ""}>
                             ${lineTotal.toFixed(2)}
                           </TableCell>
+                          {editMode && (
+                            <TableCell>
+                              {item.is_new && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeLineItem(index)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
