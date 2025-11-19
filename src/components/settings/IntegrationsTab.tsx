@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Key, CheckCircle2 } from "lucide-react";
 
@@ -28,6 +29,8 @@ export default function IntegrationsTab() {
   const [xeroConnected, setXeroConnected] = useState(false);
   const [testingXeroConnection, setTestingXeroConnection] = useState(false);
   const [connectingXero, setConnectingXero] = useState(false);
+  const [showTenantSelector, setShowTenantSelector] = useState(false);
+  const [availableTenants, setAvailableTenants] = useState<Array<{tenantId: string, tenantName: string, tenantType: string}>>([]);
 
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["accounting-integrations"],
@@ -145,11 +148,35 @@ export default function IntegrationsTab() {
       );
 
       // Listen for success message
-      const handleMessage = (event: MessageEvent) => {
+      const handleMessage = async (event: MessageEvent) => {
         if (event.data.type === 'xero-oauth-success') {
-          toast.success("Successfully connected to Xero!");
-          queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+          toast.success("Connected! Please select your organization.");
           window.removeEventListener('message', handleMessage);
+          
+          // Fetch available organizations
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-list-organizations`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            const result = await response.json();
+            if (result.success && result.organizations) {
+              setAvailableTenants(result.organizations);
+              setShowTenantSelector(true);
+            } else {
+              toast.error("Failed to fetch organizations");
+            }
+          } catch (error) {
+            console.error("Error fetching organizations:", error);
+            toast.error("Failed to fetch organizations");
+          }
         }
       };
       window.addEventListener('message', handleMessage);
@@ -254,6 +281,41 @@ export default function IntegrationsTab() {
       toast.error("Failed to save MYOB Acumatica settings");
     },
   });
+
+  const selectTenant = async (tenantId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      const { error } = await supabase
+        .from("accounting_integrations")
+        .update({
+          xero_tenant_id: tenantId,
+          is_enabled: true,
+        })
+        .eq("tenant_id", profile.tenant_id)
+        .eq("provider", "xero");
+
+      if (error) throw error;
+
+      setXeroTenantId(tenantId);
+      setXeroConnected(true);
+      setShowTenantSelector(false);
+      toast.success("Organization selected successfully!");
+      queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+    } catch (error) {
+      console.error("Error selecting tenant:", error);
+      toast.error("Failed to select organization");
+    }
+  };
 
   const saveXeroMutation = useMutation({
     mutationFn: async () => {
@@ -511,6 +573,33 @@ export default function IntegrationsTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Tenant Selection Dialog */}
+      <Dialog open={showTenantSelector} onOpenChange={setShowTenantSelector}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Xero Organization</DialogTitle>
+            <DialogDescription>
+              Choose which Xero organization you want to connect to
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {availableTenants.map((tenant) => (
+              <Button
+                key={tenant.tenantId}
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => selectTenant(tenant.tenantId)}
+              >
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">{tenant.tenantName}</span>
+                  <span className="text-xs text-muted-foreground">{tenant.tenantType}</span>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
