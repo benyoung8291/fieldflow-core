@@ -53,10 +53,12 @@ export default function ServiceOrderPurchaseOrdersTab({
 
       // Fetch supplier details
       const supplierIds = [...new Set(filteredPos.map(po => po.supplier_id).filter(Boolean))];
-      const { data: suppliers } = await supabase
-        .from("suppliers")
-        .select("id, name, abn")
-        .in("id", supplierIds);
+      const { data: suppliers } = supplierIds.length > 0
+        ? await supabase
+            .from("suppliers")
+            .select("id, name, abn")
+            .in("id", supplierIds)
+        : { data: [] };
 
       // Merge supplier data
       return filteredPos.map(po => ({
