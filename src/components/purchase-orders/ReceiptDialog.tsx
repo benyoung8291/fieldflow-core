@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   receipt_date: z.string(),
@@ -43,6 +45,19 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
   const [lineItems, setLineItems] = useState<LineItemReceipt[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
+
+  const { data: users } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .order("first_name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -356,9 +371,20 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Received By</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Name" />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {users?.map((user) => (
+                          <SelectItem key={user.id} value={`${user.first_name} ${user.last_name}`}>
+                            {user.first_name} {user.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
