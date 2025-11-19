@@ -67,7 +67,12 @@ export type Database = {
           sync_status: string | null
           tenant_id: string
           updated_at: string | null
+          xero_access_token: string | null
+          xero_client_id: string | null
+          xero_client_secret: string | null
+          xero_refresh_token: string | null
           xero_tenant_id: string | null
+          xero_token_expires_at: string | null
         }
         Insert: {
           acumatica_company_name?: string | null
@@ -82,7 +87,12 @@ export type Database = {
           sync_status?: string | null
           tenant_id: string
           updated_at?: string | null
+          xero_access_token?: string | null
+          xero_client_id?: string | null
+          xero_client_secret?: string | null
+          xero_refresh_token?: string | null
           xero_tenant_id?: string | null
+          xero_token_expires_at?: string | null
         }
         Update: {
           acumatica_company_name?: string | null
@@ -97,7 +107,12 @@ export type Database = {
           sync_status?: string | null
           tenant_id?: string
           updated_at?: string | null
+          xero_access_token?: string | null
+          xero_client_id?: string | null
+          xero_client_secret?: string | null
+          xero_refresh_token?: string | null
           xero_tenant_id?: string | null
+          xero_token_expires_at?: string | null
         }
         Relationships: []
       }
