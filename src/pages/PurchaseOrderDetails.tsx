@@ -19,6 +19,7 @@ import {
   Link2,
   ExternalLink,
   X,
+  FileText,
 } from "lucide-react";
 import {
   Select,
@@ -34,6 +35,7 @@ import { InlineEditableField } from "@/components/purchase-orders/InlineEditable
 import { InlineLineItemRow } from "@/components/purchase-orders/InlineLineItemRow";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import { canApplyGST, getGSTWarning } from "@/lib/gstCompliance";
+import APInvoiceDialog from "@/components/invoices/APInvoiceDialog";
 
 export default function PurchaseOrderDetails() {
   const { id } = useParams();
@@ -45,6 +47,7 @@ export default function PurchaseOrderDetails() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [apInvoiceDialogOpen, setApInvoiceDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceOrders, setServiceOrders] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -389,6 +392,12 @@ export default function PurchaseOrderDetails() {
             <Button onClick={() => setReceiptDialogOpen(true)}>
               <Package className="h-4 w-4 mr-2" />
               Record Receipt
+            </Button>
+          )}
+          {receipts.length > 0 && (
+            <Button onClick={() => setApInvoiceDialogOpen(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Create AP Invoice
             </Button>
           )}
           <Button 
@@ -753,6 +762,16 @@ export default function PurchaseOrderDetails() {
         onOpenChange={setReceiptDialogOpen}
         purchaseOrder={purchaseOrder}
         onSuccess={fetchPurchaseOrder}
+      />
+
+      <APInvoiceDialog
+        open={apInvoiceDialogOpen}
+        onOpenChange={setApInvoiceDialogOpen}
+        purchaseOrderId={id}
+        onSuccess={() => {
+          setApInvoiceDialogOpen(false);
+          toast.success("AP Invoice created successfully");
+        }}
       />
 
       <DeleteConfirmDialog
