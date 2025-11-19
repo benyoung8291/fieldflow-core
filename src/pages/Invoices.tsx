@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, FileText, ExternalLink } from "lucide-react";
+import { Plus, FileText, ExternalLink, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useNavigate, useLocation } from "react-router-dom";
+import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -26,6 +27,8 @@ export default function Invoices() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set()); // Stores document IDs for quick selection
   const [selectedLineItems, setSelectedLineItems] = useState<Set<string>>(new Set()); // Stores individual line item IDs
   const [invoiceNotes, setInvoiceNotes] = useState("");
+  const [manualLineItems, setManualLineItems] = useState<any[]>([]); // Manually added line items
+  const [showAddLineDialog, setShowAddLineDialog] = useState(false);
   
   const queryClient = useQueryClient();
 
@@ -221,11 +224,26 @@ export default function Invoices() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      // Collect selected line items
+      // Collect selected line items and manual line items
       const lineItems: any[] = [];
       let itemOrder = 0;
       const sourceDocuments = new Map<string, { type: string; id: string; allLineItemIds: string[]; selectedCount: number; totalLineItems: number }>();
 
+      // Add manually created line items first
+      manualLineItems.forEach((item) => {
+        lineItems.push({
+          tenant_id: profile.tenant_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          line_total: item.line_total,
+          item_order: itemOrder++,
+          account_code: item.account_code,
+          sub_account: item.sub_account,
+        });
+      });
+
+      // Then add selected line items from projects/service orders
       selectedLineItems.forEach((lineItemKey) => {
         const [sourceType, sourceId, lineItemId] = lineItemKey.split("|");
         
@@ -414,6 +432,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["customer-service-orders"] });
       setSelectedItems(new Set());
       setSelectedLineItems(new Set());
+      setManualLineItems([]);
       setInvoiceNotes("");
       setSelectedCustomerId("");
       navigate("/invoices");
@@ -499,6 +518,12 @@ export default function Invoices() {
   const calculateInvoiceTotal = () => {
     let subtotal = 0;
 
+    // Add manual line items
+    manualLineItems.forEach((item) => {
+      subtotal += Number(item.line_total) || 0;
+    });
+
+    // Add selected line items from projects/service orders
     selectedLineItems.forEach((lineKey) => {
       const [sourceType, sourceId, lineItemId] = lineKey.split("|");
       
@@ -518,6 +543,14 @@ export default function Invoices() {
     const total = subtotal + taxAmount;
 
     return { subtotal, taxAmount, total };
+  };
+
+  const handleAddManualLineItem = (newItem: any) => {
+    setManualLineItems([...manualLineItems, { ...newItem, id: `manual-${Date.now()}` }]);
+  };
+
+  const handleRemoveManualLineItem = (itemId: string) => {
+    setManualLineItems(manualLineItems.filter(item => item.id !== itemId));
   };
 
   const { subtotal, taxAmount, total } = calculateInvoiceTotal();
@@ -731,16 +764,27 @@ export default function Invoices() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-foreground">Line Items</div>
-                  {selectedLineItems.size > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      {selectedLineItems.size} {selectedLineItems.size === 1 ? 'item' : 'items'} selected
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {(selectedLineItems.size > 0 || manualLineItems.length > 0) && (
+                      <div className="text-xs text-muted-foreground">
+                        {selectedLineItems.size + manualLineItems.length} {(selectedLineItems.size + manualLineItems.length) === 1 ? 'item' : 'items'}
+                      </div>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowAddLineDialog(true)}
+                      disabled={!selectedCustomerId}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Line Item
+                    </Button>
+                  </div>
                 </div>
-                {selectedLineItems.size === 0 ? (
+                {selectedLineItems.size === 0 && manualLineItems.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-12 text-center border rounded-lg bg-muted/20">
-                    <div className="mb-2">👈 Select line items from projects or service orders</div>
-                    <div>Use checkboxes to choose which items to invoice</div>
+                    <div className="mb-2">Select line items from projects/service orders</div>
+                    <div>or click "Add Line Item" to create custom line items</div>
                   </div>
                 ) : (
                   <div className="border rounded-lg overflow-hidden">
@@ -757,6 +801,39 @@ export default function Invoices() {
                           </tr>
                         </thead>
                         <tbody>
+                          {/* Manual line items */}
+                          {manualLineItems.length > 0 && (
+                            <>
+                              <tr className="bg-muted/30">
+                                <td colSpan={6} className="p-2 text-xs font-medium text-muted-foreground">
+                                  Manual Line Items
+                                </td>
+                              </tr>
+                              {manualLineItems.map((item) => (
+                                <tr key={item.id} className="border-b hover:bg-muted/20 group">
+                                  <td className="p-2">{item.description}</td>
+                                  <td className="p-2">-</td>
+                                  <td className="p-2">-</td>
+                                  <td className="p-2 text-right">{item.quantity}</td>
+                                  <td className="p-2 text-right">${Number(item.unit_price).toFixed(2)}</td>
+                                  <td className="p-2 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      ${Number(item.line_total).toFixed(2)}
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                                        onClick={() => handleRemoveManualLineItem(item.id)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          )}
+                          {/* Selected line items from projects/service orders */}
                           {Array.from(selectedLineItems).reduce((acc, lineKey) => {
                             const [sourceType, sourceId, lineItemId] = lineKey.split("|");
                             
@@ -852,7 +929,7 @@ export default function Invoices() {
               <Button
                 className="w-full"
                 onClick={() => createInvoiceMutation.mutate()}
-                disabled={selectedLineItems.size === 0 || !selectedCustomerId || createInvoiceMutation.isPending}
+                disabled={(selectedLineItems.size === 0 && manualLineItems.length === 0) || !selectedCustomerId || createInvoiceMutation.isPending}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Invoice
@@ -861,6 +938,12 @@ export default function Invoices() {
           </Card>
         </div>
       </div>
+
+      <AddInvoiceLineDialog
+        open={showAddLineDialog}
+        onOpenChange={setShowAddLineDialog}
+        onAdd={handleAddManualLineItem}
+      />
     </DashboardLayout>
   );
 }
