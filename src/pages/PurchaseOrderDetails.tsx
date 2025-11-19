@@ -90,22 +90,23 @@ export default function PurchaseOrderDetails() {
 
   const fetchPurchaseOrder = async () => {
     try {
-      // Use RPC function to bypass PostgREST schema cache issues
-      const { data: poData, error: poError } = await supabase
-        .rpc('get_purchase_order_with_links', { p_po_id: id });
+      // Direct table query - avoids PostgREST schema cache issues completely
+      const { data: po, error: poError } = await supabase
+        .from('purchase_orders')
+        .select('*')
+        .eq('id', id)
+        .single();
 
       if (poError) {
         console.error("Purchase order fetch error:", poError);
         throw poError;
       }
 
-      if (!poData || poData.length === 0) {
+      if (!po) {
         toast.error("Purchase order not found");
         setLoading(false);
         return;
       }
-
-      const po = poData[0];
       
       // Fetch supplier details separately
       const { data: supplierData } = await supabase
@@ -125,6 +126,8 @@ export default function PurchaseOrderDetails() {
           .eq("id", po.service_order_id)
           .maybeSingle();
         setLinkedServiceOrder(soData);
+      } else {
+        setLinkedServiceOrder(null);
       }
 
       // Fetch linked project
@@ -135,6 +138,8 @@ export default function PurchaseOrderDetails() {
           .eq("id", po.project_id)
           .maybeSingle();
         setLinkedProject(projData);
+      } else {
+        setLinkedProject(null);
       }
 
       // Fetch line items
@@ -195,10 +200,14 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkServiceOrder = async (serviceOrderId: string) => {
     try {
-      const { error } = await supabase.rpc('link_purchase_order_to_service_order', {
-        p_po_id: id,
-        p_service_order_id: serviceOrderId
-      });
+      // Direct table update - simpler and avoids schema cache issues
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          service_order_id: serviceOrderId,
+          project_id: null, // Clear project when linking to SO
+        })
+        .eq('id', id);
 
       if (error) throw error;
 
@@ -212,10 +221,14 @@ export default function PurchaseOrderDetails() {
 
   const handleLinkProject = async (projectId: string) => {
     try {
-      const { error } = await supabase.rpc('link_purchase_order_to_project', {
-        p_po_id: id,
-        p_project_id: projectId
-      });
+      // Direct table update - simpler and avoids schema cache issues
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          project_id: projectId,
+          service_order_id: null, // Clear service order when linking to project
+        })
+        .eq('id', id);
 
       if (error) throw error;
 
@@ -229,11 +242,14 @@ export default function PurchaseOrderDetails() {
 
   const handleUnlink = async () => {
     try {
-      const { error } = await supabase.rpc('update_purchase_order_linkage', {
-        p_po_id: id,
-        p_service_order_id: null,
-        p_project_id: null
-      });
+      // Direct table update - clear both linkages
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          service_order_id: null,
+          project_id: null,
+        })
+        .eq('id', id);
 
       if (error) throw error;
 
