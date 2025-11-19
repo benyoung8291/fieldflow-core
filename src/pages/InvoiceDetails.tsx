@@ -173,6 +173,8 @@ export default function InvoiceDetails() {
           quantity: updates.quantity,
           unit_price: updates.unit_price,
           line_total: updates.line_total,
+          account_code: updates.account_code,
+          sub_account: updates.sub_account,
         })
         .eq("id", itemId);
 
@@ -286,6 +288,8 @@ export default function InvoiceDetails() {
           unit_price: newItem.unit_price,
           line_total: newItem.line_total,
           item_order: nextOrder,
+          account_code: newItem.account_code,
+          sub_account: newItem.sub_account,
         });
 
       if (error) throw error;
