@@ -2024,6 +2024,7 @@ export type Database = {
       }
       invoice_line_items: {
         Row: {
+          account_code: string | null
           created_at: string | null
           description: string
           id: string
@@ -2035,10 +2036,12 @@ export type Database = {
           quantity: number
           source_id: string | null
           source_type: string | null
+          sub_account: string | null
           tenant_id: string
           unit_price: number
         }
         Insert: {
+          account_code?: string | null
           created_at?: string | null
           description: string
           id?: string
@@ -2050,10 +2053,12 @@ export type Database = {
           quantity?: number
           source_id?: string | null
           source_type?: string | null
+          sub_account?: string | null
           tenant_id: string
           unit_price?: number
         }
         Update: {
+          account_code?: string | null
           created_at?: string | null
           description?: string
           id?: string
@@ -2065,6 +2070,7 @@ export type Database = {
           quantity?: number
           source_id?: string | null
           source_type?: string | null
+          sub_account?: string | null
           tenant_id?: string
           unit_price?: number
         }
@@ -2095,8 +2101,10 @@ export type Database = {
           manager_approved_at: string | null
           manager_approved_by: string | null
           notes: string | null
+          project_id: string | null
           recurring_invoice_id: string | null
           requires_manager_approval: boolean | null
+          service_order_id: string | null
           status: string
           subtotal: number
           tax_amount: number
@@ -2121,8 +2129,10 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          project_id?: string | null
           recurring_invoice_id?: string | null
           requires_manager_approval?: boolean | null
+          service_order_id?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -2147,8 +2157,10 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          project_id?: string | null
           recurring_invoice_id?: string | null
           requires_manager_approval?: boolean | null
+          service_order_id?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -2166,10 +2178,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_recurring_invoice_id_fkey"
             columns: ["recurring_invoice_id"]
             isOneToOne: false
             referencedRelation: "recurring_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
             referencedColumns: ["id"]
           },
         ]
