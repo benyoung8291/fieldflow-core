@@ -325,7 +325,10 @@ export default function IntegrationsTab() {
           onConflict: "tenant_id,provider"
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error saving Acumatica settings:", error);
+        throw error;
+      }
 
       // Save credentials if provided
       if (acumaticaUsername && acumaticaPassword) {
@@ -346,6 +349,8 @@ export default function IntegrationsTab() {
         );
 
         if (!credentialsResponse.ok) {
+          const errorText = await credentialsResponse.text();
+          console.error("Failed to save credentials:", errorText);
           throw new Error("Failed to save credentials");
         }
 
@@ -357,8 +362,9 @@ export default function IntegrationsTab() {
       queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
       toast.success("MYOB Acumatica settings saved successfully");
     },
-    onError: () => {
-      toast.error("Failed to save MYOB Acumatica settings");
+    onError: (error: Error) => {
+      console.error("Save mutation error:", error);
+      toast.error(`Failed to save settings: ${error.message}`);
     },
   });
 

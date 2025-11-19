@@ -41,7 +41,7 @@ export default function AccountSyncTab() {
   const queryClient = useQueryClient();
 
   // Fetch integration settings
-  const { data: integrationSettings } = useQuery({
+  const { data: integrationSettings, isLoading: isLoadingSettings } = useQuery({
     queryKey: ["accounting-integrations"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -66,6 +66,26 @@ export default function AccountSyncTab() {
       return data;
     },
   });
+
+  // Show message if no integration is enabled
+  if (isLoadingSettings) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!integrationSettings) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No accounting integration is currently enabled. Please configure and enable an integration in the Integrations tab first.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   const { data: externalAccounts, isLoading: isLoadingExternal, refetch: refetchExternal } = useQuery({
     queryKey: ["external-accounts", integrationSettings?.provider, accountType],
@@ -321,11 +341,18 @@ export default function AccountSyncTab() {
 
   return (
     <div className="space-y-6">
+      <Alert className="bg-primary/10 border-primary">
+        <CheckCircle className="h-4 w-4 text-primary" />
+        <AlertDescription>
+          Connected to <strong>{integrationSettings.provider === 'xero' ? 'Xero' : 'MYOB Acumatica'}</strong>
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <CardTitle>Account Synchronization</CardTitle>
           <CardDescription>
-            Import accounts from {integrationSettings.provider} or export app accounts to {integrationSettings.provider}
+            Import accounts from {integrationSettings.provider === 'xero' ? 'Xero' : 'MYOB Acumatica'} or export app accounts
           </CardDescription>
         </CardHeader>
         <CardContent>
