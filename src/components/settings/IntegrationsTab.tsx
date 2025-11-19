@@ -24,9 +24,10 @@ export default function IntegrationsTab() {
   const [xeroTenantId, setXeroTenantId] = useState("");
   const [xeroClientId, setXeroClientId] = useState("");
   const [xeroClientSecret, setXeroClientSecret] = useState("");
-  const [xeroRefreshToken, setXeroRefreshToken] = useState("");
-  const [xeroCredentialsSet, setXeroCredentialsSet] = useState(false);
+  const [xeroIntegrationId, setXeroIntegrationId] = useState<string | null>(null);
+  const [xeroConnected, setXeroConnected] = useState(false);
   const [testingXeroConnection, setTestingXeroConnection] = useState(false);
+  const [connectingXero, setConnectingXero] = useState(false);
 
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["accounting-integrations"],
@@ -49,48 +50,115 @@ export default function IntegrationsTab() {
       if (xero) {
         setXeroEnabled(xero.is_enabled);
         setXeroTenantId(xero.xero_tenant_id || "");
+        setXeroIntegrationId(xero.id);
+        setXeroClientId(xero.xero_client_id || "");
+        setXeroClientSecret(xero.xero_client_secret || "");
+        setXeroConnected(!!(xero.xero_refresh_token && xero.xero_tenant_id));
       }
-
-      // Check if credentials are set (we'll check for non-empty secrets)
-      checkCredentialsStatus();
 
       return data;
     },
   });
 
-  const checkCredentialsStatus = async () => {
+  const connectToXero = async () => {
+    if (!xeroClientId || !xeroClientSecret) {
+      toast.error("Please enter Client ID and Client Secret first");
+      return;
+    }
+
+    setConnectingXero(true);
     try {
-      // Test if Acumatica credentials exist by checking edge function
-      const acumaticaTest = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-acumatica-credentials`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-        }
-      );
-      if (acumaticaTest.ok) {
-        const result = await acumaticaTest.json();
-        setAcumaticaCredentialsSet(result.configured || false);
+      // Save credentials to integration first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      let integrationId = xeroIntegrationId;
+      
+      // Create or update integration record
+      if (!integrationId) {
+        const { data: newIntegration, error: insertError } = await supabase
+          .from("accounting_integrations")
+          .insert({
+            tenant_id: profile.tenant_id,
+            provider: "xero",
+            name: "Xero",
+            xero_client_id: xeroClientId,
+            xero_client_secret: xeroClientSecret,
+            is_enabled: false
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        integrationId = newIntegration.id;
+        setXeroIntegrationId(integrationId);
+      } else {
+        const { error: updateError } = await supabase
+          .from("accounting_integrations")
+          .update({
+            xero_client_id: xeroClientId,
+            xero_client_secret: xeroClientSecret
+          })
+          .eq("id", integrationId);
+
+        if (updateError) throw updateError;
       }
 
-      // Test if Xero credentials exist
-      const xeroTest = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-xero-credentials`,
+      // Get authorization URL
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-oauth-authorize`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Content-Type": "application/json"
           },
+          body: JSON.stringify({
+            clientId: xeroClientId,
+            integrationId: integrationId
+          })
         }
       );
-      if (xeroTest.ok) {
-        const result = await xeroTest.json();
-        setXeroCredentialsSet(result.configured || false);
-      }
+
+      if (!response.ok) throw new Error("Failed to generate authorization URL");
+
+      const { authUrl } = await response.json();
+
+      // Open OAuth window
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      window.open(
+        authUrl,
+        "Xero OAuth",
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      // Listen for success message
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'xero-oauth-success') {
+          toast.success("Successfully connected to Xero!");
+          queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+          window.removeEventListener('message', handleMessage);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
     } catch (error) {
-      console.error("Error checking credentials status:", error);
+      console.error("Error connecting to Xero:", error);
+      toast.error("Failed to connect to Xero");
+    } finally {
+      setConnectingXero(false);
     }
   };
 
@@ -213,35 +281,6 @@ export default function IntegrationsTab() {
         });
 
       if (error) throw error;
-
-      // Save credentials if provided
-      if (xeroClientId && xeroClientSecret && xeroRefreshToken) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const credentialsResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-xero-credentials`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${session?.access_token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              clientId: xeroClientId,
-              clientSecret: xeroClientSecret,
-              refreshToken: xeroRefreshToken,
-            }),
-          }
-        );
-
-        if (!credentialsResponse.ok) {
-          throw new Error("Failed to save credentials");
-        }
-
-        setXeroClientId("");
-        setXeroClientSecret("");
-        setXeroRefreshToken("");
-        setXeroCredentialsSet(true);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
@@ -388,51 +427,39 @@ export default function IntegrationsTab() {
             </p>
           </div>
           <div className="space-y-3">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="xero-client-id">Client ID</Label>
               <Input
                 id="xero-client-id"
                 type="text"
                 value={xeroClientId}
                 onChange={(e) => setXeroClientId(e.target.value)}
-                placeholder="Enter OAuth client ID"
-                disabled={!xeroEnabled}
+                placeholder="Enter Xero Client ID from developer portal"
+                disabled={xeroConnected}
               />
             </div>
-            <div>
+
+            <div className="space-y-2">
               <Label htmlFor="xero-client-secret">Client Secret</Label>
               <Input
                 id="xero-client-secret"
                 type="password"
                 value={xeroClientSecret}
                 onChange={(e) => setXeroClientSecret(e.target.value)}
-                placeholder="Enter OAuth client secret"
-                disabled={!xeroEnabled}
+                placeholder="Enter Xero Client Secret from developer portal"
+                disabled={xeroConnected}
               />
             </div>
-            <div>
-              <Label htmlFor="xero-refresh-token">Refresh Token</Label>
-              <Input
-                id="xero-refresh-token"
-                type="password"
-                value={xeroRefreshToken}
-                onChange={(e) => setXeroRefreshToken(e.target.value)}
-                placeholder="Enter OAuth refresh token"
-                disabled={!xeroEnabled}
-              />
-            </div>
-            <Alert>
-              <Key className="h-4 w-4" />
-              <AlertDescription>
-                OAuth credentials are stored securely in encrypted storage and never exposed.
-                {xeroCredentialsSet && (
-                  <span className="flex items-center gap-2 mt-2 text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Credentials configured
-                  </span>
-                )}
-              </AlertDescription>
-            </Alert>
+
+            {xeroConnected && (
+              <Alert>
+                <CheckCircle2 className="h-4 w-4" />
+                <AlertDescription>
+                  ✅ Connected to Xero{xeroTenantId ? ` (Tenant: ${xeroTenantId})` : ''}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Alert>
               <AlertDescription>
                 <strong>Redirect URI for Xero OAuth App:</strong>
@@ -448,21 +475,39 @@ export default function IntegrationsTab() {
             </Alert>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => saveXeroMutation.mutate()}
-              disabled={saveXeroMutation.isPending || !xeroEnabled}
-            >
-              {saveXeroMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save Settings
-            </Button>
-            <Button
-              variant="outline"
-              onClick={testXeroConnection}
-              disabled={testingXeroConnection || !xeroCredentialsSet || !xeroEnabled}
-            >
-              {testingXeroConnection && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Test Connection
-            </Button>
+            {!xeroConnected ? (
+              <Button
+                onClick={connectToXero}
+                disabled={!xeroClientId || !xeroClientSecret || connectingXero}
+              >
+                {connectingXero && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Connect to Xero
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => saveXeroMutation.mutate()}
+                  disabled={saveXeroMutation.isPending}
+                >
+                  {saveXeroMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save Settings
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={testXeroConnection}
+                  disabled={testingXeroConnection}
+                >
+                  {testingXeroConnection && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Test Connection
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

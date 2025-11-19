@@ -51,3 +51,9 @@ verify_jwt = true
 [functions.test-xero-connection]
 verify_jwt = true
 
+[functions.xero-oauth-authorize]
+verify_jwt = true
+
+[functions.xero-oauth-callback]
+verify_jwt = false
+
