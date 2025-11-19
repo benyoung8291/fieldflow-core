@@ -89,12 +89,33 @@ serve(async (req) => {
 
     let accessToken = integration.xero_access_token;
 
+    console.log("🔍 Token status:", {
+      hasAccessToken: !!integration.xero_access_token,
+      hasRefreshToken: !!integration.xero_refresh_token,
+      expiresAt: integration.xero_token_expires_at,
+      isExpired: integration.xero_token_expires_at ? new Date(integration.xero_token_expires_at) <= new Date() : 'no expiry set'
+    });
+
     // Check if token needs refresh (always refresh if no expiry set or if expired)
     const needsRefresh = !integration.xero_token_expires_at || 
                          new Date(integration.xero_token_expires_at) <= new Date();
     
     if (needsRefresh) {
       console.log("🔄 Refreshing Xero access token...");
+      
+      if (!integration.xero_refresh_token) {
+        console.error("❌ No refresh token available");
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Xero connection expired. Please reconnect to Xero in Settings > Integrations." 
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 401,
+          }
+        );
+      }
       
       // Refresh token
       const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
@@ -112,10 +133,25 @@ serve(async (req) => {
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
         console.error("❌ Token refresh failed:", tokenResponse.status, errorText);
+        
+        // Check if refresh token is expired (400 = invalid_grant)
+        if (tokenResponse.status === 400) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Xero connection expired. Please reconnect to Xero in Settings > Integrations to re-authorize access." 
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 401,
+            }
+          );
+        }
+        
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: "Failed to refresh Xero token. Please reconnect to Xero in Settings > Integrations." 
+            error: `Failed to refresh Xero token (${tokenResponse.status}). Please reconnect to Xero in Settings > Integrations.` 
           }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -126,7 +162,7 @@ serve(async (req) => {
 
       const tokens = await tokenResponse.json();
       accessToken = tokens.access_token;
-      console.log("✅ Token refreshed successfully");
+      console.log("✅ Token refreshed successfully, new expiry:", new Date(Date.now() + tokens.expires_in * 1000).toISOString());
 
       // Update tokens in database
       const { error: updateError } = await supabase
