@@ -48,25 +48,37 @@ serve(async (req) => {
 
     const tenantId = profile.tenant_id;
 
-    const username = Deno.env.get("ACUMATICA_USERNAME");
-    const password = Deno.env.get("ACUMATICA_PASSWORD");
-    
-    if (!username || !password) {
-      console.error("Missing Acumatica credentials");
+    // Get integration settings from database
+    const { data: integration, error: integrationError } = await supabase
+      .from("accounting_integrations")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("provider", "myob_acumatica")
+      .eq("is_enabled", true)
+      .single();
+
+    if (integrationError || !integration) {
+      console.error("Acumatica integration not found:", integrationError);
       return new Response(
         JSON.stringify({ error: "Acumatica integration not configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    const { instanceUrl, companyName, forceRefresh } = await req.json();
+    const { acumatica_username, acumatica_password, acumatica_instance_url, acumatica_company_name } = integration;
     
-    if (!instanceUrl || !companyName) {
+    if (!acumatica_username || !acumatica_password || !acumatica_instance_url || !acumatica_company_name) {
+      console.error("Missing Acumatica credentials in integration settings");
       return new Response(
-        JSON.stringify({ error: "Instance URL and company name are required" }),
+        JSON.stringify({ error: "Acumatica integration not properly configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
+
+    const { forceRefresh } = await req.json();
+    const instanceUrl = acumatica_instance_url;
+    const companyName = acumatica_company_name;
+    
 
     // Check if we have cached data (less than 24 hours old) and not forcing refresh
     if (!forceRefresh) {
@@ -114,8 +126,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: username,
-        password: password,
+        name: acumatica_username,
+        password: acumatica_password,
         company: companyName,
       }),
     });
