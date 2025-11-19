@@ -279,6 +279,32 @@ export default function IntegrationsTab() {
     }
   };
 
+  const testXeroChartOfAccounts = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-xero-accounts`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`Successfully retrieved ${result.count} accounts from Xero chart of accounts!`);
+      } else {
+        toast.error(result.error || "Failed to fetch chart of accounts");
+      }
+    } catch (error) {
+      console.error("Chart of accounts test error:", error);
+      toast.error("Failed to test chart of accounts");
+    }
+  };
+
   const saveAcumaticaMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -645,6 +671,12 @@ export default function IntegrationsTab() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Test Connection
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={testXeroChartOfAccounts}
+                >
+                  Test Chart of Accounts
                 </Button>
                 <Button
                   variant="destructive"
