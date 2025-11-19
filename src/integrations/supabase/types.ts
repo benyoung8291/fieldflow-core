@@ -1168,6 +1168,7 @@ export type Database = {
           tenant_id: string
           trading_name: string | null
           updated_at: string | null
+          xero_contact_id: string | null
         }
         Insert: {
           abn?: string | null
@@ -1194,6 +1195,7 @@ export type Database = {
           tenant_id: string
           trading_name?: string | null
           updated_at?: string | null
+          xero_contact_id?: string | null
         }
         Update: {
           abn?: string | null
@@ -1220,6 +1222,7 @@ export type Database = {
           tenant_id?: string
           trading_name?: string | null
           updated_at?: string | null
+          xero_contact_id?: string | null
         }
         Relationships: [
           {
@@ -5157,6 +5160,7 @@ export type Database = {
           tenant_id: string
           trading_name: string | null
           updated_at: string | null
+          xero_contact_id: string | null
         }
         Insert: {
           abn?: string | null
@@ -5179,6 +5183,7 @@ export type Database = {
           tenant_id: string
           trading_name?: string | null
           updated_at?: string | null
+          xero_contact_id?: string | null
         }
         Update: {
           abn?: string | null
@@ -5201,6 +5206,7 @@ export type Database = {
           tenant_id?: string
           trading_name?: string | null
           updated_at?: string | null
+          xero_contact_id?: string | null
         }
         Relationships: [
           {
