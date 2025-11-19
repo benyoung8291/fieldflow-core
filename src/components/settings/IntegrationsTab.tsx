@@ -631,15 +631,43 @@ export default function IntegrationsTab() {
           </div>
           <div className="flex gap-2">
             {!xeroConnected ? (
-              <Button
-                onClick={connectToXero}
-                disabled={!xeroClientId || !xeroClientSecret || connectingXero}
-              >
-                {connectingXero && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <>
+                <Button
+                  onClick={connectToXero}
+                  disabled={!xeroClientId || !xeroClientSecret || connectingXero}
+                >
+                  {connectingXero && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Connect to Xero
+                </Button>
+                {xeroIntegrationId && (
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from("accounting_integrations")
+                          .delete()
+                          .eq("id", xeroIntegrationId);
+                        
+                        if (error) throw error;
+                        
+                        setXeroIntegrationId(null);
+                        setXeroConnected(false);
+                        setXeroTenantId("");
+                        toast.success("Xero connection cleared");
+                        queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+                      } catch (error: any) {
+                        console.error("Error disconnecting:", error);
+                        toast.error("Failed to disconnect: " + error.message);
+                      }
+                    }}
+                  >
+                    Clear Old Connection
+                  </Button>
                 )}
-                Connect to Xero
-              </Button>
+              </>
             ) : (
               <>
                 <Button
