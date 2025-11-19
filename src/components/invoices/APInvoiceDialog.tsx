@@ -112,50 +112,55 @@ export default function APInvoiceDialog({
 
   const fetchReceiptDetails = async (receiptId: string) => {
     try {
-      // Fetch receipt with PO details
+      // Fetch receipt
       const { data: receipt, error: receiptError } = await supabase
         .from('po_receipts')
-        .select(`
-          *,
-          purchase_orders!inner(
-            id,
-            po_number,
-            supplier_id,
-            suppliers(id, name)
-          )
-        `)
+        .select('*')
         .eq('id', receiptId)
         .single();
 
       if (receiptError) throw receiptError;
       if (!receipt) throw new Error("Receipt not found");
 
-      // Fetch receipt line items with PO line details
+      // Fetch receipt line items
       const { data: receiptLineItems, error: lineItemsError } = await supabase
         .from('po_receipt_line_items')
-        .select(`
-          *,
-          purchase_order_line_items(
-            id,
-            description,
-            unit_price,
-            is_gst_free
-          )
-        `)
+        .select('*')
         .eq('receipt_id', receiptId)
         .order('created_at');
 
       if (lineItemsError) throw lineItemsError;
+      if (!receiptLineItems || receiptLineItems.length === 0) {
+        setLineItems([]);
+        return;
+      }
+
+      // Get unique PO line item IDs
+      const poLineItemIds = [...new Set(receiptLineItems.map(line => line.po_line_item_id))];
+
+      // Fetch PO line items
+      const { data: poLineItems, error: poLineItemsError } = await supabase
+        .from('purchase_order_line_items')
+        .select('id, description, unit_price, is_gst_free')
+        .in('id', poLineItemIds);
+
+      if (poLineItemsError) throw poLineItemsError;
+
+      // Map PO line items by ID
+      const poLineItemsMap = new Map(poLineItems?.map(line => [line.id, line]) || []);
 
       // Pre-populate line items from receipt
-      const items = receiptLineItems?.map((line: any) => ({
-        description: line.purchase_order_line_items.description,
-        quantity: line.quantity_received,
-        unit_price: line.purchase_order_line_items.unit_price,
-        line_total: line.quantity_received * line.purchase_order_line_items.unit_price,
-        po_line_id: line.po_line_item_id,
-        is_gst_free: line.purchase_order_line_items.is_gst_free,
-      })) || [];
+      const items = receiptLineItems.map((line: any) => {
+        const poLineItem = poLineItemsMap.get(line.po_line_item_id);
+        return {
+          description: poLineItem?.description || '',
+          quantity: line.quantity_received,
+          unit_price: poLineItem?.unit_price || 0,
+          line_total: line.quantity_received * (poLineItem?.unit_price || 0),
+          po_line_id: line.po_line_item_id,
+          is_gst_free: poLineItem?.is_gst_free || false,
+        };
+      });
 
       setLineItems(items);
     } catch (error) {
