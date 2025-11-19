@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -7,6 +8,46 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    // Get tenant_id
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.tenant_id) {
+      return new Response(
+        JSON.stringify({ error: "No tenant found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const tenantId = profile.tenant_id;
+
     const username = Deno.env.get("ACUMATICA_USERNAME");
     const password = Deno.env.get("ACUMATICA_PASSWORD");
     
@@ -18,13 +59,50 @@ serve(async (req) => {
       );
     }
 
-    const { instanceUrl, companyName } = await req.json();
+    const { instanceUrl, companyName, forceRefresh } = await req.json();
     
     if (!instanceUrl || !companyName) {
       return new Response(
         JSON.stringify({ error: "Instance URL and company name are required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
+    }
+
+    // Check if we have cached data (less than 24 hours old) and not forcing refresh
+    if (!forceRefresh) {
+      const { data: cachedAccounts } = await supabase
+        .from("chart_of_accounts_cache")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "myob_acumatica")
+        .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      const { data: cachedSubAccounts } = await supabase
+        .from("sub_accounts_cache")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "myob_acumatica")
+        .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      if (cachedAccounts && cachedAccounts.length > 0) {
+        console.log(`Using cached data: ${cachedAccounts.length} accounts, ${cachedSubAccounts?.length || 0} sub-accounts`);
+        return new Response(
+          JSON.stringify({ 
+            accounts: cachedAccounts.map(a => ({
+              AccountCD: { value: a.account_code },
+              Description: { value: a.description },
+              Type: { value: a.account_type },
+              Active: { value: a.is_active }
+            })),
+            subAccounts: (cachedSubAccounts || []).map(s => ({
+              SubAccountCD: { value: s.sub_account_code },
+              Description: { value: s.description },
+              Active: { value: s.is_active }
+            }))
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
     }
 
     console.log("Fetching accounts from Acumatica:", { instanceUrl, companyName });
@@ -97,9 +175,55 @@ serve(async (req) => {
 
     console.log(`Fetched ${accountsData.value?.length || 0} accounts and ${subAccounts.length} sub-accounts`);
 
+    // Cache the data
+    const accounts = accountsData.value || accountsData;
+    
+    // Delete old cache for this tenant/provider
+    await supabase
+      .from("chart_of_accounts_cache")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("provider", "myob_acumatica");
+
+    await supabase
+      .from("sub_accounts_cache")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("provider", "myob_acumatica");
+
+    // Insert new cache
+    if (accounts && accounts.length > 0) {
+      const accountsToCache = accounts.map((account: any) => ({
+        tenant_id: tenantId,
+        provider: "myob_acumatica",
+        account_code: account.AccountCD?.value || account.AccountCD,
+        description: account.Description?.value || account.Description,
+        account_type: account.Type?.value || account.Type,
+        is_active: account.Active?.value !== false,
+      }));
+
+      await supabase
+        .from("chart_of_accounts_cache")
+        .insert(accountsToCache);
+    }
+
+    if (subAccounts && subAccounts.length > 0) {
+      const subAccountsToCache = subAccounts.map((subAccount: any) => ({
+        tenant_id: tenantId,
+        provider: "myob_acumatica",
+        sub_account_code: subAccount.SubAccountCD?.value || subAccount.SubAccountCD,
+        description: subAccount.Description?.value || subAccount.Description,
+        is_active: subAccount.Active?.value !== false,
+      }));
+
+      await supabase
+        .from("sub_accounts_cache")
+        .insert(subAccountsToCache);
+    }
+
     return new Response(
       JSON.stringify({ 
-        accounts: accountsData.value || accountsData,
+        accounts: accounts,
         subAccounts: subAccounts
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }

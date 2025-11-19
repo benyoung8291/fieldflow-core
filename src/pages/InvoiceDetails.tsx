@@ -742,7 +742,7 @@ export default function InvoiceDetails() {
                   <span className="font-medium">${invoice.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax ({(invoice.tax_rate * 100).toFixed(0)}%)</span>
+                  <span className="text-muted-foreground">Tax ({invoice.tax_rate.toFixed(0)}%)</span>
                   <span className="font-medium">${invoice.tax_amount.toFixed(2)}</span>
                 </div>
                 <Separator />

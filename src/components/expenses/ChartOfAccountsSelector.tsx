@@ -59,12 +59,62 @@ export function ChartOfAccountsSelector({
     }
   }, [integrationSettings]);
 
-  // Fetch chart of accounts based on provider
+  // Fetch chart of accounts - from cache first, then API if needed
   const { data: accountsData, isLoading } = useQuery({
     queryKey: ["chart-of-accounts", provider, instanceUrl, companyName, xeroTenantId],
     queryFn: async () => {
       if (!provider) return null;
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) return null;
+
+      // Try to get from cache first (less than 24 hours old)
+      const { data: cachedAccounts } = await supabase
+        .from("chart_of_accounts_cache")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("provider", provider === "acumatica" ? "myob_acumatica" : "xero")
+        .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      let cachedSubAccounts = null;
+      if (provider === "acumatica") {
+        const { data } = await supabase
+          .from("sub_accounts_cache")
+          .select("*")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("provider", "myob_acumatica")
+          .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        cachedSubAccounts = data;
+      }
+
+      // If we have cache, use it
+      if (cachedAccounts && cachedAccounts.length > 0) {
+        return {
+          accounts: cachedAccounts.map(a => ({
+            AccountCD: { value: a.account_code },
+            Description: { value: a.description },
+            Type: { value: a.account_type },
+            Active: { value: a.is_active },
+            Code: a.account_code,
+            Name: a.description,
+          })),
+          subAccounts: (cachedSubAccounts || []).map(s => ({
+            SubAccountCD: { value: s.sub_account_code },
+            Description: { value: s.description },
+            Active: { value: s.is_active },
+          }))
+        };
+      }
+
+      // No cache or stale - fetch from API
       if (provider === "acumatica") {
         if (!instanceUrl || !companyName) {
           toast.error("Acumatica configuration incomplete");
@@ -72,7 +122,7 @@ export function ChartOfAccountsSelector({
         }
 
         const { data, error } = await supabase.functions.invoke("fetch-acumatica-accounts", {
-          body: { instanceUrl, companyName },
+          body: { instanceUrl, companyName, forceRefresh: false },
         });
 
         if (error) throw error;
@@ -84,7 +134,7 @@ export function ChartOfAccountsSelector({
         }
 
         const { data, error } = await supabase.functions.invoke("fetch-xero-accounts", {
-          body: { tenantId: xeroTenantId },
+          body: { tenantId: xeroTenantId, forceRefresh: false },
         });
 
         if (error) throw error;
@@ -97,6 +147,7 @@ export function ChartOfAccountsSelector({
       (provider === "acumatica" && !!instanceUrl && !!companyName) ||
       (provider === "xero" && !!xeroTenantId)
     ),
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
   if (!provider || !integrationSettings?.is_enabled) {

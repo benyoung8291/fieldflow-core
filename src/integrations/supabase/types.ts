@@ -654,6 +654,50 @@ export type Database = {
           },
         ]
       }
+      chart_of_accounts_cache: {
+        Row: {
+          account_code: string
+          account_type: string | null
+          cached_at: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          provider: string
+          tenant_id: string
+        }
+        Insert: {
+          account_code: string
+          account_type?: string | null
+          cached_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider: string
+          tenant_id: string
+        }
+        Update: {
+          account_code?: string
+          account_type?: string | null
+          cached_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_credit_cards: {
         Row: {
           assigned_to: string | null
@@ -5149,6 +5193,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      sub_accounts_cache: {
+        Row: {
+          cached_at: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          provider: string
+          sub_account_code: string
+          tenant_id: string
+        }
+        Insert: {
+          cached_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider: string
+          sub_account_code: string
+          tenant_id: string
+        }
+        Update: {
+          cached_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          sub_account_code?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_accounts_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {
