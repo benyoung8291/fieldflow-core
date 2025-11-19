@@ -356,6 +356,8 @@ export default function IntegrationsTab() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
+      console.log("Selecting tenant:", { tenantId, tenantName });
+
       const { error } = await supabase
         .from("accounting_integrations")
         .update({
@@ -365,17 +367,31 @@ export default function IntegrationsTab() {
         .eq("tenant_id", profile.tenant_id)
         .eq("provider", "xero");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating tenant:", error);
+        throw error;
+      }
 
-      // Update local state immediately
+      console.log("Tenant updated successfully, setting local state");
+
+      // Update local state immediately before closing dialog
       setXeroTenantId(tenantId);
       setXeroEnabled(true);
       setXeroConnected(true);
+      
+      // Close dialog
       setShowTenantSelector(false);
+      
       toast.success(`Connected to ${tenantName}!`);
       
-      // Refresh the data
+      // Refresh the data to ensure UI is in sync
       await queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+      
+      console.log("State after selection:", { 
+        xeroTenantId: tenantId, 
+        xeroEnabled: true, 
+        xeroConnected: true 
+      });
     } catch (error) {
       console.error("Error selecting tenant:", error);
       toast.error("Failed to select organization");
@@ -540,16 +556,16 @@ export default function IntegrationsTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {xeroConnected && xeroTenantId && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                ✅ Connected to Xero
+          {xeroConnected && xeroTenantId ? (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-900">
+                <strong>✅ Connected to Xero</strong>
                 <br />
-                <span className="text-xs text-muted-foreground">Tenant ID: {xeroTenantId}</span>
+                <span className="text-xs">Tenant ID: {xeroTenantId}</span>
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="xero-client-id">Client ID</Label>
