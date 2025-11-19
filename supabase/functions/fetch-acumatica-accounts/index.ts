@@ -230,7 +230,7 @@ serve(async (req) => {
       
       // Fetch sub-accounts
       console.log("Fetching sub-accounts...");
-      const subAccountsUrl = `${instanceUrl}/entity/Default/23.200.001/Subaccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`;
+      const subAccountsUrl = `${instanceUrl}/entity/Default/23.200.001/Subaccount?$select=SubaccountCD,Description,Active&$filter=Active eq true`;
       console.log("Sub-accounts URL:", subAccountsUrl);
       
       const subAccountsResponse = await fetch(subAccountsUrl, {
@@ -294,7 +294,7 @@ serve(async (req) => {
         const subAccountsToCache = subAccounts.map((subAccount: any) => ({
           tenant_id: tenantId,
           provider: "myob_acumatica",
-          sub_account_code: subAccount.SubAccountCD?.value || subAccount.SubAccountCD,
+          sub_account_code: subAccount.SubaccountCD?.value || subAccount.SubaccountCD,
           description: subAccount.Description?.value || subAccount.Description,
           is_active: subAccount.Active?.value !== false,
         }));

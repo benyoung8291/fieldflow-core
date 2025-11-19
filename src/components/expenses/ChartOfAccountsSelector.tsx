@@ -124,7 +124,7 @@ export function ChartOfAccountsSelector({
             Name: a.description,
           })),
           subAccounts: (cachedSubAccounts || []).map(s => ({
-            SubAccountCD: { value: s.sub_account_code },
+            SubaccountCD: { value: s.sub_account_code },
             Description: { value: s.description },
             Active: { value: s.is_active },
           }))
@@ -249,10 +249,10 @@ export function ChartOfAccountsSelector({
             <SelectContent className="bg-popover z-[100]">
               {subAccounts.map((subAcc: any) => (
                 <SelectItem 
-                  key={subAcc.SubAccountCD?.value}
-                  value={subAcc.SubAccountCD?.value}
+                  key={subAcc.SubaccountCD?.value}
+                  value={subAcc.SubaccountCD?.value}
                 >
-                  {`${subAcc.Description?.value} ${subAcc.SubAccountCD?.value}`}
+                  {`${subAcc.Description?.value} ${subAcc.SubaccountCD?.value}`}
                 </SelectItem>
               ))}
             </SelectContent>
