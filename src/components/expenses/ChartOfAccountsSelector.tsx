@@ -52,10 +52,16 @@ export function ChartOfAccountsSelector({
 
   useEffect(() => {
     if (integrationSettings) {
+      console.log('📊 Integration Settings:', integrationSettings);
       setProvider(integrationSettings.provider);
       setInstanceUrl(integrationSettings.acumatica_instance_url);
       setCompanyName(integrationSettings.acumatica_company_name);
       setXeroTenantId(integrationSettings.xero_tenant_id);
+      console.log('📊 Set values:', {
+        provider: integrationSettings.provider,
+        instanceUrl: integrationSettings.acumatica_instance_url,
+        companyName: integrationSettings.acumatica_company_name,
+      });
     }
   }, [integrationSettings]);
 
@@ -63,6 +69,7 @@ export function ChartOfAccountsSelector({
   const { data: accountsData, isLoading } = useQuery({
     queryKey: ["chart-of-accounts", provider, instanceUrl, companyName, xeroTenantId],
     queryFn: async () => {
+      console.log('📊 Query running with:', { provider, instanceUrl, companyName, xeroTenantId });
       if (!provider) return null;
 
       const { data: { user } } = await supabase.auth.getUser();
