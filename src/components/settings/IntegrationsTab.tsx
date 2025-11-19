@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Key, CheckCircle2 } from "lucide-react";
+import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 export default function IntegrationsTab() {
   const queryClient = useQueryClient();
@@ -19,6 +20,8 @@ export default function IntegrationsTab() {
   const [acumaticaCompany, setAcumaticaCompany] = useState("");
   const [acumaticaUsername, setAcumaticaUsername] = useState("");
   const [acumaticaPassword, setAcumaticaPassword] = useState("");
+  const [acumaticaDefaultSalesAccount, setAcumaticaDefaultSalesAccount] = useState("");
+  const [acumaticaDefaultSalesSubAccount, setAcumaticaDefaultSalesSubAccount] = useState("");
   
   const [xeroEnabled, setXeroEnabled] = useState(false);
   const [xeroTenantId, setXeroTenantId] = useState("");
@@ -53,6 +56,8 @@ export default function IntegrationsTab() {
         setAcumaticaCompany(acumatica.acumatica_company_name || "");
         setAcumaticaUsername(acumatica.acumatica_username || "");
         setAcumaticaPassword(acumatica.acumatica_password || "");
+        setAcumaticaDefaultSalesAccount(acumatica.default_sales_account_code || "");
+        setAcumaticaDefaultSalesSubAccount(acumatica.default_sales_sub_account || "");
       }
 
       const xero = data.find((i) => i.provider === "xero");
@@ -323,6 +328,8 @@ export default function IntegrationsTab() {
           is_enabled: acumaticaEnabled,
           acumatica_instance_url: acumaticaUrl,
           acumatica_company_name: acumaticaCompany,
+          default_sales_account_code: acumaticaDefaultSalesAccount,
+          default_sales_sub_account: acumaticaDefaultSalesSubAccount,
         }, {
           onConflict: "tenant_id,provider"
         });
@@ -548,6 +555,25 @@ export default function IntegrationsTab() {
               </AlertDescription>
             </Alert>
           </div>
+          
+          <div className="space-y-2">
+            <Label>Default Sales Account</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Default chart of accounts for AR invoice line items
+            </p>
+            {acumaticaEnabled && (
+              <ChartOfAccountsSelector
+                accountCode={acumaticaDefaultSalesAccount}
+                subAccount={acumaticaDefaultSalesSubAccount}
+                onAccountChange={setAcumaticaDefaultSalesAccount}
+                onSubAccountChange={setAcumaticaDefaultSalesSubAccount}
+              />
+            )}
+            {!acumaticaEnabled && (
+              <p className="text-sm text-muted-foreground">Enable Acumatica integration to configure default accounts</p>
+            )}
+          </div>
+          
           <div className="flex gap-2">
             <Button
               onClick={() => saveAcumaticaMutation.mutate()}

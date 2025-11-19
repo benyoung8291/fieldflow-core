@@ -60,6 +60,8 @@ export type Database = {
           acumatica_password: string | null
           acumatica_username: string | null
           created_at: string | null
+          default_sales_account_code: string | null
+          default_sales_sub_account: string | null
           id: string
           is_enabled: boolean
           last_sync_at: string | null
@@ -82,6 +84,8 @@ export type Database = {
           acumatica_password?: string | null
           acumatica_username?: string | null
           created_at?: string | null
+          default_sales_account_code?: string | null
+          default_sales_sub_account?: string | null
           id?: string
           is_enabled?: boolean
           last_sync_at?: string | null
@@ -104,6 +108,8 @@ export type Database = {
           acumatica_password?: string | null
           acumatica_username?: string | null
           created_at?: string | null
+          default_sales_account_code?: string | null
+          default_sales_sub_account?: string | null
           id?: string
           is_enabled?: boolean
           last_sync_at?: string | null
@@ -5151,6 +5157,8 @@ export type Database = {
           city: string | null
           created_at: string | null
           customer_id: string | null
+          default_account_code: string | null
+          default_sub_account: string | null
           email: string | null
           gst_registered: boolean | null
           id: string
@@ -5174,6 +5182,8 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           customer_id?: string | null
+          default_account_code?: string | null
+          default_sub_account?: string | null
           email?: string | null
           gst_registered?: boolean | null
           id?: string
@@ -5197,6 +5207,8 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           customer_id?: string | null
+          default_account_code?: string | null
+          default_sub_account?: string | null
           email?: string | null
           gst_registered?: boolean | null
           id?: string
