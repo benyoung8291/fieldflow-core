@@ -28,44 +28,22 @@ export default function ServiceOrderPurchaseOrdersTab({
 }: ServiceOrderPurchaseOrdersTabProps) {
   const navigate = useNavigate();
 
-  const { data: purchaseOrders, isLoading } = useQuery({
+  const { data: purchaseOrders, isLoading, refetch } = useQuery({
     queryKey: ["service-order-purchase-orders", serviceOrderId],
     queryFn: async () => {
-      // Get tenant_id
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", (await supabase.auth.getUser()).data.user?.id)
-        .single();
-
-      if (!profile?.tenant_id) return [];
-
-      // Use RPC function to get all POs, then filter
+      // Direct table query for better performance and live data
       const { data: pos, error } = await supabase
-        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
+        .from('purchase_orders')
+        .select('*, suppliers(id, name, abn)')
+        .eq('service_order_id', serviceOrderId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Filter for service_order_id match and fetch suppliers
-      const filteredPos = pos?.filter(po => po.service_order_id === serviceOrderId) || [];
-      
-      if (filteredPos.length === 0) return [];
-
-      // Fetch supplier details
-      const supplierIds = [...new Set(filteredPos.map(po => po.supplier_id).filter(Boolean))];
-      const { data: suppliers } = supplierIds.length > 0
-        ? await supabase
-            .from("suppliers")
-            .select("id, name, abn")
-            .in("id", supplierIds)
-        : { data: [] };
-
-      // Merge supplier data
-      return filteredPos.map(po => ({
-        ...po,
-        suppliers: suppliers?.find(s => s.id === po.supplier_id)
-      }));
+      return pos || [];
     },
+    refetchInterval: 5000, // Auto-refetch every 5 seconds for live updates
+    staleTime: 1000, // Consider data stale after 1 second
   });
 
   if (isLoading) {
