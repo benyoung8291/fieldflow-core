@@ -187,7 +187,27 @@ async function syncToAcumatica(invoice: any, integration: any) {
     throw new Error("No authentication cookies received from Acumatica");
   }
 
-  console.log("Authentication successful, cookies received");
+  console.log("Authentication successful, cookies received:", {
+    cookieCount: cookies.split(',').length,
+    cookiePreview: cookies.substring(0, 100) + '...',
+    fullCookieLength: cookies.length
+  });
+
+  // Test session validity with a simple GET request first
+  console.log("Testing session validity with GET request...");
+  const testResponse = await fetch(`${instanceUrl}/entity/Default/20.200.001/SalesInvoice`, {
+    method: "GET",
+    headers: {
+      "Cookie": cookies,
+      "Accept": "application/json",
+    },
+  });
+  
+  console.log("Session test response:", {
+    status: testResponse.status,
+    statusText: testResponse.statusText,
+    headers: Object.fromEntries(testResponse.headers.entries())
+  });
 
   // Create Sales Invoice in Acumatica
   const acumaticaInvoice = {
