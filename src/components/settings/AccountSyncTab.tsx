@@ -53,7 +53,7 @@ export default function AccountSyncTab() {
         .eq("id", user.id)
         .single();
 
-      if (!profile) throw new Error("Profile not found");
+      if (!profile?.tenant_id) throw new Error("No tenant found");
 
       const { data, error } = await supabase
         .from("accounting_integrations")
@@ -66,26 +66,6 @@ export default function AccountSyncTab() {
       return data;
     },
   });
-
-  // Show message if no integration is enabled
-  if (isLoadingSettings) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!integrationSettings) {
-    return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          No accounting integration is currently enabled. Please configure and enable an integration in the Integrations tab first.
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   const { data: externalAccounts, isLoading: isLoadingExternal, refetch: refetchExternal } = useQuery({
     queryKey: ["external-accounts", integrationSettings?.provider, accountType],
@@ -318,24 +298,24 @@ export default function AccountSyncTab() {
     exportMutation.mutate(selectedAppIds);
   };
 
+  // Show loading state if integration settings are still loading
+  if (isLoadingSettings) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show message if no integration is enabled
   if (!integrationSettings) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Synchronization</CardTitle>
-          <CardDescription>
-            Sync customers and suppliers between your app and accounting software
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              No accounting integration configured. Please configure Xero or Acumatica integration first.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No accounting integration is currently enabled. Please configure and enable an integration in the Integrations tab first.
+        </AlertDescription>
+      </Alert>
     );
   }
 
