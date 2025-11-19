@@ -32,6 +32,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
 import ServiceOrderProfitLossCard from "@/components/service-orders/ServiceOrderProfitLossCard";
+import ProjectPurchaseOrdersTab from "@/components/projects/ProjectPurchaseOrdersTab";
+import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -39,6 +41,7 @@ export default function ProjectDetails() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [poDialogOpen, setPODialogOpen] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -474,16 +477,10 @@ export default function ProjectDetails() {
       label: "Purchase Orders",
       icon: <Receipt className="h-4 w-4" />,
       content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Purchase Orders from Service Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-muted-foreground">
-              View purchase orders in individual service order details.
-            </div>
-          </CardContent>
-        </Card>
+        <ProjectPurchaseOrdersTab 
+          projectId={id!} 
+          onCreatePO={() => setPODialogOpen(true)}
+        />
       ),
     },
     {
@@ -570,6 +567,20 @@ export default function ProjectDetails() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <PurchaseOrderDialog
+      open={poDialogOpen}
+      onOpenChange={(open) => {
+        setPODialogOpen(open);
+        if (!open) {
+          queryClient.invalidateQueries({ queryKey: ["project-purchase-orders", id] });
+        }
+      }}
+      projectId={id}
+      onSuccess={() => {
+        queryClient.invalidateQueries({ queryKey: ["project-purchase-orders", id] });
+      }}
+    />
   </>
 );
 }
