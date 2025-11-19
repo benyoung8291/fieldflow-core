@@ -222,7 +222,7 @@ export function ChartOfAccountsSelector({
                   key={subAcc.SubAccountCD?.value}
                   value={subAcc.SubAccountCD?.value}
                 >
-                  {`${subAcc.SubAccountCD?.value} - ${subAcc.Description?.value}`}
+                  {`${subAcc.Description?.value} ${subAcc.SubAccountCD?.value}`}
                 </SelectItem>
               ))}
             </SelectContent>
