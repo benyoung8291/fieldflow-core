@@ -291,8 +291,8 @@ export default function Invoices() {
       });
 
       const subtotal = lineItems.reduce((sum, item) => sum + Number(item.line_total), 0);
-      const taxRate = 0.1;
-      const taxAmount = subtotal * taxRate;
+      const taxRate = 10; // Store as percentage
+      const taxAmount = subtotal * (taxRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       // Determine if this is a progress invoice (any source document not 100% invoiced)
@@ -513,8 +513,8 @@ export default function Invoices() {
       }
     });
 
-    const taxRate = 0.1;
-    const taxAmount = subtotal * taxRate;
+    const taxRate = 10; // Store as percentage
+    const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
 
     return { subtotal, taxAmount, total };
