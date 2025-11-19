@@ -282,7 +282,7 @@ export default function IntegrationsTab() {
     },
   });
 
-  const selectTenant = async (tenantId: string) => {
+  const selectTenant = async (tenantId: string, tenantName: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -306,11 +306,15 @@ export default function IntegrationsTab() {
 
       if (error) throw error;
 
+      // Update local state immediately
       setXeroTenantId(tenantId);
+      setXeroEnabled(true);
       setXeroConnected(true);
       setShowTenantSelector(false);
-      toast.success("Organization selected successfully!");
-      queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
+      toast.success(`Connected to ${tenantName}!`);
+      
+      // Refresh the data
+      await queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
     } catch (error) {
       console.error("Error selecting tenant:", error);
       toast.error("Failed to select organization");
@@ -475,19 +479,16 @@ export default function IntegrationsTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="xero-tenant">Tenant ID</Label>
-            <Input
-              id="xero-tenant"
-              value={xeroTenantId}
-              onChange={(e) => setXeroTenantId(e.target.value)}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              disabled={!xeroEnabled}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Your Xero organization tenant ID
-            </p>
-          </div>
+          {xeroConnected && xeroTenantId && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                ✅ Connected to Xero
+                <br />
+                <span className="text-xs text-muted-foreground">Tenant ID: {xeroTenantId}</span>
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="xero-client-id">Client ID</Label>
@@ -589,7 +590,7 @@ export default function IntegrationsTab() {
                 key={tenant.tenantId}
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => selectTenant(tenant.tenantId)}
+                onClick={() => selectTenant(tenant.tenantId, tenant.tenantName)}
               >
                 <div className="flex flex-col items-start">
                   <span className="font-medium">{tenant.tenantName}</span>
