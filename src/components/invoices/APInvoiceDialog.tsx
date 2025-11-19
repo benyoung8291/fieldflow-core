@@ -47,24 +47,49 @@ export default function APInvoiceDialog({
 
       if (!profile?.tenant_id) return [];
 
-      // Fetch receipts with PO and supplier details
-      const { data: receiptsData, error } = await supabase
+      // Fetch receipts
+      const { data: receiptsData, error: receiptsError } = await supabase
         .from("po_receipts")
-        .select(`
-          *,
-          purchase_orders!inner(
-            id,
-            po_number,
-            supplier_id,
-            suppliers(id, name)
-          )
-        `)
+        .select("*")
         .eq("tenant_id", profile.tenant_id)
         .order("receipt_date", { ascending: false });
 
-      if (error) throw error;
+      if (receiptsError) throw receiptsError;
+      if (!receiptsData || receiptsData.length === 0) return [];
 
-      return receiptsData || [];
+      // Get unique PO IDs
+      const poIds = [...new Set(receiptsData.map(r => r.po_id))];
+
+      // Fetch purchase orders
+      const { data: posData, error: posError } = await supabase
+        .from("purchase_orders")
+        .select("id, po_number, supplier_id")
+        .in("id", poIds);
+
+      if (posError) throw posError;
+
+      // Get unique supplier IDs
+      const supplierIds = [...new Set((posData || []).map(po => po.supplier_id).filter(Boolean))];
+
+      // Fetch suppliers
+      const { data: suppliersData, error: suppliersError } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .in("id", supplierIds);
+
+      if (suppliersError) throw suppliersError;
+
+      // Map data together
+      const posMap = new Map(posData?.map(po => [po.id, po]) || []);
+      const suppliersMap = new Map(suppliersData?.map(s => [s.id, s]) || []);
+
+      return receiptsData.map(receipt => ({
+        ...receipt,
+        purchase_orders: {
+          ...posMap.get(receipt.po_id),
+          suppliers: suppliersMap.get(posMap.get(receipt.po_id)?.supplier_id)
+        }
+      }));
     },
   });
 
