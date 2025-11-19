@@ -644,25 +644,7 @@ export default function IntegrationsTab() {
                 {xeroIntegrationId && (
                   <Button
                     variant="destructive"
-                    onClick={async () => {
-                      try {
-                        const { error } = await supabase
-                          .from("accounting_integrations")
-                          .delete()
-                          .eq("id", xeroIntegrationId);
-                        
-                        if (error) throw error;
-                        
-                        setXeroIntegrationId(null);
-                        setXeroConnected(false);
-                        setXeroTenantId("");
-                        toast.success("Xero connection cleared");
-                        queryClient.invalidateQueries({ queryKey: ["accounting-integrations"] });
-                      } catch (error: any) {
-                        console.error("Error disconnecting:", error);
-                        toast.error("Failed to disconnect: " + error.message);
-                      }
-                    }}
+                    onClick={disconnectXero}
                   >
                     Clear Old Connection
                   </Button>
