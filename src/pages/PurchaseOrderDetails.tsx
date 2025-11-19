@@ -654,18 +654,21 @@ export default function PurchaseOrderDetails() {
                         <ExternalLink className="h-4 w-4 mr-2" />
                         {linkedServiceOrder.order_number}: {linkedServiceOrder.title}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleUnlink}
-                      >
-                        Clear
-                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleUnlink}
+                        >
+                          Clear
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <Select 
                       value={purchaseOrder.service_order_id || "none"}
                       onValueChange={handleLinkServiceOrder}
+                      disabled={!canEdit}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select service order" />
@@ -696,18 +699,21 @@ export default function PurchaseOrderDetails() {
                         <ExternalLink className="h-4 w-4 mr-2" />
                         {linkedProject.project_number}: {linkedProject.name}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleUnlink}
-                      >
-                        Clear
-                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleUnlink}
+                        >
+                          Clear
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <Select 
                       value={purchaseOrder.project_id || "none"}
                       onValueChange={handleLinkProject}
+                      disabled={!canEdit}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select project" />
