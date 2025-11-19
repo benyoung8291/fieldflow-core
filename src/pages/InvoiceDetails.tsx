@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
 import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
+import { InlineInvoiceLineItemRow } from "@/components/invoices/InlineInvoiceLineItemRow";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ProjectDialog from "@/components/projects/ProjectDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
@@ -657,84 +658,28 @@ export default function InvoiceDetails() {
                     const sourceDoc = lineItems.sourceDocuments?.get(sourceKey);
 
                     return (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <div>
-                            <div>{item.description}</div>
-                            {sourceDoc && (
-                              <button
-                                onClick={() => {
-                                  setSelectedSourceId(sourceDoc.id);
-                                  if (sourceDoc.type === "project") {
-                                    setProjectDialogOpen(true);
-                                  } else {
-                                    setServiceOrderDialogOpen(true);
-                                  }
-                                }}
-                                className="flex items-center gap-1 text-xs text-muted-foreground mt-1 hover:text-primary transition-colors group"
-                              >
-                                {sourceDoc.type === "project" ? (
-                                  <>
-                                    <span>from Project: {sourceDoc.name}</span>
-                                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>from {sourceDoc.order_number} - {sourceDoc.title}</span>
-                                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {sourceDoc?.type === "service_order" && sourceDoc.work_order_number
-                            ? sourceDoc.work_order_number
-                            : "-"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {sourceDoc?.type === "service_order" && sourceDoc.purchase_order_number
-                            ? sourceDoc.purchase_order_number
-                            : "-"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {item.account_code || "-"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {item.sub_account || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          ${item.line_total.toFixed(2)}
-                        </TableCell>
-                        {invoice.status === "draft" && (
-                          <TableCell>
-                            <div className="flex items-center gap-1 justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setEditingItem({ ...item, source_type: item.source_type, source_id: item.source_id })}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setItemToDelete(item.id);
-                                  setDeleteDialogOpen(true);
-                                }}
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
+                      <InlineInvoiceLineItemRow
+                        key={item.id}
+                        item={item}
+                        sourceDoc={sourceDoc}
+                        canEdit={invoice.status === "draft"}
+                        onUpdate={() => {
+                          queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
+                          queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+                        }}
+                        onDelete={(itemId) => {
+                          setItemToDelete(itemId);
+                          setDeleteDialogOpen(true);
+                        }}
+                        onSourceClick={(doc) => {
+                          setSelectedSourceId(doc.id);
+                          if (doc.type === "project") {
+                            setProjectDialogOpen(true);
+                          } else {
+                            setServiceOrderDialogOpen(true);
+                          }
+                        }}
+                      />
                     );
                   })}
                 </TableBody>
