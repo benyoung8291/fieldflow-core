@@ -223,6 +223,11 @@ serve(async (req) => {
 
       const accountsData = await accountsResponse.json();
       
+      // Log first few accounts to see the actual structure
+      if (accountsData.value && accountsData.value.length > 0) {
+        console.log("Sample account data:", JSON.stringify(accountsData.value.slice(0, 2), null, 2));
+      }
+      
       // Fetch sub-accounts
       console.log("Fetching sub-accounts...");
       const subAccountsUrl = `${instanceUrl}/entity/Default/23.200.001/Subaccount?$select=SubAccountCD,Description,Active&$filter=Active eq true`;
@@ -242,6 +247,11 @@ serve(async (req) => {
         const subAccountsData = await subAccountsResponse.json();
         subAccounts = subAccountsData.value || subAccountsData;
         console.log(`Successfully fetched ${subAccounts.length} sub-accounts`);
+        
+        // Log first few sub-accounts to see the actual structure
+        if (subAccounts.length > 0) {
+          console.log("Sample sub-account data:", JSON.stringify(subAccounts.slice(0, 3), null, 2));
+        }
       } else {
         console.warn("Failed to fetch sub-accounts:", subAccountsResponse.status);
       }
