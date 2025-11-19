@@ -57,3 +57,6 @@ verify_jwt = true
 [functions.xero-oauth-callback]
 verify_jwt = false
 
+[functions.xero-list-organizations]
+verify_jwt = true
+

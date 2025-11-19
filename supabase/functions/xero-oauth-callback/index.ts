@@ -88,37 +88,18 @@ serve(async (req) => {
 
     const tokens = await tokenResponse.json();
 
-    // Get Xero tenant ID (organization)
-    const connectionsResponse = await fetch('https://api.xero.com/connections', {
-      headers: {
-        'Authorization': `Bearer ${tokens.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!connectionsResponse.ok) {
-      throw new Error('Failed to fetch Xero connections');
-    }
-
-    const connections = await connectionsResponse.json();
-    const tenantId = connections[0]?.tenantId;
-
-    if (!tenantId) {
-      throw new Error('No Xero organization found');
-    }
+    // Don't set tenant ID yet - let user select from available organizations
 
     // Calculate token expiry
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // Update integration with tokens
+    // Update integration with tokens (tenant ID will be selected by user)
     const { error: updateError } = await supabase
       .from('accounting_integrations')
       .update({
         xero_access_token: tokens.access_token,
         xero_refresh_token: tokens.refresh_token,
         xero_token_expires_at: expiresAt.toISOString(),
-        xero_tenant_id: tenantId,
-        is_enabled: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', state);
@@ -148,7 +129,7 @@ serve(async (req) => {
         </head>
         <body style="font-family: system-ui; padding: 2rem; text-align: center;">
           <h1>✅ Successfully Connected to Xero!</h1>
-          <p>Organization: ${connections[0]?.tenantName || 'Connected'}</p>
+          <p>Please select your organization...</p>
           <p>This window will close automatically...</p>
           <p><a href="/settings">Return to Settings</a></p>
         </body>
