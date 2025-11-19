@@ -30,13 +30,13 @@ export default function APInvoiceDialog({
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState("");
-  const [selectedPOId, setSelectedPOId] = useState(purchaseOrderId || "");
+  const [selectedReceiptId, setSelectedReceiptId] = useState("");
   const [notes, setNotes] = useState("");
   const [lineItems, setLineItems] = useState<any[]>([]);
 
-  // Fetch purchase orders
-  const { data: purchaseOrders = [] } = useQuery({
-    queryKey: ['purchase-orders-for-ap'],
+  // Fetch purchase receipts
+  const { data: receipts = [] } = useQuery({
+    queryKey: ['purchase-receipts-for-ap'],
     queryFn: async () => {
       // Get tenant_id
       const { data: profile } = await supabase
@@ -47,88 +47,103 @@ export default function APInvoiceDialog({
 
       if (!profile?.tenant_id) return [];
 
-      // Use RPC to get all POs, then filter for approved
-      const { data: pos, error } = await supabase
-        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
+      // Fetch receipts with PO and supplier details
+      const { data: receiptsData, error } = await supabase
+        .from("po_receipts")
+        .select(`
+          *,
+          purchase_orders!inner(
+            id,
+            po_number,
+            supplier_id,
+            suppliers(id, name)
+          )
+        `)
+        .eq("tenant_id", profile.tenant_id)
+        .order("receipt_date", { ascending: false });
 
       if (error) throw error;
 
-      const approvedPOs = pos?.filter(po => po.status === 'approved') || [];
-      
-      if (approvedPOs.length === 0) return [];
-
-      // Fetch supplier details
-      const supplierIds = [...new Set(approvedPOs.map(po => po.supplier_id).filter(Boolean))];
-      const { data: suppliers } = await supabase
-        .from("suppliers")
-        .select("id, name")
-        .in("id", supplierIds);
-
-      // Merge supplier data
-      return approvedPOs.map(po => ({
-        ...po,
-        supplier: suppliers?.find(s => s.id === po.supplier_id)
-      }));
+      return receiptsData || [];
     },
   });
 
-  // Fetch PO details when selected
+  // If purchaseOrderId is provided, find and pre-select its receipt
   useEffect(() => {
-    if (selectedPOId) {
-      fetchPODetails(selectedPOId);
+    if (purchaseOrderId && receipts.length > 0) {
+      const receipt = receipts.find((r: any) => r.po_id === purchaseOrderId);
+      if (receipt) {
+        setSelectedReceiptId(receipt.id);
+      }
     }
-  }, [selectedPOId]);
+  }, [purchaseOrderId, receipts]);
 
-  const fetchPODetails = async (poId: string) => {
+  // Fetch receipt details when selected
+  useEffect(() => {
+    if (selectedReceiptId) {
+      fetchReceiptDetails(selectedReceiptId);
+    }
+  }, [selectedReceiptId]);
+
+  const fetchReceiptDetails = async (receiptId: string) => {
     try {
-      // Use RPC function to get PO details
-      const { data: poData, error: poError } = await supabase
-        .rpc('get_purchase_order_with_links', { p_po_id: poId });
-
-      if (poError) throw poError;
-      if (!poData || poData.length === 0) throw new Error("PO not found");
-
-      const po = poData[0];
-
-      // Fetch supplier details
-      const { data: supplier, error: supplierError } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('id', po.supplier_id)
+      // Fetch receipt with PO details
+      const { data: receipt, error: receiptError } = await supabase
+        .from('po_receipts')
+        .select(`
+          *,
+          purchase_orders!inner(
+            id,
+            po_number,
+            supplier_id,
+            suppliers(id, name)
+          )
+        `)
+        .eq('id', receiptId)
         .single();
 
-      if (supplierError) throw supplierError;
+      if (receiptError) throw receiptError;
+      if (!receipt) throw new Error("Receipt not found");
 
-      // Fetch line items
-      const { data: poLineItems, error: lineItemsError } = await supabase
-        .from('purchase_order_line_items')
-        .select('*')
-        .eq('po_id', poId)
-        .order('item_order');
+      // Fetch receipt line items with PO line details
+      const { data: receiptLineItems, error: lineItemsError } = await supabase
+        .from('po_receipt_line_items')
+        .select(`
+          *,
+          purchase_order_line_items(
+            id,
+            description,
+            unit_price,
+            is_gst_free
+          )
+        `)
+        .eq('receipt_id', receiptId)
+        .order('created_at');
 
       if (lineItemsError) throw lineItemsError;
 
-      // Pre-populate line items from PO
-      const items = poLineItems?.map((line: any) => ({
-        description: line.description,
-        quantity: line.quantity,
-        unit_price: line.unit_price,
-        line_total: line.line_total,
-        po_line_id: line.id,
+      // Pre-populate line items from receipt
+      const items = receiptLineItems?.map((line: any) => ({
+        description: line.purchase_order_line_items.description,
+        quantity: line.quantity_received,
+        unit_price: line.purchase_order_line_items.unit_price,
+        line_total: line.quantity_received * line.purchase_order_line_items.unit_price,
+        po_line_id: line.po_line_item_id,
+        is_gst_free: line.purchase_order_line_items.is_gst_free,
       })) || [];
 
       setLineItems(items);
     } catch (error) {
-      console.error('Error fetching PO details:', error);
-      toast.error('Failed to load purchase order details');
+      console.error('Error fetching receipt details:', error);
+      toast.error('Failed to load receipt details');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedPOId) {
-      toast.error('Please select a purchase order');
+    if (!selectedReceiptId) {
+      toast.error('Please select a purchase receipt');
       return;
     }
 
@@ -149,11 +164,12 @@ export default function APInvoiceDialog({
         .eq('id', user.id)
         .single();
 
+      // Get receipt and PO details
       // @ts-ignore - Types will update after migration
-      const { data: po } = await supabase
-        .from('purchase_orders')
-        .select('supplier_id')
-        .eq('id', selectedPOId)
+      const { data: receipt } = await supabase
+        .from('po_receipts')
+        .select('po_id, purchase_orders(supplier_id)')
+        .eq('id', selectedReceiptId)
         .single();
 
       // Get next invoice number
@@ -175,9 +191,9 @@ export default function APInvoiceDialog({
           // @ts-ignore - Types will update after migration
           supplier_invoice_number: supplierInvoiceNumber,
           // @ts-ignore - Types will update after migration
-          purchase_order_id: selectedPOId,
+          purchase_order_id: receipt?.po_id,
           // @ts-ignore - Types will update after migration
-          supplier_id: po?.supplier_id,
+          supplier_id: receipt?.purchase_orders?.supplier_id,
           invoice_number: invoiceNumber,
           invoice_date: invoiceDate,
           due_date: dueDate,
@@ -185,7 +201,7 @@ export default function APInvoiceDialog({
           status: 'pending',
           notes: notes,
           // @ts-ignore - Types will update after migration
-          customer_id: po?.supplier_id, // Required field, using supplier as placeholder
+          customer_id: receipt?.purchase_orders?.supplier_id, // Required field, using supplier as placeholder
           created_by: user.id,
         })
         .select()
@@ -247,7 +263,7 @@ export default function APInvoiceDialog({
     setNotes("");
     setLineItems([]);
     if (!purchaseOrderId) {
-      setSelectedPOId("");
+      setSelectedReceiptId("");
     }
   };
 
@@ -268,19 +284,19 @@ export default function APInvoiceDialog({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchase-order">Purchase Order *</Label>
+              <Label htmlFor="purchase-receipt">Purchase Receipt *</Label>
               <Select
-                value={selectedPOId}
-                onValueChange={setSelectedPOId}
+                value={selectedReceiptId}
+                onValueChange={setSelectedReceiptId}
                 disabled={!!purchaseOrderId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select PO" />
+                  <SelectValue placeholder="Select Receipt" />
                 </SelectTrigger>
                 <SelectContent>
-                  {purchaseOrders.map((po: any) => (
-                    <SelectItem key={po.id} value={po.id}>
-                      {po.po_number} - {po.supplier?.name}
+                  {receipts.map((receipt: any) => (
+                    <SelectItem key={receipt.id} value={receipt.id}>
+                      {receipt.receipt_number} - {receipt.purchase_orders?.suppliers?.name} ({new Date(receipt.receipt_date).toLocaleDateString()})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -432,7 +448,7 @@ export default function APInvoiceDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !selectedPOId || lineItems.length === 0}>
+            <Button type="submit" disabled={loading || !selectedReceiptId || lineItems.length === 0}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create AP Invoice
             </Button>
