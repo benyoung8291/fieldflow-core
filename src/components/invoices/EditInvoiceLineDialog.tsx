@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from "@/lib/utils";
+import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 interface EditInvoiceLineDialogProps {
   open: boolean;
@@ -20,6 +21,8 @@ interface EditInvoiceLineDialogProps {
     source_type?: string;
     source_id?: string;
     line_item_id?: string;
+    account_code?: string;
+    sub_account?: string;
   };
   onSave: (updatedItem: any) => void;
   isFromSource: boolean;
@@ -36,6 +39,8 @@ export default function EditInvoiceLineDialog({
   const [quantity, setQuantity] = useState(lineItem.quantity.toString());
   const [unitPrice, setUnitPrice] = useState(lineItem.unit_price.toString());
   const [showWarning, setShowWarning] = useState(false);
+  const [accountCode, setAccountCode] = useState(lineItem.account_code || "");
+  const [subAccount, setSubAccount] = useState(lineItem.sub_account || "");
 
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
@@ -58,6 +63,8 @@ export default function EditInvoiceLineDialog({
       quantity: qty,
       unit_price: price,
       line_total: qty * price,
+      account_code: accountCode,
+      sub_account: subAccount,
     });
     
     onOpenChange(false);
@@ -117,6 +124,15 @@ export default function EditInvoiceLineDialog({
                 onChange={(e) => setUnitPrice(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <ChartOfAccountsSelector
+              accountCode={accountCode}
+              subAccount={subAccount}
+              onAccountChange={setAccountCode}
+              onSubAccountChange={setSubAccount}
+            />
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t">
