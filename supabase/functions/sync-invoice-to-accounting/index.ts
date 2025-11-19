@@ -145,15 +145,18 @@ async function syncToAcumatica(invoice: any, integration: any) {
     customerId: invoice.customers?.name
   });
 
+  // Remove trailing slash from instance URL if present
+  const instanceUrl = integration.acumatica_instance_url.replace(/\/$/, '');
+
   // Authenticate
   console.log("Attempting Acumatica authentication:", {
-    url: `${integration.acumatica_instance_url}/entity/auth/login`,
+    url: `${instanceUrl}/entity/auth/login`,
     username: username,
     company: integration.acumatica_company_name,
     hasPassword: !!password
   });
 
-  const authResponse = await fetch(`${integration.acumatica_instance_url}/entity/auth/login`, {
+  const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -211,7 +214,7 @@ async function syncToAcumatica(invoice: any, integration: any) {
   console.log("Sending to Acumatica:", JSON.stringify(acumaticaInvoice, null, 2));
 
   const invoiceResponse = await fetch(
-    `${integration.acumatica_instance_url}/entity/Default/20.200.001/SalesInvoice`,
+    `${instanceUrl}/entity/Default/20.200.001/SalesInvoice`,
     {
       method: "PUT",
       headers: {
@@ -224,7 +227,7 @@ async function syncToAcumatica(invoice: any, integration: any) {
   );
 
   // Logout
-  await fetch(`${integration.acumatica_instance_url}/entity/auth/logout`, {
+  await fetch(`${instanceUrl}/entity/auth/logout`, {
     method: "POST",
     headers: { "Cookie": cookies },
   });
