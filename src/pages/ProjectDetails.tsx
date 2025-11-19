@@ -167,6 +167,46 @@ export default function ProjectDetails() {
     enabled: !!tasks?.length && !!project,
   });
 
+  // Fetch purchase orders for pending cost calculation
+  const { data: purchaseOrders } = useQuery({
+    queryKey: ["project-purchase-orders-costs", id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) return [];
+
+      // Get all POs for this project
+      const { data: pos, error } = await supabase
+        .rpc('get_all_purchase_orders', { p_tenant_id: profile.tenant_id });
+
+      if (error) throw error;
+
+      // Filter for this project and fetch line items
+      const projectPos = pos?.filter(po => po.project_id === id) || [];
+      
+      if (projectPos.length === 0) return [];
+
+      // Fetch line items for these POs
+      const poIds = projectPos.map(po => po.id);
+      const { data: lineItems } = await supabase
+        .from("purchase_order_line_items")
+        .select("*")
+        .in("po_id", poIds);
+
+      return projectPos.map(po => ({
+        ...po,
+        line_items: lineItems?.filter(li => li.po_id === po.id) || []
+      }));
+    },
+  });
+
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -385,6 +425,28 @@ export default function ProjectDetails() {
     ? ((projectTotalRevenue - projectActualCost) / projectTotalRevenue) * 100 
     : 0;
 
+  // Calculate pending PO costs (outstanding POs not yet received, excluding GST)
+  const pendingPOCosts = useMemo(() => {
+    if (!purchaseOrders || purchaseOrders.length === 0) return 0;
+    
+    return purchaseOrders.reduce((total, po) => {
+      // Sum line items that haven't been fully received
+      const poTotal = po.line_items?.reduce((sum: number, lineItem: any) => {
+        // Calculate unreceived quantity
+        const unreceivedQty = (lineItem.quantity || 0) - (lineItem.quantity_received || 0);
+        
+        if (unreceivedQty > 0) {
+          // Calculate line total for unreceived quantity, excluding GST
+          const lineTotal = unreceivedQty * (lineItem.unit_price || 0);
+          return sum + lineTotal;
+        }
+        return sum;
+      }, 0) || 0;
+      
+      return total + poTotal;
+    }, 0);
+  }, [purchaseOrders]);
+
   // Key information cards
   const keyInfoSection = (
     <div className="grid gap-4 md:grid-cols-3">
@@ -496,6 +558,7 @@ export default function ProjectDetails() {
             costOfLabor={projectCostOfLabor}
             otherCosts={projectOtherCosts}
             profitMargin={projectProfitMargin}
+            pendingPOCosts={pendingPOCosts}
           />
         </div>
       ),
