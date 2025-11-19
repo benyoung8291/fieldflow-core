@@ -160,12 +160,40 @@ serve(async (req) => {
         throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status} - ${errorText.substring(0, 200)}`);
       }
 
-      cookies = authResponse!.headers.get("set-cookie");
-      console.log("Received cookies:", cookies ? "Yes" : "No");
+      // Parse cookies properly - Acumatica may return multiple set-cookie headers
+      const setCookieHeader = authResponse!.headers.get("set-cookie");
+      console.log("Raw set-cookie header:", setCookieHeader ? "Present" : "Missing");
       
-      if (!cookies) {
+      if (!setCookieHeader) {
         throw new Error("No authentication cookies received from Acumatica");
       }
+
+      // Parse multiple cookies if present
+      const setCookieHeaders: string[] = [];
+      if (setCookieHeader.includes(',')) {
+        // Multiple cookies in one header
+        const parts = setCookieHeader.split(',');
+        for (const part of parts) {
+          const trimmedPart = part.trim();
+          if (trimmedPart.includes('=')) {
+            setCookieHeaders.push(trimmedPart);
+          }
+        }
+      } else {
+        setCookieHeaders.push(setCookieHeader);
+      }
+
+      if (setCookieHeaders.length === 0) {
+        throw new Error("No valid cookies found in response");
+      }
+
+      // Join all cookies into a single Cookie header value (name=value pairs only)
+      cookies = setCookieHeaders
+        .map(cookie => cookie.split(';')[0]) // Take only the name=value part
+        .join('; ');
+      
+      console.log("Authentication successful, cookies received");
+      console.log("Cookie header value:", cookies.substring(0, 50) + "...");
 
       // Fetch chart of accounts
       console.log("Fetching accounts with cookie...");
