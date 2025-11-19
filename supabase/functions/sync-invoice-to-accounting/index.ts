@@ -187,10 +187,26 @@ async function syncToAcumatica(invoice: any, integration: any) {
     throw new Error("No authentication cookies received from Acumatica");
   }
 
-  console.log("Authentication successful, cookies received:", {
-    cookieCount: cookies.split(',').length,
-    cookiePreview: cookies.substring(0, 100) + '...',
-    fullCookieLength: cookies.length
+  console.log("Authentication successful, cookies received");
+
+  // Test session validity and get Bearer token
+  console.log("Getting bearer token for API access...");
+  const tokenResponse = await fetch(`${instanceUrl}/entity/Default/20.200.001`, {
+    method: "GET",
+    headers: {
+      "Cookie": cookies,
+      "Accept": "application/json",
+    },
+  });
+  
+  // Extract bearer token from response or headers
+  const bearerToken = tokenResponse.headers.get("authorization") || 
+                      authResponse.headers.get("authorization");
+  
+  console.log("Token response:", {
+    status: tokenResponse.status,
+    hasAuthHeader: !!bearerToken,
+    cookies: !!cookies
   });
 
   // Test session validity with a simple GET request first
@@ -206,10 +222,10 @@ async function syncToAcumatica(invoice: any, integration: any) {
   console.log("Session test response:", {
     status: testResponse.status,
     statusText: testResponse.statusText,
-    headers: Object.fromEntries(testResponse.headers.entries())
+    authHeader: testResponse.headers.get("www-authenticate")
   });
 
-  // Create Sales Invoice in Acumatica
+  // Use cookies for authentication (Acumatica uses session cookies, not Bearer tokens)
   const acumaticaInvoice = {
     Type: { value: "Invoice" },
     CustomerID: { value: invoice.customers?.xero_contact_id || invoice.customers?.name?.substring(0, 30) },
