@@ -48,3 +48,6 @@ verify_jwt = true
 [functions.suggest-ticket-links]
 verify_jwt = true
 
+[functions.test-xero-connection]
+verify_jwt = true
+
