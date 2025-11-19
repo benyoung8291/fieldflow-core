@@ -127,37 +127,26 @@ export default function IntegrationsTab() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      let integrationId = xeroIntegrationId;
-      
-      // Create or update integration record
-      if (!integrationId) {
-        const { data: newIntegration, error: insertError } = await supabase
-          .from("accounting_integrations")
-          .insert({
-            tenant_id: profile.tenant_id,
-            provider: "xero",
-            name: "Xero",
-            xero_client_id: xeroClientId,
-            xero_client_secret: xeroClientSecret,
-            is_enabled: false
-          })
-          .select()
-          .single();
+      // Use UPSERT to handle both new and existing connections
+      const { data: integration, error: upsertError } = await supabase
+        .from("accounting_integrations")
+        .upsert({
+          tenant_id: profile.tenant_id,
+          provider: "xero",
+          name: "Xero",
+          xero_client_id: xeroClientId,
+          xero_client_secret: xeroClientSecret,
+          is_enabled: false
+        }, {
+          onConflict: 'tenant_id,provider',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
 
-        if (insertError) throw insertError;
-        integrationId = newIntegration.id;
-        setXeroIntegrationId(integrationId);
-      } else {
-        const { error: updateError } = await supabase
-          .from("accounting_integrations")
-          .update({
-            xero_client_id: xeroClientId,
-            xero_client_secret: xeroClientSecret
-          })
-          .eq("id", integrationId);
-
-        if (updateError) throw updateError;
-      }
+      if (upsertError) throw upsertError;
+      const integrationId = integration.id;
+      setXeroIntegrationId(integrationId);
 
       // Get authorization URL
       const response = await fetch(
