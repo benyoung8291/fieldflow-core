@@ -184,6 +184,8 @@ async function syncToAcumatica(invoice: any, integration: any) {
     })) || [],
   };
 
+  console.log("Sending to Acumatica:", JSON.stringify(acumaticaInvoice, null, 2));
+
   const invoiceResponse = await fetch(
     `${integration.acumatica_instance_url}/entity/Default/20.200.001/SalesInvoice`,
     {
@@ -205,8 +207,13 @@ async function syncToAcumatica(invoice: any, integration: any) {
 
   if (!invoiceResponse.ok) {
     const errorText = await invoiceResponse.text();
-    console.error("Acumatica invoice creation failed:", errorText);
-    throw new Error(`Failed to create invoice in Acumatica: ${errorText}`);
+    console.error("Acumatica API error:", {
+      status: invoiceResponse.status,
+      statusText: invoiceResponse.statusText,
+      errorBody: errorText,
+      sentPayload: acumaticaInvoice
+    });
+    throw new Error(`Failed to create invoice in Acumatica (${invoiceResponse.status}): ${errorText || invoiceResponse.statusText}`);
   }
 
   const createdInvoice = await invoiceResponse.json();
