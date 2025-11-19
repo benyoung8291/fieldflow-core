@@ -1201,6 +1201,7 @@ export type Database = {
       customers: {
         Row: {
           abn: string | null
+          acumatica_customer_id: string | null
           address: string | null
           billing_address: string | null
           billing_email: string | null
@@ -1228,6 +1229,7 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          acumatica_customer_id?: string | null
           address?: string | null
           billing_address?: string | null
           billing_email?: string | null
@@ -1255,6 +1257,7 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          acumatica_customer_id?: string | null
           address?: string | null
           billing_address?: string | null
           billing_email?: string | null
@@ -5238,6 +5241,7 @@ export type Database = {
       suppliers: {
         Row: {
           abn: string | null
+          acumatica_vendor_id: string | null
           address: string | null
           city: string | null
           created_at: string | null
@@ -5263,6 +5267,7 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          acumatica_vendor_id?: string | null
           address?: string | null
           city?: string | null
           created_at?: string | null
@@ -5288,6 +5293,7 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          acumatica_vendor_id?: string | null
           address?: string | null
           city?: string | null
           created_at?: string | null

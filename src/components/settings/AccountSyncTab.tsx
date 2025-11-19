@@ -132,10 +132,20 @@ export default function AccountSyncTab() {
 
   // Map external accounts to app accounts
   const mappedAccounts: MappedAccount[] = (externalAccounts || []).map(ext => {
-    const matchedApp = appAccounts?.find(app => 
-      app.name.toLowerCase() === ext.name.toLowerCase() ||
-      (ext.email && app.email && app.email.toLowerCase() === ext.email.toLowerCase())
-    );
+    // Check the correct field based on integration provider
+    const matchedApp = appAccounts?.find(app => {
+      if (integrationSettings?.provider === 'xero') {
+        return (app as any).xero_contact_id === ext.id;
+      } else if (integrationSettings?.provider === 'myob_acumatica') {
+        // Acumatica
+        return accountType === 'customers' 
+          ? (app as any).acumatica_customer_id === ext.id
+          : (app as any).acumatica_vendor_id === ext.id;
+      }
+      // Fallback to name/email matching
+      return app.name.toLowerCase() === ext.name.toLowerCase() ||
+        (ext.email && app.email && app.email.toLowerCase() === ext.email.toLowerCase());
+    });
 
     return {
       ...ext,
@@ -226,9 +236,16 @@ export default function AccountSyncTab() {
     mutationFn: async ({ appAccountId, xeroContactId }: { appAccountId: string; xeroContactId: string }) => {
       const table = accountType === 'customers' ? 'customers' : 'suppliers';
       
+      // Determine which field to update based on integration provider
+      const updateField = integrationSettings?.provider === 'xero' 
+        ? 'xero_contact_id' 
+        : accountType === 'customers' 
+          ? 'acumatica_customer_id' 
+          : 'acumatica_vendor_id';
+      
       const { error } = await supabase
         .from(table)
-        .update({ xero_contact_id: xeroContactId })
+        .update({ [updateField]: xeroContactId })
         .eq('id', appAccountId);
 
       if (error) throw error;
@@ -236,6 +253,9 @@ export default function AccountSyncTab() {
     onSuccess: () => {
       toast.success("Account linked successfully");
       queryClient.invalidateQueries({ queryKey: ["app-accounts", accountType] });
+      setLinkDialogOpen(false);
+      setSelectedAppAccount("");
+      setSelectedXeroAccount("");
     },
     onError: (error: Error) => {
       toast.error(`Failed to link account: ${error.message}`);
@@ -247,9 +267,16 @@ export default function AccountSyncTab() {
     mutationFn: async (appAccountId: string) => {
       const table = accountType === 'customers' ? 'customers' : 'suppliers';
       
+      // Determine which field to clear based on integration provider
+      const updateField = integrationSettings?.provider === 'xero' 
+        ? 'xero_contact_id' 
+        : accountType === 'customers' 
+          ? 'acumatica_customer_id' 
+          : 'acumatica_vendor_id';
+      
       const { error } = await supabase
         .from(table)
-        .update({ xero_contact_id: null })
+        .update({ [updateField]: null })
         .eq('id', appAccountId);
 
       if (error) throw error;
