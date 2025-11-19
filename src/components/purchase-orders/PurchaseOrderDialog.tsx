@@ -475,30 +475,32 @@ export function PurchaseOrderDialog({
         if (numberError) throw numberError;
         if (!poNumber) throw new Error("Failed to generate PO number");
 
-        // Use database function to bypass schema cache issues
-        const { data: newPoId, error: insertError } = await supabase
-          .rpc('create_purchase_order_with_linkage', {
-            p_tenant_id: profile?.tenant_id,
-            p_supplier_id: poData.supplier_id,
-            p_po_number: poNumber,
-            p_po_date: poData.po_date,
-            p_expected_delivery_date: poData.expected_delivery_date,
-            p_notes: poData.notes || '',
-            p_internal_notes: poData.internal_notes || '',
-            p_tax_rate: poData.tax_rate,
-            p_subtotal: poData.subtotal,
-            p_tax_amount: poData.tax_amount,
-            p_total_amount: poData.total_amount,
-            p_created_by: poData.created_by,
-            p_status: 'draft',
-            p_service_order_id: selectedServiceOrderId || null,
-            p_project_id: selectedProjectId || null
-          });
+        // Direct insert to bypass PostgREST schema cache issues
+        const { data: newPo, error: insertError } = await supabase
+          .from('purchase_orders')
+          .insert({
+            tenant_id: profile?.tenant_id,
+            supplier_id: poData.supplier_id,
+            po_number: poNumber,
+            po_date: poData.po_date,
+            expected_delivery_date: poData.expected_delivery_date,
+            notes: poData.notes || '',
+            internal_notes: poData.internal_notes || '',
+            tax_rate: poData.tax_rate,
+            subtotal: poData.subtotal,
+            tax_amount: poData.tax_amount,
+            total_amount: poData.total_amount,
+            created_by: poData.created_by,
+            status: 'draft',
+            service_order_id: selectedServiceOrderId || null,
+            project_id: selectedProjectId || null
+          })
+          .select()
+          .single();
 
         if (insertError) throw insertError;
-        if (!newPoId) throw new Error("Failed to create PO");
-        
-        poId = newPoId;
+        if (!newPo) throw new Error("Failed to create purchase order");
+        poId = newPo.id;
       }
 
       // Insert line items
