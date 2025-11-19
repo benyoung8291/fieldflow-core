@@ -477,14 +477,102 @@ export default function AccountSyncTab() {
             Export {accountType} from your app to {integrationSettings.provider}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Alert className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Export functionality will push selected app {accountType} to your {integrationSettings.provider} account. 
-              This feature is coming soon and requires additional configuration in the accounting system.
-            </AlertDescription>
-          </Alert>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <Input
+              placeholder={`Search app ${accountType}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+            <Button
+              size="sm"
+              onClick={handleExportSelected}
+              disabled={selectedAccounts.size === 0 || exportMutation.isPending}
+            >
+              {exportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              Export Selected ({selectedAccounts.size})
+            </Button>
+          </div>
+
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={
+                        appAccounts?.length > 0 &&
+                        selectedAccounts.size === appAccounts.length
+                      }
+                      onCheckedChange={() => {
+                        if (selectedAccounts.size === appAccounts?.length) {
+                          setSelectedAccounts(new Set());
+                        } else {
+                          setSelectedAccounts(new Set((appAccounts || []).map(a => a.id)));
+                        }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!appAccounts ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : appAccounts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No {accountType} found in app
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  appAccounts
+                    .filter(account =>
+                      account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      account.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((account) => (
+                      <TableRow key={account.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedAccounts.has(account.id)}
+                            onCheckedChange={() => {
+                              const newSelected = new Set(selectedAccounts);
+                              if (newSelected.has(account.id)) {
+                                newSelected.delete(account.id);
+                              } else {
+                                newSelected.add(account.id);
+                              }
+                              setSelectedAccounts(newSelected);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{account.name}</TableCell>
+                        <TableCell>{account.email || '-'}</TableCell>
+                        <TableCell>{account.phone || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={account.is_active ? 'default' : 'secondary'}>
+                            {account.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
