@@ -81,22 +81,23 @@ export function ChartOfAccountsSelector({
         .from("chart_of_accounts_cache")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
-        .eq("provider", provider === "acumatica" ? "myob_acumatica" : "xero")
+        .eq("provider", provider)
         .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
       let cachedSubAccounts = null;
-      if (provider === "acumatica") {
+      if (provider === "myob_acumatica") {
         const { data } = await supabase
           .from("sub_accounts_cache")
           .select("*")
           .eq("tenant_id", profile.tenant_id)
-          .eq("provider", "myob_acumatica")
+          .eq("provider", provider)
           .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
         cachedSubAccounts = data;
       }
 
       // If we have cache, use it
       if (cachedAccounts && cachedAccounts.length > 0) {
+        console.log("Using cached chart of accounts data");
         return {
           accounts: cachedAccounts.map(a => ({
             AccountCD: { value: a.account_code },
@@ -114,8 +115,9 @@ export function ChartOfAccountsSelector({
         };
       }
 
+      console.log("No cache found, fetching from API");
       // No cache or stale - fetch from API
-      if (provider === "acumatica") {
+      if (provider === "myob_acumatica") {
         if (!instanceUrl || !companyName) {
           toast.error("Acumatica configuration incomplete");
           return null;
@@ -125,7 +127,10 @@ export function ChartOfAccountsSelector({
           body: { instanceUrl, companyName, forceRefresh: false },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching accounts:", error);
+          throw error;
+        }
         return data;
       } else if (provider === "xero") {
         if (!xeroTenantId) {
@@ -137,17 +142,21 @@ export function ChartOfAccountsSelector({
           body: { tenantId: xeroTenantId, forceRefresh: false },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching accounts:", error);
+          throw error;
+        }
         return data;
       }
 
       return null;
     },
     enabled: !!provider && (
-      (provider === "acumatica" && !!instanceUrl && !!companyName) ||
+      (provider === "myob_acumatica" && !!instanceUrl && !!companyName) ||
       (provider === "xero" && !!xeroTenantId)
     ),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    retry: 1,
   });
 
   if (!provider || !integrationSettings?.is_enabled) {
@@ -173,13 +182,13 @@ export function ChartOfAccountsSelector({
           <SelectTrigger>
             <SelectValue placeholder="Select account..." />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover z-[100]">
             {accounts.map((account: any) => (
               <SelectItem 
-                key={provider === "acumatica" ? account.AccountCD?.value : account.Code}
-                value={provider === "acumatica" ? account.AccountCD?.value : account.Code}
+                key={provider === "myob_acumatica" ? account.AccountCD?.value : account.Code}
+                value={provider === "myob_acumatica" ? account.AccountCD?.value : account.Code}
               >
-                {provider === "acumatica" 
+                {provider === "myob_acumatica" 
                   ? `${account.AccountCD?.value} - ${account.Description?.value}`
                   : `${account.Code} - ${account.Name}`
                 }
@@ -189,7 +198,7 @@ export function ChartOfAccountsSelector({
         </Select>
       </div>
 
-      {provider === "acumatica" && onSubAccountChange && (
+      {provider === "myob_acumatica" && onSubAccountChange && (
         <div>
           <Label>Sub-Account</Label>
           <Select
@@ -200,7 +209,7 @@ export function ChartOfAccountsSelector({
             <SelectTrigger>
               <SelectValue placeholder="Select sub-account..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover z-[100]">
               {subAccounts.map((subAcc: any) => (
                 <SelectItem 
                   key={subAcc.SubAccountCD?.value}
