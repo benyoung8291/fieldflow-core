@@ -196,6 +196,8 @@ serve(async (req) => {
       }
     );
 
+    console.log("📊 Initial API response status:", customersResponse.status);
+
     // If we get 401, try refreshing the token and retry once
     if (customersResponse.status === 401) {
       console.log("🔄 Got 401, attempting token refresh and retry...");
