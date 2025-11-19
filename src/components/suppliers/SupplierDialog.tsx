@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, AlertTriangle, Link2 } from "lucide-react";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
+import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 interface VendorDialogProps {
   open: boolean;
@@ -53,6 +54,8 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
     paymentTerms: "30",
     isActive: true,
     notes: "",
+    defaultAccountCode: "",
+    defaultSubAccount: "",
   });
 
   const formatABN = (value: string) => {
@@ -206,6 +209,8 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         paymentTerms: vendor.payment_terms?.toString() || "30",
         isActive: vendor.is_active ?? true,
         notes: vendor.notes || "",
+        defaultAccountCode: vendor.default_account_code || "",
+        defaultSubAccount: vendor.default_sub_account || "",
       });
       setLinkedCustomerId(vendor.customer_id || null);
       setAbnValidated(false);
@@ -228,6 +233,8 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         paymentTerms: "30",
         isActive: true,
         notes: "",
+        defaultAccountCode: "",
+        defaultSubAccount: "",
       });
       setLinkedCustomerId(null);
       setAbnValidated(false);
@@ -295,6 +302,8 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         notes: formData.notes || null,
         tenant_id: profile.tenant_id,
         customer_id: linkedCustomerId || null,
+        default_account_code: formData.defaultAccountCode || null,
+        default_sub_account: formData.defaultSubAccount || null,
       };
 
       if (vendor) {
@@ -554,6 +563,19 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
                   type="number"
                   value={formData.paymentTerms}
                   onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Default AP Invoice Account</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Default chart of accounts for AP invoices from this supplier (for Acumatica integration)
+                </p>
+                <ChartOfAccountsSelector
+                  accountCode={formData.defaultAccountCode}
+                  subAccount={formData.defaultSubAccount}
+                  onAccountChange={(code) => setFormData({ ...formData, defaultAccountCode: code })}
+                  onSubAccountChange={(sub) => setFormData({ ...formData, defaultSubAccount: sub })}
                 />
               </div>
 
