@@ -425,6 +425,7 @@ export function PurchaseOrderDialog({
       let poId: string;
 
       if (purchaseOrder) {
+        // Direct update including linkage - simpler and avoids schema cache issues
         const { error } = await supabase
           .from("purchase_orders")
           .update({
@@ -438,27 +439,13 @@ export function PurchaseOrderDialog({
             subtotal: poData.subtotal,
             tax_amount: poData.tax_amount,
             total_amount: poData.total_amount,
+            service_order_id: selectedServiceOrderId || null,
+            project_id: selectedProjectId || null,
           })
           .eq("id", purchaseOrder.id);
 
         if (error) throw error;
         poId = purchaseOrder.id;
-
-        // Update linkage using RPC functions to bypass schema cache
-        // For edits, we update links if user changed the selection
-        if (selectedServiceOrderId) {
-          const { error: linkError } = await supabase.rpc('link_purchase_order_to_service_order', {
-            p_po_id: poId,
-            p_service_order_id: selectedServiceOrderId
-          });
-          if (linkError) throw linkError;
-        } else if (selectedProjectId) {
-          const { error: linkError } = await supabase.rpc('link_purchase_order_to_project', {
-            p_po_id: poId,
-            p_project_id: selectedProjectId
-          });
-          if (linkError) throw linkError;
-        }
 
         // Delete existing line items
         await supabase
