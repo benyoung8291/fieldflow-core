@@ -62,10 +62,14 @@ serve(async (req) => {
       );
     }
 
-    console.log("Fetching vendors from Acumatica:", { instanceUrl: acumatica_instance_url, companyName: acumatica_company_name });
+    console.log("Starting Acumatica vendor fetch...");
+    console.log("Instance URL:", acumatica_instance_url);
+    console.log("Company:", acumatica_company_name);
 
     // Authenticate with Acumatica
-    const authResponse = await fetch(`${acumatica_instance_url}/entity/auth/login`, {
+    console.log("Attempting authentication...");
+    const authUrl = `${acumatica_instance_url}/entity/auth/login`;
+    const authResponse = await fetch(authUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -77,33 +81,57 @@ serve(async (req) => {
       }),
     });
 
+    console.log("Auth response status:", authResponse.status);
+
     if (!authResponse.ok) {
-      console.error("Acumatica auth failed:", authResponse.status);
-      throw new Error("Failed to authenticate with Acumatica");
+      const errorText = await authResponse.text();
+      console.error("Acumatica auth failed:", authResponse.status, errorText);
+      throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status} ${errorText}`);
     }
 
     const cookies = authResponse.headers.get("set-cookie");
     if (!cookies) {
+      console.error("No authentication cookies received");
       throw new Error("No authentication cookies received");
     }
 
-    // Fetch vendors
-    const vendorsResponse = await fetch(
-      `${acumatica_instance_url}/entity/Default/20.200.001/Vendor?$select=VendorID,VendorName,Status,MainContact,Email,Phone1&$filter=Status eq 'Active' or Status eq 'OneTime'&$expand=MainContact`,
-      {
-        headers: {
-          "Cookie": cookies,
-          "Accept": "application/json",
-        },
-      }
-    );
+    console.log("Authentication successful, cookies received");
+
+    // Fetch vendors with proper expansion
+    const vendorsUrl = `${acumatica_instance_url}/entity/Default/20.200.001/Vendor?$expand=MainContact&$select=VendorID,VendorName,Status,MainContact`;
+    console.log("Fetching vendors from:", vendorsUrl);
+
+    const vendorsResponse = await fetch(vendorsUrl, {
+      headers: {
+        "Cookie": cookies,
+        "Accept": "application/json",
+      },
+    });
+
+    console.log("Vendors response status:", vendorsResponse.status);
 
     if (!vendorsResponse.ok) {
-      console.error("Failed to fetch vendors:", vendorsResponse.status);
-      throw new Error("Failed to fetch vendors");
+      const errorText = await vendorsResponse.text();
+      console.error("Failed to fetch vendors:", vendorsResponse.status, errorText);
+      throw new Error(`Failed to fetch vendors: ${vendorsResponse.status}`);
     }
 
     const vendorsData = await vendorsResponse.json();
+    console.log("Raw response type:", typeof vendorsData);
+    console.log("Is array:", Array.isArray(vendorsData));
+    console.log("Response keys:", vendorsData ? Object.keys(vendorsData) : "null");
+
+    // Handle different response formats
+    let vendors = [];
+    if (Array.isArray(vendorsData)) {
+      vendors = vendorsData;
+    } else if (vendorsData && Array.isArray(vendorsData.value)) {
+      vendors = vendorsData.value;
+    } else if (vendorsData && typeof vendorsData === 'object') {
+      vendors = [vendorsData];
+    }
+
+    console.log(`Processed ${vendors.length} vendors`);
 
     // Logout
     await fetch(`${acumatica_instance_url}/entity/auth/logout`, {
@@ -113,16 +141,20 @@ serve(async (req) => {
       },
     });
 
-    console.log(`Fetched ${vendorsData.length || 0} vendors`);
+    console.log("Logout successful");
 
     return new Response(
-      JSON.stringify({ vendors: vendorsData }),
+      JSON.stringify({ vendors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching Acumatica vendors:", error);
+    console.error("Error in fetch-acumatica-vendors:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.stack : undefined
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

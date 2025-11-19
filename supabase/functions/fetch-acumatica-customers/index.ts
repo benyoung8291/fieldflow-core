@@ -62,10 +62,14 @@ serve(async (req) => {
       );
     }
 
-    console.log("Fetching customers from Acumatica:", { instanceUrl: acumatica_instance_url, companyName: acumatica_company_name });
+    console.log("Starting Acumatica customer fetch...");
+    console.log("Instance URL:", acumatica_instance_url);
+    console.log("Company:", acumatica_company_name);
 
     // Authenticate with Acumatica
-    const authResponse = await fetch(`${acumatica_instance_url}/entity/auth/login`, {
+    console.log("Attempting authentication...");
+    const authUrl = `${acumatica_instance_url}/entity/auth/login`;
+    const authResponse = await fetch(authUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -77,33 +81,57 @@ serve(async (req) => {
       }),
     });
 
+    console.log("Auth response status:", authResponse.status);
+
     if (!authResponse.ok) {
-      console.error("Acumatica auth failed:", authResponse.status);
-      throw new Error("Failed to authenticate with Acumatica");
+      const errorText = await authResponse.text();
+      console.error("Acumatica auth failed:", authResponse.status, errorText);
+      throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status} ${errorText}`);
     }
 
     const cookies = authResponse.headers.get("set-cookie");
     if (!cookies) {
+      console.error("No authentication cookies received");
       throw new Error("No authentication cookies received");
     }
 
-    // Fetch customers
-    const customersResponse = await fetch(
-      `${acumatica_instance_url}/entity/Default/20.200.001/Customer?$select=CustomerID,CustomerName,Status,MainContact,Email,Phone1&$filter=Status eq 'Active' or Status eq 'OneTime'&$expand=MainContact,BillingContact`,
-      {
-        headers: {
-          "Cookie": cookies,
-          "Accept": "application/json",
-        },
-      }
-    );
+    console.log("Authentication successful, cookies received");
+
+    // Fetch customers with proper expansion
+    const customersUrl = `${acumatica_instance_url}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Status,MainContact`;
+    console.log("Fetching customers from:", customersUrl);
+
+    const customersResponse = await fetch(customersUrl, {
+      headers: {
+        "Cookie": cookies,
+        "Accept": "application/json",
+      },
+    });
+
+    console.log("Customers response status:", customersResponse.status);
 
     if (!customersResponse.ok) {
-      console.error("Failed to fetch customers:", customersResponse.status);
-      throw new Error("Failed to fetch customers");
+      const errorText = await customersResponse.text();
+      console.error("Failed to fetch customers:", customersResponse.status, errorText);
+      throw new Error(`Failed to fetch customers: ${customersResponse.status}`);
     }
 
     const customersData = await customersResponse.json();
+    console.log("Raw response type:", typeof customersData);
+    console.log("Is array:", Array.isArray(customersData));
+    console.log("Response keys:", customersData ? Object.keys(customersData) : "null");
+
+    // Handle different response formats
+    let customers = [];
+    if (Array.isArray(customersData)) {
+      customers = customersData;
+    } else if (customersData && Array.isArray(customersData.value)) {
+      customers = customersData.value;
+    } else if (customersData && typeof customersData === 'object') {
+      customers = [customersData];
+    }
+
+    console.log(`Processed ${customers.length} customers`);
 
     // Logout
     await fetch(`${acumatica_instance_url}/entity/auth/logout`, {
@@ -113,16 +141,20 @@ serve(async (req) => {
       },
     });
 
-    console.log(`Fetched ${customersData.length || 0} customers`);
+    console.log("Logout successful");
 
     return new Response(
-      JSON.stringify({ customers: customersData }),
+      JSON.stringify({ customers }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching Acumatica customers:", error);
+    console.error("Error in fetch-acumatica-customers:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.stack : undefined
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
