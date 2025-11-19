@@ -56,20 +56,56 @@ export default function IntegrationsTab() {
         setXeroIntegrationId(xero.id);
         setXeroClientId(xero.xero_client_id || "");
         setXeroClientSecret(xero.xero_client_secret || "");
-        // Check if we have both refresh token AND tenant ID to consider it connected
-        const isConnected = !!(xero.xero_refresh_token && xero.xero_tenant_id);
-        setXeroConnected(isConnected);
+        
+        const hasRefreshToken = !!xero.xero_refresh_token;
+        const hasTenantId = !!xero.xero_tenant_id;
+        const isFullyConnected = hasRefreshToken && hasTenantId;
+        
+        setXeroConnected(isFullyConnected);
+        
         console.log("Xero connection status:", { 
-          hasRefreshToken: !!xero.xero_refresh_token, 
-          hasTenantId: !!xero.xero_tenant_id,
+          hasRefreshToken, 
+          hasTenantId,
           tenantId: xero.xero_tenant_id,
-          isConnected 
+          isFullyConnected 
         });
+        
+        // If we have a refresh token but no tenant ID, show tenant selector
+        if (hasRefreshToken && !hasTenantId) {
+          // Fetch available organizations
+          fetchXeroOrganizations();
+        }
       }
 
       return data;
     },
   });
+
+  const fetchXeroOrganizations = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-list-organizations`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+      if (result.success && result.organizations) {
+        setAvailableTenants(result.organizations);
+        setShowTenantSelector(true);
+      } else {
+        toast.error("Failed to fetch organizations");
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+      toast.error("Failed to fetch organizations");
+    }
+  };
 
   const connectToXero = async () => {
     if (!xeroClientId || !xeroClientSecret) {
@@ -162,29 +198,7 @@ export default function IntegrationsTab() {
           window.removeEventListener('message', handleMessage);
           
           // Fetch available organizations
-          try {
-            const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xero-list-organizations`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-
-            const result = await response.json();
-            if (result.success && result.organizations) {
-              setAvailableTenants(result.organizations);
-              setShowTenantSelector(true);
-            } else {
-              toast.error("Failed to fetch organizations");
-            }
-          } catch (error) {
-            console.error("Error fetching organizations:", error);
-            toast.error("Failed to fetch organizations");
-          }
+          await fetchXeroOrganizations();
         }
       };
       window.addEventListener('message', handleMessage);
