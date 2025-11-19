@@ -131,17 +131,18 @@ serve(async (req) => {
 });
 
 async function syncToAcumatica(invoice: any, integration: any) {
-  const username = Deno.env.get("ACUMATICA_USERNAME");
-  const password = Deno.env.get("ACUMATICA_PASSWORD");
+  const username = integration.acumatica_username;
+  const password = integration.acumatica_password;
   
   if (!username || !password) {
-    throw new Error("Acumatica credentials not configured");
+    throw new Error("Acumatica credentials not configured in integration settings");
   }
 
   console.log("Syncing AR invoice to Acumatica:", {
     instanceUrl: integration.acumatica_instance_url,
     companyName: integration.acumatica_company_name,
-    invoiceNumber: invoice.invoice_number
+    invoiceNumber: invoice.invoice_number,
+    customerId: invoice.customers?.name
   });
 
   // Authenticate
