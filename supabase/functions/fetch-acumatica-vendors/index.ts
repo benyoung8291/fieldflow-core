@@ -63,12 +63,15 @@ serve(async (req) => {
     }
 
     console.log("Starting Acumatica vendor fetch...");
-    console.log("Instance URL:", acumatica_instance_url);
+    
+    // Ensure URL doesn't have trailing slash
+    const baseUrl = acumatica_instance_url.replace(/\/$/, '');
+    console.log("Instance URL:", baseUrl);
     console.log("Company:", acumatica_company_name);
 
     // Authenticate with Acumatica
     console.log("Attempting authentication...");
-    const authUrl = `${acumatica_instance_url}/entity/auth/login`;
+    const authUrl = `${baseUrl}/entity/auth/login`;
     const authResponse = await fetch(authUrl, {
       method: "POST",
       headers: {
@@ -98,7 +101,7 @@ serve(async (req) => {
     console.log("Authentication successful, cookies received");
 
     // Fetch vendors with proper expansion
-    const vendorsUrl = `${acumatica_instance_url}/entity/Default/20.200.001/Vendor?$expand=MainContact&$select=VendorID,VendorName,Status,MainContact`;
+    const vendorsUrl = `${baseUrl}/entity/Default/20.200.001/Vendor?$expand=MainContact&$select=VendorID,VendorName,Status,MainContact`;
     console.log("Fetching vendors from:", vendorsUrl);
 
     const vendorsResponse = await fetch(vendorsUrl, {
@@ -134,7 +137,7 @@ serve(async (req) => {
     console.log(`Processed ${vendors.length} vendors`);
 
     // Logout
-    await fetch(`${acumatica_instance_url}/entity/auth/logout`, {
+    await fetch(`${baseUrl}/entity/auth/logout`, {
       method: "POST",
       headers: {
         "Cookie": cookies,
