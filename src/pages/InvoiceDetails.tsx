@@ -229,7 +229,7 @@ export default function InvoiceDetails() {
 
       if (allItems) {
         const subtotal = allItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
-        const taxAmount = subtotal * (invoice?.tax_rate || 0);
+        const taxAmount = subtotal * ((invoice?.tax_rate || 0) / 100);
         const totalAmount = subtotal + taxAmount;
 
         await supabase
@@ -313,7 +313,7 @@ export default function InvoiceDetails() {
 
       if (allItems) {
         const subtotal = allItems.reduce((sum, item) => sum + (item.line_total || 0), 0) + newItem.line_total;
-        const taxAmount = subtotal * (invoice?.tax_rate || 0);
+        const taxAmount = subtotal * ((invoice?.tax_rate || 0) / 100);
         const totalAmount = subtotal + taxAmount;
 
         await supabase
@@ -386,7 +386,7 @@ export default function InvoiceDetails() {
         .eq("invoice_id", id);
 
       const subtotal = allItems?.reduce((sum, item) => sum + (item.line_total || 0), 0) || 0;
-      const taxAmount = subtotal * (invoice?.tax_rate || 0);
+      const taxAmount = subtotal * ((invoice?.tax_rate || 0) / 100);
       const totalAmount = subtotal + taxAmount;
 
       await supabase
