@@ -63,6 +63,7 @@ const CUSTOMER_FIELDS = [
   { value: "billing_phone", label: "Billing Phone" },
   { value: "billing_email", label: "Billing Email" },
   { value: "payment_terms", label: "Payment Terms (days)" },
+  { value: "department", label: "Department" },
   { value: "notes", label: "Notes" },
   { value: "_skip", label: "- Skip this column -" },
 ];
