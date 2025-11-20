@@ -23,6 +23,8 @@ interface ExternalAccount {
   phone?: string;
   address?: string;
   abn?: string;
+  legal_company_name?: string;
+  trading_name?: string;
   type: 'customer' | 'supplier';
 }
 
@@ -93,9 +95,12 @@ export default function AccountSyncTab() {
         // Map Acumatica format to ExternalAccount format
         const accounts = (accountType === 'customers' ? data?.customers : data?.vendors) || [];
         return accounts.map((acc: any) => ({
-          id: acc.CustomerID?.value || acc.VendorID?.value,
-          name: acc.CustomerName?.value || acc.VendorName?.value,
-          email: acc.MainContact?.Email?.value || acc.Email?.value || "",
+          id: acc.CustomerID?.value || acc.VendorID?.value || acc.CustomerID || acc.VendorID,
+          name: acc.CustomerName?.value || acc.VendorName?.value || acc.CustomerName || acc.VendorName,
+          email: acc.Email?.value || acc.Email || acc.MainContact?.Email?.value,
+          phone: acc.Phone?.value || acc.Phone,
+          address: acc.Address?.value || acc.Address,
+          abn: acc.TaxRegistrationID?.value || acc.TaxRegistrationID, // Map TaxRegistrationID to ABN
           type: accountType === 'customers' ? 'customer' : 'supplier',
         })) as ExternalAccount[];
       }
@@ -186,13 +191,40 @@ export default function AccountSyncTab() {
           ? 'acumatica_customer_id' 
           : 'acumatica_vendor_id';
       
-      const accountsToImport = accounts.map(a => ({
+      // Validate ABNs if present
+      const accountsWithValidatedABN = await Promise.all(
+        accounts.map(async (a) => {
+          if (a.abn) {
+            try {
+              const { data, error } = await supabase.functions.invoke('validate-abn', {
+                body: { abn: a.abn },
+              });
+              
+              if (!error && data?.valid) {
+                return {
+                  ...a,
+                  abn: a.abn,
+                  legal_company_name: data.legalName,
+                  trading_name: data.tradingNames?.[0],
+                };
+              }
+            } catch (error) {
+              console.warn(`ABN validation failed for ${a.name}:`, error);
+            }
+          }
+          return a;
+        })
+      );
+      
+      const accountsToImport = accountsWithValidatedABN.map(a => ({
         tenant_id: profile.tenant_id,
         name: a.name,
         email: a.email,
         phone: a.phone,
         address: a.address,
         abn: a.abn,
+        legal_company_name: a.legal_company_name,
+        trading_name: a.trading_name,
         [linkField]: a.id, // Automatically link to external account
       }));
 

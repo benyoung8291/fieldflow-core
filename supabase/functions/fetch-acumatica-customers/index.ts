@@ -154,8 +154,8 @@ serve(async (req) => {
       console.log("Authentication successful, cookies received");
       console.log("Cookie header value:", cookies.substring(0, 50) + "...");
 
-      // Fetch customers with proper expansion
-      const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Status,MainContact`;
+      // Fetch customers with all available fields
+      const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Email,Status,TaxRegistrationID,CustomerClass,CustomerCategory,PrimaryContactID,BillingAddressOverride,BillingContactOverride,MainContact`;
       console.log("Fetching customers from:", customersUrl);
 
       const customersResponse = await fetch(customersUrl, {
@@ -194,9 +194,26 @@ serve(async (req) => {
       }
 
       console.log(`Processed ${customers.length} customers`);
+      
+      // Map Acumatica fields to our format
+      const mappedCustomers = customers.map((customer: any) => ({
+        CustomerID: customer.CustomerID,
+        CustomerName: customer.CustomerName,
+        Email: customer.Email || customer.MainContact?.Email,
+        Phone: customer.MainContact?.Phone1,
+        Address: customer.BillingAddressOverride?.AddressLine1 || customer.MainContact?.Address?.AddressLine1,
+        City: customer.BillingAddressOverride?.City || customer.MainContact?.Address?.City,
+        State: customer.BillingAddressOverride?.State || customer.MainContact?.Address?.State,
+        PostalCode: customer.BillingAddressOverride?.PostalCode || customer.MainContact?.Address?.PostalCode,
+        TaxRegistrationID: customer.TaxRegistrationID, // ABN
+        CustomerClass: customer.CustomerClass,
+        Status: customer.Status,
+      }));
+
+      console.log(`Mapped ${mappedCustomers.length} customers with full details`);
 
       return new Response(
-        JSON.stringify({ customers }),
+        JSON.stringify({ customers: mappedCustomers }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     } finally {
