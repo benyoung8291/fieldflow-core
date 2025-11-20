@@ -1209,6 +1209,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           customer_type: string
+          department: string | null
           email: string | null
           id: string
           is_active: boolean | null
@@ -1237,6 +1238,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           customer_type?: string
+          department?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
@@ -1265,6 +1267,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           customer_type?: string
+          department?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null

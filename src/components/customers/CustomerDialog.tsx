@@ -78,6 +78,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
     isActive: true,
     notes: "",
     acumaticaCustomerId: "",
+    department: "",
   });
 
   const formatABN = (value: string) => {
@@ -198,6 +199,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         isActive: customer.is_active ?? true,
         notes: customer.notes || "",
         acumaticaCustomerId: customer.acumatica_customer_id || "",
+        department: customer.department || "",
       });
       setLinkedVendorId(customer.supplier_id || null);
       setAbnValidated(false);
@@ -224,6 +226,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         isActive: true,
         notes: leadData.notes || "",
         acumaticaCustomerId: "",
+        department: "",
       });
       setLinkedVendorId(null);
       setAbnValidated(false);
@@ -250,6 +253,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         isActive: true,
         notes: "",
         acumaticaCustomerId: "",
+        department: "",
       });
       setLinkedVendorId(null);
       setAbnValidated(false);
@@ -298,6 +302,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         parent_customer_id: parentCustomerId || null,
         supplier_id: linkedVendorId || null,
         acumatica_customer_id: formData.acumaticaCustomerId || null,
+        department: formData.department || null,
       };
 
       if (customer) {
@@ -756,6 +761,27 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Link this customer to a supplier if they also provide goods or services to your business
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Select
+                  value={formData.department}
+                  onValueChange={(value) => setFormData({ ...formData, department: value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="cleaning">Cleaning</SelectItem>
+                    <SelectItem value="flooring">Flooring</SelectItem>
+                    <SelectItem value="special_projects">Special Projects</SelectItem>
+                    <SelectItem value="shared">Shared</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Primary department this customer works with
                 </p>
               </div>
 
