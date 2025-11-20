@@ -154,8 +154,9 @@ serve(async (req) => {
       console.log("Authentication successful, cookies received");
       console.log("Cookie header value:", cookies.substring(0, 50) + "...");
 
-      // Fetch customers with all available fields
-      const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Email,Status,TaxRegistrationID,CustomerClass,CustomerCategory,PrimaryContactID,BillingAddressOverride,BillingContactOverride,MainContact`;
+      // Fetch customers with core fields - simplified to avoid OData parsing errors
+      // Only request fields that definitely exist in the Customer entity
+      const customersUrl = `${baseUrl}/entity/Default/20.200.001/Customer?$expand=MainContact&$select=CustomerID,CustomerName,Status,TaxRegistrationID,CustomerClass,MainContact`;
       console.log("Fetching customers from:", customersUrl);
 
       const customersResponse = await fetch(customersUrl, {
@@ -195,19 +196,19 @@ serve(async (req) => {
 
       console.log(`Processed ${customers.length} customers`);
       
-      // Map Acumatica fields to our format
+      // Map Acumatica fields to our format (using available fields from simplified query)
       const mappedCustomers = customers.map((customer: any) => ({
-        CustomerID: customer.CustomerID,
-        CustomerName: customer.CustomerName,
-        Email: customer.Email || customer.MainContact?.Email,
-        Phone: customer.MainContact?.Phone1,
-        Address: customer.BillingAddressOverride?.AddressLine1 || customer.MainContact?.Address?.AddressLine1,
-        City: customer.BillingAddressOverride?.City || customer.MainContact?.Address?.City,
-        State: customer.BillingAddressOverride?.State || customer.MainContact?.Address?.State,
-        PostalCode: customer.BillingAddressOverride?.PostalCode || customer.MainContact?.Address?.PostalCode,
-        TaxRegistrationID: customer.TaxRegistrationID, // ABN
-        CustomerClass: customer.CustomerClass,
-        Status: customer.Status,
+        CustomerID: customer.CustomerID?.value || customer.CustomerID,
+        CustomerName: customer.CustomerName?.value || customer.CustomerName,
+        Email: customer.MainContact?.Email?.value || customer.MainContact?.Email,
+        Phone: customer.MainContact?.Phone1?.value || customer.MainContact?.Phone1,
+        Address: customer.MainContact?.Address?.AddressLine1?.value || customer.MainContact?.Address?.AddressLine1,
+        City: customer.MainContact?.Address?.City?.value || customer.MainContact?.Address?.City,
+        State: customer.MainContact?.Address?.State?.value || customer.MainContact?.Address?.State,
+        PostalCode: customer.MainContact?.Address?.PostalCode?.value || customer.MainContact?.Address?.PostalCode,
+        TaxRegistrationID: customer.TaxRegistrationID?.value || customer.TaxRegistrationID, // ABN
+        CustomerClass: customer.CustomerClass?.value || customer.CustomerClass,
+        Status: customer.Status?.value || customer.Status,
       }));
 
       console.log(`Mapped ${mappedCustomers.length} customers with full details`);
