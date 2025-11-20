@@ -14,6 +14,8 @@ interface ExternalAccount {
   phone?: string;
   address?: string;
   abn?: string;
+  legal_company_name?: string;
+  trading_name?: string;
   type: 'customer' | 'supplier';
 }
 
