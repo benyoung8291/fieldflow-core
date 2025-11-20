@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Building2, FileText } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Building2, FileText, Trash2 } from "lucide-react";
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
 import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
@@ -16,6 +16,7 @@ import CustomerLinkedDocuments from "@/components/customers/CustomerLinkedDocume
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
+import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,7 @@ export default function CustomerDetails() {
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [isSubAccountDialogOpen, setIsSubAccountDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: session } = useQuery({
     queryKey: ["session"],
@@ -178,6 +180,14 @@ export default function CustomerDetails() {
                 linkedRecordId={id!}
                 variant="outline"
               />
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDeleteDialogOpen(true)} 
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
               <Button onClick={() => setIsEditDialogOpen(true)} className="gap-2">
                 <Edit className="h-4 w-4" />
                 Edit Customer
@@ -540,6 +550,12 @@ export default function CustomerDetails() {
         open={isSubAccountDialogOpen}
         onOpenChange={setIsSubAccountDialogOpen}
         parentCustomerId={id}
+      />
+
+      <DeleteCustomerDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        customer={{ id: customer.id, name: customer.name }}
       />
 
       <ContactDialog
