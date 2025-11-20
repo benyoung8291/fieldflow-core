@@ -64,6 +64,7 @@ const CUSTOMER_FIELDS = [
   { value: "billing_email", label: "Billing Email" },
   { value: "payment_terms", label: "Payment Terms (days)" },
   { value: "department", label: "Department" },
+  { value: "acumatica_customer_id", label: "MYOB Customer Number" },
   { value: "notes", label: "Notes" },
   { value: "_skip", label: "- Skip this column -" },
 ];
