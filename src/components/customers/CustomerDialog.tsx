@@ -77,6 +77,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
     taxExempt: false,
     isActive: true,
     notes: "",
+    acumaticaCustomerId: "",
   });
 
   const formatABN = (value: string) => {
@@ -196,6 +197,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         taxExempt: customer.tax_exempt || false,
         isActive: customer.is_active ?? true,
         notes: customer.notes || "",
+        acumaticaCustomerId: customer.acumatica_customer_id || "",
       });
       setLinkedVendorId(customer.supplier_id || null);
       setAbnValidated(false);
@@ -221,6 +223,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         taxExempt: false,
         isActive: true,
         notes: leadData.notes || "",
+        acumaticaCustomerId: "",
       });
       setLinkedVendorId(null);
       setAbnValidated(false);
@@ -246,6 +249,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         taxExempt: false,
         isActive: true,
         notes: "",
+        acumaticaCustomerId: "",
       });
       setLinkedVendorId(null);
       setAbnValidated(false);
@@ -293,6 +297,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         tenant_id: profile.tenant_id,
         parent_customer_id: parentCustomerId || null,
         supplier_id: linkedVendorId || null,
+        acumatica_customer_id: formData.acumaticaCustomerId || null,
       };
 
       if (customer) {
@@ -751,6 +756,19 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Link this customer to a supplier if they also provide goods or services to your business
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="acumaticaCustomerId">MYOB Customer Number</Label>
+                <Input
+                  id="acumaticaCustomerId"
+                  value={formData.acumaticaCustomerId}
+                  onChange={(e) => setFormData({ ...formData, acumaticaCustomerId: e.target.value })}
+                  placeholder="Enter MYOB Customer ID"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Link this customer to MYOB Acumatica by entering their Customer ID
                 </p>
               </div>
 
