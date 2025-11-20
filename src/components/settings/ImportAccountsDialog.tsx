@@ -24,6 +24,8 @@ interface ExternalAccount {
   billing_address?: string;
   notes?: string;
   payment_terms?: number;
+  acumatica_customer_id?: string;
+  acumatica_vendor_id?: string;
   type: 'customer' | 'supplier';
 }
 
@@ -97,6 +99,11 @@ export function ImportAccountsDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">Name</TableHead>
+                  {provider === 'myob_acumatica' && (
+                    <TableHead className="w-[150px]">
+                      MYOB {accountType === 'customers' ? 'Customer' : 'Supplier'} ID
+                    </TableHead>
+                  )}
                   <TableHead className="w-[150px]">ABN</TableHead>
                   <TableHead className="w-[150px]">Email</TableHead>
                   <TableHead className="w-[120px]">Phone</TableHead>
@@ -125,6 +132,26 @@ export function ImportAccountsDialog({
                           <span className="font-medium">{account.name}</span>
                         )}
                       </TableCell>
+                      {provider === 'myob_acumatica' && (
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={accountType === 'customers' ? (account.acumatica_customer_id || '') : (account.acumatica_vendor_id || '')}
+                              onChange={(e) => handleFieldChange(
+                                account.id, 
+                                accountType === 'customers' ? 'acumatica_customer_id' : 'acumatica_vendor_id',
+                                e.target.value
+                              )}
+                              className="h-8"
+                              placeholder="MYOB ID"
+                            />
+                          ) : (
+                            <span className="text-muted-foreground font-mono text-sm">
+                              {accountType === 'customers' ? account.acumatica_customer_id : account.acumatica_vendor_id || '-'}
+                            </span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         {isEditing ? (
                           <Input
