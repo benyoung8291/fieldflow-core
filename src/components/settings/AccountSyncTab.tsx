@@ -22,9 +22,17 @@ interface ExternalAccount {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
   abn?: string;
   legal_company_name?: string;
   trading_name?: string;
+  billing_email?: string;
+  billing_phone?: string;
+  billing_address?: string;
+  notes?: string;
+  payment_terms?: number;
   type: 'customer' | 'supplier';
 }
 
@@ -98,8 +106,11 @@ export default function AccountSyncTab() {
           id: acc.CustomerID?.value || acc.VendorID?.value || acc.CustomerID || acc.VendorID,
           name: acc.CustomerName?.value || acc.VendorName?.value || acc.CustomerName || acc.VendorName,
           email: acc.Email?.value || acc.Email || acc.MainContact?.Email?.value,
-          phone: acc.Phone?.value || acc.Phone,
-          address: acc.Address?.value || acc.Address,
+          phone: acc.Phone?.value || acc.Phone || acc.MainContact?.Phone1?.value,
+          address: acc.Address?.value || acc.Address || acc.MainContact?.Address?.AddressLine1?.value,
+          city: acc.City?.value || acc.City || acc.MainContact?.Address?.City?.value,
+          state: acc.State?.value || acc.State || acc.MainContact?.Address?.State?.value,
+          postcode: acc.PostalCode?.value || acc.PostalCode || acc.MainContact?.Address?.PostalCode?.value,
           abn: acc.TaxRegistrationID?.value || acc.TaxRegistrationID, // Map TaxRegistrationID to ABN
           type: accountType === 'customers' ? 'customer' : 'supplier',
         })) as ExternalAccount[];
@@ -222,9 +233,17 @@ export default function AccountSyncTab() {
         email: a.email,
         phone: a.phone,
         address: a.address,
+        city: a.city,
+        state: a.state,
+        postcode: a.postcode,
         abn: a.abn,
         legal_company_name: a.legal_company_name,
         trading_name: a.trading_name,
+        billing_email: a.billing_email,
+        billing_phone: a.billing_phone,
+        billing_address: a.billing_address,
+        notes: a.notes,
+        payment_terms: a.payment_terms,
         [linkField]: a.id, // Automatically link to external account
       }));
 
