@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +73,7 @@ export default function CustomerImportDialog({
   onImportComplete,
 }: CustomerImportDialogProps) {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<ImportStep>("upload");
   const [csvData, setCsvData] = useState<any[]>([]);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
@@ -440,16 +441,15 @@ export default function CustomerImportDialog({
             id: duplicate.existingCustomer.id,
             data: updateData,
           });
-        } else if (!duplicate || duplicate.action === "skip") {
-          // Only insert if not a duplicate or user chose to skip update
-          if (!duplicateIds.has(index) || duplicate?.action === "skip") {
-            newCustomers.push({
-              ...row,
-              tenant_id: profile.tenant_id,
-              is_active: true,
-            });
-          }
+        } else if (!duplicate) {
+          // Only insert if NOT a duplicate (skip means don't insert or update)
+          newCustomers.push({
+            ...row,
+            tenant_id: profile.tenant_id,
+            is_active: true,
+          });
         }
+        // If duplicate with action "skip", do nothing (don't insert or update)
       });
 
       let insertCount = 0;
@@ -544,17 +544,19 @@ export default function CustomerImportDialog({
           {step === "upload" && (
             <div className="border-2 border-dashed border-border rounded-lg p-12 text-center">
               <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <Label htmlFor="csv-upload" className="cursor-pointer">
-                <div className="text-lg font-medium mb-2">Click to upload CSV</div>
-                <div className="text-sm text-muted-foreground mb-4">
-                  or drag and drop your file here
-                </div>
-                <Button type="button" variant="outline">
-                  Choose File
-                </Button>
-              </Label>
+              <div className="text-lg font-medium mb-2">Click to upload CSV</div>
+              <div className="text-sm text-muted-foreground mb-4">
+                Upload a CSV file with customer data
+              </div>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose File
+              </Button>
               <Input
-                id="csv-upload"
+                ref={fileInputRef}
                 type="file"
                 accept=".csv"
                 onChange={handleFileUpload}
