@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
 
 interface ExternalAccount {
@@ -13,10 +14,25 @@ interface ExternalAccount {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
   abn?: string;
   legal_company_name?: string;
   trading_name?: string;
+  billing_email?: string;
+  billing_phone?: string;
+  billing_address?: string;
+  notes?: string;
+  payment_terms?: number;
   type: 'customer' | 'supplier';
+}
+
+interface FieldMapping {
+  sourceField: keyof ExternalAccount | 'none';
+  targetField: string;
+  label: string;
+  description: string;
 }
 
 interface ImportAccountsDialogProps {
@@ -39,6 +55,25 @@ export function ImportAccountsDialog({
   isImporting,
 }: ImportAccountsDialogProps) {
   const [step, setStep] = useState<'preview' | 'mapping'>('preview');
+  
+  // Initialize field mappings with all customer/supplier fields
+  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([
+    { sourceField: 'name', targetField: 'name', label: 'Name', description: 'Business/Company name' },
+    { sourceField: 'email', targetField: 'email', label: 'Email', description: 'Primary email address' },
+    { sourceField: 'phone', targetField: 'phone', label: 'Phone', description: 'Primary phone number' },
+    { sourceField: 'address', targetField: 'address', label: 'Address', description: 'Street address' },
+    { sourceField: 'city', targetField: 'city', label: 'City', description: 'City' },
+    { sourceField: 'state', targetField: 'state', label: 'State', description: 'State/Province' },
+    { sourceField: 'postcode', targetField: 'postcode', label: 'Postcode', description: 'Postal/Zip code' },
+    { sourceField: 'abn', targetField: 'abn', label: 'ABN', description: 'Australian Business Number' },
+    { sourceField: 'legal_company_name', targetField: 'legal_company_name', label: 'Legal Company Name', description: 'Registered legal name' },
+    { sourceField: 'trading_name', targetField: 'trading_name', label: 'Trading Name', description: 'Trading/DBA name' },
+    { sourceField: 'billing_email', targetField: 'billing_email', label: 'Billing Email', description: 'Invoice email' },
+    { sourceField: 'billing_phone', targetField: 'billing_phone', label: 'Billing Phone', description: 'Billing contact phone' },
+    { sourceField: 'billing_address', targetField: 'billing_address', label: 'Billing Address', description: 'Billing address' },
+    { sourceField: 'notes', targetField: 'notes', label: 'Notes', description: 'Additional notes' },
+    { sourceField: 'payment_terms', targetField: 'payment_terms', label: 'Payment Terms', description: 'Payment terms (days)' },
+  ]);
 
   const handleNext = () => {
     if (step === 'preview') {
@@ -52,6 +87,17 @@ export function ImportAccountsDialog({
     setStep('preview');
     onOpenChange(false);
   };
+
+  const updateMapping = (index: number, newSourceField: string) => {
+    const newMappings = [...fieldMappings];
+    newMappings[index].sourceField = newSourceField as keyof ExternalAccount | 'none';
+    setFieldMappings(newMappings);
+  };
+
+  // Get all possible source fields from the first account
+  const availableSourceFields = accounts.length > 0 
+    ? Object.keys(accounts[0]).filter(key => key !== 'type') as (keyof ExternalAccount)[]
+    : [];
 
   const providerName = provider === 'xero' ? 'Xero' : 'MYOB Acumatica';
 
@@ -114,97 +160,43 @@ export function ImportAccountsDialog({
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                The following fields will be mapped from {providerName} to your application:
+                Configure how fields from {providerName} map to your application. Select "None" to skip importing a field.
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm">
-                    <div className="font-medium">{providerName} ID</div>
-                    <div className="text-muted-foreground text-xs">External Account ID</div>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium">Linked Account ID</div>
-                  <div className="text-muted-foreground text-xs">For sync tracking</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm">
-                    <div className="font-medium">Name</div>
-                    <div className="text-muted-foreground text-xs">Business name</div>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium">Name</div>
-                  <div className="text-muted-foreground text-xs">Primary identifier</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm">
-                    <div className="font-medium">Email</div>
-                    <div className="text-muted-foreground text-xs">Contact email</div>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium">Email</div>
-                  <div className="text-muted-foreground text-xs">Primary email</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm">
-                    <div className="font-medium">Phone</div>
-                    <div className="text-muted-foreground text-xs">Contact number</div>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium">Phone</div>
-                  <div className="text-muted-foreground text-xs">Primary phone</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm">
-                    <div className="font-medium">Address</div>
-                    <div className="text-muted-foreground text-xs">Physical address</div>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium">Address</div>
-                  <div className="text-muted-foreground text-xs">Primary address</div>
-                </div>
-              </div>
-
-              {accounts.some(a => a.abn) && (
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm">
-                      <div className="font-medium">ABN</div>
-                      <div className="text-muted-foreground text-xs">Tax number</div>
+            <ScrollArea className="h-[400px] rounded-md border">
+              <div className="space-y-2 p-4">
+                {fieldMappings.map((mapping, index) => (
+                  <div key={mapping.targetField} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{mapping.label}</div>
+                      <div className="text-xs text-muted-foreground">{mapping.description}</div>
+                    </div>
+                    
+                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    
+                    <div className="w-48">
+                      <Select
+                        value={mapping.sourceField}
+                        onValueChange={(value) => updateMapping(index, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select source field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None (skip)</SelectItem>
+                          {availableSourceFields.map((field) => (
+                            <SelectItem key={field} value={field}>
+                              {field}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  <div className="text-sm">
-                    <div className="font-medium">ABN</div>
-                    <div className="text-muted-foreground text-xs">Tax identifier</div>
-                  </div>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         )}
 
