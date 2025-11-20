@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Edit2 } from "lucide-react";
 
 interface ExternalAccount {
   id: string;
@@ -28,13 +27,6 @@ interface ExternalAccount {
   type: 'customer' | 'supplier';
 }
 
-interface FieldMapping {
-  sourceField: keyof ExternalAccount | 'none';
-  targetField: string;
-  label: string;
-  description: string;
-}
-
 interface ImportAccountsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,172 +46,217 @@ export function ImportAccountsDialog({
   onConfirm,
   isImporting,
 }: ImportAccountsDialogProps) {
-  const [step, setStep] = useState<'preview' | 'mapping'>('preview');
-  
-  // Initialize field mappings with all customer/supplier fields
-  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([
-    { sourceField: 'name', targetField: 'name', label: 'Name', description: 'Business/Company name' },
-    { sourceField: 'email', targetField: 'email', label: 'Email', description: 'Primary email address' },
-    { sourceField: 'phone', targetField: 'phone', label: 'Phone', description: 'Primary phone number' },
-    { sourceField: 'address', targetField: 'address', label: 'Address', description: 'Street address' },
-    { sourceField: 'city', targetField: 'city', label: 'City', description: 'City' },
-    { sourceField: 'state', targetField: 'state', label: 'State', description: 'State/Province' },
-    { sourceField: 'postcode', targetField: 'postcode', label: 'Postcode', description: 'Postal/Zip code' },
-    { sourceField: 'abn', targetField: 'abn', label: 'ABN', description: 'Australian Business Number' },
-    { sourceField: 'legal_company_name', targetField: 'legal_company_name', label: 'Legal Company Name', description: 'Registered legal name' },
-    { sourceField: 'trading_name', targetField: 'trading_name', label: 'Trading Name', description: 'Trading/DBA name' },
-    { sourceField: 'billing_email', targetField: 'billing_email', label: 'Billing Email', description: 'Invoice email' },
-    { sourceField: 'billing_phone', targetField: 'billing_phone', label: 'Billing Phone', description: 'Billing contact phone' },
-    { sourceField: 'billing_address', targetField: 'billing_address', label: 'Billing Address', description: 'Billing address' },
-    { sourceField: 'notes', targetField: 'notes', label: 'Notes', description: 'Additional notes' },
-    { sourceField: 'payment_terms', targetField: 'payment_terms', label: 'Payment Terms', description: 'Payment terms (days)' },
-  ]);
-
-  const handleNext = () => {
-    if (step === 'preview') {
-      setStep('mapping');
-    } else {
-      onConfirm(accounts);
-    }
-  };
-
-  const handleClose = () => {
-    setStep('preview');
-    onOpenChange(false);
-  };
-
-  const updateMapping = (index: number, newSourceField: string) => {
-    const newMappings = [...fieldMappings];
-    newMappings[index].sourceField = newSourceField as keyof ExternalAccount | 'none';
-    setFieldMappings(newMappings);
-  };
-
-  // Get all possible source fields from the first account
-  const availableSourceFields = accounts.length > 0 
-    ? Object.keys(accounts[0]).filter(key => key !== 'type') as (keyof ExternalAccount)[]
-    : [];
+  const [editableAccounts, setEditableAccounts] = useState<ExternalAccount[]>(accounts);
+  const [editingRow, setEditingRow] = useState<string | null>(null);
 
   const providerName = provider === 'xero' ? 'Xero' : 'MYOB Acumatica';
 
+  const handleFieldChange = (accountId: string, field: keyof ExternalAccount, value: string) => {
+    setEditableAccounts(prev => 
+      prev.map(acc => 
+        acc.id === accountId 
+          ? { ...acc, [field]: field === 'payment_terms' ? parseInt(value) || 0 : value }
+          : acc
+      )
+    );
+  };
+
+  const handleClose = () => {
+    setEditableAccounts(accounts);
+    setEditingRow(null);
+    onOpenChange(false);
+  };
+
+  const handleImport = () => {
+    onConfirm(editableAccounts);
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent className="max-w-7xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
-            Import {accounts.length} {accountType === 'customers' ? 'Customer' : 'Supplier'}
-            {accounts.length !== 1 ? 's' : ''} from {providerName}
+            Import {editableAccounts.length} {accountType === 'customers' ? 'Customer' : 'Supplier'}
+            {editableAccounts.length !== 1 ? 's' : ''} from {providerName}
           </DialogTitle>
           <DialogDescription>
-            {step === 'preview' 
-              ? `Review the ${accountType} that will be imported and automatically linked to ${providerName}.`
-              : 'Confirm the field mapping before importing.'
-            }
+            Review and edit the data below before importing. ABN validation will be performed during import.
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'preview' && (
-          <div className="space-y-4">
-            <Alert className="bg-primary/10 border-primary">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <AlertDescription>
-                These {accountType} will be automatically linked to your {providerName} account after import.
-              </AlertDescription>
-            </Alert>
+        <div className="space-y-4">
+          <Alert>
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <AlertDescription>
+              Click any field to edit. These {accountType} will be automatically linked to your {providerName} account after import.
+            </AlertDescription>
+          </Alert>
 
-            <ScrollArea className="h-[400px] rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>ABN</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accounts.map((account) => (
+          <ScrollArea className="h-[500px] rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Name</TableHead>
+                  <TableHead className="w-[150px]">ABN</TableHead>
+                  <TableHead className="w-[150px]">Email</TableHead>
+                  <TableHead className="w-[120px]">Phone</TableHead>
+                  <TableHead className="w-[180px]">Address</TableHead>
+                  <TableHead className="w-[100px]">City</TableHead>
+                  <TableHead className="w-[80px]">State</TableHead>
+                  <TableHead className="w-[100px]">Postcode</TableHead>
+                  <TableHead className="w-[150px]">Billing Email</TableHead>
+                  <TableHead className="w-[120px]">Payment Terms</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {editableAccounts.map((account) => {
+                  const isEditing = editingRow === account.id;
+                  return (
                     <TableRow key={account.id}>
-                      <TableCell className="font-medium">{account.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{account.email || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{account.phone || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{account.abn || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">New</Badge>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.name || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'name', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="font-medium">{account.name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.abn || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'abn', e.target.value)}
+                            className="h-8"
+                            placeholder="ABN"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.abn || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.email || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'email', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.email || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.phone || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'phone', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.phone || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.address || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'address', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.address || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.city || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'city', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.city || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.state || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'state', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.state || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.postcode || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'postcode', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.postcode || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={account.billing_email || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'billing_email', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.billing_email || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            value={account.payment_terms || ''}
+                            onChange={(e) => handleFieldChange(account.id, 'payment_terms', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">{account.payment_terms || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingRow(isEditing ? null : account.id)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
-        )}
-
-        {step === 'mapping' && (
-          <div className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Configure how fields from {providerName} map to your application. Select "None" to skip importing a field.
-              </AlertDescription>
-            </Alert>
-
-            <ScrollArea className="h-[400px] rounded-md border">
-              <div className="space-y-2 p-4">
-                {fieldMappings.map((mapping, index) => (
-                  <div key={mapping.targetField} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{mapping.label}</div>
-                      <div className="text-xs text-muted-foreground">{mapping.description}</div>
-                    </div>
-                    
-                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    
-                    <div className="w-48">
-                      <Select
-                        value={mapping.sourceField}
-                        onValueChange={(value) => updateMapping(index, value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select source field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None (skip)</SelectItem>
-                          {availableSourceFields.map((field) => (
-                            <SelectItem key={field} value={field}>
-                              {field}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={isImporting}>
             Cancel
           </Button>
-          {step === 'preview' ? (
-            <Button onClick={handleNext}>
-              Next: Review Mapping
-            </Button>
-          ) : (
-            <Button onClick={handleNext} disabled={isImporting}>
-              {isImporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                `Import ${accounts.length} ${accountType === 'customers' ? 'Customer' : 'Supplier'}${accounts.length !== 1 ? 's' : ''}`
-              )}
-            </Button>
-          )}
+          <Button onClick={handleImport} disabled={isImporting}>
+            {isImporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Importing and validating ABNs...
+              </>
+            ) : (
+              `Import ${editableAccounts.length} ${accountType === 'customers' ? 'Customer' : 'Supplier'}${editableAccounts.length !== 1 ? 's' : ''}`
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

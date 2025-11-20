@@ -202,61 +202,80 @@ export default function AccountSyncTab() {
           ? 'acumatica_customer_id' 
           : 'acumatica_vendor_id';
       
-      // Validate ABNs if present
-      const accountsWithValidatedABN = await Promise.all(
-        accounts.map(async (a) => {
-          if (a.abn) {
+      const results = [];
+      const errors = [];
+      
+      // Process each account individually with ABN validation
+      for (const account of accounts) {
+        try {
+          let validatedAccount = { ...account };
+          
+          // Validate ABN if present
+          if (account.abn) {
             try {
               const { data, error } = await supabase.functions.invoke('validate-abn', {
-                body: { abn: a.abn },
+                body: { abn: account.abn },
               });
               
               if (!error && data?.valid) {
-                return {
-                  ...a,
-                  abn: a.abn,
-                  legal_company_name: data.legalName,
-                  trading_name: data.tradingNames?.[0],
+                validatedAccount = {
+                  ...validatedAccount,
+                  legal_company_name: data.legalName || validatedAccount.legal_company_name,
+                  trading_name: data.tradingNames?.[0] || validatedAccount.trading_name,
                 };
               }
-            } catch (error) {
-              console.warn(`ABN validation failed for ${a.name}:`, error);
+            } catch (abnError) {
+              console.warn(`ABN validation failed for ${account.name}:`, abnError);
+              // Continue with import even if ABN validation fails
             }
           }
-          return a;
-        })
-      );
-      
-      const accountsToImport = accountsWithValidatedABN.map(a => ({
-        tenant_id: profile.tenant_id,
-        name: a.name,
-        email: a.email,
-        phone: a.phone,
-        address: a.address,
-        city: a.city,
-        state: a.state,
-        postcode: a.postcode,
-        abn: a.abn,
-        legal_company_name: a.legal_company_name,
-        trading_name: a.trading_name,
-        billing_email: a.billing_email,
-        billing_phone: a.billing_phone,
-        billing_address: a.billing_address,
-        notes: a.notes,
-        payment_terms: a.payment_terms,
-        [linkField]: a.id, // Automatically link to external account
-      }));
+          
+          const accountData = {
+            tenant_id: profile.tenant_id,
+            name: validatedAccount.name,
+            email: validatedAccount.email,
+            phone: validatedAccount.phone,
+            address: validatedAccount.address,
+            city: validatedAccount.city,
+            state: validatedAccount.state,
+            postcode: validatedAccount.postcode,
+            abn: validatedAccount.abn,
+            legal_company_name: validatedAccount.legal_company_name,
+            trading_name: validatedAccount.trading_name,
+            billing_email: validatedAccount.billing_email || validatedAccount.email,
+            billing_phone: validatedAccount.billing_phone || validatedAccount.phone,
+            billing_address: validatedAccount.billing_address || validatedAccount.address,
+            notes: validatedAccount.notes,
+            payment_terms: validatedAccount.payment_terms || 0,
+            [linkField]: account.id, // Link using external CustomerID/VendorID
+          };
 
-      const { error } = await supabase
-        .from(table)
-        .insert(accountsToImport);
+          // Add customer_type for customers
+          if (accountType === 'customers') {
+            accountData.customer_type = 'business';
+          }
 
-      if (error) throw error;
+          const { error } = await supabase
+            .from(table)
+            .insert(accountData);
 
-      return accountsToImport.length;
+          if (error) throw error;
+          results.push(validatedAccount.name);
+        } catch (error) {
+          console.error(`Failed to import ${account.name}:`, error);
+          errors.push({ name: account.name, error: error.message });
+        }
+      }
+
+      return { results, errors };
     },
-    onSuccess: (count) => {
-      toast.success(`Successfully imported and linked ${count} ${accountType}`);
+    onSuccess: ({ results, errors }) => {
+      if (results.length > 0) {
+        toast.success(`Successfully imported ${results.length} ${accountType}`);
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} ${accountType} failed to import. Check console for details.`);
+      }
       queryClient.invalidateQueries({ queryKey: ["app-accounts", accountType] });
       queryClient.invalidateQueries({ queryKey: ["external-accounts"] });
       setSelectedAccounts(new Set());
