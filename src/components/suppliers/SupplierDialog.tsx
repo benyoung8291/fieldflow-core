@@ -56,6 +56,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
     notes: "",
     defaultAccountCode: "",
     defaultSubAccount: "",
+    acumaticaVendorId: "",
   });
 
   const formatABN = (value: string) => {
@@ -211,6 +212,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         notes: vendor.notes || "",
         defaultAccountCode: vendor.default_account_code || "",
         defaultSubAccount: vendor.default_sub_account || "",
+        acumaticaVendorId: vendor.acumatica_vendor_id || "",
       });
       setLinkedCustomerId(vendor.customer_id || null);
       setAbnValidated(false);
@@ -235,6 +237,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         notes: "",
         defaultAccountCode: "",
         defaultSubAccount: "",
+        acumaticaVendorId: "",
       });
       setLinkedCustomerId(null);
       setAbnValidated(false);
@@ -304,6 +307,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         customer_id: linkedCustomerId || null,
         default_account_code: formData.defaultAccountCode || null,
         default_sub_account: formData.defaultSubAccount || null,
+        acumatica_vendor_id: formData.acumaticaVendorId || null,
       };
 
       if (vendor) {
