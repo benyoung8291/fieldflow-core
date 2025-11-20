@@ -33,6 +33,8 @@ interface ExternalAccount {
   billing_address?: string;
   notes?: string;
   payment_terms?: number;
+  acumatica_customer_id?: string;
+  acumatica_vendor_id?: string;
   type: 'customer' | 'supplier';
 }
 
@@ -102,18 +104,23 @@ export default function AccountSyncTab() {
         
         // Map Acumatica format to ExternalAccount format
         const accounts = (accountType === 'customers' ? data?.customers : data?.vendors) || [];
-        return accounts.map((acc: any) => ({
-          id: acc.CustomerID?.value || acc.VendorID?.value || acc.CustomerID || acc.VendorID,
-          name: acc.CustomerName?.value || acc.VendorName?.value || acc.CustomerName || acc.VendorName,
-          email: acc.Email?.value || acc.Email || acc.MainContact?.Email?.value,
-          phone: acc.Phone?.value || acc.Phone || acc.MainContact?.Phone1?.value,
-          address: acc.Address?.value || acc.Address || acc.MainContact?.Address?.AddressLine1?.value,
-          city: acc.City?.value || acc.City || acc.MainContact?.Address?.City?.value,
-          state: acc.State?.value || acc.State || acc.MainContact?.Address?.State?.value,
-          postcode: acc.PostalCode?.value || acc.PostalCode || acc.MainContact?.Address?.PostalCode?.value,
-          abn: acc.TaxRegistrationID?.value || acc.TaxRegistrationID, // Map TaxRegistrationID to ABN
-          type: accountType === 'customers' ? 'customer' : 'supplier',
-        })) as ExternalAccount[];
+        return accounts.map((acc: any) => {
+          const customerId = acc.CustomerID?.value || acc.VendorID?.value || acc.CustomerID || acc.VendorID;
+          return {
+            id: customerId,
+            name: acc.CustomerName?.value || acc.VendorName?.value || acc.CustomerName || acc.VendorName,
+            email: acc.Email?.value || acc.Email || acc.MainContact?.Email?.value,
+            phone: acc.Phone?.value || acc.Phone || acc.MainContact?.Phone1?.value,
+            address: acc.Address?.value || acc.Address || acc.MainContact?.Address?.AddressLine1?.value,
+            city: acc.City?.value || acc.City || acc.MainContact?.Address?.City?.value,
+            state: acc.State?.value || acc.State || acc.MainContact?.Address?.State?.value,
+            postcode: acc.PostalCode?.value || acc.PostalCode || acc.MainContact?.Address?.PostalCode?.value,
+            abn: acc.TaxRegistrationID?.value || acc.TaxRegistrationID,
+            acumatica_customer_id: accountType === 'customers' ? customerId : undefined,
+            acumatica_vendor_id: accountType === 'suppliers' ? customerId : undefined,
+            type: accountType === 'customers' ? 'customer' : 'supplier',
+          };
+        }) as ExternalAccount[];
       }
       
       return [];
@@ -247,7 +254,9 @@ export default function AccountSyncTab() {
             billing_address: validatedAccount.billing_address || validatedAccount.address,
             notes: validatedAccount.notes,
             payment_terms: validatedAccount.payment_terms || 0,
-            [linkField]: account.id, // Link using external CustomerID/VendorID
+            [linkField]: integrationSettings.provider === 'myob_acumatica'
+              ? (accountType === 'customers' ? validatedAccount.acumatica_customer_id : validatedAccount.acumatica_vendor_id)
+              : account.id, // For Xero, use id; for Acumatica, use specific field
           };
 
           // Add customer_type for customers
