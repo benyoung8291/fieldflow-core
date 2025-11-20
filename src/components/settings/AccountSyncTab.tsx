@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Download, Upload, RefreshCw, CheckCircle, XCircle, Loader2, AlertCircle, Link as LinkIcon, Unlink } from "lucide-react";
+import { ImportAccountsDialog } from "./ImportAccountsDialog";
 
 interface ExternalAccount {
   id: string;
@@ -38,6 +39,7 @@ export default function AccountSyncTab() {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [selectedAppAccount, setSelectedAppAccount] = useState<string>("");
   const [selectedXeroAccount, setSelectedXeroAccount] = useState<string>("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch integration settings
@@ -163,7 +165,7 @@ export default function AccountSyncTab() {
 
   // Import accounts mutation
   const importMutation = useMutation({
-    mutationFn: async (accounts: MappedAccount[]) => {
+    mutationFn: async (accounts: ExternalAccount[]) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -176,16 +178,23 @@ export default function AccountSyncTab() {
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
       const table = accountType === 'customers' ? 'customers' : 'suppliers';
-      const accountsToImport = accounts
-        .filter(a => a.syncStatus === 'unmapped')
-        .map(a => ({
-          tenant_id: profile.tenant_id,
-          name: a.name,
-          email: a.email,
-          phone: a.phone,
-          address: a.address,
-          abn: a.abn,
-        }));
+      
+      // Determine the linking field based on provider
+      const linkField = integrationSettings?.provider === 'xero' 
+        ? 'xero_contact_id' 
+        : accountType === 'customers' 
+          ? 'acumatica_customer_id' 
+          : 'acumatica_vendor_id';
+      
+      const accountsToImport = accounts.map(a => ({
+        tenant_id: profile.tenant_id,
+        name: a.name,
+        email: a.email,
+        phone: a.phone,
+        address: a.address,
+        abn: a.abn,
+        [linkField]: a.id, // Automatically link to external account
+      }));
 
       const { error } = await supabase
         .from(table)
@@ -196,9 +205,11 @@ export default function AccountSyncTab() {
       return accountsToImport.length;
     },
     onSuccess: (count) => {
-      toast.success(`Successfully imported ${count} ${accountType}`);
+      toast.success(`Successfully imported and linked ${count} ${accountType}`);
       queryClient.invalidateQueries({ queryKey: ["app-accounts", accountType] });
+      queryClient.invalidateQueries({ queryKey: ["external-accounts"] });
       setSelectedAccounts(new Set());
+      setImportDialogOpen(false);
     },
     onError: (error: Error) => {
       toast.error(`Failed to import ${accountType}: ${error.message}`);
@@ -309,10 +320,11 @@ export default function AccountSyncTab() {
   };
 
   const handleImportSelected = () => {
-    const accountsToImport = filteredAccounts.filter(a => 
-      selectedAccounts.has(a.id) && a.syncStatus === 'unmapped'
-    );
-    importMutation.mutate(accountsToImport);
+    setImportDialogOpen(true);
+  };
+  
+  const handleConfirmImport = (accounts: ExternalAccount[]) => {
+    importMutation.mutate(accounts);
   };
 
   const handleExportSelected = () => {
@@ -341,8 +353,29 @@ export default function AccountSyncTab() {
     );
   }
 
+  const accountsToImport = filteredAccounts
+    .filter(a => selectedAccounts.has(a.id) && a.syncStatus === 'unmapped')
+    .map(a => ({
+      id: a.id,
+      name: a.name,
+      email: a.email,
+      phone: a.phone,
+      address: a.address,
+      abn: a.abn,
+      type: accountType === 'customers' ? 'customer' as const : 'supplier' as const,
+    }));
+
   return (
     <div className="space-y-6">
+      <ImportAccountsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        accounts={accountsToImport}
+        accountType={accountType}
+        provider={(integrationSettings?.provider === 'myob_acumatica' ? 'myob_acumatica' : 'xero') as 'xero' | 'myob_acumatica'}
+        onConfirm={handleConfirmImport}
+        isImporting={importMutation.isPending}
+      />
       <Alert className="bg-primary/10 border-primary">
         <CheckCircle className="h-4 w-4 text-primary" />
         <AlertDescription>
