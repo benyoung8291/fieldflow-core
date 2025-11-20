@@ -370,8 +370,10 @@ export default function CustomerImportDialog({
     } else {
       toast({
         title: "No duplicates",
-        description: "All customers are unique, ready to import",
+        description: "All customers are unique, proceeding to import",
       });
+      // Automatically proceed to import when no duplicates
+      await handleImport();
     }
   };
 
