@@ -5265,6 +5265,7 @@ export type Database = {
       suppliers: {
         Row: {
           abn: string | null
+          abn_validation_status: string | null
           acumatica_supplier_id: string | null
           acumatica_vendor_id: string | null
           address: string | null
@@ -5292,6 +5293,7 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          abn_validation_status?: string | null
           acumatica_supplier_id?: string | null
           acumatica_vendor_id?: string | null
           address?: string | null
@@ -5319,6 +5321,7 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          abn_validation_status?: string | null
           acumatica_supplier_id?: string | null
           acumatica_vendor_id?: string | null
           address?: string | null

@@ -414,23 +414,70 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
       // Trigger background ABN validation for all imported suppliers with ABN
       if (suppliersWithABN.length > 0) {
         console.log(`Triggering background ABN validation for ${suppliersWithABN.length} suppliers`);
+        
+        // Mark all suppliers as pending validation first
+        await supabase
+          .from("suppliers")
+          .update({ abn_validation_status: 'pending' })
+          .in('id', suppliersWithABN);
+        
         // Fire and forget - don't wait for validation to complete
         Promise.all(
           suppliersWithABN.map(async (supplierId) => {
             try {
               const { data: supplier } = await supabase
                 .from("suppliers")
-                .select("abn")
+                .select("abn, trading_name")
                 .eq("id", supplierId)
                 .single();
 
               if (supplier?.abn) {
-                await supabase.functions.invoke("validate-abn", {
+                const { data: validationResult, error } = await supabase.functions.invoke("validate-abn", {
                   body: { abn: supplier.abn },
                 });
+
+                if (error) {
+                  // Mark as needs review on validation error
+                  await supabase
+                    .from("suppliers")
+                    .update({ 
+                      abn_validation_status: 'needs_review',
+                      abn_validation_error: error.message 
+                    })
+                    .eq("id", supplierId);
+                } else if (validationResult) {
+                  const updateData: any = {
+                    abn_validation_status: validationResult.valid ? 'valid' : 'needs_review',
+                    abn_validated_at: new Date().toISOString(),
+                    gst_registered: validationResult.gstRegistered || false,
+                    legal_company_name: validationResult.legalName || null,
+                  };
+
+                  // Only set trading_name if it's currently empty or null
+                  if (!supplier.trading_name && validationResult.legalName) {
+                    updateData.trading_name = validationResult.legalName;
+                  }
+
+                  if (!validationResult.valid && validationResult.error) {
+                    updateData.abn_validation_error = validationResult.error;
+                  }
+
+                  await supabase
+                    .from("suppliers")
+                    .update(updateData)
+                    .eq("id", supplierId);
+                }
               }
             } catch (err) {
               console.error(`ABN validation failed for supplier ${supplierId}:`, err);
+              // Mark as needs review on any error
+              await supabase
+                .from("suppliers")
+                .update({ 
+                  abn_validation_status: 'needs_review',
+                  abn_validation_error: err instanceof Error ? err.message : 'Unknown error'
+                })
+                .eq("id", supplierId);
             }
           })
         ).catch(err => console.error("Background ABN validation error:", err));
