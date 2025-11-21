@@ -98,6 +98,9 @@ Deno.serve(async (req) => {
               validationResult.business_details.trading_names.length > 0) {
             updateData.trading_name = validationResult.business_details.trading_names[0];
           }
+          if (validationResult.business_details.gst_registered !== undefined) {
+            updateData.gst_registered = validationResult.business_details.gst_registered;
+          }
         }
 
         if (!validationResult.valid && validationResult.message) {
