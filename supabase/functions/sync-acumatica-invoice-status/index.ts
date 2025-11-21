@@ -175,16 +175,16 @@ Deno.serve(async (req) => {
 
           // Status mapping:
           // Acumatica "Closed" -> App "paid"
-          // Acumatica "Deleted"/"Voided" -> App "draft" (unapproved)
+          // Acumatica "Deleted"/"Voided"/"Reversed" -> App "draft" (unapproved)
           if (acumaticaStatus === 'Closed' && invoice.status !== 'paid') {
             newStatus = 'paid';
             shouldUpdate = true;
             auditNote = 'Invoice marked as paid - synced from MYOB Acumatica (status: Closed)';
             console.log(`Invoice ${invoice.invoice_number} is Closed in Acumatica - updating to paid`);
-          } else if ((acumaticaStatus === 'Deleted' || acumaticaStatus === 'Voided') && invoice.status !== 'draft') {
+          } else if ((acumaticaStatus === 'Deleted' || acumaticaStatus === 'Voided' || acumaticaStatus === 'Reversed') && invoice.status !== 'draft') {
             newStatus = 'draft';
             shouldUpdate = true;
-            auditNote = `Invoice unapproved - deleted/voided in MYOB Acumatica (status: ${acumaticaStatus})`;
+            auditNote = `Invoice unapproved - ${acumaticaStatus.toLowerCase()} in MYOB Acumatica`;
             console.log(`Invoice ${invoice.invoice_number} is ${acumaticaStatus} in Acumatica - updating to draft`);
           }
 
