@@ -135,6 +135,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
       setFormData(prev => ({
         ...prev,
         legalName: data.legalName || prev.legalName,
+        tradingName: data.legalName || prev.tradingName, // Default trading name to legal name
       }));
 
       // If editing an existing customer, update the validation status and legal name in the database
