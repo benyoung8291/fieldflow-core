@@ -18,6 +18,19 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if a specific invoice ID was provided
+    let specificInvoiceId: string | null = null;
+    try {
+      const body = await req.json();
+      specificInvoiceId = body?.invoice_id || null;
+    } catch {
+      // No body or invalid JSON - process all invoices
+    }
+
+    if (specificInvoiceId) {
+      console.log(`Manual sync requested for invoice: ${specificInvoiceId}`);
+    }
+
     // Get all tenants with enabled Acumatica integrations
     const { data: integrations, error: integrationsError } = await supabase
       .from('accounting_integrations')
@@ -38,12 +51,19 @@ Deno.serve(async (req) => {
     for (const integration of integrations || []) {
       console.log(`Processing tenant: ${integration.tenant_id}`);
 
-      // Get all invoices for this tenant that have been synced to Acumatica
-      const { data: invoices, error: invoicesError } = await supabase
+      // Build query for invoices
+      let query = supabase
         .from('invoices')
-        .select('id, invoice_number, acumatica_invoice_id, acumatica_status, status')
+        .select('id, invoice_number, acumatica_invoice_id, acumatica_status, status, tenant_id')
         .eq('tenant_id', integration.tenant_id)
         .not('acumatica_invoice_id', 'is', null);
+
+      // If specific invoice requested, filter to just that one
+      if (specificInvoiceId) {
+        query = query.eq('id', specificInvoiceId);
+      }
+
+      const { data: invoices, error: invoicesError } = await query;
 
       if (invoicesError) {
         console.error(`Error fetching invoices for tenant ${integration.tenant_id}:`, invoicesError);

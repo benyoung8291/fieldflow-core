@@ -508,6 +508,29 @@ export default function InvoiceDetails() {
     },
   });
 
+  const syncAcumaticaStatusMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        'sync-acumatica-invoice-status',
+        {
+          body: { invoice_id: id }
+        }
+      );
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
+      toast.success("Invoice status synced from Acumatica successfully");
+    },
+    onError: (error: any) => {
+      console.error(error);
+      toast.error(error.message || "Failed to sync invoice status from Acumatica");
+    },
+  });
+
   if (isLoading || !invoice) {
     return (
       <DocumentDetailLayout
@@ -659,6 +682,14 @@ export default function InvoiceDetails() {
                 {invoice.synced_to_accounting_at && ` • Synced: ${format(new Date(invoice.synced_to_accounting_at), "dd MMM yyyy HH:mm")}`}
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncAcumaticaStatusMutation.mutate()}
+              disabled={syncAcumaticaStatusMutation.isPending}
+            >
+              {syncAcumaticaStatusMutation.isPending ? "Syncing..." : "Sync Status"}
+            </Button>
           </div>
         </div>
       )}
