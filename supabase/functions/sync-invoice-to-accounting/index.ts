@@ -248,8 +248,18 @@ async function syncToAcumatica(invoice: any, integration: any) {
   // Prepare invoice description with invoice number prefix
   const description = `${invoice.invoice_number} - ${invoice.description || 'Invoice'}`;
 
-  // Build line items
+  // Build line items - ensure Account and Subaccount are always present to override inventory defaults
   const lineItems = invoice.invoice_line_items?.map((item: any) => {
+    const account = item.account_code || integration.default_sales_account_code;
+    const subaccount = item.sub_account || integration.default_sales_sub_account;
+    
+    if (!account) {
+      throw new Error(`Line item "${item.description}" is missing account code. Please set account for all line items.`);
+    }
+    if (!subaccount) {
+      throw new Error(`Line item "${item.description}" is missing sub-account. Please set sub-account for all line items.`);
+    }
+
     return {
       Branch: { value: "PREMREST" },
       InventoryID: { value: "CLEANING" },
@@ -257,8 +267,8 @@ async function syncToAcumatica(invoice: any, integration: any) {
       UOM: { value: "EACH" },
       UnitPrice: { value: parseFloat(item.unit_price) },
       TransactionDescription: { value: item.description || "" },
-      Account: { value: item.account_code || integration.default_sales_account_code },
-      Subaccount: { value: item.sub_account || integration.default_sales_sub_account },
+      Account: { value: account },
+      Subaccount: { value: subaccount },
     };
   }) || [];
 
