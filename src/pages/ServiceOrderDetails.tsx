@@ -300,7 +300,7 @@ export default function ServiceOrderDetails() {
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
   const updateDatesMutation = useMutation({
-    mutationFn: async (dates: { preferred_date?: string | null, date_range_start?: string | null, date_range_end?: string | null }) => {
+    mutationFn: async (dates: { preferred_date?: string | null, preferred_date_start?: string | null, preferred_date_end?: string | null }) => {
       const { error } = await supabase
         .from("service_orders")
         .update(dates)
@@ -323,16 +323,16 @@ export default function ServiceOrderDetails() {
 
   const handleEditDates = () => {
     setPreferredDate(order?.preferred_date ? new Date(order.preferred_date) : undefined);
-    setDateRangeStart((order as any)?.date_range_start ? new Date((order as any).date_range_start) : undefined);
-    setDateRangeEnd((order as any)?.date_range_end ? new Date((order as any).date_range_end) : undefined);
+    setDateRangeStart((order as any)?.preferred_date_start ? new Date((order as any).preferred_date_start) : undefined);
+    setDateRangeEnd((order as any)?.preferred_date_end ? new Date((order as any).preferred_date_end) : undefined);
     setEditingDates(true);
   };
 
   const handleSaveDates = () => {
     updateDatesMutation.mutate({
       preferred_date: preferredDate ? preferredDate.toISOString() : null,
-      date_range_start: dateRangeStart ? dateRangeStart.toISOString() : null,
-      date_range_end: dateRangeEnd ? dateRangeEnd.toISOString() : null,
+      preferred_date_start: dateRangeStart ? dateRangeStart.toISOString() : null,
+      preferred_date_end: dateRangeEnd ? dateRangeEnd.toISOString() : null,
     });
   };
 
@@ -1011,18 +1011,18 @@ export default function ServiceOrderDetails() {
                     </div>
                   </div>
 
-                  {((order as any).date_range_start || (order as any).date_range_end) && (
+                  {((order as any).preferred_date_start || (order as any).preferred_date_end) && (
                     <div>
                       <div className="text-xs text-muted-foreground mb-1.5">Alternative Date Window</div>
                       <div className="bg-muted/50 border border-border px-3 py-2.5 rounded-md">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           <div className="text-sm font-medium">
-                            {(order as any).date_range_start && format(new Date((order as any).date_range_start), "PP")}
-                            {(order as any).date_range_start && (order as any).date_range_end && (
+                            {(order as any).preferred_date_start && format(new Date((order as any).preferred_date_start), "PP")}
+                            {(order as any).preferred_date_start && (order as any).preferred_date_end && (
                               <span className="mx-2 text-muted-foreground">—</span>
                             )}
-                            {(order as any).date_range_end && format(new Date((order as any).date_range_end), "PP")}
+                            {(order as any).preferred_date_end && format(new Date((order as any).preferred_date_end), "PP")}
                           </div>
                         </div>
                       </div>
