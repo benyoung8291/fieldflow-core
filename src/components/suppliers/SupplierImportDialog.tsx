@@ -50,9 +50,14 @@ const SUPPLIER_FIELDS = [
   { value: 'email', label: 'Email' },
   { value: 'phone', label: 'Phone' },
   { value: 'mobile', label: 'Mobile' },
-  { value: 'address', label: 'Address' },
+  { value: 'address', label: 'Full Address' },
+  { value: 'address_line_1', label: 'Address Line 1' },
+  { value: 'city', label: 'City' },
+  { value: 'state', label: 'State' },
+  { value: 'postcode', label: 'Postcode' },
   { value: 'payment_terms', label: 'Payment Terms (days)' },
   { value: 'notes', label: 'Notes' },
+  { value: 'acumatica_supplier_id', label: 'MYOB Acumatica Supplier Number' },
 ];
 
 export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: SupplierImportDialogProps) {
@@ -280,17 +285,90 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
 
         const supplierData: any = {
           tenant_id: profile.tenant_id,
-          name: row.name?.trim(),
-          trading_name: row.trading_name?.trim() || null,
-          abn: row.abn ? row.abn.replace(/\s/g, '') : null,
-          email: row.email?.trim() || null,
-          phone: row.phone?.trim() || null,
-          mobile: row.mobile?.trim() || null,
-          address: row.address?.trim() || null,
-          payment_terms: row.payment_terms ? parseInt(row.payment_terms) : null,
-          notes: row.notes?.trim() || null,
-          is_active: true,
         };
+
+        // Collect address components for Google Maps validation
+        let addressLine1 = '';
+        let city = '';
+        let state = '';
+        let postcode = '';
+        let fullAddress = '';
+
+        // Map all fields from the CSV
+        Object.keys(columnMapping).forEach((csvColumn) => {
+          const dbField = columnMapping[csvColumn];
+          const value = row[csvColumn];
+
+          if (value !== undefined && value !== null && value !== '') {
+            if (dbField === 'name') {
+              supplierData.name = value.trim();
+            } else if (dbField === 'trading_name') {
+              supplierData.trading_name = value.trim();
+            } else if (dbField === 'abn') {
+              supplierData.abn = value.replace(/\s/g, '');
+            } else if (dbField === 'email') {
+              supplierData.email = value.trim();
+            } else if (dbField === 'phone') {
+              supplierData.phone = value.trim();
+            } else if (dbField === 'mobile') {
+              supplierData.mobile = value.trim();
+            } else if (dbField === 'address') {
+              fullAddress = value.trim();
+            } else if (dbField === 'address_line_1') {
+              addressLine1 = value.trim();
+            } else if (dbField === 'city') {
+              city = value.trim();
+            } else if (dbField === 'state') {
+              state = value.trim();
+            } else if (dbField === 'postcode') {
+              postcode = value.trim();
+            } else if (dbField === 'payment_terms') {
+              supplierData.payment_terms = parseInt(value) || 30;
+            } else if (dbField === 'notes') {
+              supplierData.notes = value.trim();
+            } else if (dbField === 'acumatica_supplier_id') {
+              supplierData.acumatica_supplier_id = value.trim();
+            }
+          }
+        });
+
+        // Build address from components if provided, or use full address field
+        let addressToValidate = fullAddress;
+        if (addressLine1 || city || state || postcode) {
+          const addressParts = [addressLine1, city, state, postcode].filter(Boolean);
+          addressToValidate = addressParts.join(', ');
+        }
+
+        // Validate address with Google Maps if we have an address
+        if (addressToValidate) {
+          try {
+            const { data: placeData, error: placeError } = await supabase.functions.invoke(
+              'places-details',
+              {
+                body: { address: addressToValidate },
+              }
+            );
+
+            if (!placeError && placeData) {
+              supplierData.address = placeData.formatted_address;
+              if (placeData.geometry?.location) {
+                supplierData.latitude = placeData.geometry.location.lat;
+                supplierData.longitude = placeData.geometry.location.lng;
+              }
+            }
+          } catch (error) {
+            console.error('Error geocoding address:', error);
+          }
+        }
+
+        // Set defaults
+        if (!supplierData.name) {
+          supplierData.name = supplierData.trading_name || 'Unknown';
+        }
+        if (!supplierData.payment_terms) {
+          supplierData.payment_terms = 30;
+        }
+        supplierData.is_active = true;
 
         if (duplicate?.resolution === 'update') {
           const { error } = await supabase

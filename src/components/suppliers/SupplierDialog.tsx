@@ -57,6 +57,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
     defaultAccountCode: "",
     defaultSubAccount: "",
     acumaticaVendorId: "",
+    acumaticaSupplierId: "",
   });
 
   const formatABN = (value: string) => {
@@ -213,6 +214,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         defaultAccountCode: vendor.default_account_code || "",
         defaultSubAccount: vendor.default_sub_account || "",
         acumaticaVendorId: vendor.acumatica_vendor_id || "",
+        acumaticaSupplierId: vendor.acumatica_supplier_id || "",
       });
       setLinkedCustomerId(vendor.customer_id || null);
       setAbnValidated(false);
@@ -238,6 +240,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         defaultAccountCode: "",
         defaultSubAccount: "",
         acumaticaVendorId: "",
+        acumaticaSupplierId: "",
       });
       setLinkedCustomerId(null);
       setAbnValidated(false);
@@ -308,6 +311,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         default_account_code: formData.defaultAccountCode || null,
         default_sub_account: formData.defaultSubAccount || null,
         acumatica_vendor_id: formData.acumaticaVendorId || null,
+        acumatica_supplier_id: formData.acumaticaSupplierId || null,
       };
 
       if (vendor) {
@@ -580,6 +584,16 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
                   subAccount={formData.defaultSubAccount}
                   onAccountChange={(code) => setFormData({ ...formData, defaultAccountCode: code })}
                   onSubAccountChange={(sub) => setFormData({ ...formData, defaultSubAccount: sub })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="acumaticaSupplierId">MYOB Acumatica Supplier Number</Label>
+                <Input
+                  id="acumaticaSupplierId"
+                  value={formData.acumaticaSupplierId}
+                  onChange={(e) => setFormData({ ...formData, acumaticaSupplierId: e.target.value })}
+                  placeholder="Enter supplier number"
                 />
               </div>
 
