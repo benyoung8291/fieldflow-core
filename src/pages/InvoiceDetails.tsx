@@ -61,6 +61,26 @@ export default function InvoiceDetails() {
     },
   });
 
+  // Fetch accounting integration for Acumatica link
+  const { data: accountingIntegration } = useQuery({
+    queryKey: ["accounting-integration", invoice?.tenant_id],
+    queryFn: async () => {
+      if (!invoice?.tenant_id) return null;
+      
+      const { data, error } = await supabase
+        .from("accounting_integrations")
+        .select("acumatica_instance_url")
+        .eq("tenant_id", invoice.tenant_id)
+        .eq("provider", "acumatica")
+        .eq("is_enabled", true)
+        .single();
+
+      if (error) return null;
+      return data;
+    },
+    enabled: !!invoice?.tenant_id && !!invoice?.acumatica_reference_nbr,
+  });
+
   const { data: lineItems } = useQuery({
     queryKey: ["invoice-line-items", id],
     queryFn: async () => {
@@ -594,8 +614,22 @@ export default function InvoiceDetails() {
               <div className="font-semibold text-destructive">Invoice Locked - Released in MYOB Acumatica</div>
               <div className="text-sm text-muted-foreground mt-1">
                 This invoice has been released in MYOB Acumatica and cannot be modified. 
-                {invoice.acumatica_reference_nbr && ` Reference: ${invoice.acumatica_reference_nbr}`}
-                {" "}Contact an administrator to void or reverse this invoice if changes are required.
+                {invoice.acumatica_reference_nbr && accountingIntegration?.acumatica_instance_url && (
+                  <>
+                    <br />
+                    <a
+                      href={`${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AR301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline mt-1"
+                    >
+                      View in Acumatica: {invoice.acumatica_reference_nbr}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </>
+                )}
+                <br />
+                Contact an administrator to void or reverse this invoice if changes are required.
               </div>
             </div>
           </div>
@@ -609,7 +643,19 @@ export default function InvoiceDetails() {
             <div className="flex-1">
               <div className="font-semibold text-blue-600 dark:text-blue-400">Synced to MYOB Acumatica</div>
               <div className="text-sm text-muted-foreground mt-1">
-                Reference: {invoice.acumatica_reference_nbr}
+                {accountingIntegration?.acumatica_instance_url ? (
+                  <a
+                    href={`${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AR301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    View in Acumatica: {invoice.acumatica_reference_nbr}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  `Reference: ${invoice.acumatica_reference_nbr}`
+                )}
                 {invoice.synced_to_accounting_at && ` • Synced: ${format(new Date(invoice.synced_to_accounting_at), "dd MMM yyyy HH:mm")}`}
               </div>
             </div>

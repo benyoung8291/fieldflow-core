@@ -104,7 +104,7 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
         const invoiceIds = [...new Set(invoiceLinks.map((l) => l.invoice_id))];
         const { data: invoices } = await supabase
           .from("invoices")
-          .select("id, invoice_number, status, created_at, created_by")
+          .select("id, invoice_number, status, created_at, created_by, customer_id, customers(id, name)")
           .in("id", invoiceIds);
 
         if (invoices) {
@@ -119,6 +119,70 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
               createdBy,
               status: invoice.status,
               route: `/invoices/${invoice.id}`,
+            });
+          }
+        }
+      }
+
+      // Fetch linked customer (for invoices, service orders, quotes, projects, contracts)
+      if (documentType === "invoice" || documentType === "service_order" || documentType === "project" || documentType === "quote" || documentType === "contract") {
+        let customerId = null;
+
+        // Get customer_id based on document type
+        if (documentType === "invoice") {
+          const { data } = await supabase
+            .from("invoices")
+            .select("customer_id")
+            .eq("id", documentId)
+            .single();
+          customerId = data?.customer_id;
+        } else if (documentType === "service_order") {
+          const { data } = await supabase
+            .from("service_orders")
+            .select("customer_id")
+            .eq("id", documentId)
+            .single();
+          customerId = data?.customer_id;
+        } else if (documentType === "project") {
+          const { data } = await supabase
+            .from("projects")
+            .select("customer_id")
+            .eq("id", documentId)
+            .single();
+          customerId = data?.customer_id;
+        } else if (documentType === "quote") {
+          const { data } = await supabase
+            .from("quotes")
+            .select("customer_id")
+            .eq("id", documentId)
+            .single();
+          customerId = data?.customer_id;
+        } else if (documentType === "contract") {
+          const { data } = await supabase
+            .from("service_contracts")
+            .select("customer_id")
+            .eq("id", documentId)
+            .single();
+          customerId = data?.customer_id;
+        }
+
+        // Fetch customer details if we have a customer_id
+        if (customerId) {
+          const { data: customer } = await supabase
+            .from("customers")
+            .select("id, name, created_at")
+            .eq("id", customerId)
+            .single();
+
+          if (customer) {
+            allDocuments.push({
+              id: customer.id,
+              type: "Customer",
+              number: customer.name,
+              title: customer.name,
+              createdAt: new Date(customer.created_at),
+              createdBy: "System",
+              route: `/customers/${customer.id}`,
             });
           }
         }
@@ -426,6 +490,8 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
         return <User className="h-4 w-4" />;
       case "Contact":
         return <UserCircle className="h-4 w-4" />;
+      case "Customer":
+        return <User className="h-4 w-4" />;
       case "Help Desk Ticket":
         return <FileText className="h-4 w-4" />;
       case "Purchase Order":

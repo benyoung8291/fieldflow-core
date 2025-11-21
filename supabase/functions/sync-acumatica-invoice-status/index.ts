@@ -91,19 +91,29 @@ Deno.serve(async (req) => {
           // Determine if we need to update the local invoice
           let shouldUpdate = false;
           let newStatus = invoice.status;
+          let auditNote = '';
 
           // Status mapping:
           // Acumatica "Closed" -> App "paid"
-          // Also update acumatica_status if it changed
+          // Acumatica "Deleted"/"Voided" -> App "draft" (unapproved)
           if (acumaticaStatus === 'Closed' && invoice.status !== 'paid') {
             newStatus = 'paid';
             shouldUpdate = true;
+            auditNote = 'Invoice marked as paid - synced from MYOB Acumatica (status: Closed)';
             console.log(`Invoice ${invoice.invoice_number} is Closed in Acumatica - updating to paid`);
+          } else if ((acumaticaStatus === 'Deleted' || acumaticaStatus === 'Voided') && invoice.status !== 'draft') {
+            newStatus = 'draft';
+            shouldUpdate = true;
+            auditNote = `Invoice unapproved - deleted/voided in MYOB Acumatica (status: ${acumaticaStatus})`;
+            console.log(`Invoice ${invoice.invoice_number} is ${acumaticaStatus} in Acumatica - updating to draft`);
           }
 
           // Always update acumatica_status if it changed
           if (invoice.acumatica_status !== acumaticaStatus) {
             shouldUpdate = true;
+            if (!auditNote) {
+              auditNote = `Acumatica status changed from ${invoice.acumatica_status || 'none'} to ${acumaticaStatus}`;
+            }
           }
 
           if (shouldUpdate) {
@@ -120,6 +130,21 @@ Deno.serve(async (req) => {
               errorCount++;
             } else {
               console.log(`Successfully updated invoice ${invoice.invoice_number} - Status: ${newStatus}, Acumatica Status: ${acumaticaStatus}`);
+              
+              // Log the change to audit history
+              await supabase.from('audit_logs').insert({
+                tenant_id: integration.tenant_id,
+                user_id: null,
+                user_name: 'System (Acumatica Sync)',
+                table_name: 'invoices',
+                record_id: invoice.id,
+                action: 'update',
+                field_name: 'status',
+                old_value: invoice.status,
+                new_value: newStatus,
+                note: auditNote,
+              });
+              
               updatedCount++;
             }
           }

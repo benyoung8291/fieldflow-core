@@ -126,7 +126,7 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {logs.map((log, index) => {
         const Icon = actionIcons[log.action];
         const isEditing = editingNote === log.id;
@@ -135,35 +135,35 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
           <div key={log.id} className="relative">
             {/* Timeline line */}
             {index < logs.length - 1 && (
-              <div className="absolute left-4 top-10 bottom-0 w-px bg-border" />
+              <div className="absolute left-3 top-8 bottom-0 w-px bg-border" />
             )}
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               {/* Icon */}
               <div className={cn(
-                "h-8 w-8 rounded-full border-2 border-background bg-card flex items-center justify-center shadow-sm flex-shrink-0",
+                "h-6 w-6 rounded-full border-2 border-background bg-card flex items-center justify-center shadow-sm flex-shrink-0",
                 actionColors[log.action]
               )}>
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3 w-3" />
               </div>
 
               {/* Content */}
               <div className="flex-1 space-y-1">
-                <Card className="p-3">
+                <Card className="p-2">
                   {/* Header */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <Badge variant="outline" className={cn("capitalize text-[10px] py-0 px-1", actionColors[log.action])}>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Badge variant="outline" className={cn("capitalize text-[10px] py-0 px-1 h-4", actionColors[log.action])}>
                           {actionLabels[log.action]}
                         </Badge>
                         {log.field_name && (
-                          <span className="text-xs font-medium truncate">
+                          <span className="text-[11px] font-medium truncate">
                             {formatFieldName(log.field_name)}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[10px] text-muted-foreground">
                         <span className="font-medium text-foreground">{log.user_name}</span>
                         {" • "}
                         {format(new Date(log.created_at), "MMM d, h:mm a")}
@@ -177,7 +177,7 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
                         size="sm"
                         onClick={() => handleRevert(log.id, log)}
                         disabled={revertChange.isPending}
-                        className="h-7 px-2 text-xs gap-1"
+                        className="h-6 px-1.5 text-[10px] gap-1"
                       >
                         <Undo2 className="h-3 w-3" />
                         Revert
@@ -188,17 +188,17 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
                   {/* Change details */}
                   {log.action === "update" && log.field_name && (
                     <div className="space-y-1">
-                      <Separator />
-                      <div className="grid grid-cols-2 gap-2 text-xs py-1">
+                      <Separator className="my-1" />
+                      <div className="grid grid-cols-2 gap-1.5 text-xs">
                         <div>
-                          <div className="text-muted-foreground text-[10px] mb-0.5">From:</div>
-                          <div className="font-mono text-[10px] bg-muted p-1.5 rounded truncate">
+                          <div className="text-muted-foreground text-[9px] mb-0.5">From:</div>
+                          <div className="font-mono text-[9px] bg-muted p-1 rounded truncate">
                             {formatValue(log.old_value)}
                           </div>
                         </div>
                         <div>
-                          <div className="text-muted-foreground text-[10px] mb-0.5">To:</div>
-                          <div className="font-mono text-[10px] bg-primary/5 p-1.5 rounded border border-primary/20 truncate">
+                          <div className="text-muted-foreground text-[9px] mb-0.5">To:</div>
+                          <div className="font-mono text-[9px] bg-primary/5 p-1 rounded border border-primary/20 truncate">
                             {formatValue(log.new_value)}
                           </div>
                         </div>
@@ -208,20 +208,20 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
 
                   {/* Note */}
                   {log.note && (
-                    <div className="mt-2 pt-2 border-t">
-                      <div className="flex items-start gap-1.5 text-xs">
-                        <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5" />
+                    <div className="mt-1.5 pt-1.5 border-t">
+                      <div className="flex items-start gap-1 text-xs">
+                        <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="text-muted-foreground text-[10px] mb-0.5">Note:</div>
-                          <div className="text-foreground">
+                          <div className="text-muted-foreground text-[9px] mb-0.5">Note:</div>
+                          <div className="text-foreground text-[10px]">
                             {formatValue(log.note)}
                             {extractLink(log.note) && (
                               <Link 
                                 to={extractLink(log.note)!} 
-                                className="inline-flex items-center gap-1 ml-2 text-primary hover:underline"
+                                className="inline-flex items-center gap-1 ml-1.5 text-primary hover:underline"
                               >
-                                View Document
-                                <ExternalLink className="h-3 w-3" />
+                                View
+                                <ExternalLink className="h-2.5 w-2.5" />
                               </Link>
                             )}
                           </div>
@@ -232,23 +232,23 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
 
                   {/* Add note section */}
                   {!log.note && (
-                    <div className="mt-2 pt-2 border-t">
+                    <div className="mt-1.5 pt-1.5 border-t">
                       {isEditing ? (
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <Textarea
                             placeholder="Add a note..."
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
                             rows={2}
                             autoFocus
-                            className="text-xs"
+                            className="text-[10px] min-h-[50px]"
                           />
                           <div className="flex gap-1">
                             <Button
                               size="sm"
                               onClick={() => handleAddNote(log.id)}
                               disabled={!noteText.trim() || addNote.isPending}
-                              className="h-7 px-2 text-xs gap-1"
+                              className="h-6 px-1.5 text-[10px] gap-1"
                             >
                               <Save className="h-3 w-3" />
                               Save
@@ -260,7 +260,7 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
                                 setEditingNote(null);
                                 setNoteText("");
                               }}
-                              className="h-7 px-2"
+                              className="h-6 px-1.5"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -271,7 +271,7 @@ export default function AuditTimeline({ tableName, recordId }: AuditTimelineProp
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditingNote(log.id)}
-                          className="h-7 px-2 text-xs gap-1 text-muted-foreground"
+                          className="h-6 px-1.5 text-[10px] gap-1 text-muted-foreground"
                         >
                           <MessageSquare className="h-3 w-3" />
                           Add Note
