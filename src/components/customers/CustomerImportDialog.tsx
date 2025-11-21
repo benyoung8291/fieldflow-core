@@ -279,10 +279,21 @@ export default function CustomerImportDialog({
       const mappedData = getMappedData();
       const duplicateMatches: DuplicateMatch[] = [];
 
-      // Get all existing customers
+      // Collect unique ABNs and emails from import data
+      const abns = mappedData.map(row => row.abn).filter(Boolean);
+      const emails = mappedData.map(row => row.email).filter(Boolean);
+
+      if (abns.length === 0 && emails.length === 0) {
+        // No identifiable data, skip duplicate check
+        setDuplicates([]);
+        return [];
+      }
+
+      // Fetch only customers that match ABNs or emails (much more efficient)
       const { data: existingCustomers, error } = await supabase
         .from("customers")
-        .select("*");
+        .select("*")
+        .or(`abn.in.(${abns.join(",")}),email.in.(${emails.join(",")})`);
 
       if (error) throw error;
 
