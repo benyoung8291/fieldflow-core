@@ -91,6 +91,7 @@ export default function CreateTaskButton({
         end_date: taskData.end_date?.toISOString().split('T')[0] || null,
         estimated_hours: taskData.estimated_hours ? parseFloat(taskData.estimated_hours) : null,
         progress_percentage: taskData.progress_percentage ? parseInt(taskData.progress_percentage) : 0,
+        show_description_on_card: taskData.show_description_on_card || false,
         created_by: user.id,
         linked_module: linkedModule || null,
         linked_record_id: linkedRecordId || null,

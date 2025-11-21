@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -42,6 +43,7 @@ export interface TaskFormData {
   estimated_hours: string;
   progress_percentage: string;
   tags: string[];
+  show_description_on_card: boolean;
 }
 
 export default function TaskDialog({
@@ -69,6 +71,7 @@ export default function TaskDialog({
     estimated_hours: defaultValues?.estimated_hours || "",
     progress_percentage: defaultValues?.progress_percentage || "0",
     tags: defaultValues?.tags || [],
+    show_description_on_card: (defaultValues as any)?.show_description_on_card || false,
   });
   
   const [tagInput, setTagInput] = useState("");
@@ -104,6 +107,7 @@ export default function TaskDialog({
         estimated_hours: defaultValues?.estimated_hours || "",
         progress_percentage: defaultValues?.progress_percentage || "0",
         tags: defaultValues?.tags || [],
+        show_description_on_card: (defaultValues as any)?.show_description_on_card || false,
       });
     }
   }, [defaultValues, open]);
@@ -188,6 +192,17 @@ export default function TaskDialog({
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-description"
+              checked={formData.show_description_on_card}
+              onCheckedChange={(checked) => setFormData({ ...formData, show_description_on_card: checked })}
+            />
+            <Label htmlFor="show-description" className="cursor-pointer">
+              Show description on task card
+            </Label>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
