@@ -717,6 +717,11 @@ export default function Tasks() {
       const taskTitle = (currentTask as any).title as string;
       const tenantId = (currentTask as any).tenant_id as string;
 
+      // Permission check: Only assigned user can complete tasks
+      if (data.status === "completed" && oldAssignedTo !== user.id) {
+        throw new Error("You can only complete tasks assigned to you");
+      }
+
       // Build update object with only provided fields
       const updateData: any = {};
       
@@ -775,8 +780,8 @@ export default function Tasks() {
       setSelectedTask(null);
       setIsDialogOpen(false);
     },
-    onError: () => {
-      toast.error("Failed to update task");
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to update task");
     }
   });
   const toggleTaskStatus = async (task: any) => {
