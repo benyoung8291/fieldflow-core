@@ -51,6 +51,12 @@ export default function InvoiceDetails() {
             name,
             email,
             billing_address
+          ),
+          suppliers (
+            id,
+            name,
+            email,
+            acumatica_supplier_id
           )
         `)
         .eq("id", id)
@@ -155,7 +161,7 @@ export default function InvoiceDetails() {
         
         // Determine which sync function to call based on invoice type
         // @ts-ignore - invoice_type exists on invoice table
-        const syncFunctionName = invoice?.invoice_type === 'AP' 
+        const syncFunctionName = invoice?.invoice_type === 'ap' 
           ? 'sync-ap-invoice-to-acumatica' 
           : 'sync-invoice-to-accounting';
         
@@ -204,7 +210,7 @@ export default function InvoiceDetails() {
       // Show loading toast when approving
       if (status === "approved") {
         // @ts-ignore - invoice_type exists on invoice table
-        const toastMessage = invoice?.invoice_type === 'AP'
+        const toastMessage = invoice?.invoice_type === 'ap'
           ? "Syncing AP Invoice to MYOB Acumatica..."
           : "Syncing invoice to MYOB Acumatica...";
         toast.loading(toastMessage, { id: "invoice-sync" });
@@ -221,7 +227,7 @@ export default function InvoiceDetails() {
       
       if (status === "approved") {
         // @ts-ignore - invoice_type exists on invoice table
-        const successMessage = invoice?.invoice_type === 'AP'
+        const successMessage = invoice?.invoice_type === 'ap'
           ? "AP Invoice approved and synced to MYOB Acumatica successfully"
           : "Invoice approved and synced to MYOB Acumatica successfully";
         toast.success(successMessage);
@@ -721,8 +727,10 @@ export default function InvoiceDetails() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <KeyInfoCard
           icon={User}
-          label="Customer"
-          value={invoice.customers?.name || "N/A"}
+          // @ts-ignore - invoice_type exists
+          label={invoice.invoice_type === 'ap' ? "Supplier" : "Customer"}
+          // @ts-ignore - suppliers relation exists
+          value={invoice.invoice_type === 'ap' ? (invoice.suppliers?.name || "N/A") : (invoice.customers?.name || "N/A")}
           iconColor="text-primary"
         />
         <KeyInfoCard
@@ -857,28 +865,43 @@ export default function InvoiceDetails() {
     }] : []),
     {
       value: "customer",
-      label: "Customer",
+      // @ts-ignore - invoice_type exists
+      label: invoice.invoice_type === 'ap' ? "Supplier" : "Customer",
       icon: <User className="h-4 w-4" />,
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
+            {/* @ts-ignore - invoice_type exists */}
+            <CardTitle>{invoice.invoice_type === 'ap' ? 'Supplier' : 'Customer'} Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <div className="text-sm text-muted-foreground mb-1">Customer Name</div>
-              <div className="font-medium">{invoice.customers?.name}</div>
+              {/* @ts-ignore - invoice_type and suppliers exists */}
+              <div className="text-sm text-muted-foreground mb-1">{invoice.invoice_type === 'ap' ? 'Supplier' : 'Customer'} Name</div>
+              {/* @ts-ignore - invoice_type and suppliers exists */}
+              <div className="font-medium">{invoice.invoice_type === 'ap' ? invoice.suppliers?.name : invoice.customers?.name}</div>
             </div>
-            {invoice.customers?.email && (
+            {/* @ts-ignore - invoice_type and suppliers exists */}
+            {(invoice.invoice_type === 'ap' ? invoice.suppliers?.email : invoice.customers?.email) && (
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Email</div>
-                <div className="text-sm">{invoice.customers.email}</div>
+                {/* @ts-ignore - invoice_type and suppliers exists */}
+                <div className="text-sm">{invoice.invoice_type === 'ap' ? invoice.suppliers.email : invoice.customers.email}</div>
               </div>
             )}
-            {invoice.customers?.billing_address && (
+            {/* @ts-ignore - invoice_type exists */}
+            {invoice.invoice_type === 'ar' && invoice.customers?.billing_address && (
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Billing Address</div>
                 <div className="text-sm">{invoice.customers.billing_address}</div>
+              </div>
+            )}
+            {/* @ts-ignore - invoice_type and suppliers exists */}
+            {invoice.invoice_type === 'ap' && invoice.suppliers?.acumatica_supplier_id && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Acumatica Supplier ID</div>
+                {/* @ts-ignore - suppliers exists */}
+                <div className="text-sm font-mono">{invoice.suppliers.acumatica_supplier_id}</div>
               </div>
             )}
           </CardContent>
