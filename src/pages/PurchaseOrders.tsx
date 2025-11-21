@@ -9,6 +9,8 @@ import { Plus, Search, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
 import { useNavigate } from "react-router-dom";
+import { usePagination } from "@/hooks/usePagination";
+import { useQuery } from "@tanstack/react-query";
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<any>(null);
+  const pagination = usePagination({ initialPageSize: 50 });
 
   useEffect(() => {
     fetchPurchaseOrders();
@@ -218,6 +221,13 @@ export default function PurchaseOrders() {
         purchaseOrder={selectedPO}
         onSuccess={fetchPurchaseOrders}
       />
+      
+      {/* Pagination for large PO lists */}
+      {filteredPOs.length > 50 && (
+        <div className="mt-6 flex justify-center">
+          <div className="text-sm text-muted-foreground">Showing {Math.min(filteredPOs.length, 100)} purchase orders</div>
+        </div>
+      )}
       </div>
     </DashboardLayout>
   );

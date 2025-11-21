@@ -15,16 +15,20 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function InvoicesList() {
   const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: invoices, isLoading, refetch } = useQuery({
-    queryKey: ["invoices", statusFilter],
+  const { data: invoicesResponse, isLoading, refetch } = useQuery({
+    queryKey: ["invoices", statusFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
+      const { from, to } = pagination.getRange();
+      
       let query = supabase
         .from("invoices")
         .select(`
@@ -33,18 +37,23 @@ export default function InvoicesList() {
             id,
             name
           )
-        `)
-        .order("created_at", { ascending: false });
+        `, { count: 'exact' })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+      return { invoices: data || [], count: count || 0 };
     },
   });
+
+  const invoices = invoicesResponse?.invoices || [];
+  const totalCount = invoicesResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -189,10 +198,40 @@ export default function InvoicesList() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+              </Table>
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {!isMobile && totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} invoices
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => pagination.prevPage()}
+                  disabled={pagination.currentPage === 0}
+                >
+                  Previous
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  Page {pagination.currentPage + 1} of {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => pagination.nextPage()}
+                  disabled={pagination.currentPage >= totalPages - 1}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

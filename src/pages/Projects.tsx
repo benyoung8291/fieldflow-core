@@ -15,6 +15,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -22,14 +23,18 @@ export default function Projects() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: projects, isLoading, refetch } = useQuery({
-    queryKey: ["projects"],
+  const { data: projectsResponse, isLoading, refetch } = useQuery({
+    queryKey: ["projects", pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { from, to } = pagination.getRange();
+      
+      const { data, error, count } = await supabase
         .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*", { count: 'exact' })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
       
@@ -50,9 +55,13 @@ export default function Projects() {
         return { ...project, customer, creator };
       }));
 
-      return projectsWithDetails;
+      return { projects: projectsWithDetails, count: count || 0 };
     },
   });
+
+  const projects = projectsResponse?.projects || [];
+  const totalCount = projectsResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -209,6 +218,58 @@ export default function Projects() {
               </Card>
             ))}
           </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <div className="mt-6">
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} projects
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pagination.prevPage()}
+                      disabled={pagination.currentPage === 0}
+                    >
+                      Previous
+                    </Button>
+                    <div className="text-sm text-muted-foreground">
+                      Page {pagination.currentPage + 1} of {totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pagination.nextPage()}
+                      disabled={pagination.currentPage >= totalPages - 1}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <Card className="mt-6">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} projects</div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>Previous</Button>
+                  <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+                  <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>Next</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
       </div>
