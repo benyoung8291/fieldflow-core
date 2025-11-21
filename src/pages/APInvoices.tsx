@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -23,6 +23,7 @@ export default function APInvoices() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: apInvoices = [], isLoading } = useQuery({
     queryKey: ['ap-invoices'],
@@ -34,7 +35,7 @@ export default function APInvoices() {
           *,
           supplier:suppliers(name)
         `)
-        .eq('invoice_type', 'AP')
+        .eq('invoice_type', 'ap')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -191,7 +192,9 @@ export default function APInvoices() {
       <APInvoiceDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['ap-invoices'] });
+        }}
       />
     </DashboardLayout>
   );
