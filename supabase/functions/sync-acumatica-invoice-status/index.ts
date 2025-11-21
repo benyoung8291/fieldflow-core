@@ -133,38 +133,65 @@ Deno.serve(async (req) => {
       // Check status for each invoice
       for (const invoice of invoices || []) {
         try {
-          // Use invoice_id if available, otherwise use reference_nbr
-          const acumaticaIdentifier = invoice.acumatica_invoice_id || invoice.acumatica_reference_nbr;
-          
-          if (!acumaticaIdentifier) {
-            console.log(`Skipping invoice ${invoice.invoice_number} - no Acumatica identifier`);
+          let acumaticaInvoice;
+          let acumaticaInvoiceId = invoice.acumatica_invoice_id;
+
+          // If we have invoice_id, use direct lookup
+          if (invoice.acumatica_invoice_id) {
+            console.log(`Checking status for invoice ${invoice.invoice_number} using ID: ${invoice.acumatica_invoice_id}`);
+            
+            const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${invoice.acumatica_invoice_id}`;
+            const response = await fetch(acumaticaUrl, {
+              method: 'GET',
+              headers: {
+                'Cookie': cookies,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (!response.ok) {
+              console.error(`Failed to fetch invoice ${invoice.invoice_number} from Acumatica: ${response.status}`);
+              errorCount++;
+              continue;
+            }
+
+            acumaticaInvoice = await response.json();
+          } 
+          // If we only have reference_nbr, use filter query
+          else if (invoice.acumatica_reference_nbr) {
+            console.log(`Checking status for invoice ${invoice.invoice_number} using filter ReferenceNbr: ${invoice.acumatica_reference_nbr}`);
+            
+            const filterUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice?$filter=ReferenceNbr eq '${invoice.acumatica_reference_nbr}'`;
+            const response = await fetch(filterUrl, {
+              method: 'GET',
+              headers: {
+                'Cookie': cookies,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (!response.ok) {
+              console.error(`Failed to fetch invoice ${invoice.invoice_number} from Acumatica: ${response.status}`);
+              errorCount++;
+              continue;
+            }
+
+            const results = await response.json();
+            if (!results || results.length === 0) {
+              console.error(`No invoice found in Acumatica with ReferenceNbr ${invoice.acumatica_reference_nbr}`);
+              errorCount++;
+              continue;
+            }
+
+            acumaticaInvoice = results[0];
+            acumaticaInvoiceId = acumaticaInvoice.id?.value;
+            console.log(`Found invoice via filter, ID: ${acumaticaInvoiceId}`);
+          } else {
+            console.log(`Skipping invoice ${invoice.invoice_number} - no Acumatica identifier found`);
             continue;
           }
 
-          console.log(`Checking status for invoice ${invoice.invoice_number} (Acumatica: ${acumaticaIdentifier})`);
-
-          // Query Acumatica API for invoice status using authenticated session
-          const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${acumaticaIdentifier}`;
-
-          const response = await fetch(acumaticaUrl, {
-            method: 'GET',
-            headers: {
-              'Cookie': cookies,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (!response.ok) {
-            console.error(`Failed to fetch invoice ${invoice.invoice_number} from Acumatica: ${response.status}`);
-            errorCount++;
-            continue;
-          }
-
-          const acumaticaInvoice = await response.json();
           const acumaticaStatus = acumaticaInvoice.Status?.value;
-          
-          // Extract and update invoice_id if we only had reference_nbr
-          const acumaticaInvoiceId = acumaticaInvoice.id?.value;
           
           console.log(`Invoice ${invoice.invoice_number} - Acumatica status: ${acumaticaStatus}, Current app status: ${invoice.status}`);
 
