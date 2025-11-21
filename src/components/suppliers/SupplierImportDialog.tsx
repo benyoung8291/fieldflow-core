@@ -459,9 +459,22 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
   };
 
   const handleNext = () => {
+    console.log('handleNext called, current step:', step);
+    console.log('columnMapping:', columnMapping);
+    
     if (step === 'mapping') {
-      if (validateMappedData()) {
+      const isValid = validateMappedData();
+      console.log('Validation result:', isValid, 'Errors:', validationErrors);
+      
+      if (isValid) {
+        console.log('Moving to preview step');
         setStep('preview');
+      } else {
+        toast({
+          title: "Validation failed",
+          description: "Please fix the validation errors before proceeding",
+          variant: "destructive",
+        });
       }
     } else if (step === 'preview') {
       checkForDuplicates();
