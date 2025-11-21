@@ -147,7 +147,17 @@ export default function ServiceOrderDetails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*")
+        .select(`
+          *,
+          appointment_workers(
+            worker_id,
+            profiles!appointment_workers_worker_id_fkey(
+              id,
+              hourly_rate,
+              hourly_loading_percentage
+            )
+          )
+        `)
         .eq("service_order_id", id);
       if (error) throw error;
       return data;
@@ -314,6 +324,26 @@ export default function ServiceOrderDetails() {
 
   const totalCost = lineItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0) * item.quantity, 0);
   const totalRevenue = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
+  
+  // Calculate estimated labor costs from appointments
+  const estimatedLaborCost = appointments.reduce((sum: number, apt: any) => {
+    if (!apt.start_time || !apt.end_time || !apt.appointment_workers?.length) return sum;
+    
+    const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);
+    
+    const appointmentLaborCost = apt.appointment_workers.reduce((workerSum: number, aw: any) => {
+      const worker = aw.profiles;
+      if (!worker?.hourly_rate) return workerSum;
+      
+      const hourlyRate = worker.hourly_rate;
+      const loading = worker.hourly_loading_percentage || 0;
+      const rateWithLoading = hourlyRate * (1 + loading / 100);
+      
+      return workerSum + (hours * rateWithLoading);
+    }, 0);
+    
+    return sum + appointmentLaborCost;
+  }, 0);
   
   // Calculate AP invoice costs (approved AP invoices linked to this service order)
   const apInvoiceCosts = apInvoices
@@ -774,6 +804,9 @@ export default function ServiceOrderDetails() {
                   <div className="text-xs text-muted-foreground">
                     Costs: ${actualCost.toFixed(2)}
                   </div>
+                  <div className="text-xs text-muted-foreground">
+                    Est. Labor: ${estimatedLaborCost.toFixed(2)}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1211,6 +1244,7 @@ export default function ServiceOrderDetails() {
               costOfMaterials={totalCost}
               costOfLabor={0}
               apInvoiceCosts={apInvoiceCosts}
+              estimatedLaborCost={estimatedLaborCost}
               otherCosts={0}
               profitMargin={profitMargin}
               pendingPOCosts={pendingPOCosts}
