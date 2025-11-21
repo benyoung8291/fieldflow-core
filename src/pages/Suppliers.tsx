@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Phone, Mail, MapPin, ArrowUpDown, Filter, Upload, Download, FileUp, FileDown } from "lucide-react";
+import { Plus, Search, Phone, Mail, MapPin, ArrowUpDown, Filter, Upload, Download, FileUp, FileDown, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
 import SupplierDialog from "@/components/suppliers/SupplierDialog";
 import { SupplierImportDialog } from "@/components/suppliers/SupplierImportDialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -415,6 +415,7 @@ export default function Suppliers() {
                     <TableHead>
                       <SortButton field="abn">ABN</SortButton>
                     </TableHead>
+                    <TableHead>ABN Status</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>
@@ -454,6 +455,37 @@ export default function Suppliers() {
                             </Badge>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {vendor.abn && (
+                          <div>
+                            {vendor.abn_validation_status === 'valid' && (
+                              <Badge variant="outline" className="border-green-600 text-green-600">
+                                Valid
+                              </Badge>
+                            )}
+                            {vendor.abn_validation_status === 'invalid' && (
+                              <Badge variant="outline" className="border-red-600 text-red-600">
+                                Invalid
+                              </Badge>
+                            )}
+                            {vendor.abn_validation_status === 'pending' && (
+                              <Badge variant="outline" className="border-yellow-600 text-yellow-600">
+                                Validating...
+                              </Badge>
+                            )}
+                            {vendor.abn_validation_status === 'needs_review' && (
+                              <Badge variant="outline" className="border-orange-600 text-orange-600">
+                                Needs Review
+                              </Badge>
+                            )}
+                            {!vendor.abn_validation_status && (
+                              <Badge variant="outline" className="border-muted-foreground text-muted-foreground">
+                                Not Checked
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1 text-sm">
