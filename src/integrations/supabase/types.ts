@@ -2190,6 +2190,7 @@ export type Database = {
           invoice_number: string
           invoice_type: string
           is_progress_invoice: boolean | null
+          last_synced_at: string | null
           manager_approval_notes: string | null
           manager_approved_at: string | null
           manager_approved_by: string | null
@@ -2225,6 +2226,7 @@ export type Database = {
           invoice_number: string
           invoice_type?: string
           is_progress_invoice?: boolean | null
+          last_synced_at?: string | null
           manager_approval_notes?: string | null
           manager_approved_at?: string | null
           manager_approved_by?: string | null
@@ -2260,6 +2262,7 @@ export type Database = {
           invoice_number?: string
           invoice_type?: string
           is_progress_invoice?: boolean | null
+          last_synced_at?: string | null
           manager_approval_notes?: string | null
           manager_approved_at?: string | null
           manager_approved_by?: string | null
