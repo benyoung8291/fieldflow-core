@@ -157,7 +157,22 @@ serve(async (req) => {
     let mainName = '';
     if (mainNameMatch) {
       const mainNameSection = mainNameMatch[1];
+      // Try organisation name first (for companies)
       mainName = extractXMLValue(mainNameSection, 'organisationName') || '';
+      
+      // If no organisation name, try person name (for sole traders)
+      if (!mainName) {
+        const givenName = extractXMLValue(mainNameSection, 'givenName') || '';
+        const familyName = extractXMLValue(mainNameSection, 'familyName') || '';
+        const otherGivenName = extractXMLValue(mainNameSection, 'otherGivenName') || '';
+        
+        if (familyName) {
+          mainName = [givenName, otherGivenName, familyName]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        }
+      }
     }
     
     // Extract all business names (trading names) from businessEntity section
