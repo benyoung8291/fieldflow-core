@@ -43,6 +43,8 @@ export default function Customers() {
           email,
           phone,
           abn,
+          abn_validation_status,
+          abn_validation_error,
           city,
           state,
           customer_type,
@@ -252,7 +254,20 @@ export default function Customers() {
                 badge={customer.is_active ? "Active" : "Inactive"}
                 badgeVariant={customer.is_active ? "default" : "secondary"}
                 metadata={[
-                  { label: "ABN", value: customer.abn || "-" },
+                  { 
+                    label: "ABN", 
+                    value: customer.abn ? (
+                      <div className="flex items-center gap-2">
+                        <span>{customer.abn}</span>
+                        {customer.abn_validation_status === 'pending' && (
+                          <Badge variant="outline" className="text-xs">Validating</Badge>
+                        )}
+                        {customer.abn_validation_status === 'invalid' && (
+                          <Badge variant="destructive" className="text-xs">Invalid</Badge>
+                        )}
+                      </div>
+                    ) : "-" 
+                  },
                   { label: "Contact", value: customer.email || customer.phone || "-" },
                   { label: "Location", value: customer.city && customer.state ? `${customer.city}, ${customer.state}` : customer.city || customer.state || "-" },
                   { label: "Orders", value: serviceOrderCounts[customer.id] || 0 },
@@ -314,7 +329,22 @@ export default function Customers() {
                             )}
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-sm">{customer.abn || '-'}</td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{customer.abn || '-'}</span>
+                            {customer.abn_validation_status === 'pending' && (
+                              <Badge variant="outline" className="text-xs">
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Validating
+                              </Badge>
+                            )}
+                            {customer.abn_validation_status === 'invalid' && (
+                              <Badge variant="destructive" className="text-xs">
+                                Invalid
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-4 px-4">
                           <div className="text-sm">{customer.email || '-'}</div>
                           <div className="text-sm text-muted-foreground">{customer.phone || '-'}</div>

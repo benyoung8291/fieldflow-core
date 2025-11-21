@@ -236,15 +236,8 @@ export default function CustomerImportDialog({
         });
       }
 
-      // Validate ABN format
-      if (row.abn && !validateABN(row.abn)) {
-        errors.push({
-          row: index + 1,
-          field: "abn",
-          value: row.abn,
-          message: "Invalid ABN format (must be 11 digits with valid checksum)",
-        });
-      }
+      // NOTE: ABN validation is now done in background after import
+      // We no longer block import on ABN format issues
 
       // Validate email format
       if (row.email && !validateEmail(row.email)) {
@@ -395,6 +388,91 @@ export default function CustomerImportDialog({
     );
   };
 
+  const validateABNsInBackground = async (tenantId: string) => {
+    // Run ABN validation in background without blocking
+    setTimeout(async () => {
+      try {
+        // Get all customers with pending ABN validation
+        const { data: pendingCustomers, error: fetchError } = await supabase
+          .from("customers")
+          .select("id, abn, name")
+          .eq("tenant_id", tenantId)
+          .eq("abn_validation_status", "pending")
+          .not("abn", "is", null);
+
+        if (fetchError) {
+          console.error("Error fetching pending ABN validations:", fetchError);
+          return;
+        }
+
+        if (!pendingCustomers || pendingCustomers.length === 0) return;
+
+        console.log(`Validating ${pendingCustomers.length} ABNs in background...`);
+
+        // Validate each ABN
+        for (const customer of pendingCustomers) {
+          try {
+            const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+              "validate-abn",
+              {
+                body: { abn: customer.abn },
+              }
+            );
+
+            if (validationError) throw validationError;
+
+            // Update customer with validation result
+            const updateData: any = {
+              abn_validated_at: new Date().toISOString(),
+            };
+
+            if (validationResult.valid) {
+              updateData.abn_validation_status = "valid";
+              updateData.abn_validation_error = null;
+              // Optionally populate legal name from ABN if not already set
+              if (validationResult.legalName) {
+                const { data: existingCustomer } = await supabase
+                  .from("customers")
+                  .select("legal_company_name")
+                  .eq("id", customer.id)
+                  .single();
+                
+                if (!existingCustomer?.legal_company_name) {
+                  updateData.legal_company_name = validationResult.legalName;
+                }
+              }
+            } else {
+              updateData.abn_validation_status = "invalid";
+              updateData.abn_validation_error = validationResult.error || "ABN validation failed";
+            }
+
+            await supabase
+              .from("customers")
+              .update(updateData)
+              .eq("id", customer.id);
+
+            console.log(`Validated ABN for ${customer.name}: ${updateData.abn_validation_status}`);
+          } catch (error: any) {
+            console.error(`Error validating ABN for customer ${customer.id}:`, error);
+            // Mark as invalid on error
+            await supabase
+              .from("customers")
+              .update({
+                abn_validation_status: "invalid",
+                abn_validation_error: error.message || "Failed to validate ABN",
+                abn_validated_at: new Date().toISOString(),
+              })
+              .eq("id", customer.id);
+          }
+        }
+
+        console.log("Background ABN validation complete");
+      } catch (error) {
+        console.error("Background ABN validation error:", error);
+      }
+    }, 1000); // Start after 1 second delay
+  };
+
   const handleImport = async () => {
     // Don't allow import if there are validation errors
     if (validationErrors.length > 0) {
@@ -451,6 +529,8 @@ export default function CustomerImportDialog({
             ...row,
             tenant_id: profile.tenant_id,
             is_active: true,
+            // Set ABN validation status to pending if ABN exists
+            abn_validation_status: row.abn ? 'pending' : null,
           });
         }
         // If duplicate with action "skip", do nothing (don't insert or update)
@@ -486,8 +566,13 @@ export default function CustomerImportDialog({
 
       toast({
         title: "Import successful",
-        description: `Imported ${message.join(" and ")}`,
+        description: `Imported ${message.join(" and ")}. ABN validation running in background.`,
       });
+
+      // Trigger background ABN validation for newly imported customers with pending status
+      if (insertCount > 0) {
+        validateABNsInBackground(profile.tenant_id);
+      }
 
       onImportComplete();
       handleClose();
