@@ -36,7 +36,7 @@ serve(async (req) => {
         )
       `)
       .eq('id', invoice_id)
-      .eq('invoice_type', 'AP')
+      .eq('invoice_type', 'ap')
       .single();
 
     if (invoiceError) throw invoiceError;
