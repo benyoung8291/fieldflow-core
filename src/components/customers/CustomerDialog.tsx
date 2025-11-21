@@ -154,8 +154,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         if (updateError) {
           console.error('Failed to update ABN validation status:', updateError);
         } else {
-          // Invalidate queries to refresh the UI
-          queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
+          // Only invalidate the customers list, not the specific customer to avoid form reset
           queryClient.invalidateQueries({ queryKey: ["customers"] });
         }
       }
@@ -204,92 +203,93 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
       }
     };
 
+    // Only reset form data when dialog opens or customer/leadData initially provided
     if (open) {
       fetchSuppliers();
+      
+      if (customer) {
+        setFormData({
+          customerType: customer.customer_type || "company",
+          name: customer.name || "",
+          tradingName: customer.trading_name || "",
+          legalName: customer.legal_company_name || "",
+          abn: customer.abn || "",
+          email: customer.email || "",
+          phone: customer.phone || "",
+          address: customer.address || "",
+          city: customer.city || "",
+          state: customer.state || "",
+          postcode: customer.postcode || "",
+          billingEmail: customer.billing_email || "",
+          billingPhone: customer.billing_phone || "",
+          billingAddress: customer.billing_address || "",
+          paymentTerms: customer.payment_terms?.toString() || "30",
+          taxExempt: customer.tax_exempt || false,
+          isActive: customer.is_active ?? true,
+          notes: customer.notes || "",
+          acumaticaCustomerId: customer.acumatica_customer_id || "",
+          department: customer.department || "",
+        });
+        setLinkedVendorId(customer.supplier_id || null);
+        setAbnValidated(false);
+        setAvailableTradingNames([]);
+      } else if (leadData) {
+        // Pre-populate form with lead data for conversion
+        setFormData({
+          customerType: "company",
+          name: leadData.name || "",
+          tradingName: leadData.company_name || "",
+          legalName: "",
+          abn: leadData.abn || "",
+          email: leadData.email || "",
+          phone: leadData.phone || "",
+          address: leadData.address || "",
+          city: leadData.city || "",
+          state: leadData.state || "",
+          postcode: leadData.postcode || "",
+          billingEmail: "",
+          billingPhone: "",
+          billingAddress: "",
+          paymentTerms: "0",
+          taxExempt: false,
+          isActive: true,
+          notes: leadData.notes || "",
+          acumaticaCustomerId: "",
+          department: "",
+        });
+        setLinkedVendorId(null);
+        setAbnValidated(false);
+        setAvailableTradingNames([]);
+      } else {
+        // Reset form for new customer
+        setFormData({
+          customerType: "company",
+          name: "",
+          tradingName: "",
+          legalName: "",
+          abn: "",
+          email: "",
+          phone: "",
+          address: "",
+          city: "",
+          state: "",
+          postcode: "",
+          billingEmail: "",
+          billingPhone: "",
+          billingAddress: "",
+          paymentTerms: "0",
+          taxExempt: false,
+          isActive: true,
+          notes: "",
+          acumaticaCustomerId: "",
+          department: "",
+        });
+        setLinkedVendorId(null);
+        setAbnValidated(false);
+        setAvailableTradingNames([]);
+      }
     }
-
-    if (customer) {
-      setFormData({
-        customerType: customer.customer_type || "company",
-        name: customer.name || "",
-        tradingName: customer.trading_name || "",
-        legalName: customer.legal_company_name || "",
-        abn: customer.abn || "",
-        email: customer.email || "",
-        phone: customer.phone || "",
-        address: customer.address || "",
-        city: customer.city || "",
-        state: customer.state || "",
-        postcode: customer.postcode || "",
-        billingEmail: customer.billing_email || "",
-        billingPhone: customer.billing_phone || "",
-        billingAddress: customer.billing_address || "",
-        paymentTerms: customer.payment_terms?.toString() || "30",
-        taxExempt: customer.tax_exempt || false,
-        isActive: customer.is_active ?? true,
-        notes: customer.notes || "",
-        acumaticaCustomerId: customer.acumatica_customer_id || "",
-        department: customer.department || "",
-      });
-      setLinkedVendorId(customer.supplier_id || null);
-      setAbnValidated(false);
-      setAvailableTradingNames([]);
-    } else if (leadData) {
-      // Pre-populate form with lead data for conversion
-      setFormData({
-        customerType: "company",
-        name: leadData.name || "",
-        tradingName: leadData.company_name || "",
-        legalName: "",
-        abn: leadData.abn || "",
-        email: leadData.email || "",
-        phone: leadData.phone || "",
-        address: leadData.address || "",
-        city: leadData.city || "",
-        state: leadData.state || "",
-        postcode: leadData.postcode || "",
-        billingEmail: "",
-        billingPhone: "",
-        billingAddress: "",
-        paymentTerms: "0",
-        taxExempt: false,
-        isActive: true,
-        notes: leadData.notes || "",
-        acumaticaCustomerId: "",
-        department: "",
-      });
-      setLinkedVendorId(null);
-      setAbnValidated(false);
-      setAvailableTradingNames([]);
-    } else {
-      // Reset form for new customer
-      setFormData({
-        customerType: "company",
-        name: "",
-        tradingName: "",
-        legalName: "",
-        abn: "",
-        email: "",
-        phone: "",
-        address: "",
-        city: "",
-        state: "",
-        postcode: "",
-        billingEmail: "",
-        billingPhone: "",
-        billingAddress: "",
-        paymentTerms: "0",
-        taxExempt: false,
-        isActive: true,
-        notes: "",
-        acumaticaCustomerId: "",
-        department: "",
-      });
-      setLinkedVendorId(null);
-      setAbnValidated(false);
-      setAvailableTradingNames([]);
-    }
-  }, [customer, leadData, open]);
+  }, [open]); // Only depend on 'open', not customer or leadData
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,8 +345,9 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         if (error) throw error;
         toast.success("Customer updated successfully");
         
-        // Invalidate queries to refresh the list
+        // Invalidate queries to refresh the list and details page
         queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
         queryClient.invalidateQueries({ queryKey: ["customer-sub-accounts"] });
         onOpenChange(false);
       } else {
