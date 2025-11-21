@@ -8,6 +8,7 @@ import { startOfDay, endOfDay, startOfMonth, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { TodaysTasks } from "@/components/dashboard/TodaysTasks";
 import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
+import { PerrAIAssistant } from "@/components/dashboard/PerrAIAssistant";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -314,6 +315,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      <PerrAIAssistant />
     </DashboardLayout>
   );
 }
