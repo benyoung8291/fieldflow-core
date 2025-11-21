@@ -119,80 +119,164 @@ serve(async (req) => {
 
     console.log('Sending Bill to Acumatica:', JSON.stringify(billPayload, null, 2));
 
-    // Prepare authentication
-    const authString = btoa(`${integration.acumatica_username}:${integration.acumatica_password}`);
     const baseUrl = integration.acumatica_instance_url?.replace(/\/$/, '') || '';
-    const apiUrl = `${baseUrl}/entity/Default/23.200.001/Bill`;
+    let cookies: string | null = null;
 
-    // Send to Acumatica
-    const acumaticaResponse = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(billPayload)
-    });
+    try {
+      // Authenticate with Acumatica (with retry for concurrent session limits)
+      let authResponse: Response | null = null;
+      let retryCount = 0;
+      const maxRetries = 3;
 
-    if (!acumaticaResponse.ok) {
-      const errorText = await acumaticaResponse.text();
-      console.error('Acumatica API error:', errorText);
-      throw new Error(`Acumatica API error: ${acumaticaResponse.status} - ${errorText}`);
-    }
+      while (retryCount < maxRetries) {
+        console.log(`Attempting authentication... (attempt ${retryCount + 1})`);
+        authResponse = await fetch(`${baseUrl}/entity/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: integration.acumatica_username,
+            password: integration.acumatica_password,
+            company: integration.acumatica_company_name,
+          }),
+        });
 
-    const acumaticaData = await acumaticaResponse.json();
-    console.log('Acumatica response:', JSON.stringify(acumaticaData, null, 2));
+        console.log('Auth response status:', authResponse.status);
 
-    // Extract the Bill ID and ReferenceNbr from response
-    const billId = acumaticaData.id;
-    const billReferenceNbr = acumaticaData.ReferenceNbr?.value;
+        if (authResponse.ok) {
+          break; // Success - exit retry loop
+        }
 
-    // Update invoice with Acumatica references
-    const { error: updateError } = await supabase
-      .from('invoices')
-      .update({
-        acumatica_invoice_id: billId,
-        acumatica_reference_nbr: billReferenceNbr,
-        sync_status: 'synced',
-        last_synced_at: new Date().toISOString(),
-        sync_error: null
-      })
-      .eq('id', invoice_id);
+        const errorText = await authResponse.text();
+        console.error('Acumatica auth failed:', authResponse.status, errorText);
 
-    if (updateError) {
-      console.error('Error updating invoice:', updateError);
-      throw updateError;
-    }
+        // Check for concurrent session limit error
+        if (errorText.includes('concurrent') || errorText.includes('session limit')) {
+          if (retryCount < maxRetries - 1) {
+            console.log('Concurrent session limit hit, waiting 2s before retry...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            retryCount++;
+            continue;
+          } else {
+            throw new Error('Acumatica concurrent session limit reached. Please wait a few minutes and try again.');
+          }
+        }
 
-    // Log sync to integration_sync_logs
-    await supabase
-      .from('integration_sync_logs')
-      .insert({
-        tenant_id: invoice.tenant_id,
-        integration_id: integration.id,
-        invoice_id: invoice_id,
-        sync_type: 'ap_bill_create',
-        status: 'success',
-        external_reference: billReferenceNbr,
-        request_data: billPayload,
-        response_data: acumaticaData,
-        synced_at: new Date().toISOString()
+        throw new Error(`Failed to authenticate with Acumatica: ${authResponse.status} - ${errorText}`);
+      }
+
+      if (!authResponse || !authResponse.ok) {
+        throw new Error('Failed to authenticate after retries');
+      }
+
+      // Get cookies from authentication response
+      const setCookieHeaders = authResponse.headers.getSetCookie?.() || [];
+      if (setCookieHeaders.length === 0) {
+        const singleCookie = authResponse.headers.get('set-cookie');
+        if (singleCookie) {
+          setCookieHeaders.push(singleCookie);
+        }
+      }
+
+      if (setCookieHeaders.length === 0) {
+        console.error('No authentication cookies received');
+        throw new Error('No authentication cookies received from Acumatica');
+      }
+
+      cookies = setCookieHeaders
+        .map(cookie => cookie.split(';')[0])
+        .join('; ');
+
+      console.log('Authentication successful, cookies received');
+
+      // Send Bill to Acumatica with cookies
+      const apiUrl = `${baseUrl}/entity/Default/23.200.001/Bill`;
+      const acumaticaResponse = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          'Cookie': cookies,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(billPayload)
       });
 
-    console.log('Successfully synced AP invoice to Acumatica Bill:', billReferenceNbr);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'AP Invoice synced to Acumatica successfully',
-        bill_id: billId,
-        bill_reference: billReferenceNbr
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      if (!acumaticaResponse.ok) {
+        const errorText = await acumaticaResponse.text();
+        console.error('Acumatica API error:', errorText);
+        throw new Error(`Acumatica API error: ${acumaticaResponse.status} - ${errorText}`);
       }
-    );
+
+      const acumaticaData = await acumaticaResponse.json();
+      console.log('Acumatica response:', JSON.stringify(acumaticaData, null, 2));
+
+      // Extract the Bill ID and ReferenceNbr from response
+      const billId = acumaticaData.id;
+      const billReferenceNbr = acumaticaData.ReferenceNbr?.value;
+
+      // Update invoice with Acumatica references
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          acumatica_invoice_id: billId,
+          acumatica_reference_nbr: billReferenceNbr,
+          sync_status: 'synced',
+          last_synced_at: new Date().toISOString(),
+          sync_error: null
+        })
+        .eq('id', invoice_id);
+
+      if (updateError) {
+        console.error('Error updating invoice:', updateError);
+        throw updateError;
+      }
+
+      // Log sync to integration_sync_logs
+      await supabase
+        .from('integration_sync_logs')
+        .insert({
+          tenant_id: invoice.tenant_id,
+          integration_id: integration.id,
+          invoice_id: invoice_id,
+          sync_type: 'ap_bill_create',
+          status: 'success',
+          external_reference: billReferenceNbr,
+          request_data: billPayload,
+          response_data: acumaticaData,
+          synced_at: new Date().toISOString()
+        });
+
+      console.log('Successfully synced AP invoice to Acumatica Bill:', billReferenceNbr);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'AP Invoice synced to Acumatica successfully',
+          bill_id: billId,
+          bill_reference: billReferenceNbr
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } finally {
+      // Always logout to prevent session accumulation
+      if (cookies) {
+        try {
+          console.log('Logging out from Acumatica...');
+          await fetch(`${baseUrl}/entity/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Cookie': cookies,
+            },
+          });
+          console.log('Logout successful');
+        } catch (logoutError) {
+          console.error('Logout failed (non-critical):', logoutError);
+        }
+      }
+    }
 
   } catch (error: any) {
     console.error('Error syncing AP invoice to Acumatica:', error);
