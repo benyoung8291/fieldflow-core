@@ -772,14 +772,34 @@ export default function Tasks() {
       toast.error("Failed to update task");
     }
   });
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+  
   const toggleTaskStatus = async (task: any) => {
     const newStatus = task.status === "completed" ? "pending" : "completed";
-    updateTaskMutation.mutate({
-      id: task.id,
-      data: {
-        status: newStatus
-      } as any
-    });
+    
+    // If marking as completed, show visual feedback for 2 seconds
+    if (newStatus === "completed") {
+      setCompletingTaskId(task.id);
+      
+      // Wait 2 seconds before actually updating
+      setTimeout(() => {
+        updateTaskMutation.mutate({
+          id: task.id,
+          data: {
+            status: newStatus
+          } as any
+        });
+        setCompletingTaskId(null);
+      }, 2000);
+    } else {
+      // Immediately update when marking as incomplete
+      updateTaskMutation.mutate({
+        id: task.id,
+        data: {
+          status: newStatus
+        } as any
+      });
+    }
   };
 
   // Drag handlers for kanban view
@@ -797,30 +817,50 @@ export default function Tasks() {
     setActiveTask(null);
     if (!over) return;
     const task = active.data.current?.task;
-    const newDateKey = over.id as string;
-    if (!task || !newDateKey) return;
+    const newKey = over.id as string;
+    if (!task || !newKey) return;
 
-    // Parse the new date from the column ID (format: yyyy-MM-dd)
-    const newDueDate = new Date(newDateKey);
-
-    // Only update if the date actually changed
-    const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
-    if (currentDateKey !== newDateKey) {
-      try {
-        const {
-          error
-        } = await supabase.from("tasks").update({
-          due_date: newDueDate.toISOString()
-        }).eq("id", task.id);
-        if (error) throw error;
-        queryClient.invalidateQueries({
-          queryKey: ["tasks"]
-        });
-        toast.success("Task date updated");
-      } catch (error) {
-        console.error("Error updating task:", error);
-        toast.error("Failed to update task date");
+    try {
+      if (kanbanViewMode === 'status') {
+        // Status-based kanban: update task status
+        const newStatus = newKey; // The droppable column ID is the status
+        
+        // Only update if status actually changed
+        if (task.status !== newStatus) {
+          const {
+            error
+          } = await supabase.from("tasks" as any).update({
+            status: newStatus,
+            completed_at: newStatus === "completed" ? new Date().toISOString() : null
+          }).eq("id", task.id);
+          if (error) throw error;
+          queryClient.invalidateQueries({
+            queryKey: ["tasks"]
+          });
+          toast.success("Task status updated");
+        }
+      } else {
+        // Date-based kanban: update due date
+        const newDueDate = new Date(newKey);
+        
+        // Only update if the date actually changed
+        const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
+        if (currentDateKey !== newKey) {
+          const {
+            error
+          } = await supabase.from("tasks" as any).update({
+            due_date: newDueDate.toISOString()
+          }).eq("id", task.id);
+          if (error) throw error;
+          queryClient.invalidateQueries({
+            queryKey: ["tasks"]
+          });
+          toast.success("Task date updated");
+        }
       }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error("Failed to update task");
     }
   };
   const getPriorityColor = (priority: string) => {
@@ -1070,7 +1110,15 @@ export default function Tasks() {
                   
                   {!collapsedSections[groupKey] && <div className="space-y-0.5 pl-6">
                       {groupTasks.map((task: any) => <div key={task.id} className={cn("group flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer", selectedTask?.id === task.id && sidePanelOpen && "bg-muted")} onClick={() => handleTaskClick(task)}>
-                          <Checkbox checked={task.status === "completed"} onCheckedChange={() => toggleTaskStatus(task)} onClick={e => e.stopPropagation()} className="mt-0.5 h-3.5 w-3.5" />
+                          <Checkbox 
+                            checked={task.status === "completed" || completingTaskId === task.id} 
+                            onCheckedChange={() => toggleTaskStatus(task)} 
+                            onClick={e => e.stopPropagation()} 
+                            className={cn(
+                              "mt-0.5 h-3.5 w-3.5 transition-all",
+                              completingTaskId === task.id && "data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            )} 
+                          />
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-0.5">
