@@ -107,6 +107,13 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
       return;
     }
 
+    // Check that ABN has exactly 11 digits
+    const digitsOnly = formData.abn.replace(/\D/g, '');
+    if (digitsOnly.length !== 11) {
+      toast.error('ABN must be exactly 11 digits');
+      return;
+    }
+
     setValidatingABN(true);
     try {
       const { data, error } = await supabase.functions.invoke('validate-abn', {
