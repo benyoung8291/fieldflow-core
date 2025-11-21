@@ -80,6 +80,56 @@ Deno.serve(async (req) => {
       let updatedCount = 0;
       let errorCount = 0;
 
+      // Authenticate with Acumatica once per tenant
+      console.log(`Authenticating with Acumatica for tenant ${integration.tenant_id}`);
+      
+      const authResponse = await fetch(`${integration.acumatica_instance_url}/entity/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: integration.acumatica_username,
+          password: integration.acumatica_password,
+          company: integration.acumatica_company_name,
+        }),
+      });
+
+      if (!authResponse.ok) {
+        console.error(`Failed to authenticate with Acumatica: ${authResponse.status}`);
+        results.push({
+          tenant_id: integration.tenant_id,
+          status: 'error',
+          error: 'Authentication failed',
+        });
+        continue;
+      }
+
+      // Get authentication cookies
+      const setCookieHeaders = authResponse.headers.getSetCookie?.() || [];
+      if (setCookieHeaders.length === 0) {
+        const singleCookie = authResponse.headers.get("set-cookie");
+        if (singleCookie) {
+          setCookieHeaders.push(singleCookie);
+        }
+      }
+      
+      if (setCookieHeaders.length === 0) {
+        console.error("No authentication cookies received");
+        results.push({
+          tenant_id: integration.tenant_id,
+          status: 'error',
+          error: 'No authentication cookies',
+        });
+        continue;
+      }
+
+      const cookies = setCookieHeaders
+        .map(cookie => cookie.split(';')[0])
+        .join('; ');
+
+      console.log("Authentication successful");
+
       // Check status for each invoice
       for (const invoice of invoices || []) {
         try {
@@ -93,14 +143,13 @@ Deno.serve(async (req) => {
 
           console.log(`Checking status for invoice ${invoice.invoice_number} (Acumatica: ${acumaticaIdentifier})`);
 
-          // Query Acumatica API for invoice status
+          // Query Acumatica API for invoice status using authenticated session
           const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${acumaticaIdentifier}`;
-          const authString = btoa(`${integration.acumatica_username}:${integration.acumatica_password}`);
 
           const response = await fetch(acumaticaUrl, {
             method: 'GET',
             headers: {
-              'Authorization': `Basic ${authString}`,
+              'Cookie': cookies,
               'Content-Type': 'application/json',
             },
           });
@@ -191,6 +240,12 @@ Deno.serve(async (req) => {
           errorCount++;
         }
       }
+
+      // Logout after processing all invoices for this tenant
+      await fetch(`${integration.acumatica_instance_url}/entity/auth/logout`, {
+        method: "POST",
+        headers: { "Cookie": cookies },
+      });
 
       results.push({
         tenant_id: integration.tenant_id,
