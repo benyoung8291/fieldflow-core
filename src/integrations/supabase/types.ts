@@ -254,7 +254,10 @@ export type Database = {
           manager_approved_at: string | null
           manager_approved_by: string | null
           notes: string | null
+          project_id: string | null
+          purchase_receipt_id: string | null
           requires_manager_approval: boolean | null
+          service_order_id: string | null
           status: string
           subtotal: number
           supplier_id: string | null
@@ -285,7 +288,10 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          project_id?: string | null
+          purchase_receipt_id?: string | null
           requires_manager_approval?: boolean | null
+          service_order_id?: string | null
           status?: string
           subtotal?: number
           supplier_id?: string | null
@@ -316,7 +322,10 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          project_id?: string | null
+          purchase_receipt_id?: string | null
           requires_manager_approval?: boolean | null
+          service_order_id?: string | null
           status?: string
           subtotal?: number
           supplier_id?: string | null
@@ -370,6 +379,27 @@ export type Database = {
             columns: ["manager_approved_by"]
             isOneToOne: false
             referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_purchase_receipt_id_fkey"
+            columns: ["purchase_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "po_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
             referencedColumns: ["id"]
           },
           {

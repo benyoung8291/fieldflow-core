@@ -202,16 +202,24 @@ export default function APInvoiceDialog({
       if (receiptError) throw receiptError;
       if (!receipt) throw new Error("Receipt not found");
 
-      // Get PO to get supplier
+      // Get PO to get supplier and service order/project linkage
       const { data: po, error: poError } = await supabase
         .from('purchase_orders')
-        .select('supplier_id')
+        .select('supplier_id, service_order_id, project_id')
         .eq('id', receipt.po_id)
         .single();
 
       if (poError) throw poError;
       if (po?.supplier_id) {
         setSupplierId(po.supplier_id);
+      }
+      
+      // Automatically populate service order or project from PO
+      if (po?.service_order_id) {
+        setSelectedServiceOrderId(po.service_order_id);
+      }
+      if (po?.project_id) {
+        setSelectedProjectId(po.project_id);
       }
 
       const { data: receiptLineItems, error: lineItemsError } = await supabase
@@ -341,6 +349,9 @@ export default function APInvoiceDialog({
           status: 'draft',
           notes: notes,
           created_by: user.id,
+          purchase_receipt_id: selectedReceiptId || null,
+          service_order_id: selectedServiceOrderId || null,
+          project_id: selectedProjectId || null,
         }])
         .select()
         .single();

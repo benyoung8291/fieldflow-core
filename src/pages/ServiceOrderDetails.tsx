@@ -198,20 +198,54 @@ export default function ServiceOrderDetails() {
     },
   });
 
-  // Fetch AP invoices linked to this service order
+  // Fetch AP invoices linked to this service order (directly or via PO)
   const { data: apInvoices = [] } = useQuery({
     queryKey: ["service-order-ap-invoices", id],
     queryFn: async () => {
       if (!id) return [];
       
+      // Get AP invoices directly linked to service order
       // @ts-ignore - Supabase types can be excessively deep
-      const { data, error } = await supabase
+      const { data: directInvoices, error: directError } = await supabase
         .from("ap_invoices")
         .select("id, total_amount, subtotal, status, service_order_id")
         .eq("service_order_id", id);
       
-      if (error) throw error;
-      return data || [];
+      if (directError) throw directError;
+      
+      // Get AP invoices linked via purchase receipt → purchase order → service order
+      // First get POs for this service order
+      // @ts-ignore
+      const { data: pos } = await supabase
+        .from("purchase_orders")
+        .select("id")
+        .eq("service_order_id", id);
+      
+      if (!pos || pos.length === 0) return directInvoices || [];
+      
+      // Get receipts for those POs
+      // @ts-ignore
+      const { data: receipts } = await supabase
+        .from("po_receipts")
+        .select("id")
+        .in("po_id", pos.map((po: any) => po.id));
+      
+      if (!receipts || receipts.length === 0) return directInvoices || [];
+      
+      // Get AP invoices for those receipts
+      // @ts-ignore
+      const { data: indirectInvoices, error: indirectError } = await supabase
+        .from("ap_invoices")
+        .select("id, total_amount, subtotal, status, purchase_receipt_id")
+        .in("purchase_receipt_id", receipts.map((r: any) => r.id));
+      
+      if (indirectError) throw indirectError;
+      
+      // Combine and deduplicate
+      const allInvoices = [...(directInvoices || []), ...(indirectInvoices || [])];
+      const uniqueInvoices = Array.from(new Map(allInvoices.map((inv: any) => [inv.id, inv])).values());
+      
+      return uniqueInvoices;
     },
   });
 
