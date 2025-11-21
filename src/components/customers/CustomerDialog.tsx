@@ -137,7 +137,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         legalName: data.legalName || prev.legalName,
       }));
 
-      // If editing an existing customer, update the validation status in the database
+      // If editing an existing customer, update the validation status and legal name in the database
       if (customer?.id) {
         const { error: updateError } = await supabase
           .from('customers')
@@ -145,6 +145,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             abn_validation_status: 'valid',
             abn_validated_at: new Date().toISOString(),
             abn_validation_error: null,
+            legal_company_name: data.legalName || null,
           })
           .eq('id', customer.id);
 
