@@ -4,13 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format, isPast, startOfDay } from "date-fns";
-import { Calendar, User, Link as LinkIcon, ExternalLink, CheckSquare } from "lucide-react";
+import { Calendar, Link as LinkIcon, ExternalLink, CheckSquare } from "lucide-react";
 
 interface DraggableTaskCardProps {
   task: any;
   onTaskClick: (task: any) => void;
   onNavigateToLinked: (module: string, id: string) => void;
-  workerName?: string;
   subtaskCount?: number;
   completedSubtaskCount?: number;
 }
@@ -19,7 +18,6 @@ export default function DraggableTaskCard({
   task, 
   onTaskClick, 
   onNavigateToLinked,
-  workerName,
   subtaskCount = 0,
   completedSubtaskCount = 0
 }: DraggableTaskCardProps) {
@@ -40,16 +38,6 @@ export default function DraggableTaskCard({
       case 'high': return 'bg-destructive text-destructive-foreground';
       case 'medium': return 'bg-warning text-warning-foreground';
       case 'low': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-success/10 text-success';
-      case 'in_progress': return 'bg-info/10 text-info';
-      case 'todo': return 'bg-muted text-muted-foreground';
-      case 'pending': return 'bg-warning/10 text-warning';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -75,24 +63,13 @@ export default function DraggableTaskCard({
             </Badge>
           </div>
           
-          {task.description && (
+          {task.show_description_on_card && task.description && (
             <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
               {task.description}
             </p>
           )}
 
           <div className="flex flex-wrap gap-2 text-xs mb-2">
-            <Badge variant="outline" className={getStatusColor(task.status)}>
-              {task.status.replace('_', ' ')}
-            </Badge>
-
-            {workerName && (
-              <Badge variant="outline" className="gap-1">
-                <User className="h-3 w-3" />
-                {workerName}
-              </Badge>
-            )}
-            
             {task.tags && task.tags.length > 0 && task.tags.map((tag: string, index: number) => (
               <Badge 
                 key={index} 

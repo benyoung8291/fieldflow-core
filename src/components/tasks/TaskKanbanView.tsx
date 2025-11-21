@@ -139,7 +139,6 @@ function DroppableColumn({
               task={task}
               onTaskClick={onTaskClick}
               onNavigateToLinked={(module, id) => navigate(getModuleRoute(module, id))}
-              workerName={workersMap[task.assigned_to]}
               subtaskCount={task.subtaskCount || 0}
               completedSubtaskCount={task.completedSubtaskCount || 0}
             />

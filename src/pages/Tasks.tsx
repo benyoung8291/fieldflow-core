@@ -1051,7 +1051,6 @@ export default function Tasks() {
                     task={activeTask} 
                     onTaskClick={() => {}} 
                     onNavigateToLinked={() => {}} 
-                    workerName={activeTask.assigned_user ? `${activeTask.assigned_user.first_name} ${activeTask.assigned_user.last_name}` : undefined}
                     subtaskCount={activeTask.subtaskCount || 0} 
                     completedSubtaskCount={activeTask.completedSubtaskCount || 0} 
                   />
