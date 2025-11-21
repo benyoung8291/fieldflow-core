@@ -409,7 +409,15 @@ export default function ServiceOrderDetails() {
       
       if (!profile) throw new Error("Profile not found");
 
-      const { error } = await supabase
+      console.log("Creating appointment:", {
+        title: order?.title || "Appointment",
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+        service_order_id: id,
+        tenant_id: profile.tenant_id,
+      });
+
+      const { data, error } = await supabase
         .from("appointments")
         .insert({
           title: order?.title || "Appointment",
@@ -419,15 +427,25 @@ export default function ServiceOrderDetails() {
           created_by: user.id,
           tenant_id: profile.tenant_id,
           service_order_id: id,
-        });
-      if (error) throw error;
+        })
+        .select();
+      
+      if (error) {
+        console.error("Appointment creation error:", error);
+        throw error;
+      }
+      
+      console.log("Appointment created successfully:", data);
+      return data;
     },
     onSuccess: () => {
+      console.log("Invalidating queries for service-order-appointments:", id);
       queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
       setCreateAppointmentDialogOpen(false);
       toast({ title: "Appointment created successfully" });
     },
     onError: (error: any) => {
+      console.error("Mutation error:", error);
       toast({ title: "Error creating appointment", description: error.message, variant: "destructive" });
     },
   });
