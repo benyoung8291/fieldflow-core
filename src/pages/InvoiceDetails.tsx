@@ -71,7 +71,7 @@ export default function InvoiceDetails() {
         .from("accounting_integrations")
         .select("acumatica_instance_url")
         .eq("tenant_id", invoice.tenant_id)
-        .eq("provider", "acumatica")
+        .eq("provider", "myob_acumatica")
         .eq("is_enabled", true)
         .single();
 

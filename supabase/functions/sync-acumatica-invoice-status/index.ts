@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const { data: integrations, error: integrationsError } = await supabase
       .from('accounting_integrations')
       .select('*')
-      .eq('provider', 'acumatica')
+      .eq('provider', 'myob_acumatica')
       .eq('is_enabled', true);
 
     if (integrationsError) {
