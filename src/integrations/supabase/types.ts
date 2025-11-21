@@ -1201,6 +1201,9 @@ export type Database = {
       customers: {
         Row: {
           abn: string | null
+          abn_validated_at: string | null
+          abn_validation_error: string | null
+          abn_validation_status: string | null
           acumatica_customer_id: string | null
           address: string | null
           billing_address: string | null
@@ -1230,6 +1233,9 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          abn_validated_at?: string | null
+          abn_validation_error?: string | null
+          abn_validation_status?: string | null
           acumatica_customer_id?: string | null
           address?: string | null
           billing_address?: string | null
@@ -1259,6 +1265,9 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          abn_validated_at?: string | null
+          abn_validation_error?: string | null
+          abn_validation_status?: string | null
           acumatica_customer_id?: string | null
           address?: string | null
           billing_address?: string | null
