@@ -772,34 +772,14 @@ export default function Tasks() {
       toast.error("Failed to update task");
     }
   });
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
-  
   const toggleTaskStatus = async (task: any) => {
     const newStatus = task.status === "completed" ? "pending" : "completed";
-    
-    // If marking as completed, show visual feedback for 2 seconds
-    if (newStatus === "completed") {
-      setCompletingTaskId(task.id);
-      
-      // Wait 2 seconds before actually updating
-      setTimeout(() => {
-        updateTaskMutation.mutate({
-          id: task.id,
-          data: {
-            status: newStatus
-          } as any
-        });
-        setCompletingTaskId(null);
-      }, 2000);
-    } else {
-      // Immediately update when marking as incomplete
-      updateTaskMutation.mutate({
-        id: task.id,
-        data: {
-          status: newStatus
-        } as any
-      });
-    }
+    updateTaskMutation.mutate({
+      id: task.id,
+      data: {
+        status: newStatus
+      } as any
+    });
   };
 
   // Drag handlers for kanban view
@@ -1111,13 +1091,10 @@ export default function Tasks() {
                   {!collapsedSections[groupKey] && <div className="space-y-0.5 pl-6">
                       {groupTasks.map((task: any) => <div key={task.id} className={cn("group flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer", selectedTask?.id === task.id && sidePanelOpen && "bg-muted")} onClick={() => handleTaskClick(task)}>
                           <Checkbox 
-                            checked={task.status === "completed" || completingTaskId === task.id} 
+                            checked={task.status === "completed"} 
                             onCheckedChange={() => toggleTaskStatus(task)} 
                             onClick={e => e.stopPropagation()} 
-                            className={cn(
-                              "mt-0.5 h-3.5 w-3.5 transition-all",
-                              completingTaskId === task.id && "data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                            )} 
+                            className="mt-0.5 h-3.5 w-3.5" 
                           />
                           
                           <div className="flex-1 min-w-0">
