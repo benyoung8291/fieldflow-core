@@ -60,3 +60,6 @@ verify_jwt = false
 [functions.xero-list-organizations]
 verify_jwt = true
 
+[functions.chat-assistant]
+verify_jwt = true
+
