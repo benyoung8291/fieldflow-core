@@ -27,10 +27,9 @@ serve(async (req) => {
 
     // Get invoice
     const { data: invoice, error: invoiceError } = await supabase
-      .from('invoices')
+      .from('ap_invoices')
       .select('*')
       .eq('id', invoice_id)
-      .eq('invoice_type', 'ap')
       .maybeSingle();
 
     if (invoiceError) throw invoiceError;
@@ -63,9 +62,9 @@ serve(async (req) => {
 
     // Get line items
     const { data: lineItems, error: lineItemsError } = await supabase
-      .from('invoice_line_items')
+      .from('ap_invoice_line_items')
       .select('*')
-      .eq('invoice_id', invoice_id)
+      .eq('ap_invoice_id', invoice_id)
       .order('item_order');
 
     if (lineItemsError) throw lineItemsError;
@@ -238,7 +237,7 @@ serve(async (req) => {
 
       // Update invoice with Acumatica references and set to approved
       const { error: updateError } = await supabase
-        .from('invoices')
+        .from('ap_invoices')
         .update({
           acumatica_invoice_id: billId,
           acumatica_reference_nbr: billReferenceNbr,
@@ -310,7 +309,7 @@ serve(async (req) => {
       const supabase = createClient(supabaseUrl, supabaseKey);
 
       await supabase
-        .from('invoices')
+        .from('ap_invoices')
         .update({
           sync_status: 'failed',
           sync_error: error.message
