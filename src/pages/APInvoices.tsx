@@ -27,6 +27,8 @@ export default function APInvoices() {
 
   const { data: apInvoices = [], isLoading } = useQuery({
     queryKey: ['ap-invoices'],
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       // @ts-ignore - Complex Supabase types cause TS depth issues
       const { data, error } = await supabase
