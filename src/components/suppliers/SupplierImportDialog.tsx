@@ -461,16 +461,22 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
                 <div key={header} className="flex items-center gap-4">
                   <Label className="w-1/3 text-sm font-normal">{header}</Label>
                   <Select
-                    value={columnMapping[header] || ''}
-                    onValueChange={(value) =>
-                      setColumnMapping({ ...columnMapping, [header]: value })
-                    }
+                    value={columnMapping[header] || 'skip'}
+                    onValueChange={(value) => {
+                      if (value === 'skip') {
+                        const newMapping = { ...columnMapping };
+                        delete newMapping[header];
+                        setColumnMapping(newMapping);
+                      } else {
+                        setColumnMapping({ ...columnMapping, [header]: value });
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-2/3">
                       <SelectValue placeholder="Select field" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Skip this column</SelectItem>
+                      <SelectItem value="skip">Skip this column</SelectItem>
                       {SUPPLIER_FIELDS.map((field) => (
                         <SelectItem key={field.value} value={field.value}>
                           {field.label}
