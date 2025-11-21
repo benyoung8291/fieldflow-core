@@ -18,14 +18,16 @@ import { Plus, Search } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { ExpenseDialog } from "@/components/expenses/ExpenseDialog";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: expenses = [], isLoading, refetch } = useQuery({
-    queryKey: ["expenses", searchTerm],
+  const { data: expensesResponse, isLoading, refetch } = useQuery({
+    queryKey: ["expenses", searchTerm, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -38,6 +40,7 @@ export default function Expenses() {
 
       if (!profile) throw new Error("Profile not found");
 
+      const { from, to } = pagination.getRange();
       let query = supabase
         .from("expenses")
         .select(`
@@ -47,19 +50,24 @@ export default function Expenses() {
           service_order:service_orders(work_order_number),
           project:projects(name),
           submitted_by_user:profiles!expenses_submitted_by_fkey(first_name, last_name)
-        `)
+        `, { count: 'exact' })
         .eq("tenant_id", profile.tenant_id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (searchTerm) {
         query = query.or(`description.ilike.%${searchTerm}%,expense_number.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data || [];
+      return { data: data || [], count: count || 0 };
     },
   });
+  
+  const expenses = expensesResponse?.data || [];
+  const totalCount = expensesResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
@@ -168,6 +176,24 @@ export default function Expenses() {
             </TableBody>
           </Table>
         </Card>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-6 border-t pt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} expenses
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>
+                Previous
+              </Button>
+              <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
 
         <ExpenseDialog
           open={isDialogOpen}
