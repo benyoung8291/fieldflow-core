@@ -459,6 +459,9 @@ export default function AppointmentDialog({
       }
 
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      if (serviceOrderId) {
+        queryClient.invalidateQueries({ queryKey: ["service-order-appointments", serviceOrderId] });
+      }
       onOpenChange(false);
     } catch (error: any) {
       toast({ 

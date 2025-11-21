@@ -38,39 +38,29 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*")
+        .select(`
+          *,
+          appointment_workers(
+            worker_id,
+            profiles!appointment_workers_worker_id_fkey(
+              id,
+              first_name,
+              last_name,
+              hourly_rate,
+              hourly_loading_percentage
+            )
+          )
+        `)
         .eq("service_order_id", serviceOrderId)
         .order("start_time", { ascending: false });
 
       if (error) throw error;
       
-      // Fetch assigned profiles and workers separately
-      const appointmentsWithData = await Promise.all(
-        (data || []).map(async (apt: any) => {
-          // Get primary assigned user
-          let assigned_to_profile = null;
-          if (apt.assigned_to) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("first_name, last_name, email")
-              .eq("id", apt.assigned_to)
-              .maybeSingle();
-            assigned_to_profile = profile;
-          }
-          
-          // Get all assigned workers
-          const { data: workers } = await supabase
-            .from("appointment_workers")
-            .select("worker_id, profiles(first_name, last_name)")
-            .eq("appointment_id", apt.id);
-          
-          return { 
-            ...apt, 
-            assigned_to_profile,
-            assigned_workers: workers || []
-          };
-        })
-      );
+      // Map data to include assigned_workers in expected format
+      const appointmentsWithData = (data || []).map((apt: any) => ({
+        ...apt,
+        assigned_workers: apt.appointment_workers || []
+      }));
       
       return appointmentsWithData;
     },
