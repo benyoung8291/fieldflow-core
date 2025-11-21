@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DocumentDetailLayout, { StatusBadge, DocumentAction, FileMenuAction, TabConfig } from "@/components/layout/DocumentDetailLayout";
+import DocumentDetailLayout, { StatusBadge, DocumentAction, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, CheckCircle, Download, Plus, Edit, Trash2, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks, Clock } from "lucide-react";
+import { Send, CheckCircle, Download, Plus, Edit, Archive, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
@@ -469,83 +469,22 @@ export default function InvoiceDetails() {
     },
   });
 
-  const deleteInvoiceMutation = useMutation({
+  const archiveInvoiceMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Get invoice line items to potentially update source documents
-      const { data: invoiceLineItems } = await supabase
-        .from("invoice_line_items")
-        .select("source_type, source_id, line_item_id")
-        .eq("invoice_id", id);
-
-      // Group by source document to update billing status
-      const sourceDocUpdates = new Map<string, { type: string; id: string; lineItemIds: string[] }>();
-      
-      invoiceLineItems?.forEach(item => {
-        if (item.source_id && item.source_type && item.line_item_id) {
-          const key = `${item.source_type}-${item.source_id}`;
-          if (!sourceDocUpdates.has(key)) {
-            sourceDocUpdates.set(key, {
-              type: item.source_type,
-              id: item.source_id,
-              lineItemIds: []
-            });
-          }
-          sourceDocUpdates.get(key)!.lineItemIds.push(item.line_item_id);
-        }
-      });
-
-      // Delete line items first (foreign key constraint)
-      const { error: lineItemsError } = await supabase
-        .from("invoice_line_items")
-        .delete()
-        .eq("invoice_id", id);
-
-      if (lineItemsError) throw lineItemsError;
-
-      // Delete the invoice
-      const { error: invoiceError } = await supabase
+      const { error } = await supabase
         .from("invoices")
-        .delete()
+        .update({ status: "archived" })
         .eq("id", id);
 
-      if (invoiceError) throw invoiceError;
-
-      // Update billing status of source documents
-      // Check if there are other invoices referencing the same source documents
-      for (const [key, doc] of sourceDocUpdates.entries()) {
-        const { data: remainingInvoices } = await supabase
-          .from("invoice_line_items")
-          .select("invoice_id")
-          .eq("source_type", doc.type)
-          .eq("source_id", doc.id)
-          .limit(1);
-
-        // If no other invoices reference this source, reset billing status
-        if (!remainingInvoices || remainingInvoices.length === 0) {
-          if (doc.type === "service_order") {
-            await supabase
-              .from("service_orders")
-              .update({ billing_status: "not_billed" })
-              .eq("id", doc.id);
-          } else if (doc.type === "project") {
-            await supabase
-              .from("projects")
-              .update({ billing_status: "not_billed" })
-              .eq("id", doc.id);
-          }
-        }
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Invoice deleted successfully");
+      toast.success("Invoice archived successfully");
       navigate("/invoices");
     },
     onError: (error) => {
       console.error(error);
-      toast.error("Failed to delete invoice");
+      toast.error("Failed to archive invoice");
     },
   });
 
@@ -634,15 +573,15 @@ export default function InvoiceDetails() {
     variant: "outline",
   });
 
-  // File menu actions configuration
-  const fileMenuActions: FileMenuAction[] = [
-    {
-      label: "Delete Invoice",
-      icon: <Trash2 className="h-4 w-4" />,
+  // Only show archive button if invoice is draft
+  if (invoice.status === "draft") {
+    primaryActions.push({
+      label: "Archive",
+      icon: <Archive className="h-4 w-4" />,
       onClick: () => setDeleteInvoiceDialogOpen(true),
-      destructive: true,
-    },
-  ];
+      variant: "outline",
+    });
+  }
 
   // Key info section
   const keyInfoSection = (
@@ -895,7 +834,6 @@ export default function InvoiceDetails() {
         backPath="/invoices"
         statusBadges={statusBadges}
         primaryActions={primaryActions}
-        fileMenuActions={fileMenuActions}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
         auditTableName="invoices"
@@ -953,18 +891,18 @@ export default function InvoiceDetails() {
       <AlertDialog open={deleteInvoiceDialogOpen} onOpenChange={setDeleteInvoiceDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogTitle>Archive Invoice</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete invoice {invoice?.invoice_number}? This will permanently remove the invoice and all its line items. Source documents will have their billing status reset if no other invoices reference them.
+              Are you sure you want to archive invoice {invoice?.invoice_number}? This will hide the invoice from the active invoices list. You can restore it later from the archived invoices view.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteInvoiceMutation.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => archiveInvoiceMutation.mutate()}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
-              Delete Invoice
+              Archive Invoice
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
