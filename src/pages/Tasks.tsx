@@ -731,6 +731,7 @@ export default function Tasks() {
         estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
         progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
         tags: data.tags || [],
+        show_description_on_card: data.show_description_on_card !== undefined ? data.show_description_on_card : false,
         completed_at: data.status === "completed" ? new Date().toISOString() : null
       }).eq("id", id);
       if (error) throw error;
