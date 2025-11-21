@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText } from 'lucide-react';
 import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -261,14 +261,14 @@ export default function WorkerDashboard() {
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Button
             size="lg"
             onClick={() => navigate('/worker/appointments')}
             className="h-24 flex-col gap-2"
           >
-            <CalendarDays className="h-8 w-8" />
-            <span>All Appointments</span>
+            <CalendarDays className="h-6 w-6" />
+            <span className="text-xs">All Appointments</span>
           </Button>
           <Button
             size="lg"
@@ -276,8 +276,17 @@ export default function WorkerDashboard() {
             onClick={() => navigate('/worker/schedule')}
             className="h-24 flex-col gap-2"
           >
-            <Clock className="h-8 w-8" />
-            <span>My Schedule</span>
+            <Clock className="h-6 w-6" />
+            <span className="text-xs">My Schedule</span>
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => navigate('/worker/field-report-new')}
+            className="h-24 flex-col gap-2"
+          >
+            <FileText className="h-6 w-6" />
+            <span className="text-xs">Field Report</span>
           </Button>
         </div>
 

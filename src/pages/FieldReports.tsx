@@ -6,16 +6,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Search, Download, Send, Edit } from 'lucide-react';
+import { FileText, Search, Download, Send, Edit, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import FieldReportDialog from '@/components/field-reports/FieldReportDialog';
 
 export default function FieldReports() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ['field-reports'],
@@ -117,8 +119,17 @@ export default function FieldReports() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
-        {/* Left Panel - Reports List */}
+      <div className="flex-1 flex flex-col h-full">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h1 className="text-2xl font-bold">Field Reports</h1>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Report
+          </Button>
+        </div>
+
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* Left Panel - Reports List */}
         <div className="w-full lg:w-96 border-r bg-background flex flex-col">
           <div className="p-4 border-b space-y-4">
             <div className="flex items-center justify-between">
@@ -429,6 +440,12 @@ export default function FieldReports() {
           )}
         </div>
       </div>
+    </div>
+
+      <FieldReportDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
     </DashboardLayout>
   );
 }
