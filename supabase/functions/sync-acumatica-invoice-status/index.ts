@@ -54,9 +54,9 @@ Deno.serve(async (req) => {
       // Build query for invoices
       let query = supabase
         .from('invoices')
-        .select('id, invoice_number, acumatica_reference_nbr, acumatica_status, status, tenant_id')
+        .select('id, invoice_number, acumatica_invoice_id, acumatica_status, status, tenant_id')
         .eq('tenant_id', integration.tenant_id)
-        .not('acumatica_reference_nbr', 'is', null);
+        .not('acumatica_invoice_id', 'is', null);
 
       // If specific invoice requested, filter to just that one
       if (specificInvoiceId) {
@@ -83,10 +83,10 @@ Deno.serve(async (req) => {
       // Check status for each invoice
       for (const invoice of invoices || []) {
         try {
-          console.log(`Checking status for invoice ${invoice.invoice_number} (Acumatica Ref: ${invoice.acumatica_reference_nbr})`);
+          console.log(`Checking status for invoice ${invoice.invoice_number} (Acumatica ID: ${invoice.acumatica_invoice_id})`);
 
-          // Query Acumatica API for invoice status using ReferenceNbr
-          const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${invoice.acumatica_reference_nbr}`;
+          // Query Acumatica API for invoice status
+          const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${invoice.acumatica_invoice_id}`;
           const authString = btoa(`${integration.acumatica_username}:${integration.acumatica_password}`);
 
           const response = await fetch(acumaticaUrl, {
