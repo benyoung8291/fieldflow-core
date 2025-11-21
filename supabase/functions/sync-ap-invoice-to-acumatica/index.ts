@@ -107,7 +107,6 @@ serve(async (req) => {
       ReferenceNbr: { value: "<NEW>" },
       Vendor: { value: supplier.acumatica_supplier_id },
       VendorRef: { value: invoice.supplier_invoice_number || invoice.invoice_number },
-      LocationID: { value: "MAIN" },
       LinkAPAccount: { value: "28000" },
       Project: { value: "X" },
       Date: { value: invoiceDate.toISOString() },
