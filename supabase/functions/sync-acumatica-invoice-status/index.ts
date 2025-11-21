@@ -51,12 +51,12 @@ Deno.serve(async (req) => {
     for (const integration of integrations || []) {
       console.log(`Processing tenant: ${integration.tenant_id}`);
 
-      // Build query for invoices
+      // Build query for invoices - get those with either acumatica_invoice_id or acumatica_reference_nbr
       let query = supabase
         .from('invoices')
-        .select('id, invoice_number, acumatica_invoice_id, acumatica_status, status, tenant_id')
+        .select('id, invoice_number, acumatica_invoice_id, acumatica_reference_nbr, acumatica_status, status, tenant_id')
         .eq('tenant_id', integration.tenant_id)
-        .not('acumatica_invoice_id', 'is', null);
+        .or('acumatica_invoice_id.not.is.null,acumatica_reference_nbr.not.is.null');
 
       // If specific invoice requested, filter to just that one
       if (specificInvoiceId) {
@@ -83,10 +83,18 @@ Deno.serve(async (req) => {
       // Check status for each invoice
       for (const invoice of invoices || []) {
         try {
-          console.log(`Checking status for invoice ${invoice.invoice_number} (Acumatica ID: ${invoice.acumatica_invoice_id})`);
+          // Use invoice_id if available, otherwise use reference_nbr
+          const acumaticaIdentifier = invoice.acumatica_invoice_id || invoice.acumatica_reference_nbr;
+          
+          if (!acumaticaIdentifier) {
+            console.log(`Skipping invoice ${invoice.invoice_number} - no Acumatica identifier`);
+            continue;
+          }
+
+          console.log(`Checking status for invoice ${invoice.invoice_number} (Acumatica: ${acumaticaIdentifier})`);
 
           // Query Acumatica API for invoice status
-          const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${invoice.acumatica_invoice_id}`;
+          const acumaticaUrl = `${integration.acumatica_instance_url}/entity/Default/23.200.001/Invoice/${acumaticaIdentifier}`;
           const authString = btoa(`${integration.acumatica_username}:${integration.acumatica_password}`);
 
           const response = await fetch(acumaticaUrl, {
@@ -105,7 +113,10 @@ Deno.serve(async (req) => {
 
           const acumaticaInvoice = await response.json();
           const acumaticaStatus = acumaticaInvoice.Status?.value;
-
+          
+          // Extract and update invoice_id if we only had reference_nbr
+          const acumaticaInvoiceId = acumaticaInvoice.id?.value;
+          
           console.log(`Invoice ${invoice.invoice_number} - Acumatica status: ${acumaticaStatus}, Current app status: ${invoice.status}`);
 
           // Determine if we need to update the local invoice
@@ -137,12 +148,19 @@ Deno.serve(async (req) => {
           }
 
           if (shouldUpdate) {
+            const updateData: any = {
+              status: newStatus,
+              acumatica_status: acumaticaStatus,
+            };
+            
+            // Update invoice_id if we didn't have it before
+            if (!invoice.acumatica_invoice_id && acumaticaInvoiceId) {
+              updateData.acumatica_invoice_id = acumaticaInvoiceId;
+            }
+
             const { error: updateError } = await supabase
               .from('invoices')
-              .update({
-                status: newStatus,
-                acumatica_status: acumaticaStatus,
-              })
+              .update(updateData)
               .eq('id', invoice.id);
 
             if (updateError) {
