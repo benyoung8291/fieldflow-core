@@ -111,9 +111,9 @@ serve(async (req) => {
       LinkAPAccount: { value: "28000" },
       Project: { value: "X" },
       Date: { value: invoiceDate.toISOString() },
-      Description: { value: `${invoice.invoice_number} - ${invoice.description || ''}`.substring(0, 255) },
+      Description: { value: `${invoice.invoice_number} ${supplier.name}`.substring(0, 255) },
       Terms: { value: terms },
-      DueDate: { value: dueDate.toISOString() },
+      DueDate: { value: invoice.due_date ? new Date(invoice.due_date).toISOString() : dueDate.toISOString() },
       Hold: { value: true },
       Details: details
     };
