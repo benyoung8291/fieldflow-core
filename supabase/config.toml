@@ -1,5 +1,8 @@
 project_id = "puffpjmmuoaecxygrkcm"
 
+[functions.validate-all-supplier-abns]
+verify_jwt = true
+
 [functions.send-quote-email]
 verify_jwt = false
 

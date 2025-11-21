@@ -48,6 +48,7 @@ export default function Suppliers() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [validatingAbns, setValidatingAbns] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -194,6 +195,32 @@ export default function Suppliers() {
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleValidateAllAbns = async () => {
+    setValidatingAbns(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-all-supplier-abns');
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["vendors"] });
+
+      const results = data.results;
+      toast({
+        title: "ABN Validation Complete",
+        description: `Validated ${results.validated} suppliers successfully. ${results.failed} failed. ${results.skipped} skipped.`,
+      });
+    } catch (error) {
+      console.error("Error validating ABNs:", error);
+      toast({
+        title: "Validation failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingAbns(false);
     }
   };
 
@@ -344,6 +371,15 @@ export default function Suppliers() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button 
+              variant="outline" 
+              onClick={handleValidateAllAbns}
+              disabled={validatingAbns}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {validatingAbns ? "Validating..." : "Validate All ABNs"}
+            </Button>
 
             <Button onClick={handleCreateVendor}>
               <Plus className="mr-2 h-4 w-4" />
