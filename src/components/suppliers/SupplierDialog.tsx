@@ -290,6 +290,13 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         }
       }
 
+      // Validate required fields
+      if (!formData.tradingName && !formData.name) {
+        toast.error("Trading name is required");
+        setSaving(false);
+        return;
+      }
+
       const vendorData = {
         name: formData.tradingName || formData.name,
         trading_name: formData.tradingName || null,
@@ -332,6 +339,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
       }
 
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error saving supplier:", error);
@@ -372,14 +380,13 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="legalName">Legal Company Name *</Label>
+                  <Label htmlFor="legalName">Legal Company Name</Label>
                   <Input
                     id="legalName"
                     value={formData.legalName}
                     onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
                     disabled
                     className="bg-muted"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
