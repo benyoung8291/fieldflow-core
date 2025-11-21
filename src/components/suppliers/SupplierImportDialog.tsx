@@ -130,13 +130,22 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
   };
 
   const getMappedData = () => {
-    return csvData.map((row, index) => {
-      const mappedRow: any = { rowNumber: index + 1 };
-      Object.entries(columnMapping).forEach(([csvColumn, fieldName]) => {
-        mappedRow[fieldName] = row[csvColumn];
+    return csvData
+      .map((row, index) => {
+        const mappedRow: any = { rowNumber: index + 1 };
+        Object.entries(columnMapping).forEach(([csvColumn, fieldName]) => {
+          const value = row[csvColumn];
+          // Only set value if it's not empty/whitespace
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            mappedRow[fieldName] = value;
+          }
+        });
+        return mappedRow;
+      })
+      .filter((row) => {
+        // Filter out rows that don't have a name (required field)
+        return row.name && String(row.name).trim() !== '';
       });
-      return mappedRow;
-    });
   };
 
   const validateMappedData = () => {
@@ -361,10 +370,13 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
           }
         }
 
-        // Set defaults
-        if (!supplierData.name) {
-          supplierData.name = supplierData.trading_name || 'Unknown';
+        // Skip rows without a name (should not happen due to filtering in getMappedData, but double-check)
+        if (!supplierData.name || supplierData.name.trim() === '') {
+          skippedCount++;
+          continue;
         }
+
+        // Set defaults
         if (!supplierData.payment_terms) {
           supplierData.payment_terms = 30;
         }
