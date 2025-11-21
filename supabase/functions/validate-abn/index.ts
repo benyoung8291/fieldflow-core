@@ -240,7 +240,8 @@ serve(async (req) => {
     for (const match of businessNameMatches) {
       const businessNameSection = match[1];
       const orgName = extractXMLValue(businessNameSection, 'organisationName');
-      if (orgName && !businessNames.includes(orgName)) {
+      // Only add non-empty names that aren't duplicates
+      if (orgName && orgName.trim() !== '' && !businessNames.includes(orgName)) {
         businessNames.push(orgName);
       }
     }
