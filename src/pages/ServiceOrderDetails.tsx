@@ -800,12 +800,12 @@ export default function ServiceOrderDetails() {
             <CardContent className="px-4 pb-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Total</div>
+                  <div className="text-xs text-muted-foreground mb-1">Total ex GST</div>
                   <div className="text-2xl font-bold">
-                    ${((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0))).toFixed(2)}
+                    ${((order as any).subtotal || totalRevenue).toFixed(2)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Subtotal: ${((order as any).subtotal || totalRevenue).toFixed(2)}
+                    Inc GST: ${((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0))).toFixed(2)}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Tax ({((order as any).tax_rate || 0).toFixed(1)}%): ${((order as any).tax_amount || 0).toFixed(2)}
