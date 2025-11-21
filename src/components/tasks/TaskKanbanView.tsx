@@ -255,7 +255,7 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
             const taskDate = startOfDay(taskDueDate);
             
             // If task is overdue (before today) and not completed, show it in Today column
-            if (isPast(taskDate) && !isSameDay(taskDate, today) && task.status !== 'completed') {
+            if (taskDate < today && task.status !== 'completed') {
               if (groups[todayKey]) {
                 groups[todayKey].push(task);
               }
