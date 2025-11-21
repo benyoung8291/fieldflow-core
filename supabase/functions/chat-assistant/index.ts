@@ -12,8 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory } = await req.json();
+    const { message, conversationHistory, context } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY is not configured');
@@ -22,6 +24,89 @@ serve(async (req) => {
 
     console.log('Received message:', message);
     console.log('Conversation history length:', conversationHistory?.length || 0);
+    console.log('Context:', context);
+
+    // Fetch context data from database
+    let contextData = '';
+    if (context && context.documentId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      
+      try {
+        // Fetch document data based on module
+        if (context.module === 'quotes' && context.documentId) {
+          const { data: quote } = await supabaseClient
+            .from('quotes')
+            .select('*, customers(name), contacts(first_name, last_name, email)')
+            .eq('id', context.documentId)
+            .single();
+          
+          if (quote) {
+            contextData += `\n\n**Current Document:** Quote ${quote.quote_number}\n`;
+            contextData += `Customer: ${quote.customers?.name || 'N/A'}\n`;
+            contextData += `Status: ${quote.status}\n`;
+            contextData += `Total: $${quote.total_amount}\n`;
+            contextData += `Contact: ${quote.contacts?.first_name} ${quote.contacts?.last_name}\n`;
+          }
+        } else if (context.module === 'service-orders' && context.documentId) {
+          const { data: order } = await supabaseClient
+            .from('service_orders')
+            .select('*, customers(name), customer_locations(name, address)')
+            .eq('id', context.documentId)
+            .single();
+          
+          if (order) {
+            contextData += `\n\n**Current Document:** Service Order ${order.order_number}\n`;
+            contextData += `Customer: ${order.customers?.name || 'N/A'}\n`;
+            contextData += `Location: ${order.customer_locations?.name || 'N/A'}\n`;
+            contextData += `Status: ${order.status}\n`;
+            contextData += `Title: ${order.title}\n`;
+          }
+        } else if (context.module === 'projects' && context.documentId) {
+          const { data: project } = await supabaseClient
+            .from('projects')
+            .select('*, customers(name)')
+            .eq('id', context.documentId)
+            .single();
+          
+          if (project) {
+            contextData += `\n\n**Current Document:** Project ${project.project_number}\n`;
+            contextData += `Customer: ${project.customers?.name || 'N/A'}\n`;
+            contextData += `Title: ${project.title}\n`;
+            contextData += `Status: ${project.status}\n`;
+            contextData += `Budget: $${project.original_budget}\n`;
+          }
+        } else if (context.module === 'invoices' && context.documentId) {
+          const { data: invoice } = await supabaseClient
+            .from('invoices')
+            .select('*, customers(name)')
+            .eq('id', context.documentId)
+            .single();
+          
+          if (invoice) {
+            contextData += `\n\n**Current Document:** Invoice ${invoice.invoice_number}\n`;
+            contextData += `Customer: ${invoice.customers?.name || 'N/A'}\n`;
+            contextData += `Type: ${invoice.invoice_type}\n`;
+            contextData += `Status: ${invoice.status}\n`;
+            contextData += `Total: $${invoice.total_amount}\n`;
+          }
+        } else if (context.module === 'customers' && context.documentId) {
+          const { data: customer } = await supabaseClient
+            .from('customers')
+            .select('*')
+            .eq('id', context.documentId)
+            .single();
+          
+          if (customer) {
+            contextData += `\n\n**Current Document:** Customer ${customer.name}\n`;
+            contextData += `Type: ${customer.customer_type}\n`;
+            contextData += `Email: ${customer.email || 'N/A'}\n`;
+            contextData += `Phone: ${customer.phone || 'N/A'}\n`;
+          }
+        }
+      } catch (dbError) {
+        console.error('Error fetching context data:', dbError);
+      }
+    }
 
     const messages = [
       {
@@ -33,6 +118,7 @@ Your role is to help users:
 - Navigate through their tasks and documents efficiently
 - Get quick context about related documents and entities
 - Complete their work faster with helpful suggestions
+- Answer questions using the database context provided
 
 Key features of Service Pulse include:
 - CRM with leads, contacts, and customers
@@ -45,7 +131,12 @@ Key features of Service Pulse include:
 - Expense management
 - Helpdesk/ticketing system
 
-Be concise, friendly, and actionable. Focus on helping users accomplish their immediate goals. If asked about specific data, let them know you can see their context but would need them to share details.`
+**Current Context:**
+- Page: ${context?.currentPage || 'Dashboard'}
+- Module: ${context?.module || 'Dashboard'}
+${contextData}
+
+Be concise, friendly, and actionable. Use the context data provided to give specific, relevant answers. When referencing the current document, use specific details from the context. If users ask about related documents or need additional information, explain what you can see and offer to help them navigate.`
       },
       ...(conversationHistory || []),
       { role: "user", content: message }
