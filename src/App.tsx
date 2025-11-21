@@ -56,7 +56,8 @@ import Workflows from "@/pages/Workflows";
 import WorkflowBuilder from "@/pages/WorkflowBuilder";
 import WorkflowTemplateSelector from "@/pages/WorkflowTemplateSelector";
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
-import APInvoices from "./pages/APInvoices";
+import APInvoicesList from "./pages/APInvoicesList";
+import APInvoiceDetails from "./pages/APInvoiceDetails";
 import APInvoiceApprovalQueue from "./pages/APInvoiceApprovalQueue";
 import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
@@ -201,7 +202,8 @@ const App = () => {
             <Route path="/invoices" element={isAuthenticated ? <InvoicesList /> : <Navigate to="/auth" replace />} />
             <Route path="/invoices/create" element={isAuthenticated ? <Invoices /> : <Navigate to="/auth" replace />} />
             <Route path="/invoices/:id" element={isAuthenticated ? <InvoiceDetails /> : <Navigate to="/auth" replace />} />
-            <Route path="/ap-invoices" element={isAuthenticated ? <APInvoices /> : <Navigate to="/auth" replace />} />
+            <Route path="/ap-invoices" element={isAuthenticated ? <APInvoicesList /> : <Navigate to="/auth" replace />} />
+            <Route path="/ap-invoices/:id" element={isAuthenticated ? <APInvoiceDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/ap-invoice-approval-queue" element={isAuthenticated ? <APInvoiceApprovalQueue /> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices" element={isAuthenticated ? <RecurringInvoices /> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices/:id" element={isAuthenticated ? <RecurringInvoiceDetails /> : <Navigate to="/auth" replace />} />
