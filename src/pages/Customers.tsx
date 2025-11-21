@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Building2, Users, FileText, Upload } from "lucide-react";
+import { Plus, Search, Building2, Users, FileText, Upload, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import CustomerImportDialog from "@/components/customers/CustomerImportDialog";
@@ -262,8 +262,11 @@ export default function Customers() {
                         {customer.abn_validation_status === 'pending' && (
                           <Badge variant="outline" className="text-xs">Validating</Badge>
                         )}
+                        {customer.abn_validation_status === 'valid' && (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                        )}
                         {customer.abn_validation_status === 'invalid' && (
-                          <Badge variant="destructive" className="text-xs">Invalid</Badge>
+                          <Badge variant="destructive" className="text-xs">Needs Review</Badge>
                         )}
                       </div>
                     ) : "-" 
@@ -338,9 +341,12 @@ export default function Customers() {
                                 Validating
                               </Badge>
                             )}
+                            {customer.abn_validation_status === 'valid' && (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            )}
                             {customer.abn_validation_status === 'invalid' && (
                               <Badge variant="destructive" className="text-xs">
-                                Invalid
+                                Needs Review
                               </Badge>
                             )}
                           </div>
