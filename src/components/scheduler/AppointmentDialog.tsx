@@ -63,7 +63,6 @@ export default function AppointmentDialog({
     description: "",
     start_time: "",
     end_time: "",
-    assigned_to: "",
     status: "draft",
     location_address: "",
     location_lat: "",
@@ -167,7 +166,6 @@ export default function AppointmentDialog({
         description: data.description || "",
         start_time: data.start_time?.slice(0, 16) || "",
         end_time: data.end_time?.slice(0, 16) || "",
-        assigned_to: data.assigned_to || "",
         status: data.status || "draft",
         location_address: data.location_address || "",
         location_lat: data.location_lat?.toString() || "",
@@ -200,7 +198,6 @@ export default function AppointmentDialog({
       description: "",
       start_time: "",
       end_time: "",
-      assigned_to: "",
       status: "draft",
       location_address: "",
       location_lat: "",
@@ -335,7 +332,6 @@ export default function AppointmentDialog({
         description: formData.description,
         start_time: formData.start_time,
         end_time: formData.end_time,
-        assigned_to: formData.assigned_to || null,
         status: formData.status,
         location_address: formData.location_address,
         location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
@@ -414,38 +410,12 @@ export default function AppointmentDialog({
             end_time: new Date(formData.end_time),
             title: formData.title,
             description: formData.description,
-            assigned_to: formData.assigned_to,
             location_address: formData.location_address,
             location_lat: formData.location_lat ? parseFloat(formData.location_lat) : undefined,
             location_lng: formData.location_lng ? parseFloat(formData.location_lng) : undefined,
           };
 
           const instances = generateRecurringInstances(template, recurrenceConfig);
-
-          // Check for conflicts
-          if (formData.assigned_to) {
-            const { data: existingAppointments } = await supabase
-              .from("appointments")
-              .select("*")
-              .eq("assigned_to", formData.assigned_to)
-              .neq("status", "cancelled");
-
-            const conflicts = checkRecurringConflicts(
-              instances,
-              existingAppointments || [],
-              formData.assigned_to
-            );
-
-            if (conflicts.length > 0) {
-              toast({
-                title: "Conflicts detected",
-                description: `${conflicts.length} appointments conflict with existing schedule`,
-                variant: "destructive",
-              });
-              setLoading(false);
-              return;
-            }
-          }
 
           // Create parent appointment
           const { data: parentAppt, error: parentError } = await supabase
@@ -736,95 +706,56 @@ export default function AppointmentDialog({
             </FieldPresenceWrapper>
           </div>
 
-          <FieldPresenceWrapper fieldName="assigned_to" onlineUsers={onlineUsers}>
+          <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/50">
+            <Label className="text-base font-semibold">Assigned Workers</Label>
+            
             <div className="space-y-2">
-              <Label htmlFor="assigned_to">Assigned To</Label>
-              <Select 
-                value={formData.assigned_to} 
-                onValueChange={(value) => {
-                  setFormData({ ...formData, assigned_to: value });
-                  setCurrentField("assigned_to");
-                  updateField("assigned_to");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select technician" />
-                </SelectTrigger>
-                <SelectContent>
-                  {technicians.map((tech) => (
+              {assignedWorkers.map((worker) => (
+                <div key={worker.id} className="flex items-center justify-between p-2 bg-background rounded-md border">
+                  <span className="text-sm">
+                    {worker.first_name} {worker.last_name}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAssignedWorkers(assignedWorkers.filter(w => w.id !== worker.id));
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              
+              {assignedWorkers.length === 0 && (
+                <p className="text-sm text-muted-foreground">No workers assigned</p>
+              )}
+            </div>
+
+            <Select
+              value=""
+              onValueChange={(workerId) => {
+                const worker = technicians.find(t => t.id === workerId);
+                if (worker && !assignedWorkers.find(w => w.id === workerId)) {
+                  setAssignedWorkers([...assignedWorkers, worker]);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Add worker" />
+              </SelectTrigger>
+              <SelectContent>
+                {technicians
+                  .filter(tech => !assignedWorkers.find(w => w.id === tech.id))
+                  .map((tech) => (
                     <SelectItem key={tech.id} value={tech.id}>
                       {tech.first_name} {tech.last_name}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </FieldPresenceWrapper>
-
-          {formData.service_order_id && (
-            <WorkerSuggestions
-              serviceOrderId={formData.service_order_id}
-              onSelectWorker={(workerId) => {
-                setFormData({ ...formData, assigned_to: workerId });
-                setCurrentField("assigned_to");
-                updateField("assigned_to");
-              }}
-              selectedWorkerId={formData.assigned_to}
-            />
-          )}
-
-          {appointmentId && (
-            <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/50">
-              <Label className="text-base font-semibold">Assigned Workers</Label>
-              
-              <div className="space-y-2">
-                {assignedWorkers.map((worker) => (
-                  <div key={worker.id} className="flex items-center justify-between p-2 bg-background rounded-md border">
-                    <span className="text-sm">
-                      {worker.first_name} {worker.last_name}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setAssignedWorkers(assignedWorkers.filter(w => w.id !== worker.id));
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-                
-                {assignedWorkers.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No workers assigned</p>
-                )}
-              </div>
-
-              <Select
-                value=""
-                onValueChange={(workerId) => {
-                  const worker = technicians.find(t => t.id === workerId);
-                  if (worker && !assignedWorkers.find(w => w.id === workerId)) {
-                    setAssignedWorkers([...assignedWorkers, worker]);
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Add worker" />
-                </SelectTrigger>
-                <SelectContent>
-                  {technicians
-                    .filter(tech => !assignedWorkers.find(w => w.id === tech.id))
-                    .map((tech) => (
-                      <SelectItem key={tech.id} value={tech.id}>
-                        {tech.first_name} {tech.last_name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+              </SelectContent>
+            </Select>
+          </div>
 
           <FieldPresenceWrapper fieldName="status" onlineUsers={onlineUsers}>
             <div className="space-y-2">

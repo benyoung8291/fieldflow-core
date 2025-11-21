@@ -21,7 +21,6 @@ interface Worker {
 interface Appointment {
   start_time: string;
   end_time: string;
-  assigned_to: string | null;
   status: string;
   appointment_workers?: Array<{ worker_id: string }>;
 }
@@ -151,7 +150,7 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
 
       const { data, error } = await supabase
         .from("appointments")
-        .select("id, start_time, end_time, assigned_to, status, appointment_workers(worker_id)")
+        .select("id, start_time, end_time, status, appointment_workers(worker_id)")
         .gte("start_time", startDate.toISOString())
         .lte("start_time", endDate.toISOString())
         .neq("status", "cancelled");
@@ -226,10 +225,9 @@ export function CapacityPlanningView({ workers, currentDate, onScheduleServiceOr
             if (aptStart < weekStart || aptStart > weekEnd) return false;
             if (apt.status === 'cancelled') return false;
             
-            const isPrimary = apt.assigned_to === worker.id;
             const isAssigned = apt.appointment_workers?.some(aw => aw.worker_id === worker.id);
             
-            return isPrimary || isAssigned;
+            return isAssigned;
           })
           .reduce((total, apt) => {
             const hours = (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60);

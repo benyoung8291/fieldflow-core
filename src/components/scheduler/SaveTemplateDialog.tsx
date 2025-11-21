@@ -48,7 +48,6 @@ export default function SaveTemplateDialog({
           name,
           description,
           duration_hours: duration,
-          default_assigned_to: appointmentData?.assigned_to || null,
           location_address: appointmentData?.location_address || null,
           location_lat: appointmentData?.location_lat || null,
           location_lng: appointmentData?.location_lng || null,
