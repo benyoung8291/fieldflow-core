@@ -2175,6 +2175,9 @@ export type Database = {
       }
       invoices: {
         Row: {
+          acumatica_invoice_id: string | null
+          acumatica_reference_nbr: string | null
+          acumatica_status: string | null
           approval_requested_at: string | null
           approval_requested_by: string | null
           approval_status: string | null
@@ -2196,6 +2199,7 @@ export type Database = {
           service_order_id: string | null
           status: string
           subtotal: number
+          synced_to_accounting_at: string | null
           tax_amount: number
           tax_rate: number
           tenant_id: string
@@ -2203,6 +2207,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          acumatica_invoice_id?: string | null
+          acumatica_reference_nbr?: string | null
+          acumatica_status?: string | null
           approval_requested_at?: string | null
           approval_requested_by?: string | null
           approval_status?: string | null
@@ -2224,6 +2231,7 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
+          synced_to_accounting_at?: string | null
           tax_amount?: number
           tax_rate?: number
           tenant_id: string
@@ -2231,6 +2239,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          acumatica_invoice_id?: string | null
+          acumatica_reference_nbr?: string | null
+          acumatica_status?: string | null
           approval_requested_at?: string | null
           approval_requested_by?: string | null
           approval_status?: string | null
@@ -2252,6 +2263,7 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
+          synced_to_accounting_at?: string | null
           tax_amount?: number
           tax_rate?: number
           tenant_id?: string
