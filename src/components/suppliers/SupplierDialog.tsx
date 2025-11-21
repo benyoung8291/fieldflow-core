@@ -95,6 +95,8 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
 
       if (error) throw error;
 
+      console.log('ABN validation response:', data);
+
       if (!data.valid) {
         toast.error(data.error || 'ABN is not valid');
         setAbnValidated(false);
@@ -138,12 +140,19 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
       setGstRegistered(data.gstRegistered);
       setAvailableTradingNames(data.tradingNames || []);
       
-      setFormData(prev => ({
-        ...prev,
-        legalName: data.legalName || prev.legalName,
-        tradingName: prev.tradingName || data.legalName || prev.tradingName,
-        gstRegistered: data.gstRegistered,
-      }));
+      console.log('Setting form data with legal name:', data.legalName);
+      console.log('Current trading name:', formData.tradingName);
+      
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          legalName: data.legalName || '',
+          tradingName: prev.tradingName || data.legalName || '',
+          gstRegistered: data.gstRegistered,
+        };
+        console.log('New form data:', newData);
+        return newData;
+      });
 
       toast.success(
         <div>
