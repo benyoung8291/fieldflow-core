@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus } from "lucide-react";
+import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, X, Check, CalendarIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -37,6 +37,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -76,6 +79,10 @@ export default function ServiceOrderDetails() {
   const [purchaseOrderDialogOpen, setPurchaseOrderDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
+  const [editingDates, setEditingDates] = useState(false);
+  const [preferredDate, setPreferredDate] = useState<Date | undefined>();
+  const [dateRangeStart, setDateRangeStart] = useState<Date | undefined>();
+  const [dateRangeEnd, setDateRangeEnd] = useState<Date | undefined>();
 
   // Fetch project integration setting
   const { data: integrationSettings } = useQuery({
@@ -267,6 +274,43 @@ export default function ServiceOrderDetails() {
   });
 
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
+
+  const updateDatesMutation = useMutation({
+    mutationFn: async (dates: { preferred_date?: string | null, date_range_start?: string | null, date_range_end?: string | null }) => {
+      const { error } = await supabase
+        .from("service_orders")
+        .update(dates)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+      toast({ title: "Dates updated successfully" });
+      setEditingDates(false);
+    },
+    onError: (error) => {
+      toast({ title: "Failed to update dates", description: String(error), variant: "destructive" });
+    },
+  });
+
+  const handleEditDates = () => {
+    setPreferredDate(order?.preferred_date ? new Date(order.preferred_date) : undefined);
+    setDateRangeStart((order as any)?.date_range_start ? new Date((order as any).date_range_start) : undefined);
+    setDateRangeEnd((order as any)?.date_range_end ? new Date((order as any).date_range_end) : undefined);
+    setEditingDates(true);
+  };
+
+  const handleSaveDates = () => {
+    updateDatesMutation.mutate({
+      preferred_date: preferredDate ? preferredDate.toISOString() : null,
+      date_range_start: dateRangeStart ? dateRangeStart.toISOString() : null,
+      date_range_end: dateRangeEnd ? dateRangeEnd.toISOString() : null,
+    });
+  };
+
+  const handleCancelEditDates = () => {
+    setEditingDates(false);
+  };
 
   const totalCost = lineItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0) * item.quantity, 0);
   const totalRevenue = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
@@ -728,7 +772,7 @@ export default function ServiceOrderDetails() {
                     Margin: {profitMargin.toFixed(1)}%
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Costs: ${totalCost.toFixed(2)}
+                    Costs: ${actualCost.toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -773,43 +817,145 @@ export default function ServiceOrderDetails() {
 
           {/* Schedule Information */}
           <Card className="lg:col-span-3">
-            <CardHeader className="pb-2 pt-3 px-4">
+            <CardHeader className="pb-2 pt-3 px-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Schedule
               </CardTitle>
+              {!editingDates && (
+                <Button variant="ghost" size="sm" onClick={handleEditDates}>
+                  <Edit className="h-3 w-3" />
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-3">
-              <div>
-                <div className="text-xs text-muted-foreground mb-1.5">Preferred Service Date</div>
-                <div className="bg-primary/10 border-l-4 border-primary px-3 py-2.5 rounded-md">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span className="text-sm font-semibold text-primary">
-                      {order.preferred_date
-                        ? format(new Date(order.preferred_date), "PPP")
-                        : "Not specified"}
-                    </span>
+              {editingDates ? (
+                <>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5">Preferred Service Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !preferredDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {preferredDate ? format(preferredDate, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={preferredDate}
+                          onSelect={setPreferredDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                </div>
-              </div>
 
-              {((order as any).date_range_start || (order as any).date_range_end) && (
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1.5">Alternative Date Window</div>
-                  <div className="bg-muted/50 border border-border px-3 py-2.5 rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="text-sm font-medium">
-                        {(order as any).date_range_start && format(new Date((order as any).date_range_start), "PP")}
-                        {(order as any).date_range_start && (order as any).date_range_end && (
-                          <span className="mx-2 text-muted-foreground">—</span>
-                        )}
-                        {(order as any).date_range_end && format(new Date((order as any).date_range_end), "PP")}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5">Alternative Date Window</Label>
+                    <div className="flex gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !dateRangeStart && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRangeStart ? format(dateRangeStart, "PP") : "Start"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dateRangeStart}
+                            onSelect={setDateRangeStart}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !dateRangeEnd && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRangeEnd ? format(dateRangeEnd, "PP") : "End"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dateRangeEnd}
+                            onSelect={setDateRangeEnd}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" onClick={handleSaveDates} disabled={updateDatesMutation.isPending}>
+                      <Check className="h-4 w-4 mr-1" />
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelEditDates}>
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1.5">Preferred Service Date</div>
+                    <div className="bg-primary/10 border-l-4 border-primary px-3 py-2.5 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-sm font-semibold text-primary">
+                          {order.preferred_date
+                            ? format(new Date(order.preferred_date), "PPP")
+                            : "Not specified"}
+                        </span>
                       </div>
                     </div>
                   </div>
-                </div>
+
+                  {((order as any).date_range_start || (order as any).date_range_end) && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1.5">Alternative Date Window</div>
+                      <div className="bg-muted/50 border border-border px-3 py-2.5 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="text-sm font-medium">
+                            {(order as any).date_range_start && format(new Date((order as any).date_range_start), "PP")}
+                            {(order as any).date_range_start && (order as any).date_range_end && (
+                              <span className="mx-2 text-muted-foreground">—</span>
+                            )}
+                            {(order as any).date_range_end && format(new Date((order as any).date_range_end), "PP")}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
