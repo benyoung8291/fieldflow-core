@@ -36,6 +36,22 @@ serve(async (req) => {
     if (invoiceError) throw invoiceError;
     if (!invoice) throw new Error('Invoice not found');
 
+    // Check if already synced to prevent duplicates
+    if (invoice.acumatica_reference_nbr) {
+      console.log('Invoice already synced to Acumatica:', invoice.acumatica_reference_nbr);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Invoice already synced to Acumatica',
+          bill_reference: invoice.acumatica_reference_nbr,
+          bill_id: invoice.acumatica_invoice_id
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Get supplier separately
     const { data: supplier, error: supplierError } = await supabase
       .from('suppliers')
