@@ -11,6 +11,7 @@ import SupplierDialog from "@/components/suppliers/SupplierDialog";
 import { SupplierImportDialog } from "@/components/suppliers/SupplierImportDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { usePagination } from "@/hooks/usePagination";
 import {
   Table,
   TableBody,
@@ -42,9 +43,10 @@ export default function Suppliers() {
   const [validatingAbns, setValidatingAbns] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: vendors, isLoading } = useQuery({
-    queryKey: ["vendors"],
+  const { data: vendorsResponse, isLoading } = useQuery({
+    queryKey: ["vendors", pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -57,16 +59,22 @@ export default function Suppliers() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      const { data, error } = await supabase
+      const { from, to } = pagination.getRange();
+      const { data, error, count } = await supabase
         .from("suppliers")
-        .select("*")
+        .select("*", { count: 'exact' })
         .eq("tenant_id", profile.tenant_id)
-        .order("name");
+        .order("name")
+        .range(from, to);
 
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
   });
+  
+  const vendors = vendorsResponse?.data || [];
+  const totalCount = vendorsResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const filteredAndSortedVendors = vendors
     ?.filter((vendor) => {
@@ -392,6 +400,24 @@ export default function Suppliers() {
               )}
             </CardContent>
           </Card>
+        )}
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-6 border-t pt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} suppliers
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>
+                Previous
+              </Button>
+              <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>
+                Next
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 

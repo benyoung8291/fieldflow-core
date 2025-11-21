@@ -33,6 +33,7 @@ import {
 import { MoreVertical } from "lucide-react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -46,11 +47,13 @@ export default function Quotes() {
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<any>(null);
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: quotes, isLoading, refetch } = useQuery({
-    queryKey: ["quotes", showArchived],
+  const { data: quotesResponse, isLoading, refetch } = useQuery({
+    queryKey: ["quotes", showArchived, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { from, to } = pagination.getRange();
+      const { data, error, count } = await supabase
         .from("quotes")
         .select(`
           id,
@@ -68,21 +71,27 @@ export default function Quotes() {
           converted_to_contract_id,
           customers(name),
           leads(name)
-        `)
+        `, { count: 'exact' })
         .eq("is_archived", showArchived)
         .order("created_at", { ascending: false })
-        .limit(100); // Add pagination limit
+        .range(from, to);
 
       if (error) throw error;
       
       // Transform to match expected format
-      return (data || []).map(quote => ({
+      const transformedData = (data || []).map(quote => ({
         ...quote,
         customer: quote.customers ? { name: quote.customers.name } : null,
         lead: quote.leads ? { name: quote.leads.name } : null
       }));
+      
+      return { data: transformedData, count: count || 0 };
     },
   });
+  
+  const quotes = quotesResponse?.data || [];
+  const totalCount = quotesResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -538,6 +547,24 @@ export default function Quotes() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <div className="mt-6 border-t pt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} quotes
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>
+                Previous
+              </Button>
+              <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </div>

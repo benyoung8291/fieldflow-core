@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function CreditCardReconciliation() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -34,9 +35,10 @@ export default function CreditCardReconciliation() {
   });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: transactions, isLoading, error: transactionsError } = useQuery({
-    queryKey: ['my-credit-card-transactions'],
+  const { data: transactionsResponse, isLoading, error: transactionsError } = useQuery({
+    queryKey: ['my-credit-card-transactions', pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -44,23 +46,29 @@ export default function CreditCardReconciliation() {
         throw new Error('Not authenticated');
       }
       
-      const { data, error } = await supabase
+      const { from, to } = pagination.getRange();
+      const { data, error, count } = await supabase
         .from('credit_card_transactions')
         .select(`
           *,
           company_credit_cards(card_name, card_provider, last_four_digits),
           expenses(expense_number, status)
-        `)
+        `, { count: 'exact' })
         .eq('assigned_to', user.id)
-        .order('transaction_date', { ascending: false });
+        .order('transaction_date', { ascending: false })
+        .range(from, to);
       
       if (error) {
         console.error('Transaction fetch error:', error);
         throw error;
       }
-      return data;
+      return { data: data || [], count: count || 0 };
     },
   });
+  
+  const transactions = transactionsResponse?.data || [];
+  const totalCount = transactionsResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   // Fetch potential matching expenses
   const { data: potentialMatches } = useQuery({
@@ -752,6 +760,24 @@ export default function CreditCardReconciliation() {
                   </div>
                 );
               })
+            )}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-6 p-4 border-t flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} transactions
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>
+                    Previous
+                  </Button>
+                  <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+                  <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>
+                    Next
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </ScrollArea>

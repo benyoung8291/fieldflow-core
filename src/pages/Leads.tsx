@@ -22,6 +22,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function Leads() {
   const navigate = useNavigate();
@@ -30,10 +31,12 @@ export default function Leads() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: leads = [], isLoading, refetch } = useQuery({
-    queryKey: ["leads", statusFilter],
+  const { data: leadsResponse, isLoading, refetch } = useQuery({
+    queryKey: ["leads", statusFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
+      const { from, to } = pagination.getRange();
       let query = supabase
         .from("leads")
         .select(`
@@ -47,20 +50,24 @@ export default function Leads() {
           source,
           created_at,
           converted_to_customer_id
-        `)
+        `, { count: 'exact' })
         .eq("is_active", true)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .range(from, to);
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data || [];
+      return { data: data || [], count: count || 0 };
     },
   });
+  
+  const leads = leadsResponse?.data || [];
+  const totalCount = leadsResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -314,6 +321,24 @@ export default function Leads() {
             </Table>
           )}
         </div>
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <div className="mt-6 border-t pt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} leads
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>
+                Previous
+              </Button>
+              <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
       </div>
 

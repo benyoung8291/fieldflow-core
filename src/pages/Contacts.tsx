@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function Contacts() {
   const navigate = useNavigate();
@@ -21,10 +22,12 @@ export default function Contacts() {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const isMobile = useIsMobile();
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: contacts, isLoading } = useQuery({
-    queryKey: ["contacts", activeTab, showArchived],
+  const { data: contactsResponse, isLoading } = useQuery({
+    queryKey: ["contacts", activeTab, showArchived, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
+      const { from, to } = pagination.getRange();
       let query = supabase
         .from("contacts")
         .select(`
@@ -32,8 +35,9 @@ export default function Contacts() {
           customer:customers(name),
           supplier:suppliers(name),
           assigned_user:profiles!contacts_assigned_to_fkey(id, first_name, last_name)
-        `)
-        .order("created_at", { ascending: false });
+        `, { count: 'exact' })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       // Filter by archived status
       if (showArchived) {
@@ -47,19 +51,25 @@ export default function Contacts() {
         query = query.eq("contact_type", activeTab);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
       
       // Transform the data to add full_name
-      return data?.map(contact => ({
+      const transformedData = data?.map(contact => ({
         ...contact,
         assigned_user: contact.assigned_user ? {
           ...contact.assigned_user,
           full_name: `${contact.assigned_user.first_name || ''} ${contact.assigned_user.last_name || ''}`.trim()
         } : null
       })) || [];
+      
+      return { data: transformedData, count: count || 0 };
     },
   });
+  
+  const contacts = contactsResponse?.data || [];
+  const totalCount = contactsResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const filteredContacts = contacts?.filter((contact) => {
     const searchLower = searchQuery.toLowerCase();
@@ -274,6 +284,24 @@ export default function Contacts() {
             )}
           </TabsContent>
         </Tabs>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-6 border-t pt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} contacts
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>
+                Previous
+              </Button>
+              <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <ContactManagementDialog
