@@ -313,6 +313,8 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         legal_company_name: formData.legalName || null,
         abn: formData.abn || null,
         gst_registered: formData.gstRegistered,
+        abn_validation_status: abnValidated ? 'valid' : null,
+        abn_validated_at: abnValidated ? new Date().toISOString() : null,
         email: formData.email || null,
         phone: formData.phone || null,
         mobile: formData.mobile || null,
