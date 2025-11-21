@@ -22,6 +22,7 @@ import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import ContactSelectorDialog from "@/components/customers/ContactSelectorDialog";
+import FieldReportsTab from "@/components/service-orders/FieldReportsTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1446,6 +1447,12 @@ export default function ServiceOrderDetails() {
       label: "Help Desk",
       icon: <Mail className="h-4 w-4" />,
       content: <LinkedHelpdeskTicketsTab documentType="service_order" documentId={id!} />,
+    },
+    {
+      value: "field-reports",
+      label: "Field Reports",
+      icon: <FileText className="h-4 w-4" />,
+      content: <FieldReportsTab serviceOrderId={id!} />,
     },
     {
       value: "linked-documents",
