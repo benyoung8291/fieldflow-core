@@ -155,10 +155,16 @@ serve(async (req) => {
     // Extract legal name from mainName section within businessEntity
     const mainNameMatch = businessEntitySection.match(/<mainName[^>]*>([\s\S]*?)<\/mainName>/i);
     let mainName = '';
+    
+    console.log('DEBUG: mainNameMatch found:', mainNameMatch ? 'yes' : 'no');
+    
     if (mainNameMatch) {
       const mainNameSection = mainNameMatch[1];
+      console.log('DEBUG: mainNameSection:', mainNameSection.substring(0, 200));
+      
       // Try organisation name first (for companies)
       mainName = extractXMLValue(mainNameSection, 'organisationName') || '';
+      console.log('DEBUG: organisationName:', mainName);
       
       // If no organisation name, try person name (for sole traders)
       if (!mainName) {
@@ -166,14 +172,19 @@ serve(async (req) => {
         const familyName = extractXMLValue(mainNameSection, 'familyName') || '';
         const otherGivenName = extractXMLValue(mainNameSection, 'otherGivenName') || '';
         
+        console.log('DEBUG: Sole trader names - given:', givenName, 'family:', familyName, 'other:', otherGivenName);
+        
         if (familyName) {
           mainName = [givenName, otherGivenName, familyName]
             .filter(Boolean)
             .join(' ')
             .trim();
+          console.log('DEBUG: Constructed mainName for sole trader:', mainName);
         }
       }
     }
+    
+    console.log('DEBUG: Final mainName:', mainName);
     
     // Extract all business names (trading names) from businessEntity section
     const businessNames: string[] = [];
