@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,8 +16,12 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY is not configured');
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    console.log('Received message:', message);
+    console.log('Conversation history length:', conversationHistory?.length || 0);
 
     const messages = [
       {
@@ -42,9 +47,11 @@ Key features of Service Pulse include:
 
 Be concise, friendly, and actionable. Focus on helping users accomplish their immediate goals. If asked about specific data, let them know you can see their context but would need them to share details.`
       },
-      ...conversationHistory,
+      ...(conversationHistory || []),
       { role: "user", content: message }
     ];
+
+    console.log('Calling AI Gateway...');
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -63,11 +70,26 @@ Be concise, friendly, and actionable. Focus on helping users accomplish their im
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI Gateway error:', response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ response: "I'm currently experiencing high demand. Please try again in a moment." }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('AI Gateway response received');
+    
     const assistantMessage = data.choices?.[0]?.message?.content;
+
+    if (!assistantMessage) {
+      console.error('No content in AI response:', data);
+      throw new Error('No content in AI response');
+    }
 
     return new Response(
       JSON.stringify({ response: assistantMessage }),
@@ -76,7 +98,10 @@ Be concise, friendly, and actionable. Focus on helping users accomplish their im
   } catch (error) {
     console.error('Error in chat-assistant:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment.",
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
