@@ -666,6 +666,7 @@ export default function Tasks() {
         estimated_hours: taskData.estimated_hours ? parseFloat(taskData.estimated_hours) : null,
         progress_percentage: taskData.progress_percentage ? parseInt(taskData.progress_percentage) : 0,
         tags: taskData.tags || [],
+        show_description_on_card: taskData.show_description_on_card || false,
         created_by: user.id
       }).select().single();
       if (error) throw error;
@@ -1560,7 +1561,8 @@ export default function Tasks() {
       status: selectedTask.status,
       priority: selectedTask.priority,
       assigned_to: selectedTask.assigned_to || undefined,
-      due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined
+      due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : undefined,
+      show_description_on_card: selectedTask.show_description_on_card || false
     } : undefined} linkedModule={selectedTask?.linked_module} linkedRecordId={selectedTask?.linked_record_id} linkedRecordName={selectedTask?.linked_record_name} workers={workers} />
       
       {/* Link Document Dialog */}

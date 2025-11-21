@@ -5858,6 +5858,7 @@ export type Database = {
           parent_task_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           progress_percentage: number | null
+          show_description_on_card: boolean | null
           start_date: string | null
           status: Database["public"]["Enums"]["task_status"]
           tags: string[] | null
@@ -5882,6 +5883,7 @@ export type Database = {
           parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           progress_percentage?: number | null
+          show_description_on_card?: boolean | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           tags?: string[] | null
@@ -5906,6 +5908,7 @@ export type Database = {
           parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           progress_percentage?: number | null
+          show_description_on_card?: boolean | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           tags?: string[] | null
