@@ -153,8 +153,9 @@ export default function ServiceOrderDetails() {
             worker_id,
             profiles!appointment_workers_worker_id_fkey(
               id,
-              hourly_rate,
-              hourly_loading_percentage
+              first_name,
+              last_name,
+              pay_rate_category:pay_rate_categories(hourly_rate)
             )
           )
         `)
@@ -333,11 +334,11 @@ export default function ServiceOrderDetails() {
     
     const appointmentLaborCost = apt.appointment_workers.reduce((workerSum: number, aw: any) => {
       const worker = aw.profiles;
-      if (!worker?.hourly_rate) return workerSum;
+      const hourlyRate = worker?.pay_rate_category?.hourly_rate;
+      if (!hourlyRate) return workerSum;
       
-      const hourlyRate = worker.hourly_rate;
-      const loading = worker.hourly_loading_percentage || 0;
-      const rateWithLoading = hourlyRate * (1 + loading / 100);
+      // TODO: Add loading percentage when available in pay_rate_categories table
+      const rateWithLoading = hourlyRate;
       
       return workerSum + (hours * rateWithLoading);
     }, 0);

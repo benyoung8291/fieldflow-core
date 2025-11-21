@@ -46,8 +46,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
               id,
               first_name,
               last_name,
-              hourly_rate,
-              hourly_loading_percentage
+              pay_rate_category:pay_rate_categories(hourly_rate)
             )
           )
         `)
