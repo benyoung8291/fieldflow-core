@@ -2183,11 +2183,12 @@ export type Database = {
           approval_status: string | null
           created_at: string | null
           created_by: string
-          customer_id: string
+          customer_id: string | null
           due_date: string | null
           id: string
           invoice_date: string
           invoice_number: string
+          invoice_type: string
           is_progress_invoice: boolean | null
           manager_approval_notes: string | null
           manager_approved_at: string | null
@@ -2199,6 +2200,7 @@ export type Database = {
           service_order_id: string | null
           status: string
           subtotal: number
+          supplier_id: string | null
           synced_to_accounting_at: string | null
           tax_amount: number
           tax_rate: number
@@ -2215,11 +2217,12 @@ export type Database = {
           approval_status?: string | null
           created_at?: string | null
           created_by: string
-          customer_id: string
+          customer_id?: string | null
           due_date?: string | null
           id?: string
           invoice_date?: string
           invoice_number: string
+          invoice_type?: string
           is_progress_invoice?: boolean | null
           manager_approval_notes?: string | null
           manager_approved_at?: string | null
@@ -2231,6 +2234,7 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
+          supplier_id?: string | null
           synced_to_accounting_at?: string | null
           tax_amount?: number
           tax_rate?: number
@@ -2247,11 +2251,12 @@ export type Database = {
           approval_status?: string | null
           created_at?: string | null
           created_by?: string
-          customer_id?: string
+          customer_id?: string | null
           due_date?: string | null
           id?: string
           invoice_date?: string
           invoice_number?: string
+          invoice_type?: string
           is_progress_invoice?: boolean | null
           manager_approval_notes?: string | null
           manager_approved_at?: string | null
@@ -2263,6 +2268,7 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
+          supplier_id?: string | null
           synced_to_accounting_at?: string | null
           tax_amount?: number
           tax_rate?: number
@@ -2297,6 +2303,13 @@ export type Database = {
             columns: ["service_order_id"]
             isOneToOne: false
             referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
