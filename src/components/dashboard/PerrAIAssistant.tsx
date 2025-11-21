@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
 
 interface Message {
   role: "user" | "assistant";
@@ -18,19 +19,35 @@ export function PerrAIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm PerrAI, your helpful assistant. I can help you understand what you're looking at and guide you through your tasks. What can I help you with today?"
+      content: "Hi! I'm PerrAI, your helpful assistant. I can see what page you're on and what documents you're viewing. Ask me anything about your current context!"
     }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const location = useLocation();
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const getContextInfo = () => {
+    const path = location.pathname;
+    const pathParts = path.split('/').filter(Boolean);
+    
+    // Extract module and document ID from URL
+    let module = pathParts[0] || 'dashboard';
+    let documentId = pathParts[1] || null;
+    
+    return {
+      currentPage: path,
+      module: module,
+      documentId: documentId
+    };
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -41,10 +58,13 @@ export function PerrAIAssistant() {
     setIsLoading(true);
 
     try {
+      const context = getContextInfo();
+      
       const { data, error } = await supabase.functions.invoke("chat-assistant", {
         body: { 
           message: userMessage,
-          conversationHistory: messages 
+          conversationHistory: messages,
+          context: context
         }
       });
 
