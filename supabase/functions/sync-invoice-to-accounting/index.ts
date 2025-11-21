@@ -248,7 +248,7 @@ async function syncToAcumatica(invoice: any, integration: any) {
   // Prepare invoice description with invoice number prefix
   const description = `${invoice.invoice_number} - ${invoice.description || 'Invoice'}`;
 
-  // Build line items - ensure Account and Subaccount are always present to override inventory defaults
+  // Build line items - CRITICAL: Set Account/Subaccount BEFORE InventoryID to prevent Acumatica auto-defaulting
   const lineItems = invoice.invoice_line_items?.map((item: any) => {
     const account = item.account_code || integration.default_sales_account_code;
     const subaccount = item.sub_account || integration.default_sales_sub_account;
@@ -262,13 +262,13 @@ async function syncToAcumatica(invoice: any, integration: any) {
 
     return {
       Branch: { value: "PREMREST" },
+      Account: { value: account },
+      Subaccount: { value: subaccount },
       InventoryID: { value: "CLEANING" },
       Qty: { value: parseFloat(item.quantity) },
       UOM: { value: "EACH" },
       UnitPrice: { value: parseFloat(item.unit_price) },
       TransactionDescription: { value: item.description || "" },
-      Account: { value: account },
-      Subaccount: { value: subaccount },
     };
   }) || [];
 
