@@ -56,7 +56,7 @@ serve(async (req) => {
       .from('accounting_integrations')
       .select('*')
       .eq('tenant_id', invoice.tenant_id)
-      .eq('provider', 'acumatica')
+      .eq('provider', 'myob_acumatica')
       .eq('is_enabled', true)
       .single();
 
@@ -66,7 +66,7 @@ serve(async (req) => {
 
     // Validate required fields
     if (!invoice.supplier?.acumatica_supplier_id) {
-      throw new Error('Supplier does not have an Acumatica Supplier ID');
+      throw new Error('Supplier does not have an Acumatica Supplier ID mapped. Please ensure the supplier record has been synced to Acumatica.');
     }
 
     if (!lineItems || lineItems.length === 0) {
