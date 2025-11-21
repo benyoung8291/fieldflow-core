@@ -102,11 +102,16 @@ serve(async (req) => {
     }));
 
     // Build Bill payload
+    // VendorRef must be unique per vendor in Acumatica - use supplier invoice number or fall back to unique invoice ID
+    const vendorRef = invoice.supplier_invoice_number && invoice.supplier_invoice_number.trim() 
+      ? invoice.supplier_invoice_number 
+      : `${invoice.invoice_number}-${invoice_id.substring(0, 8)}`;
+    
     const billPayload = {
       Type: { value: "Bill" },
       ReferenceNbr: { value: "<NEW>" },
       Vendor: { value: supplier.acumatica_supplier_id },
-      VendorRef: { value: invoice.supplier_invoice_number || invoice.invoice_number },
+      VendorRef: { value: vendorRef },
       LinkAPAccount: { value: "28000" },
       Project: { value: "X" },
       Date: { value: invoiceDate.toISOString() },
