@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePagination } from "@/hooks/usePagination";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export default function Tasks() {
   const [groupMode, setGroupMode] = useState<'status' | 'tag' | 'document'>('status');
   const [kanbanViewMode, setKanbanViewMode] = useState<'date' | 'status'>('status');
   const queryClient = useQueryClient();
+  const pagination = usePagination({ initialPageSize: 50 });
 
   // Drag and drop sensors with mobile support
   const sensors = useSensors(useSensor(PointerSensor, {
@@ -116,6 +118,11 @@ export default function Tasks() {
       setViewMode(userProfile.task_view_preference as 'list' | 'kanban');
     }
   }, [userProfile]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    pagination.resetPage();
+  }, [filterStatus, filterPriority, filterAssignee, filterTag, searchQuery]);
 
   // Save view preference mutation
   const saveViewPreference = useMutation({
@@ -411,17 +418,24 @@ export default function Tasks() {
   };
 
   const {
-    data: tasks = [],
+    data: tasksResponse,
     isLoading
   } = useQuery({
-    queryKey: ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery],
+    queryKey: ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
-      let query = supabase.from("tasks" as any).select("*").order("due_date", {
-        ascending: true,
-        nullsFirst: false
-      }).order("priority", {
-        ascending: false
-      });
+      const { from, to } = pagination.getRange();
+      
+      let query = supabase
+        .from("tasks" as any)
+        .select("*", { count: 'exact' })
+        .order("due_date", {
+          ascending: true,
+          nullsFirst: false
+        })
+        .order("priority", {
+          ascending: false
+        })
+        .range(from, to);
 
       // Filter by assignee (default: my tasks)
       if (filterAssignee === "my-tasks" && currentUser) {
@@ -446,7 +460,8 @@ export default function Tasks() {
       }
       const {
         data,
-        error
+        error,
+        count
       } = await query;
       if (error) throw error;
 
@@ -523,9 +538,13 @@ export default function Tasks() {
           completedSubtaskCount
         };
       }));
-      return tasksWithLinks;
+      return { tasks: tasksWithLinks, count: count || 0 };
     }
   });
+
+  const tasks = tasksResponse?.tasks || [];
+  const totalCount = tasksResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   // Fetch assigned users data
   const {
@@ -1154,6 +1173,40 @@ export default function Tasks() {
                 </div>
         })}
               </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <Card className="mt-6">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} tasks
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pagination.prevPage()}
+                          disabled={pagination.currentPage === 0}
+                        >
+                          Previous
+                        </Button>
+                        <div className="text-sm text-muted-foreground">
+                          Page {pagination.currentPage + 1} of {totalPages}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pagination.nextPage()}
+                          disabled={pagination.currentPage >= totalPages - 1}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Side Panel for Task Details */}
