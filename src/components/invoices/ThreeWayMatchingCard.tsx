@@ -36,11 +36,11 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
     queryKey: ['ap-invoice-matching', invoiceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('invoices')
+        .from('ap_invoices')
         .select(`
           *,
           supplier:suppliers(*),
-          line_items:invoice_line_items(*),
+          line_items:ap_invoice_line_items(*),
           matching_data:ap_invoice_line_matching(*)
         `)
         .eq('id', invoiceId)
@@ -175,7 +175,7 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
     );
   }
 
-  if (!invoice || (invoice as any).invoice_type !== 'AP') {
+  if (!invoice) {
     return null;
   }
 

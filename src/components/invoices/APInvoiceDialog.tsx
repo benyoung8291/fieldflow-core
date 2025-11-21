@@ -321,21 +321,25 @@ export default function APInvoiceDialog({
         p_entity_type: 'ap_invoice'
       });
 
-      const totalAmount = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
+      const subtotal = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
+      const taxAmount = subtotal * 0.1; // Fixed 10% tax rate
+      const totalAmount = subtotal + taxAmount;
 
       // Create AP invoice
       const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
+        .from('ap_invoices')
         .insert([{
           tenant_id: profile.tenant_id,
           invoice_number: invoiceNumberData || 'AP-001',
           supplier_id: supplierId,
-          invoice_type: 'ap',
+          supplier_invoice_number: supplierInvoiceNumber,
           invoice_date: invoiceDate,
           due_date: dueDate,
+          subtotal: subtotal,
+          tax_amount: taxAmount,
           total_amount: totalAmount,
           status: 'draft',
-          notes: `AP Invoice - Supplier Invoice #: ${supplierInvoiceNumber}\n${notes}`,
+          notes: notes,
           created_by: user.id,
         }])
         .select()
@@ -346,7 +350,7 @@ export default function APInvoiceDialog({
       // Create line items
       const lineItemsData = lineItems.map((item, index) => ({
         tenant_id: profile.tenant_id,
-        invoice_id: invoice.id,
+        ap_invoice_id: invoice.id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -357,7 +361,7 @@ export default function APInvoiceDialog({
       }));
 
       const { error: linesError } = await supabase
-        .from('invoice_line_items')
+        .from('ap_invoice_line_items')
         .insert(lineItemsData);
 
       if (linesError) throw linesError;

@@ -10,7 +10,8 @@ import {
   Send,
   CheckCircle2,
   ArrowLeft,
-  Trash2
+  Trash2,
+  ExternalLink
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
 import { useAPInvoice, useUpdateAPInvoice, useDeleteAPInvoice, useSyncAPInvoiceToAcumatica } from "@/hooks/useAPInvoices";
 import { useAPInvoiceLineItems } from "@/hooks/useAPInvoiceLineItems";
 import AuditTimeline from "@/components/audit/AuditTimeline";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function APInvoiceDetails() {
   const { id } = useParams();
@@ -35,6 +38,26 @@ export default function APInvoiceDetails() {
   const updateMutation = useUpdateAPInvoice(id!);
   const deleteMutation = useDeleteAPInvoice();
   const syncMutation = useSyncAPInvoiceToAcumatica(id!);
+
+  // Fetch accounting integration for Acumatica link
+  const { data: accountingIntegration } = useQuery({
+    queryKey: ["accounting-integration", invoice?.tenant_id],
+    queryFn: async () => {
+      if (!invoice?.tenant_id) return null;
+      
+      const { data, error } = await supabase
+        .from("accounting_integrations")
+        .select("acumatica_instance_url")
+        .eq("tenant_id", invoice.tenant_id)
+        .eq("provider", "myob_acumatica")
+        .eq("is_enabled", true)
+        .single();
+
+      if (error) return null;
+      return data;
+    },
+    enabled: !!invoice?.tenant_id && !!invoice?.acumatica_reference_nbr,
+  });
 
   const handleApprove = () => {
     if (invoice?.acumatica_status === "Released") {
@@ -78,6 +101,7 @@ export default function APInvoiceDetails() {
   const canEdit = invoice.status === "draft" && !invoice.acumatica_reference_nbr;
   const canApprove = invoice.status === "draft" && !invoice.acumatica_reference_nbr;
   const isSynced = !!invoice.acumatica_reference_nbr;
+  const isAcumaticaReleased = invoice.acumatica_status === "Released";
 
   const statusBadges: Array<{ label: string; variant?: "default" | "secondary" | "destructive" | "outline"; className?: string }> = [
     {
@@ -110,26 +134,55 @@ export default function APInvoiceDetails() {
   ];
 
   const keyInfoSection = (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div>
-        <div className="text-sm text-muted-foreground mb-1">Invoice Date</div>
-        <div className="font-medium">{format(new Date(invoice.invoice_date), "dd MMM yyyy")}</div>
-      </div>
-      <div>
-        <div className="text-sm text-muted-foreground mb-1">Due Date</div>
-        <div className="font-medium">
-          {invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "-"}
+    <>
+      {invoice.acumatica_reference_nbr && !isAcumaticaReleased && (
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div className="flex-1">
+              <div className="font-semibold text-blue-600 dark:text-blue-400">Synced to MYOB Acumatica</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {accountingIntegration?.acumatica_instance_url ? (
+                  <a
+                    href={`${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AP301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    View Bill in Acumatica: {invoice.acumatica_reference_nbr}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  `Reference: ${invoice.acumatica_reference_nbr}`
+                )}
+                {invoice.last_synced_at && ` • Synced: ${format(new Date(invoice.last_synced_at), "dd MMM yyyy HH:mm")}`}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <div className="text-sm text-muted-foreground mb-1">Invoice Date</div>
+          <div className="font-medium">{format(new Date(invoice.invoice_date), "dd MMM yyyy")}</div>
+        </div>
+        <div>
+          <div className="text-sm text-muted-foreground mb-1">Due Date</div>
+          <div className="font-medium">
+            {invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "-"}
+          </div>
+        </div>
+        <div>
+          <div className="text-sm text-muted-foreground mb-1">Supplier Invoice #</div>
+          <div className="font-medium font-mono">{invoice.supplier_invoice_number || "-"}</div>
+        </div>
+        <div>
+          <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
+          <div className="font-medium text-lg">${invoice.total_amount.toFixed(2)}</div>
         </div>
       </div>
-      <div>
-        <div className="text-sm text-muted-foreground mb-1">Supplier Invoice #</div>
-        <div className="font-medium font-mono">{invoice.supplier_invoice_number || "-"}</div>
-      </div>
-      <div>
-        <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
-        <div className="font-medium text-lg">${invoice.total_amount.toFixed(2)}</div>
-      </div>
-    </div>
+    </>
   );
 
   const tabs = [

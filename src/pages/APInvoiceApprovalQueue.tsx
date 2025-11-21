@@ -45,14 +45,12 @@ export default function APInvoiceApprovalQueue() {
   const { data: pendingInvoices = [], isLoading } = useQuery({
     queryKey: ['ap-invoice-approval-queue'],
     queryFn: async () => {
-      // @ts-ignore - Complex Supabase types cause TS depth issues
       const { data, error } = await supabase
-        .from('invoices')
+        .from('ap_invoices')
         .select(`
           *,
           suppliers (name)
         `)
-        .eq('invoice_type', 'AP')
         .eq('requires_manager_approval', true)
         .eq('approval_status', 'pending')
         .order('approval_requested_at', { ascending: false });
@@ -351,10 +349,10 @@ export default function APInvoiceApprovalQueue() {
                         </p>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
+                       <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/invoices/${invoice.id}`)}
+                          onClick={() => navigate(`/ap-invoices/${invoice.id}`)}
                         >
                           Review
                         </Button>
