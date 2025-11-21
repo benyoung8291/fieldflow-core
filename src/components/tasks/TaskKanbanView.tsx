@@ -177,49 +177,31 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
     return map;
   }, [workers]);
 
-  if (viewMode === 'status') {
-    // Status-based kanban view
-    const statusColumns = [
-      { id: 'pending', title: 'Pending', color: 'border-yellow-500' },
-      { id: 'in_progress', title: 'In Progress', color: 'border-blue-500' },
-      { id: 'completed', title: 'Completed', color: 'border-green-500' },
-      { id: 'cancelled', title: 'Cancelled', color: 'border-gray-500' },
-    ];
+  // Status-based data
+  const statusColumns = [
+    { id: 'pending', title: 'Pending', color: 'border-yellow-500' },
+    { id: 'in_progress', title: 'In Progress', color: 'border-blue-500' },
+    { id: 'completed', title: 'Completed', color: 'border-green-500' },
+    { id: 'cancelled', title: 'Cancelled', color: 'border-gray-500' },
+  ];
 
-    const tasksByStatus = useMemo(() => {
-      const groups: Record<string, any[]> = {
-        'pending': [],
-        'in_progress': [],
-        'completed': [],
-        'cancelled': []
-      };
-      
-      safeTasks.forEach((task: any) => {
-        if (task && task.status && groups[task.status]) {
-          groups[task.status].push(task);
-        }
-      });
-      return groups;
-    }, [safeTasks]);
+  const tasksByStatus = useMemo(() => {
+    const groups: Record<string, any[]> = {
+      'pending': [],
+      'in_progress': [],
+      'completed': [],
+      'cancelled': []
+    };
+    
+    safeTasks.forEach((task: any) => {
+      if (task && task.status && groups[task.status]) {
+        groups[task.status].push(task);
+      }
+    });
+    return groups;
+  }, [safeTasks]);
 
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statusColumns.map((column) => (
-          <DroppableColumn
-            key={column.id}
-            id={column.id}
-            title={column.title}
-            tasks={tasksByStatus[column.id]}
-            onTaskClick={onTaskClick}
-            workersMap={workersMap}
-            statusColor={column.color}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  // Date-based kanban view (original behavior)
+  // Date-based data
   const today = startOfDay(new Date());
   
   const columns = useMemo(() => {
@@ -282,6 +264,25 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
 
     return groups;
   }, [safeTasks, columns]);
+
+  // Render based on viewMode
+  if (viewMode === 'status') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {statusColumns.map((column) => (
+          <DroppableColumn
+            key={column.id}
+            id={column.id}
+            title={column.title}
+            tasks={tasksByStatus[column.id]}
+            onTaskClick={onTaskClick}
+            workersMap={workersMap}
+            statusColor={column.color}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
