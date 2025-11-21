@@ -34,6 +34,7 @@ export default function AddressAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [justSelected, setJustSelected] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +42,7 @@ export default function AddressAutocomplete({
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
+        setIsFocused(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -48,8 +50,8 @@ export default function AddressAutocomplete({
   }, []);
 
   useEffect(() => {
-    // Don't fetch predictions if we just selected an address
-    if (justSelected) {
+    // Don't fetch predictions if we just selected an address or field is not focused
+    if (justSelected || !isFocused) {
       setJustSelected(false);
       return;
     }
@@ -83,7 +85,7 @@ export default function AddressAutocomplete({
         setIsLoading(false);
       }
     }, 300);
-  }, [value, justSelected]);
+  }, [value, justSelected, isFocused]);
 
   const handleSelect = async (placeId: string, description: string) => {
     setIsLoading(true);
@@ -149,6 +151,7 @@ export default function AddressAutocomplete({
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
           placeholder={placeholder}
           className={className}
         />
