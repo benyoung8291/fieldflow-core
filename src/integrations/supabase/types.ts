@@ -2204,6 +2204,7 @@ export type Database = {
           supplier_id: string | null
           supplier_invoice_number: string | null
           sync_error: string | null
+          sync_status: string | null
           synced_to_accounting_at: string | null
           tax_amount: number
           tax_rate: number
@@ -2241,6 +2242,7 @@ export type Database = {
           supplier_id?: string | null
           supplier_invoice_number?: string | null
           sync_error?: string | null
+          sync_status?: string | null
           synced_to_accounting_at?: string | null
           tax_amount?: number
           tax_rate?: number
@@ -2278,6 +2280,7 @@ export type Database = {
           supplier_id?: string | null
           supplier_invoice_number?: string | null
           sync_error?: string | null
+          sync_status?: string | null
           synced_to_accounting_at?: string | null
           tax_amount?: number
           tax_rate?: number

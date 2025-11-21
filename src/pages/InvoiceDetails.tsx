@@ -89,7 +89,8 @@ export default function InvoiceDetails() {
       if (error) return null;
       return data;
     },
-    enabled: !!invoice?.tenant_id && !!invoice?.acumatica_reference_nbr,
+    // @ts-ignore - sync_status will exist
+    enabled: !!invoice?.tenant_id && !!(invoice?.acumatica_reference_nbr || invoice?.sync_status === 'synced'),
   });
 
   // Fetch suppliers for editing
@@ -681,6 +682,12 @@ export default function InvoiceDetails() {
       variant: "outline" as const,
       className: "text-xs",
     }] : []),
+    // @ts-ignore - sync_status will exist
+    ...(invoice.sync_status === 'synced' && invoice.acumatica_reference_nbr ? [{
+      label: "Synced to Acumatica",
+      variant: "secondary" as const,
+      className: "text-xs",
+    }] : []),
     ...(invoice.acumatica_status ? [{
       label: `Acumatica: ${invoice.acumatica_status}`,
       variant: invoice.acumatica_status === "Released" ? "destructive" as const : "secondary" as const,
@@ -805,28 +812,38 @@ export default function InvoiceDetails() {
               <div className="text-sm text-muted-foreground mt-1">
                 {accountingIntegration?.acumatica_instance_url ? (
                   <a
-                    href={`${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AR301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`}
+                    href={
+                      // @ts-ignore - invoice_type exists
+                      invoice.invoice_type === 'ap'
+                        ? `${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AP301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`
+                        : `${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AR301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-primary hover:underline"
                   >
-                    View in Acumatica: {invoice.acumatica_reference_nbr}
+                    {/* @ts-ignore - invoice_type exists */}
+                    View {invoice.invoice_type === 'ap' ? 'Bill' : 'Invoice'} in Acumatica: {invoice.acumatica_reference_nbr}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
                   `Reference: ${invoice.acumatica_reference_nbr}`
                 )}
-                {invoice.synced_to_accounting_at && ` • Synced: ${format(new Date(invoice.synced_to_accounting_at), "dd MMM yyyy HH:mm")}`}
+                {/* @ts-ignore - last_synced_at will exist */}
+                {(invoice.synced_to_accounting_at || invoice.last_synced_at) && ` • Synced: ${format(new Date(invoice.synced_to_accounting_at || invoice.last_synced_at), "dd MMM yyyy HH:mm")}`}
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => syncAcumaticaStatusMutation.mutate()}
-              disabled={syncAcumaticaStatusMutation.isPending}
-            >
-              {syncAcumaticaStatusMutation.isPending ? "Syncing..." : "Sync Status"}
-            </Button>
+            {/* @ts-ignore - invoice_type exists */}
+            {invoice.invoice_type !== 'ap' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncAcumaticaStatusMutation.mutate()}
+                disabled={syncAcumaticaStatusMutation.isPending}
+              >
+                {syncAcumaticaStatusMutation.isPending ? "Syncing..." : "Sync Status"}
+              </Button>
+            )}
           </div>
         </div>
       )}
