@@ -65,6 +65,7 @@ import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
+import WorkerFieldReport from "./pages/worker/WorkerFieldReport";
 import SupervisorDashboard from "./pages/worker/supervisor/SupervisorDashboard";
 import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashboard";
 import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
@@ -218,6 +219,7 @@ const App = () => {
             <Route path="/workflows" element={isAuthenticated ? <Workflows /> : <Navigate to="/auth" replace />} />
             <Route path="/workflows/templates" element={isAuthenticated ? <WorkflowTemplateSelector /> : <Navigate to="/auth" replace />} />
             <Route path="/workflows/:id" element={isAuthenticated ? <WorkflowBuilder /> : <Navigate to="/auth" replace />} />
+            <Route path="/field-reports" element={isAuthenticated ? <FieldReports /> : <Navigate to="/auth" replace />} />
             <Route path="/contacts" element={isAuthenticated ? <Contacts /> : <Navigate to="/auth" replace />} />
             <Route path="/contacts/:id" element={isAuthenticated ? <ContactDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
@@ -231,6 +233,7 @@ const App = () => {
             <Route path="/worker/supervisor/service-orders" element={isAuthenticated ? <SupervisorServiceOrders /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/appointments" element={isAuthenticated ? <WorkerAppointments /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/appointments/:id" element={isAuthenticated ? <WorkerAppointmentDetails /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/appointments/:id/field-report" element={isAuthenticated ? <WorkerFieldReport /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/schedule" element={isAuthenticated ? <WorkerSchedule /> : <Navigate to="/worker/auth" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

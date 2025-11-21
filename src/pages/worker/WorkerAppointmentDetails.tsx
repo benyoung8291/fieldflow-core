@@ -21,6 +21,7 @@ import {
   Play,
   Square,
   Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -967,14 +968,25 @@ export default function WorkerAppointmentDetails() {
 
         {/* Complete Job */}
         {timeLog && !timeLog.clock_out && !isCompleted && (
-          <Button
-            onClick={handleCompleteAppointment}
-            size="lg"
-            className="w-full"
-          >
-            <FileSignature className="h-5 w-5 mr-2" />
-            Complete Job & Get Signature
-          </Button>
+          <div className="space-y-2">
+            <Button
+              onClick={handleCompleteAppointment}
+              size="lg"
+              className="w-full"
+            >
+              <FileSignature className="h-5 w-5 mr-2" />
+              Complete Job & Get Signature
+            </Button>
+            <Button
+              onClick={() => navigate(`/worker/appointments/${id}/field-report`)}
+              size="lg"
+              variant="outline"
+              className="w-full"
+            >
+              <FileText className="h-5 w-5 mr-2" />
+              Create Field Report
+            </Button>
+          </div>
         )}
 
         {/* Time Logs */}
