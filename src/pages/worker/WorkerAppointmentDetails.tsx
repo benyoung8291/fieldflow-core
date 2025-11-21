@@ -773,26 +773,37 @@ export default function WorkerAppointmentDetails() {
                     />
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="space-y-3">
                     <Button
-                      onClick={handlePause}
-                      disabled={processing}
-                      size="lg"
                       variant="outline"
-                      className="flex-1"
+                      onClick={() => navigate(`/worker/field-report/${id}`)}
+                      className="w-full"
                     >
-                      Pause
+                      <FileText className="h-4 w-4 mr-2" />
+                      Create Field Report
                     </Button>
-                    <Button
-                      onClick={handleClockOut}
-                      disabled={processing}
-                      size="lg"
-                      variant="destructive"
-                      className="flex-1"
-                    >
-                      <Square className="h-5 w-5 mr-2" />
-                      Clock Out
-                    </Button>
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handlePause}
+                        disabled={processing}
+                        size="lg"
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Pause
+                      </Button>
+                      <Button
+                        onClick={handleClockOut}
+                        disabled={processing}
+                        size="lg"
+                        variant="destructive"
+                        className="flex-1"
+                      >
+                        <Square className="h-5 w-5 mr-2" />
+                        Clock Out
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : isPaused ? (
