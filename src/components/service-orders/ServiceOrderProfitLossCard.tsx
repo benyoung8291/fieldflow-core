@@ -10,6 +10,7 @@ interface ServiceOrderProfitLossCardProps {
   profitMargin?: number;
   pendingPOCosts?: number;
   apInvoiceCosts?: number;
+  estimatedLaborCost?: number;
 }
 
 export default function ServiceOrderProfitLossCard({
@@ -21,6 +22,7 @@ export default function ServiceOrderProfitLossCard({
   profitMargin,
   pendingPOCosts = 0,
   apInvoiceCosts = 0,
+  estimatedLaborCost = 0,
 }: ServiceOrderProfitLossCardProps) {
   const grossProfit = totalRevenue - actualCost;
   const isPositive = grossProfit >= 0;
@@ -63,6 +65,16 @@ export default function ServiceOrderProfitLossCard({
               ${costOfLabor.toFixed(2)}
             </span>
           </div>
+          
+          {/* Estimated Labor */}
+          {estimatedLaborCost > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs">Est. Labor</span>
+              <span className="text-xs font-medium">
+                ${estimatedLaborCost.toFixed(2)}
+              </span>
+            </div>
+          )}
           
           {/* AP Invoice Costs */}
           {apInvoiceCosts > 0 && (
