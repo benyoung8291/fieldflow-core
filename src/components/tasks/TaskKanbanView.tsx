@@ -56,9 +56,34 @@ function DroppableColumn({
 
   // Sort tasks: overdue first, then by priority
   const sortedTasks = useMemo(() => {
+    if (!Array.isArray(tasks)) return [];
+    
     return [...tasks].sort((a, b) => {
-      const aOverdue = a.due_date && isPast(startOfDay(new Date(a.due_date))) && a.status !== 'completed';
-      const bOverdue = b.due_date && isPast(startOfDay(new Date(b.due_date))) && b.status !== 'completed';
+      // Safely check for overdue tasks with proper date validation
+      let aOverdue = false;
+      let bOverdue = false;
+      
+      try {
+        if (a?.due_date) {
+          const aDueDate = new Date(a.due_date);
+          if (!isNaN(aDueDate.getTime())) {
+            aOverdue = isPast(startOfDay(aDueDate)) && a.status !== 'completed';
+          }
+        }
+      } catch (e) {
+        console.warn('Invalid date for task:', a?.id);
+      }
+      
+      try {
+        if (b?.due_date) {
+          const bDueDate = new Date(b.due_date);
+          if (!isNaN(bDueDate.getTime())) {
+            bOverdue = isPast(startOfDay(bDueDate)) && b.status !== 'completed';
+          }
+        }
+      } catch (e) {
+        console.warn('Invalid date for task:', b?.id);
+      }
       
       // Overdue tasks come first
       if (aOverdue && !bOverdue) return -1;
@@ -66,7 +91,7 @@ function DroppableColumn({
       
       // Then sort by priority
       const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-      return (priorityOrder[a.priority] || 4) - (priorityOrder[b.priority] || 4);
+      return (priorityOrder[a?.priority] || 4) - (priorityOrder[b?.priority] || 4);
     });
   }, [tasks]);
 
@@ -126,6 +151,9 @@ function DroppableColumn({
 }
 
 export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status' }: TaskKanbanViewProps) {
+  // Safety check for tasks prop
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
@@ -165,13 +193,14 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
         'completed': [],
         'cancelled': []
       };
-      tasks.forEach((task: any) => {
-        if (groups[task.status]) {
+      
+      safeTasks.forEach((task: any) => {
+        if (task && task.status && groups[task.status]) {
           groups[task.status].push(task);
         }
       });
       return groups;
-    }, [tasks]);
+    }, [safeTasks]);
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -199,9 +228,18 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
     let daysAdded = 0;
     
     while (daysAdded < 3) {
-      if (!isWeekend(currentDate) || tasks.some((t: any) => 
-        t.due_date && isSameDay(startOfDay(new Date(t.due_date)), currentDate)
-      )) {
+      const hasTasksOnDate = safeTasks.some((t: any) => {
+        if (!t || !t.due_date) return false;
+        try {
+          const taskDueDate = new Date(t.due_date);
+          if (isNaN(taskDueDate.getTime())) return false;
+          return isSameDay(startOfDay(taskDueDate), currentDate);
+        } catch {
+          return false;
+        }
+      });
+      
+      if (!isWeekend(currentDate) || hasTasksOnDate) {
         const dayLabel = daysAdded === 0 ? 'Today' : daysAdded === 1 ? 'Tomorrow' : format(currentDate, 'EEEE');
         cols.push({ 
           date: currentDate, 
@@ -214,7 +252,7 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
     }
     
     return cols;
-  }, [today, tasks]);
+  }, [today, safeTasks]);
 
   const tasksByDate = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -224,18 +262,26 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
       groups[dateKey] = [];
     });
 
-    tasks.forEach((task: any) => {
+    safeTasks.forEach((task: any) => {
       if (task.due_date) {
-        const taskDate = startOfDay(new Date(task.due_date));
-        const dateKey = format(taskDate, 'yyyy-MM-dd');
-        if (groups[dateKey]) {
-          groups[dateKey].push(task);
+        try {
+          const taskDueDate = new Date(task.due_date);
+          // Validate the date is valid
+          if (!isNaN(taskDueDate.getTime())) {
+            const taskDate = startOfDay(taskDueDate);
+            const dateKey = format(taskDate, 'yyyy-MM-dd');
+            if (groups[dateKey]) {
+              groups[dateKey].push(task);
+            }
+          }
+        } catch (e) {
+          console.warn('Invalid due_date for task:', task.id, task.due_date);
         }
       }
     });
 
     return groups;
-  }, [tasks, columns]);
+  }, [safeTasks, columns]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
