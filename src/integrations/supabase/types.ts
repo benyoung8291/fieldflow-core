@@ -1800,6 +1800,229 @@ export type Database = {
         }
         Relationships: []
       }
+      field_report_photos: {
+        Row: {
+          display_order: number
+          field_report_id: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          paired_photo_id: string | null
+          photo_type: string
+          tenant_id: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          display_order?: number
+          field_report_id: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          paired_photo_id?: string | null
+          photo_type: string
+          tenant_id: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          display_order?: number
+          field_report_id?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          paired_photo_id?: string | null
+          photo_type?: string
+          tenant_id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_report_photos_field_report_id_fkey"
+            columns: ["field_report_id"]
+            isOneToOne: false
+            referencedRelation: "field_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_photos_paired_photo_id_fkey"
+            columns: ["paired_photo_id"]
+            isOneToOne: false
+            referencedRelation: "field_report_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_photos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_reports: {
+        Row: {
+          appointment_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          arrival_time: string
+          carpet_condition_arrival: number | null
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          customer_signature_data: string | null
+          customer_signature_date: string | null
+          customer_signature_name: string | null
+          equipment_clean_working: boolean
+          equipment_tested_tagged: boolean
+          flooring_state_description: string | null
+          had_incident: boolean
+          had_problem_areas: boolean
+          hard_floor_condition_arrival: number | null
+          has_signed_swms: boolean
+          id: string
+          incident_description: string | null
+          internal_notes: string | null
+          location_id: string | null
+          methods_attempted: string | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          problem_areas_description: string | null
+          report_number: string
+          service_date: string
+          service_order_id: string | null
+          status: string
+          submitted_at: string | null
+          tenant_id: string
+          updated_at: string
+          work_description: string
+          work_order_number: string | null
+          worker_name: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          arrival_time: string
+          carpet_condition_arrival?: number | null
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          customer_signature_data?: string | null
+          customer_signature_date?: string | null
+          customer_signature_name?: string | null
+          equipment_clean_working?: boolean
+          equipment_tested_tagged?: boolean
+          flooring_state_description?: string | null
+          had_incident?: boolean
+          had_problem_areas?: boolean
+          hard_floor_condition_arrival?: number | null
+          has_signed_swms?: boolean
+          id?: string
+          incident_description?: string | null
+          internal_notes?: string | null
+          location_id?: string | null
+          methods_attempted?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          problem_areas_description?: string | null
+          report_number: string
+          service_date: string
+          service_order_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          tenant_id: string
+          updated_at?: string
+          work_description: string
+          work_order_number?: string | null
+          worker_name: string
+        }
+        Update: {
+          appointment_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          arrival_time?: string
+          carpet_condition_arrival?: number | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          customer_signature_data?: string | null
+          customer_signature_date?: string | null
+          customer_signature_name?: string | null
+          equipment_clean_working?: boolean
+          equipment_tested_tagged?: boolean
+          flooring_state_description?: string | null
+          had_incident?: boolean
+          had_problem_areas?: boolean
+          hard_floor_condition_arrival?: number | null
+          has_signed_swms?: boolean
+          id?: string
+          incident_description?: string | null
+          internal_notes?: string | null
+          location_id?: string | null
+          methods_attempted?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          problem_areas_description?: string | null
+          report_number?: string
+          service_date?: string
+          service_order_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+          work_description?: string
+          work_order_number?: string | null
+          worker_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_reports_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       general_settings: {
         Row: {
           created_at: string | null
