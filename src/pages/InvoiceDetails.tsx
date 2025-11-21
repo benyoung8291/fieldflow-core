@@ -41,8 +41,6 @@ export default function InvoiceDetails() {
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
-  const [editSupplierDialogOpen, setEditSupplierDialogOpen] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -587,31 +585,7 @@ export default function InvoiceDetails() {
     },
   });
 
-  const updateSupplierMutation = useMutation({
-    mutationFn: async (supplierId: string) => {
-      // Check if invoice is released in Acumatica
-      if (invoice?.acumatica_status === "Released") {
-        throw new Error("Cannot modify supplier - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
-      }
-
-      const { error } = await supabase
-        .from("invoices")
-        .update({ supplier_id: supplierId })
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
-      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
-      toast.success("Supplier updated successfully");
-      setEditSupplierDialogOpen(false);
-    },
-    onError: (error: any) => {
-      console.error(error);
-      toast.error(error.message || "Failed to update supplier");
-    },
-  });
+  // Removed supplier mutation - invoices table is AR-only now
 
   const recalculateTotalsMutation = useMutation({
     mutationFn: async () => {
@@ -1001,40 +975,19 @@ export default function InvoiceDetails() {
     }] : []),
     {
       value: "customer",
-      // @ts-ignore - invoice_type exists
-      label: invoice.invoice_type === 'ap' ? "Supplier" : "Customer",
+      label: "Customer",
       icon: <User className="h-4 w-4" />,
       content: (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              {/* @ts-ignore - invoice_type exists */}
-              <CardTitle>{invoice.invoice_type === 'ap' ? 'Supplier' : 'Customer'} Information</CardTitle>
-              {/* @ts-ignore - invoice_type exists */}
-              {invoice.invoice_type === 'ap' && canEdit && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedSupplierId(invoice.supplier_id || "");
-                    setEditSupplierDialogOpen(true);
-                  }}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Supplier
-                </Button>
-              )}
-            </div>
+            <CardTitle>Customer Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              {/* @ts-ignore - invoice_type and suppliers exists */}
-              <div className="text-sm text-muted-foreground mb-1">{invoice.invoice_type === 'ap' ? 'Supplier' : 'Customer'} Name</div>
-              {/* @ts-ignore - invoice_type and suppliers exists */}
-              <div className="font-medium">{invoice.invoice_type === 'ap' ? invoice.suppliers?.name : invoice.customers?.name}</div>
+              <div className="text-sm text-muted-foreground mb-1">Customer Name</div>
+              <div className="font-medium">{invoice.customers?.name}</div>
             </div>
-            {/* @ts-ignore - invoice_type and suppliers exists */}
-            {(invoice.invoice_type === 'ap' ? invoice.suppliers?.email : invoice.customers?.email) && (
+            {invoice.customers?.email && (
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Email</div>
                 {/* @ts-ignore - invoice_type and suppliers exists */}
@@ -1204,53 +1157,6 @@ export default function InvoiceDetails() {
           />
         </>
       )}
-
-      <Dialog open={editSupplierDialogOpen} onOpenChange={setEditSupplierDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Supplier</DialogTitle>
-            <DialogDescription>
-              Change the supplier for this AP invoice
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Supplier</Label>
-              <Select
-                value={selectedSupplierId}
-                onValueChange={setSelectedSupplierId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers?.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                      {supplier.acumatica_supplier_id && (
-                        <span className="ml-2 text-muted-foreground text-xs">
-                          ({supplier.acumatica_supplier_id})
-                        </span>
-                      )}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSupplierDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => updateSupplierMutation.mutate(selectedSupplierId)}
-              disabled={!selectedSupplierId || updateSupplierMutation.isPending}
-            >
-              {updateSupplierMutation.isPending ? "Updating..." : "Update Supplier"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

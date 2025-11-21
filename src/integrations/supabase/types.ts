@@ -128,6 +128,75 @@ export type Database = {
         }
         Relationships: []
       }
+      ap_invoice_line_items: {
+        Row: {
+          account_code: string | null
+          ap_invoice_id: string
+          created_at: string | null
+          description: string
+          id: string
+          is_gst_free: boolean | null
+          item_order: number
+          line_item_id: string | null
+          line_total: number
+          quantity: number
+          source_id: string | null
+          source_type: string | null
+          sub_account: string | null
+          tenant_id: string
+          unit_price: number
+        }
+        Insert: {
+          account_code?: string | null
+          ap_invoice_id: string
+          created_at?: string | null
+          description: string
+          id?: string
+          is_gst_free?: boolean | null
+          item_order?: number
+          line_item_id?: string | null
+          line_total?: number
+          quantity?: number
+          source_id?: string | null
+          source_type?: string | null
+          sub_account?: string | null
+          tenant_id: string
+          unit_price?: number
+        }
+        Update: {
+          account_code?: string | null
+          ap_invoice_id?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_gst_free?: boolean | null
+          item_order?: number
+          line_item_id?: string | null
+          line_total?: number
+          quantity?: number
+          source_id?: string | null
+          source_type?: string | null
+          sub_account?: string | null
+          tenant_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_invoice_line_items_ap_invoice_id_fkey"
+            columns: ["ap_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "ap_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoice_line_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ap_invoice_settings: {
         Row: {
           auto_approve_within_threshold: boolean
@@ -161,6 +230,159 @@ export type Database = {
             foreignKeyName: "ap_invoice_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ap_invoices: {
+        Row: {
+          acumatica_invoice_id: string | null
+          acumatica_reference_nbr: string | null
+          acumatica_status: string | null
+          approval_requested_at: string | null
+          approval_requested_by: string | null
+          approval_status: string | null
+          created_at: string
+          created_by: string
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          last_synced_at: string | null
+          manager_approval_notes: string | null
+          manager_approved_at: string | null
+          manager_approved_by: string | null
+          notes: string | null
+          requires_manager_approval: boolean | null
+          status: string
+          subtotal: number
+          supplier_id: string | null
+          supplier_invoice_number: string | null
+          sync_error: string | null
+          sync_status: string | null
+          synced_to_accounting_at: string | null
+          tax_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          acumatica_invoice_id?: string | null
+          acumatica_reference_nbr?: string | null
+          acumatica_status?: string | null
+          approval_requested_at?: string | null
+          approval_requested_by?: string | null
+          approval_status?: string | null
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          last_synced_at?: string | null
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          notes?: string | null
+          requires_manager_approval?: boolean | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          supplier_invoice_number?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          synced_to_accounting_at?: string | null
+          tax_amount?: number
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          acumatica_invoice_id?: string | null
+          acumatica_reference_nbr?: string | null
+          acumatica_status?: string | null
+          approval_requested_at?: string | null
+          approval_requested_by?: string | null
+          approval_status?: string | null
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          last_synced_at?: string | null
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          notes?: string | null
+          requires_manager_approval?: boolean | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          supplier_invoice_number?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          synced_to_accounting_at?: string | null
+          tax_amount?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_invoices_approval_requested_by_fkey"
+            columns: ["approval_requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_approval_requested_by_fkey"
+            columns: ["approval_requested_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_manager_approved_by_fkey"
+            columns: ["manager_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_manager_approved_by_fkey"
+            columns: ["manager_approved_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -2053,6 +2275,7 @@ export type Database = {
       }
       integration_sync_logs: {
         Row: {
+          ap_invoice_id: string | null
           created_at: string | null
           error_message: string | null
           external_reference: string | null
@@ -2067,6 +2290,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          ap_invoice_id?: string | null
           created_at?: string | null
           error_message?: string | null
           external_reference?: string | null
@@ -2081,6 +2305,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          ap_invoice_id?: string | null
           created_at?: string | null
           error_message?: string | null
           external_reference?: string | null
@@ -2095,6 +2320,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "integration_sync_logs_ap_invoice_id_fkey"
+            columns: ["ap_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "ap_invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "integration_sync_logs_integration_id_fkey"
             columns: ["integration_id"]
@@ -2188,7 +2420,6 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
-          invoice_type: string
           is_progress_invoice: boolean | null
           last_synced_at: string | null
           manager_approval_notes: string | null
@@ -2201,8 +2432,6 @@ export type Database = {
           service_order_id: string | null
           status: string
           subtotal: number
-          supplier_id: string | null
-          supplier_invoice_number: string | null
           sync_error: string | null
           sync_status: string | null
           synced_to_accounting_at: string | null
@@ -2226,7 +2455,6 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
-          invoice_type?: string
           is_progress_invoice?: boolean | null
           last_synced_at?: string | null
           manager_approval_notes?: string | null
@@ -2239,8 +2467,6 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
-          supplier_id?: string | null
-          supplier_invoice_number?: string | null
           sync_error?: string | null
           sync_status?: string | null
           synced_to_accounting_at?: string | null
@@ -2264,7 +2490,6 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
-          invoice_type?: string
           is_progress_invoice?: boolean | null
           last_synced_at?: string | null
           manager_approval_notes?: string | null
@@ -2277,8 +2502,6 @@ export type Database = {
           service_order_id?: string | null
           status?: string
           subtotal?: number
-          supplier_id?: string | null
-          supplier_invoice_number?: string | null
           sync_error?: string | null
           sync_status?: string | null
           synced_to_accounting_at?: string | null
@@ -2315,13 +2538,6 @@ export type Database = {
             columns: ["service_order_id"]
             isOneToOne: false
             referencedRelation: "service_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
