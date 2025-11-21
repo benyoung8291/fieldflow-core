@@ -138,7 +138,9 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
 
       setAbnValidated(true);
       setGstRegistered(data.business_details?.gst_registered || false);
-      setAvailableTradingNames(data.business_details?.trading_names || []);
+      // Filter out empty trading names
+      const validTradingNames = (data.business_details?.trading_names || []).filter((name: string) => name && name.trim() !== '');
+      setAvailableTradingNames(validTradingNames);
       
       console.log('Setting form data with legal name:', data.business_details?.legal_name);
       console.log('Current trading name:', formData.tradingName);

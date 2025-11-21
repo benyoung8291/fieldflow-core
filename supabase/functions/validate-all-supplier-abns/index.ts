@@ -94,9 +94,13 @@ Deno.serve(async (req) => {
           if (validationResult.business_details.legal_name) {
             updateData.legal_company_name = validationResult.business_details.legal_name;
           }
+          // Only use first non-empty trading name
           if (validationResult.business_details.trading_names && 
               validationResult.business_details.trading_names.length > 0) {
-            updateData.trading_name = validationResult.business_details.trading_names[0];
+            const firstNonEmpty = validationResult.business_details.trading_names.find((name: string) => name && name.trim() !== '');
+            if (firstNonEmpty) {
+              updateData.trading_name = firstNonEmpty;
+            }
           }
           if (validationResult.business_details.gst_registered !== undefined) {
             updateData.gst_registered = validationResult.business_details.gst_registered;
