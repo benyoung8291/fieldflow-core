@@ -127,8 +127,8 @@ serve(async (req) => {
     
     const businessEntitySection = businessEntityTag[1];
     
-    // Log the first 500 chars of businessEntity section to debug
-    console.log('DEBUG: businessEntitySection (first 500 chars):', businessEntitySection.substring(0, 500));
+    // Log the first 1500 chars of businessEntity section to debug
+    console.log('DEBUG: businessEntitySection (first 1500 chars):', businessEntitySection.substring(0, 1500));
     
     // Check if businessName tags exist
     const businessNameCount = (businessEntitySection.match(/<businessName>/g) || []).length;
