@@ -303,12 +303,11 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
         let postcode = '';
         let fullAddress = '';
 
-        // Map all fields from the CSV
-        Object.keys(columnMapping).forEach((csvColumn) => {
-          const dbField = columnMapping[csvColumn];
-          const value = row[csvColumn];
+        // Map all fields from the mapped row (keys are already DB field names)
+        Object.keys(row).forEach((dbField) => {
+          const value = row[dbField];
 
-          if (value !== undefined && value !== null && value !== '') {
+          if (value !== undefined && value !== null && value !== '' && dbField !== 'rowNumber') {
             if (dbField === 'name') {
               supplierData.name = value.trim();
             } else if (dbField === 'trading_name') {
