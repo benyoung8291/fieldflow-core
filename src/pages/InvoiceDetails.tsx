@@ -164,7 +164,18 @@ export default function InvoiceDetails() {
 
       if (error) throw error;
     },
+    onMutate: (status) => {
+      // Show loading toast when approving
+      if (status === "approved") {
+        toast.loading("Syncing invoice to MYOB Acumatica...", { id: "invoice-sync" });
+      }
+    },
     onSuccess: (_, status) => {
+      // Dismiss loading toast
+      if (status === "approved") {
+        toast.dismiss("invoice-sync");
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
       
@@ -174,7 +185,11 @@ export default function InvoiceDetails() {
         toast.success("Invoice status updated successfully");
       }
     },
-    onError: (error: any) => {
+    onError: (error: any, status) => {
+      // Dismiss loading toast
+      if (status === "approved") {
+        toast.dismiss("invoice-sync");
+      }
       toast.error(error.message || "Failed to update invoice status");
     },
   });
