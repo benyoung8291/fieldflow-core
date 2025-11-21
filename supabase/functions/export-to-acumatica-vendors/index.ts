@@ -73,7 +73,7 @@ serve(async (req) => {
         };
 
         const createResponse = await fetch(
-          `${instanceUrl}/entity/Default/20.200.001/Vendor`,
+          `${instanceUrl}/entity/Default/23.200.001/Vendor`,
           {
             method: "PUT",
             headers: {
