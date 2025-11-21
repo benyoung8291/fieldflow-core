@@ -129,41 +129,48 @@ export default function InvoiceDetails() {
         throw new Error("Cannot modify invoice status - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
       }
 
+      // If moving to approved status, trigger accounting sync FIRST
+      if (status === "approved") {
+        console.log("Attempting to approve invoice - triggering accounting sync first:", id);
+        
+        const { data: syncData, error: syncError } = await supabase.functions.invoke(
+          "sync-invoice-to-accounting",
+          {
+            body: { invoice_id: id },
+          }
+        );
+
+        if (syncError) {
+          console.error("Accounting sync error:", syncError);
+          throw new Error(`Acumatica sync failed: ${syncError.message}`);
+        }
+
+        console.log("Accounting sync response:", syncData);
+
+        // Check if any sync result failed
+        if (syncData?.results?.some((r: any) => r.status === "failed")) {
+          const failedResult = syncData.results.find((r: any) => r.status === "failed");
+          throw new Error(failedResult.error || "Unknown sync error");
+        }
+
+        console.log("Accounting sync successful, proceeding to update status");
+      }
+
+      // Only update status if sync was successful (or not needed)
       const { error } = await supabase
         .from("invoices")
         .update({ status })
         .eq("id", id);
 
       if (error) throw error;
-
-      // If status is approved, trigger integration sync
-      if (status === "approved") {
-        console.log("Invoice approved, triggering accounting sync for invoice:", id);
-        try {
-          const { data, error: syncError } = await supabase.functions.invoke(
-            "sync-invoice-to-accounting",
-            {
-              body: { invoice_id: id },
-            }
-          );
-
-          if (syncError) {
-            console.error("Accounting sync error:", syncError);
-            toast.error("Invoice approved but sync to accounting failed: " + syncError.message);
-          } else {
-            console.log("Accounting sync successful:", data);
-            toast.success("Invoice approved and synced to accounting successfully");
-          }
-        } catch (syncError: any) {
-          console.error("Accounting sync exception:", syncError);
-          toast.error("Invoice approved but sync to accounting failed: " + syncError.message);
-        }
-      }
     },
     onSuccess: (_, status) => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
-      if (status !== "approved") {
+      
+      if (status === "approved") {
+        toast.success("Invoice approved and synced to MYOB Acumatica successfully");
+      } else {
         toast.success("Invoice status updated successfully");
       }
     },
