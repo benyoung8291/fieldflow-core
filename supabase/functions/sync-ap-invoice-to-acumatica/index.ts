@@ -24,23 +24,25 @@ serve(async (req) => {
 
     console.log('Syncing AP invoice to Acumatica:', invoice_id);
 
-    // Get invoice with supplier and line items
+    // Get invoice
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select(`
-        *,
-        supplier:suppliers(
-          name,
-          acumatica_supplier_id,
-          payment_terms
-        )
-      `)
+      .select('*')
       .eq('id', invoice_id)
       .eq('invoice_type', 'ap')
-      .single();
+      .maybeSingle();
 
     if (invoiceError) throw invoiceError;
     if (!invoice) throw new Error('Invoice not found');
+
+    // Get supplier separately
+    const { data: supplier, error: supplierError } = await supabase
+      .from('suppliers')
+      .select('name, acumatica_supplier_id, payment_terms')
+      .eq('id', invoice.supplier_id)
+      .maybeSingle();
+
+    if (supplierError) throw supplierError;
 
     // Get line items
     const { data: lineItems, error: lineItemsError } = await supabase
@@ -65,7 +67,11 @@ serve(async (req) => {
     }
 
     // Validate required fields
-    if (!invoice.supplier?.acumatica_supplier_id) {
+    if (!supplier) {
+      throw new Error('Supplier not found for this invoice');
+    }
+
+    if (!supplier.acumatica_supplier_id) {
       throw new Error('Supplier does not have an Acumatica Supplier ID mapped. Please ensure the supplier record has been synced to Acumatica.');
     }
 
@@ -74,7 +80,7 @@ serve(async (req) => {
     }
 
     // Format payment terms
-    const paymentTermsDays = invoice.supplier.payment_terms || 30;
+    const paymentTermsDays = supplier.payment_terms || 30;
     const terms = `NET${paymentTermsDays}DAYS`;
 
     // Calculate due date
@@ -98,7 +104,7 @@ serve(async (req) => {
     const billPayload = {
       Type: { value: "Bill" },
       ReferenceNbr: { value: "<NEW>" },
-      Vendor: { value: invoice.supplier.acumatica_supplier_id },
+      Vendor: { value: supplier.acumatica_supplier_id },
       VendorRef: { value: invoice.supplier_invoice_number || invoice.invoice_number },
       LocationID: { value: "MAIN" },
       LinkAPAccount: { value: "28000" },
