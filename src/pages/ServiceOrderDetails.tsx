@@ -198,11 +198,36 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  // Fetch AP invoices linked to this service order
+  const { data: apInvoices = [] } = useQuery({
+    queryKey: ["service-order-ap-invoices", id],
+    queryFn: async () => {
+      if (!id) return [];
+      
+      // @ts-ignore - Supabase types can be excessively deep
+      const { data, error } = await supabase
+        .from("ap_invoices")
+        .select("id, total_amount, subtotal, status, service_order_id")
+        .eq("service_order_id", id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
   const totalCost = lineItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0) * item.quantity, 0);
   const totalRevenue = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
-  const totalProfit = totalRevenue - totalCost;
+  
+  // Calculate AP invoice costs (approved AP invoices linked to this service order)
+  const apInvoiceCosts = apInvoices
+    .filter((invoice: any) => invoice.status === 'approved')
+    .reduce((sum: number, invoice: any) => sum + (invoice.subtotal || 0), 0);
+  
+  // Total actual cost includes line item costs + AP invoice costs
+  const actualCost = totalCost + apInvoiceCosts;
+  const totalProfit = totalRevenue - actualCost;
   const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   // Calculate pending purchase order costs (draft and approved POs not yet received)
@@ -517,7 +542,7 @@ export default function ServiceOrderDetails() {
     },
   ];
 
-  // Primary actions - Now includes all actions (file menu removed)
+  // Primary actions - primary buttons shown always
   const primaryActions: DocumentAction[] = [
     {
       label: "Complete Order",
@@ -547,31 +572,35 @@ export default function ServiceOrderDetails() {
       variant: "outline",
       show: true,
     },
+  ];
+
+  // Secondary actions - moved to dropdown menu
+  const secondaryActions: DocumentAction[] = [
     {
       label: "Duplicate",
       icon: <Copy className="h-4 w-4" />,
       onClick: () => {/* Duplicate order */},
-      variant: "outline",
+      variant: "ghost",
       show: true,
     },
     {
       label: "Set to Waiting",
       onClick: () => updateOrderStatusMutation.mutate("draft"),
-      variant: "outline",
-      show: true,
+      variant: "ghost",
+      show: order?.status !== "draft",
     },
     {
       label: "Cancel Order",
       icon: <XCircle className="h-4 w-4" />,
       onClick: () => setCancelConfirmOpen(true),
-      variant: "outline",
-      show: true,
+      variant: "ghost",
+      show: order?.status !== "cancelled",
     },
     {
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: handleDelete,
-      variant: "destructive",
+      variant: "ghost",
       show: true,
     },
   ];
@@ -772,11 +801,12 @@ export default function ServiceOrderDetails() {
           <div className="lg:col-span-2">
             <ServiceOrderProfitLossCard
               totalRevenue={totalRevenue}
-              actualCost={(order as any)?.actual_cost || 0}
-              costOfMaterials={(order as any)?.cost_of_materials || 0}
-              costOfLabor={(order as any)?.cost_of_labor || 0}
-              otherCosts={(order as any)?.other_costs || 0}
-              profitMargin={(order as any)?.profit_margin || 0}
+              actualCost={actualCost}
+              costOfMaterials={totalCost}
+              costOfLabor={0}
+              apInvoiceCosts={apInvoiceCosts}
+              otherCosts={0}
+              profitMargin={profitMargin}
               pendingPOCosts={pendingPOCosts}
             />
           </div>
@@ -1077,6 +1107,7 @@ export default function ServiceOrderDetails() {
         backPath="/service-orders"
         statusBadges={statusBadges}
         primaryActions={primaryActions}
+        secondaryActions={secondaryActions}
         auditTableName="service_orders"
         auditRecordId={id!}
         keyInfoSection={keyInfoSection}

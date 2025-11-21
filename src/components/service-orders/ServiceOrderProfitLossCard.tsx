@@ -6,9 +6,10 @@ interface ServiceOrderProfitLossCardProps {
   actualCost: number;
   costOfMaterials: number;
   costOfLabor: number;
-  otherCosts: number;
-  profitMargin: number;
+  otherCosts?: number;
+  profitMargin?: number;
   pendingPOCosts?: number;
+  apInvoiceCosts?: number;
 }
 
 export default function ServiceOrderProfitLossCard({
@@ -16,12 +17,14 @@ export default function ServiceOrderProfitLossCard({
   actualCost,
   costOfMaterials,
   costOfLabor,
-  otherCosts,
+  otherCosts = 0,
   profitMargin,
   pendingPOCosts = 0,
+  apInvoiceCosts = 0,
 }: ServiceOrderProfitLossCardProps) {
   const grossProfit = totalRevenue - actualCost;
   const isPositive = grossProfit >= 0;
+  const calculatedMargin = profitMargin ?? (totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0);
 
   return (
     <div className="bg-card border rounded-lg p-2.5">
@@ -60,6 +63,16 @@ export default function ServiceOrderProfitLossCard({
               ${costOfLabor.toFixed(2)}
             </span>
           </div>
+          
+          {/* AP Invoice Costs */}
+          {apInvoiceCosts > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs">AP Invoices</span>
+              <span className="text-xs font-medium">
+                ${apInvoiceCosts.toFixed(2)}
+              </span>
+            </div>
+          )}
           
           {/* Other */}
           {otherCosts > 0 && (
@@ -118,7 +131,7 @@ export default function ServiceOrderProfitLossCard({
                 isPositive ? "text-success" : "text-destructive"
               }`}
             >
-              {profitMargin.toFixed(1)}%
+              {calculatedMargin.toFixed(1)}%
             </span>
           </div>
         </div>

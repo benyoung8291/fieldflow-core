@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, MoreVertical } from "lucide-react";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +61,7 @@ interface DocumentDetailLayoutProps {
   
   // Toolbar actions
   primaryActions?: DocumentAction[];
+  secondaryActions?: DocumentAction[];
   fileMenuActions?: FileMenuAction[];
   
   // Audit (kept for backward compatibility but not used for drawer)
@@ -85,6 +86,7 @@ export default function DocumentDetailLayout({
   backPath,
   statusBadges = [],
   primaryActions = [],
+  secondaryActions = [],
   fileMenuActions = [],
   auditTableName,
   auditRecordId,
@@ -332,6 +334,31 @@ export default function DocumentDetailLayout({
                   </Button>
                 )
               )}
+
+            {/* Secondary Actions Dropdown */}
+            {secondaryActions.filter(action => action.show !== false).length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-popover z-50">
+                  {secondaryActions
+                    .filter(action => action.show !== false)
+                    .map((action, idx) => (
+                      <DropdownMenuItem
+                        key={idx}
+                        onClick={action.onClick}
+                        className={action.variant === "destructive" ? "text-destructive focus:text-destructive" : ""}
+                      >
+                        {action.icon && <span className="mr-2">{action.icon}</span>}
+                        {action.label}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
