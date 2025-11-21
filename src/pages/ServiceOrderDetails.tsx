@@ -312,8 +312,12 @@ export default function ServiceOrderDetails() {
       toast({ title: "Dates updated successfully" });
       setEditingDates(false);
     },
-    onError: (error) => {
-      toast({ title: "Failed to update dates", description: String(error), variant: "destructive" });
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to update dates", 
+        description: error?.message || "An error occurred while updating dates", 
+        variant: "destructive" 
+      });
     },
   });
 
