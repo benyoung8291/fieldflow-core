@@ -163,30 +163,75 @@ async function syncToAcumatica(invoice: any, integration: any) {
   // Remove trailing slash from instance URL if present
   const instanceUrl = integration.acumatica_instance_url.replace(/\/$/, '');
 
-  // Authenticate
-  console.log("Attempting Acumatica authentication...");
-  const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: username,
-      password: password,
-      company: integration.acumatica_company_name,
-    }),
-  });
+  // Authenticate with retry logic for concurrent session limits
+  let authResponse: Response | null = null;
+  let retryCount = 0;
+  const maxRetries = 2;
+  const retryDelay = 2000; // 2 seconds
 
-  if (!authResponse.ok) {
-    const authErrorText = await authResponse.text();
-    console.error("Acumatica authentication failed:", authErrorText);
-    throw new Error(`Failed to authenticate with Acumatica (${authResponse.status}): ${authErrorText || authResponse.statusText}`);
+  while (retryCount <= maxRetries) {
+    console.log(`Attempting Acumatica authentication (attempt ${retryCount + 1})...`);
+    
+    authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: username,
+        password: password,
+        company: integration.acumatica_company_name,
+      }),
+    });
+
+    console.log("Auth response:", { status: authResponse.status });
+
+    if (!authResponse.ok) {
+      const authErrorText = await authResponse.text();
+      console.error("Acumatica authentication failed:", authErrorText);
+      
+      // Check for concurrent login limit error
+      if (authErrorText.includes("concurrent API logins")) {
+        if (retryCount < maxRetries) {
+          console.log(`Concurrent session limit hit, waiting ${retryDelay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          retryCount++;
+          continue; // Retry
+        }
+      }
+      
+      throw new Error(`Failed to authenticate with Acumatica (${authResponse.status}): ${authErrorText || authResponse.statusText}`);
+    }
+    
+    // Success - break out of retry loop
+    break;
   }
 
-  const cookies = authResponse.headers.get("set-cookie");
-  if (!cookies) {
+  if (!authResponse) {
+    throw new Error("Failed to authenticate after retries");
+  }
+
+  // Get all Set-Cookie headers (there may be multiple)
+  const setCookieHeaders = authResponse.headers.getSetCookie?.() || [];
+  console.log("Number of Set-Cookie headers:", setCookieHeaders.length);
+  
+  // Fallback to single header if getSetCookie not available
+  if (setCookieHeaders.length === 0) {
+    const singleCookie = authResponse.headers.get("set-cookie");
+    if (singleCookie) {
+      setCookieHeaders.push(singleCookie);
+    }
+  }
+  
+  if (setCookieHeaders.length === 0) {
+    console.error("No authentication cookies received");
     throw new Error("No authentication cookies received from Acumatica");
   }
 
-  console.log("Authentication successful");
+  // Join all cookies into a single Cookie header value
+  const cookies = setCookieHeaders
+    .map(cookie => cookie.split(';')[0]) // Take only the name=value part
+    .join('; ');
+  
+  console.log("Authentication successful, cookies parsed:", cookies.substring(0, 100) + "...");
 
   // Get customer's Acumatica ID
   const customerId = invoice.customers?.acumatica_customer_id;
@@ -195,17 +240,41 @@ async function syncToAcumatica(invoice: any, integration: any) {
       method: "POST",
       headers: { "Cookie": cookies },
     });
-    throw new Error("Customer does not have an Acumatica customer ID mapped");
+    throw new Error("Customer does not have an Acumatica customer ID mapped. Please ensure the customer record has been synced to Acumatica.");
   }
+
+  console.log("Using Acumatica Customer ID:", customerId);
 
   // Prepare invoice description with invoice number prefix
   const description = `${invoice.invoice_number} - ${invoice.description || 'Invoice'}`;
 
-  // Build Acumatica invoice payload
+  // Build line items
+  const lineItems = invoice.invoice_line_items?.map((item: any) => {
+    const lineItem: any = {
+      Branch: { value: "PREMREST" },
+      InventoryID: { value: "CLEANING" },
+      Qty: { value: parseFloat(item.quantity) },
+      UOM: { value: "EACH" },
+      UnitPrice: { value: parseFloat(item.unit_price) },
+      TransactionDescription: { value: item.description || "" },
+    };
+
+    // Add account and subaccount if provided
+    if (item.account_code || integration.default_sales_account_code) {
+      lineItem.Account = { value: item.account_code || integration.default_sales_account_code };
+    }
+    if (item.sub_account || integration.default_sales_sub_account) {
+      lineItem.Subaccount = { value: item.sub_account || integration.default_sales_sub_account };
+    }
+
+    return lineItem;
+  }) || [];
+
+  // Build Acumatica invoice payload - exactly matching the user's working example
   const acumaticaInvoice = {
     Type: { value: "Invoice" },
     ReferenceNbr: { value: "<NEW>" },
-    Customer: { value: customerId },
+    Customer: { value: customerId },  // Use Customer, not CustomerID
     LocationID: { value: "MAIN" },
     LinkARAccount: { value: "16100" },
     Project: { value: "X" },
@@ -215,19 +284,13 @@ async function syncToAcumatica(invoice: any, integration: any) {
     DiscountDate: { value: invoice.invoice_date },
     DueDate: { value: invoice.due_date || invoice.invoice_date },
     Hold: { value: true },
-    Details: invoice.invoice_line_items?.map((item: any) => ({
-      Branch: { value: "PREMREST" },
-      InventoryID: { value: "CLEANING" },
-      Qty: { value: item.quantity },
-      UOM: { value: "EACH" },
-      UnitPrice: { value: item.unit_price },
-      TransactionDescription: { value: item.description || "" },
-      Account: { value: item.account_code || integration.default_sales_account_code },
-      Subaccount: { value: item.sub_account || integration.default_sales_sub_account },
-    })) || [],
+    Details: lineItems,
   };
 
-  console.log("Creating invoice in Acumatica:", JSON.stringify(acumaticaInvoice, null, 2));
+  console.log("Creating invoice in Acumatica with payload:", JSON.stringify(acumaticaInvoice, null, 2));
+
+  // Wait a moment to ensure session is fully established
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   const invoiceResponse = await fetch(
     `${instanceUrl}/entity/Default/20.200.001/SalesInvoice`,
@@ -242,9 +305,16 @@ async function syncToAcumatica(invoice: any, integration: any) {
     }
   );
 
+  console.log("Invoice response status:", invoiceResponse.status);
+
   if (!invoiceResponse.ok) {
     const errorText = await invoiceResponse.text();
-    console.error("Acumatica invoice creation failed:", errorText);
+    console.error("Acumatica invoice creation failed:", {
+      status: invoiceResponse.status,
+      statusText: invoiceResponse.statusText,
+      error: errorText,
+      payload: acumaticaInvoice,
+    });
     
     // Logout even on error
     await fetch(`${instanceUrl}/entity/auth/logout`, {
