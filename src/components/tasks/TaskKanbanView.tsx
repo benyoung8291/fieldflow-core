@@ -244,7 +244,8 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
       groups[dateKey] = [];
     });
 
-    const todayKey = format(today, 'yyyy-MM-dd');
+    // Use the first available workday column for overdue tasks
+    const firstWorkdayKey = columns.length > 0 ? format(columns[0].date, 'yyyy-MM-dd') : null;
 
     safeTasks.forEach((task: any) => {
       if (task.due_date) {
@@ -254,11 +255,9 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
           if (!isNaN(taskDueDate.getTime())) {
             const taskDate = startOfDay(taskDueDate);
             
-            // If task is overdue (before today) and not completed, show it in Today column
-            if (taskDate < today && task.status !== 'completed') {
-              if (groups[todayKey]) {
-                groups[todayKey].push(task);
-              }
+            // If task is overdue (before first workday) and not completed, show it in first workday column
+            if (firstWorkdayKey && taskDate < columns[0].date && task.status !== 'completed') {
+              groups[firstWorkdayKey].push(task);
             } else {
               // Otherwise, show in its original date column
               const dateKey = format(taskDate, 'yyyy-MM-dd');
@@ -274,7 +273,7 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
     });
 
     return groups;
-  }, [safeTasks, columns, today]);
+  }, [safeTasks, columns]);
 
   // Render based on viewMode
   if (viewMode === 'status') {
