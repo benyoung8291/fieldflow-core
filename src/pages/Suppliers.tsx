@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Phone, Mail, MapPin, ArrowUpDown, Filter, Upload, Download, FileUp, FileDown, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
+import { Plus, Search, Phone, Mail, MapPin, ArrowUpDown, Filter, Upload, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
 import SupplierDialog from "@/components/suppliers/SupplierDialog";
 import { SupplierImportDialog } from "@/components/suppliers/SupplierImportDialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,14 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type SortField = "name" | "abn" | "created_at" | "payment_terms";
 type SortOrder = "asc" | "desc";
@@ -47,7 +39,6 @@ export default function Suppliers() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [validatingAbns, setValidatingAbns] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -134,70 +125,6 @@ export default function Suppliers() {
     }
   };
 
-  const handleImportFromAccounting = async (provider: 'xero' | 'acumatica') => {
-    setSyncing(true);
-    try {
-      const functionName = provider === 'xero' ? 'fetch-xero-suppliers' : 'fetch-acumatica-vendors';
-      
-      const { data, error } = await supabase.functions.invoke(functionName);
-      
-      if (error) throw error;
-      
-      if (data?.suppliers && data.suppliers.length > 0) {
-        // Import suppliers
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("tenant_id")
-          .eq("id", user.id)
-          .single();
-
-        if (!profile?.tenant_id) throw new Error("No tenant found");
-
-        for (const supplier of data.suppliers) {
-          const supplierData = {
-            tenant_id: profile.tenant_id,
-            name: supplier.name,
-            trading_name: supplier.tradingName || null,
-            abn: supplier.abn || null,
-            email: supplier.email || null,
-            phone: supplier.phone || null,
-            address: supplier.address || null,
-            is_active: true,
-            [provider === 'xero' ? 'xero_contact_id' : 'xero_contact_id']: supplier.id,
-          };
-
-          await supabase.from("suppliers").upsert([supplierData], {
-            onConflict: provider === 'xero' ? 'xero_contact_id' : 'xero_contact_id',
-          });
-        }
-
-        await queryClient.invalidateQueries({ queryKey: ["vendors"] });
-        
-        toast({
-          title: "Import complete",
-          description: `Imported ${data.suppliers.length} suppliers from ${provider === 'xero' ? 'Xero' : 'Acumatica'}`,
-        });
-      } else {
-        toast({
-          title: "No suppliers found",
-          description: `No suppliers found in ${provider === 'xero' ? 'Xero' : 'Acumatica'}`,
-        });
-      }
-    } catch (error) {
-      console.error("Error importing suppliers:", error);
-      toast({
-        title: "Import failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const handleValidateAllAbns = async () => {
     setValidatingAbns(true);
     try {
@@ -224,86 +151,6 @@ export default function Suppliers() {
     }
   };
 
-  const handleExportToAccounting = async (provider: 'xero' | 'acumatica') => {
-    setSyncing(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.tenant_id) throw new Error("No tenant found");
-
-      // Get integration settings
-      const { data: integration } = await supabase
-        .from("accounting_integrations")
-        .select("*")
-        .eq("tenant_id", profile.tenant_id)
-        .eq("provider", provider)
-        .single();
-
-      if (!integration) {
-        toast({
-          title: "Integration not configured",
-          description: `Please configure ${provider === 'xero' ? 'Xero' : 'Acumatica'} integration in settings`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get all suppliers without external ID
-      const { data: suppliersToExport } = await supabase
-        .from("suppliers")
-        .select("id")
-        .eq("tenant_id", profile.tenant_id)
-        .is("xero_contact_id", null);
-
-      if (!suppliersToExport || suppliersToExport.length === 0) {
-        toast({
-          title: "No suppliers to export",
-          description: "All suppliers are already synced",
-        });
-        return;
-      }
-
-      const functionName = provider === 'xero' ? 'export-to-xero-suppliers' : 'export-to-acumatica-vendors';
-      
-      const payload = provider === 'xero' 
-        ? { accountIds: suppliersToExport.map(s => s.id) }
-        : {
-            supplierIds: suppliersToExport.map(s => s.id),
-            instanceUrl: integration.acumatica_instance_url,
-            companyName: integration.acumatica_company_name,
-          };
-
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: payload,
-      });
-
-      if (error) throw error;
-
-      await queryClient.invalidateQueries({ queryKey: ["vendors"] });
-
-      toast({
-        title: "Export complete",
-        description: `Exported ${suppliersToExport.length} suppliers to ${provider === 'xero' ? 'Xero' : 'Acumatica'}`,
-      });
-    } catch (error) {
-      console.error("Error exporting suppliers:", error);
-      toast({
-        title: "Export failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <Button
       variant="ghost"
@@ -326,51 +173,13 @@ export default function Suppliers() {
             <p className="text-muted-foreground">Manage your suppliers</p>
           </div>
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={syncing}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Import From</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                  <FileUp className="mr-2 h-4 w-4" />
-                  CSV File
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleImportFromAccounting('xero')}>
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Xero
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleImportFromAccounting('acumatica')}>
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Acumatica
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={syncing}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Export To</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleExportToAccounting('xero')}>
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Xero
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportToAccounting('acumatica')}>
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Acumatica
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button 
+              variant="outline" 
+              onClick={() => setImportDialogOpen(true)}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Import CSV
+            </Button>
 
             <Button 
               variant="outline" 
