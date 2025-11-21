@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, CalendarIcon, X, Check } from "lucide-react";
+import { Calendar as CalendarIcon, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, X, Check } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -38,6 +38,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 const statusColors = {
@@ -818,7 +819,7 @@ export default function ServiceOrderDetails() {
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
+                  <CalendarIcon className="h-4 w-4" />
                   Schedule
                 </CardTitle>
                 {!editingDates ? (
@@ -859,7 +860,7 @@ export default function ServiceOrderDetails() {
                 {!editingDates ? (
                   <div className="bg-primary/10 border-l-4 border-primary px-3 py-2.5 rounded-md">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+                      <CalendarIcon className="h-4 w-4 text-primary flex-shrink-0" />
                       <span className="text-sm font-semibold text-primary">
                         {order.preferred_date
                           ? format(new Date(order.preferred_date), "PPP")
