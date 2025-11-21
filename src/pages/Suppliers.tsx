@@ -294,9 +294,13 @@ export default function Suppliers() {
                           {vendor.abn && (
                             <span className="text-sm">{vendor.abn}</span>
                           )}
-                          {vendor.gst_registered && (
+                          {vendor.gst_registered ? (
                             <Badge variant="outline" className="w-fit text-xs border-green-600 text-green-600">
                               GST Registered
+                            </Badge>
+                          ) : vendor.abn && (
+                            <Badge variant="outline" className="w-fit text-xs border-amber-600 text-amber-600">
+                              Not GST Registered
                             </Badge>
                           )}
                         </div>
