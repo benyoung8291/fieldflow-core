@@ -222,11 +222,19 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
       });
       
       if (!isWeekend(currentDate) || hasTasksOnDate) {
-        const dayLabel = daysAdded === 0 ? 'Today' : daysAdded === 1 ? 'Tomorrow' : format(currentDate, 'EEEE');
+        let dayLabel: string;
+        if (isSameDay(currentDate, today)) {
+          dayLabel = 'Today';
+        } else if (isSameDay(currentDate, addDays(today, 1))) {
+          dayLabel = 'Tomorrow';
+        } else {
+          dayLabel = format(currentDate, 'EEEE');
+        }
+        
         cols.push({ 
           date: currentDate, 
           title: dayLabel,
-          isToday: daysAdded === 0
+          isToday: isSameDay(currentDate, today)
         });
         daysAdded++;
       }
@@ -300,7 +308,7 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
         <DroppableColumn
           key={format(column.date, 'yyyy-MM-dd')}
           id={format(column.date, 'yyyy-MM-dd')}
-          title={`${column.title} - ${format(column.date, 'MMM d')}`}
+          title={column.title}
           tasks={tasksByDate[format(column.date, 'yyyy-MM-dd')]}
           onTaskClick={onTaskClick}
           workersMap={workersMap}
