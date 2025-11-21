@@ -485,7 +485,6 @@ export default function APInvoiceDialog({
                   <SelectValue placeholder="Select Service Order (Optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {serviceOrders.map((so: any) => (
                     <SelectItem key={so.id} value={so.id}>
                       {so.order_number} - {so.title}
@@ -505,7 +504,6 @@ export default function APInvoiceDialog({
                   <SelectValue placeholder="Select Project (Optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {projects.map((project: any) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.project_number} - {project.name}
