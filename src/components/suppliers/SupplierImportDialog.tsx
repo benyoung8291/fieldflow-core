@@ -534,6 +534,18 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
             <p className="text-sm text-muted-foreground">
               Map your CSV columns to supplier fields
             </p>
+            {validationErrors.length > 0 && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                <p className="font-medium text-sm mb-2">Validation Errors:</p>
+                <ul className="text-sm space-y-1">
+                  {validationErrors.map((error, i) => (
+                    <li key={i}>
+                      Row {error.row}, {error.field}: {error.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {csvHeaders.map((header) => (
                 <div key={header} className="flex items-center gap-4">
