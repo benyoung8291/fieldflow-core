@@ -155,7 +155,7 @@ serve(async (req) => {
       console.log("Cookie header value:", cookies.substring(0, 50) + "...");
 
       // Fetch vendors with proper expansion
-      const vendorsUrl = `${baseUrl}/entity/Default/20.200.001/Vendor?$expand=MainContact&$select=VendorID,VendorName,Status,MainContact`;
+      const vendorsUrl = `${baseUrl}/entity/Default/23.200.001/Vendor?$expand=MainContact&$select=VendorID,VendorName,Status,MainContact`;
       console.log("Fetching vendors from:", vendorsUrl);
 
       const vendorsResponse = await fetch(vendorsUrl, {
