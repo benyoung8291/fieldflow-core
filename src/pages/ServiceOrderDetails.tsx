@@ -1511,9 +1511,15 @@ export default function ServiceOrderDetails() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => createAppointmentMutation.mutate()}>
-              Create Appointment
-            </AlertDialogAction>
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                createAppointmentMutation.mutate();
+              }}
+              disabled={createAppointmentMutation.isPending}
+            >
+              {createAppointmentMutation.isPending ? "Creating..." : "Create Appointment"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
