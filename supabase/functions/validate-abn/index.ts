@@ -155,13 +155,36 @@ serve(async (req) => {
       );
     }
 
-    // Extract legal name from mainName section within businessEntity
+    // Extract legal name - try both mainName (for companies) and legalName (for sole traders)
     const mainNameMatch = businessEntitySection.match(/<mainName[^>]*>([\s\S]*?)<\/mainName>/i);
+    const legalNameMatch = businessEntitySection.match(/<legalName[^>]*>([\s\S]*?)<\/legalName>/i);
     let mainName = '';
     
     console.log('DEBUG: mainNameMatch found:', mainNameMatch ? 'yes' : 'no');
+    console.log('DEBUG: legalNameMatch found:', legalNameMatch ? 'yes' : 'no');
     
-    if (mainNameMatch) {
+    // Try legalName first (for sole traders)
+    if (legalNameMatch) {
+      const legalNameSection = legalNameMatch[1];
+      console.log('DEBUG: legalNameSection:', legalNameSection.substring(0, 200));
+      
+      const givenName = extractXMLValue(legalNameSection, 'givenName') || '';
+      const familyName = extractXMLValue(legalNameSection, 'familyName') || '';
+      const otherGivenName = extractXMLValue(legalNameSection, 'otherGivenName') || '';
+      
+      console.log('DEBUG: Sole trader names - given:', givenName, 'family:', familyName, 'other:', otherGivenName);
+      
+      if (familyName) {
+        mainName = [givenName, otherGivenName, familyName]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+        console.log('DEBUG: Constructed mainName from legalName:', mainName);
+      }
+    }
+    
+    // If no legalName, try mainName (for companies)
+    if (!mainName && mainNameMatch) {
       const mainNameSection = mainNameMatch[1];
       console.log('DEBUG: mainNameSection:', mainNameSection.substring(0, 200));
       
@@ -169,20 +192,20 @@ serve(async (req) => {
       mainName = extractXMLValue(mainNameSection, 'organisationName') || '';
       console.log('DEBUG: organisationName:', mainName);
       
-      // If no organisation name, try person name (for sole traders)
+      // If no organisation name, try person name (for sole traders in mainName tag)
       if (!mainName) {
         const givenName = extractXMLValue(mainNameSection, 'givenName') || '';
         const familyName = extractXMLValue(mainNameSection, 'familyName') || '';
         const otherGivenName = extractXMLValue(mainNameSection, 'otherGivenName') || '';
         
-        console.log('DEBUG: Sole trader names - given:', givenName, 'family:', familyName, 'other:', otherGivenName);
+        console.log('DEBUG: Sole trader names from mainName - given:', givenName, 'family:', familyName, 'other:', otherGivenName);
         
         if (familyName) {
           mainName = [givenName, otherGivenName, familyName]
             .filter(Boolean)
             .join(' ')
             .trim();
-          console.log('DEBUG: Constructed mainName for sole trader:', mainName);
+          console.log('DEBUG: Constructed mainName from mainName tag:', mainName);
         }
       }
     }
