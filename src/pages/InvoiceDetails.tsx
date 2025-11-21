@@ -24,6 +24,9 @@ import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimel
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import ThreeWayMatchingCard from "@/components/invoices/ThreeWayMatchingCard";
 import { Package } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -38,6 +41,8 @@ export default function InvoiceDetails() {
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
+  const [editSupplierDialogOpen, setEditSupplierDialogOpen] = useState(false);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -85,6 +90,20 @@ export default function InvoiceDetails() {
       return data;
     },
     enabled: !!invoice?.tenant_id && !!invoice?.acumatica_reference_nbr,
+  });
+
+  // Fetch suppliers for editing
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, name, email, acumatica_supplier_id")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const { data: lineItems } = useQuery({
@@ -561,6 +580,32 @@ export default function InvoiceDetails() {
     },
   });
 
+  const updateSupplierMutation = useMutation({
+    mutationFn: async (supplierId: string) => {
+      // Check if invoice is released in Acumatica
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot modify supplier - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
+      }
+
+      const { error } = await supabase
+        .from("invoices")
+        .update({ supplier_id: supplierId })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
+      toast.success("Supplier updated successfully");
+      setEditSupplierDialogOpen(false);
+    },
+    onError: (error: any) => {
+      console.error(error);
+      toast.error(error.message || "Failed to update supplier");
+    },
+  });
+
   if (isLoading || !invoice) {
     return (
       <DocumentDetailLayout
@@ -885,8 +930,24 @@ export default function InvoiceDetails() {
       content: (
         <Card>
           <CardHeader>
-            {/* @ts-ignore - invoice_type exists */}
-            <CardTitle>{invoice.invoice_type === 'ap' ? 'Supplier' : 'Customer'} Information</CardTitle>
+            <div className="flex items-center justify-between">
+              {/* @ts-ignore - invoice_type exists */}
+              <CardTitle>{invoice.invoice_type === 'ap' ? 'Supplier' : 'Customer'} Information</CardTitle>
+              {/* @ts-ignore - invoice_type exists */}
+              {invoice.invoice_type === 'ap' && canEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedSupplierId(invoice.supplier_id || "");
+                    setEditSupplierDialogOpen(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Supplier
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -1066,6 +1127,53 @@ export default function InvoiceDetails() {
           />
         </>
       )}
+
+      <Dialog open={editSupplierDialogOpen} onOpenChange={setEditSupplierDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Supplier</DialogTitle>
+            <DialogDescription>
+              Change the supplier for this AP invoice
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+              <Select
+                value={selectedSupplierId}
+                onValueChange={setSelectedSupplierId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supplier..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers?.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                      {supplier.acumatica_supplier_id && (
+                        <span className="ml-2 text-muted-foreground text-xs">
+                          ({supplier.acumatica_supplier_id})
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSupplierDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateSupplierMutation.mutate(selectedSupplierId)}
+              disabled={!selectedSupplierId || updateSupplierMutation.isPending}
+            >
+              {updateSupplierMutation.isPending ? "Updating..." : "Update Supplier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
