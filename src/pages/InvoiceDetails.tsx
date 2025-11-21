@@ -346,13 +346,15 @@ export default function InvoiceDetails() {
 
       if (allItems) {
         const subtotal = allItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
-        const taxAmount = subtotal * ((invoice?.tax_rate || 0) / 100);
+        const taxRate = 10; // 10% GST
+        const taxAmount = subtotal * (taxRate / 100);
         const totalAmount = subtotal + taxAmount;
 
         await supabase
           .from("invoices")
           .update({
             subtotal,
+            tax_rate: taxRate,
             tax_amount: taxAmount,
             total_amount: totalAmount,
           })
@@ -437,13 +439,15 @@ export default function InvoiceDetails() {
 
       if (allItems) {
         const subtotal = allItems.reduce((sum, item) => sum + (item.line_total || 0), 0) + newItem.line_total;
-        const taxAmount = subtotal * ((invoice?.tax_rate || 0) / 100);
+        const taxRate = 10; // 10% GST
+        const taxAmount = subtotal * (taxRate / 100);
         const totalAmount = subtotal + taxAmount;
 
         await supabase
           .from("invoices")
           .update({
             subtotal,
+            tax_rate: taxRate,
             tax_amount: taxAmount,
             total_amount: totalAmount,
           })
@@ -515,13 +519,15 @@ export default function InvoiceDetails() {
         .eq("invoice_id", id);
 
       const subtotal = allItems?.reduce((sum, item) => sum + (item.line_total || 0), 0) || 0;
-      const taxAmount = subtotal * ((invoice?.tax_rate || 0) / 100);
+      const taxRate = 10; // 10% GST
+      const taxAmount = subtotal * (taxRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       await supabase
         .from("invoices")
         .update({
           subtotal,
+          tax_rate: taxRate,
           tax_amount: taxAmount,
           total_amount: totalAmount,
         })
@@ -603,6 +609,48 @@ export default function InvoiceDetails() {
     onError: (error: any) => {
       console.error(error);
       toast.error(error.message || "Failed to update supplier");
+    },
+  });
+
+  const recalculateTotalsMutation = useMutation({
+    mutationFn: async () => {
+      // Check if invoice is released in Acumatica
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot recalculate totals - invoice is Released in MYOB Acumatica.");
+      }
+
+      // Get all line items
+      const { data: allItems, error: itemsError } = await supabase
+        .from("invoice_line_items")
+        .select("line_total")
+        .eq("invoice_id", id);
+
+      if (itemsError) throw itemsError;
+
+      const subtotal = allItems?.reduce((sum, item) => sum + (item.line_total || 0), 0) || 0;
+      const taxRate = 10; // 10% GST
+      const taxAmount = subtotal * (taxRate / 100);
+      const totalAmount = subtotal + taxAmount;
+
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          subtotal,
+          tax_rate: taxRate,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      toast.success("Invoice totals recalculated successfully");
+    },
+    onError: (error: any) => {
+      console.error(error);
+      toast.error(error.message || "Failed to recalculate totals");
     },
   });
 
@@ -828,12 +876,24 @@ export default function InvoiceDetails() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium">Invoice Line Items</div>
-                {canEdit && (
-                  <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Line
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {canEdit && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => recalculateTotalsMutation.mutate()}
+                        disabled={recalculateTotalsMutation.isPending}
+                      >
+                        {recalculateTotalsMutation.isPending ? "Calculating..." : "Recalculate Totals"}
+                      </Button>
+                      <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Line
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
               
               {invoice.notes && (
