@@ -10,7 +10,16 @@ const corsHeaders = {
 const extractXMLValue = (xml: string, tag: string): string | null => {
   const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'i');
   const match = xml.match(regex);
-  return match ? match[1].trim() : null;
+  if (!match) return null;
+  
+  // Decode HTML entities (e.g., &amp; -> &)
+  const value = match[1].trim();
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 };
 
 // Helper function to extract all matching XML values
@@ -20,7 +29,14 @@ const extractAllXMLValues = (xml: string, tag: string): string[] => {
   const values: string[] = [];
   for (const match of matches) {
     if (match[1].trim()) {
-      values.push(match[1].trim());
+      // Decode HTML entities
+      const value = match[1].trim()
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+      values.push(value);
     }
   }
   return values;
@@ -69,12 +85,15 @@ serve(async (req) => {
       console.log('ABN cache hit:', cleanABN);
       return new Response(JSON.stringify({
         valid: cached.valid,
-        legalName: cached.legal_name,
-        tradingNames: cached.trading_names || [],
-        entityType: cached.entity_type,
-        gstRegistered: cached.gst_registered,
-        status: cached.status,
-        lastUpdated: cached.last_updated,
+        business_details: {
+          legal_name: cached.legal_name || '',
+          trading_names: cached.trading_names || [],
+          entity_type: cached.entity_type || '',
+          gst_registered: cached.gst_registered || false,
+          status: cached.status,
+          last_updated: cached.last_updated,
+        },
+        message: cached.valid ? 'ABN is valid' : 'ABN is invalid',
         fromCache: true,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -146,8 +165,10 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          error: `This ABN status is: ${abn_status || 'Unknown'}`,
-          status: abn_status 
+          message: `This ABN status is: ${abn_status || 'Unknown'}`,
+          business_details: {
+            status: abn_status,
+          }
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -248,13 +269,15 @@ serve(async (req) => {
 
     const result = {
       valid: true,
-      abn: cleanABN,
-      legalName: mainName || '',
-      tradingNames: businessNames,
-      entityType: entityType || '',
-      gstRegistered,
-      status: abn_status,
-      lastUpdated: recordLastUpdatedDate,
+      message: 'ABN is valid',
+      business_details: {
+        legal_name: mainName || '',
+        trading_names: businessNames,
+        entity_type: entityType || '',
+        gst_registered: gstRegistered,
+        status: abn_status,
+        last_updated: recordLastUpdatedDate,
+      }
     };
 
     // Cache the result for future lookups (non-blocking)
@@ -283,7 +306,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         valid: false, 
-        error: error.message || 'Failed to validate ABN' 
+        message: error.message || 'Failed to validate ABN' 
       }),
       {
         status: 400,
