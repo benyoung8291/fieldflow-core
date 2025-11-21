@@ -14,6 +14,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { useAPInvoices } from "@/hooks/useAPInvoices";
 import APInvoiceDialog from "@/components/invoices/APInvoiceDialog";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function APInvoicesList() {
   const navigate = useNavigate();
@@ -21,8 +22,13 @@ export default function APInvoicesList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: apInvoices, isLoading, refetch } = useAPInvoices(statusFilter);
+  const { data: apInvoicesResponse, isLoading, refetch } = useAPInvoices(statusFilter, pagination.currentPage, pagination.pageSize);
+  
+  const apInvoices = apInvoicesResponse?.data || [];
+  const totalCount = apInvoicesResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -176,6 +182,19 @@ export default function APInvoicesList() {
             </div>
           )}
         </div>
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <div className="mt-6 border-t pt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} AP invoices</div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => pagination.prevPage()} disabled={pagination.currentPage === 0}>Previous</Button>
+              <div className="text-sm">Page {pagination.currentPage + 1} of {totalPages}</div>
+              <Button variant="outline" size="sm" onClick={() => pagination.nextPage()} disabled={pagination.currentPage >= totalPages - 1}>Next</Button>
+            </div>
+          </div>
+        )}
+      </div>
       </div>
 
       <APInvoiceDialog

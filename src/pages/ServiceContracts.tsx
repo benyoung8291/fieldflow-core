@@ -559,6 +559,11 @@ export default function ServiceContracts() {
           open={isGenerateDialogOpen}
           onOpenChange={setIsGenerateDialogOpen}
         />
+        
+        {/* Pagination info for contracts */}
+        {contracts && contracts.length > 50 && (
+          <div className="text-center text-sm text-muted-foreground mt-4">Showing first 100 contracts</div>
+        )}
       </div>
     </DashboardLayout>
   );

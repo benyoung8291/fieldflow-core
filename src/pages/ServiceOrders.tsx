@@ -35,6 +35,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
+import { usePagination } from "@/hooks/usePagination";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -73,11 +74,14 @@ export default function ServiceOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: orders = [], isLoading, refetch } = useQuery({
-    queryKey: ["service_orders"],
+  const { data: ordersResponse, isLoading, refetch } = useQuery({
+    queryKey: ["service_orders", pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { from, to } = pagination.getRange();
+      
+      const { data, error, count } = await supabase
         .from("service_orders")
         .select(`
           id,
@@ -93,17 +97,21 @@ export default function ServiceOrders() {
           completed_date,
           created_at,
           customers!service_orders_customer_id_fkey(name)
-        `)
+        `, { count: 'exact' })
         .order("created_at", { ascending: false })
-        .limit(100);
+        .range(from, to);
 
       if (error) {
         console.error("Error fetching service orders:", error);
         throw error;
       }
-      return data || [];
+      return { orders: data || [], count: count || 0 };
     },
   });
+
+  const orders = ordersResponse?.orders || [];
+  const totalCount = ordersResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -493,6 +501,40 @@ export default function ServiceOrders() {
             )}
           </CardContent>
         </Card>
+        )}
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <Card>
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} orders
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => pagination.prevPage()}
+                    disabled={pagination.currentPage === 0}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Page {pagination.currentPage + 1} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => pagination.nextPage()}
+                    disabled={pagination.currentPage >= totalPages - 1}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
       </div>

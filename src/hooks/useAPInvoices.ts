@@ -2,10 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export function useAPInvoices(statusFilter?: string) {
+export function useAPInvoices(statusFilter?: string, page?: number, pageSize?: number) {
   return useQuery({
-    queryKey: ["ap-invoices", statusFilter],
+    queryKey: ["ap-invoices", statusFilter, page, pageSize],
     queryFn: async () => {
+      const from = page !== undefined && pageSize ? page * pageSize : undefined;
+      const to = from !== undefined && pageSize ? from + pageSize - 1 : undefined;
+      
       let query = supabase
         .from("ap_invoices")
         .select(`
@@ -16,16 +19,20 @@ export function useAPInvoices(statusFilter?: string) {
             email,
             acumatica_supplier_id
           )
-        `)
+        `, { count: 'exact' })
         .order("created_at", { ascending: false });
+
+      if (from !== undefined && to !== undefined) {
+        query = query.range(from, to);
+      }
 
       if (statusFilter && statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
   });
 }

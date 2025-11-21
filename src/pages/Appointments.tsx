@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
+import { usePagination } from "@/hooks/usePagination";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -42,9 +43,10 @@ export default function Appointments() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("start_time");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const pagination = usePagination({ initialPageSize: 50 });
 
-  const { data: appointments = [], isLoading, refetch } = useQuery({
-    queryKey: ["all-appointments"],
+  const { data: appointmentsResponse, isLoading, refetch } = useQuery({
+    queryKey: ["all-appointments", pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -53,12 +55,14 @@ export default function Appointments() {
         .from("profiles")
         .select("tenant_id")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
+      const { from, to } = pagination.getRange();
+
       // Fetch appointments with service orders
-      const { data: appointmentsData, error } = await supabase
+      const { data: appointmentsData, error, count } = await supabase
         .from("appointments")
         .select(`
           *,
@@ -67,9 +71,10 @@ export default function Appointments() {
             work_order_number,
             purchase_order_number
           )
-        `)
+        `, { count: 'exact' })
         .eq("tenant_id", profile.tenant_id)
-        .order("start_time", { ascending: false });
+        .order("start_time", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
 
@@ -119,9 +124,13 @@ export default function Appointments() {
         })
       );
 
-      return appointmentsWithCosts;
+      return { appointments: appointmentsWithCosts, count: count || 0 };
     },
   });
+
+  const appointments = appointmentsResponse?.appointments || [];
+  const totalCount = appointmentsResponse?.count || 0;
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
@@ -372,6 +381,40 @@ export default function Appointments() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Pagination Controls */}
+        {!isMobile && totalPages > 1 && (
+          <Card className="mt-6">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {pagination.currentPage * pagination.pageSize + 1} - {Math.min((pagination.currentPage + 1) * pagination.pageSize, totalCount)} of {totalCount} appointments
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => pagination.prevPage()}
+                    disabled={pagination.currentPage === 0}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Page {pagination.currentPage + 1} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => pagination.nextPage()}
+                    disabled={pagination.currentPage >= totalPages - 1}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
