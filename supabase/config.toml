@@ -66,3 +66,9 @@ verify_jwt = true
 [functions.chat-assistant]
 verify_jwt = true
 
+[functions.sync-ap-invoice-to-acumatica]
+verify_jwt = true
+
+[functions.validate-abn]
+verify_jwt = true
+

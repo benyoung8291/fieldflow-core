@@ -153,8 +153,17 @@ export default function InvoiceDetails() {
       if (status === "approved") {
         console.log("Attempting to approve invoice - triggering accounting sync first:", id);
         
+        // Determine which sync function to call based on invoice type
+        // @ts-ignore - invoice_type exists on invoice table
+        const syncFunctionName = invoice?.invoice_type === 'AP' 
+          ? 'sync-ap-invoice-to-acumatica' 
+          : 'sync-invoice-to-accounting';
+        
+        // @ts-ignore - invoice_type exists on invoice table
+        console.log(`Calling ${syncFunctionName} for invoice type: ${invoice?.invoice_type}`);
+        
         const { data: syncData, error: syncError } = await supabase.functions.invoke(
-          "sync-invoice-to-accounting",
+          syncFunctionName,
           {
             body: { invoice_id: id },
           }
@@ -167,10 +176,17 @@ export default function InvoiceDetails() {
 
         console.log("Accounting sync response:", syncData);
 
-        // Check if any sync result failed
-        if (syncData?.results?.some((r: any) => r.status === "failed")) {
-          const failedResult = syncData.results.find((r: any) => r.status === "failed");
-          throw new Error(failedResult.error || "Unknown sync error");
+        // Check if sync failed (different response structure for different functions)
+        if (syncFunctionName === 'sync-invoice-to-accounting') {
+          if (syncData?.results?.some((r: any) => r.status === "failed")) {
+            const failedResult = syncData.results.find((r: any) => r.status === "failed");
+            throw new Error(failedResult.error || "Unknown sync error");
+          }
+        } else {
+          // For AP invoice sync
+          if (!syncData?.success) {
+            throw new Error(syncData?.error || "Failed to sync AP invoice to Acumatica");
+          }
         }
 
         console.log("Accounting sync successful, proceeding to update status");
@@ -187,7 +203,11 @@ export default function InvoiceDetails() {
     onMutate: (status) => {
       // Show loading toast when approving
       if (status === "approved") {
-        toast.loading("Syncing invoice to MYOB Acumatica...", { id: "invoice-sync" });
+        // @ts-ignore - invoice_type exists on invoice table
+        const toastMessage = invoice?.invoice_type === 'AP'
+          ? "Syncing AP Invoice to MYOB Acumatica..."
+          : "Syncing invoice to MYOB Acumatica...";
+        toast.loading(toastMessage, { id: "invoice-sync" });
       }
     },
     onSuccess: (_, status) => {
@@ -200,7 +220,11 @@ export default function InvoiceDetails() {
       queryClient.invalidateQueries({ queryKey: ["audit-logs", "invoices", id] });
       
       if (status === "approved") {
-        toast.success("Invoice approved and synced to MYOB Acumatica successfully");
+        // @ts-ignore - invoice_type exists on invoice table
+        const successMessage = invoice?.invoice_type === 'AP'
+          ? "AP Invoice approved and synced to MYOB Acumatica successfully"
+          : "Invoice approved and synced to MYOB Acumatica successfully";
+        toast.success(successMessage);
       } else {
         toast.success("Invoice status updated successfully");
       }
