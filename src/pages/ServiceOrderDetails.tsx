@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import DocumentDetailLayout, { DocumentAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
@@ -20,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
-import QuickContactDialog from "@/components/customers/QuickContactDialog";
+import ContactSelectorDialog from "@/components/customers/ContactSelectorDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -208,7 +209,7 @@ export default function ServiceOrderDetails() {
       // @ts-ignore - Supabase types can be excessively deep
       const { data: directInvoices, error: directError } = await supabase
         .from("ap_invoices")
-        .select("id, total_amount, subtotal, status, service_order_id")
+        .select("id, invoice_number, total_amount, subtotal, status, service_order_id, invoice_date, suppliers(name)")
         .eq("service_order_id", id);
       
       if (directError) throw directError;
@@ -236,7 +237,7 @@ export default function ServiceOrderDetails() {
       // @ts-ignore
       const { data: indirectInvoices, error: indirectError } = await supabase
         .from("ap_invoices")
-        .select("id, total_amount, subtotal, status, purchase_receipt_id")
+        .select("id, invoice_number, total_amount, subtotal, status, purchase_receipt_id, invoice_date, suppliers(name)")
         .in("purchase_receipt_id", receipts.map((r: any) => r.id));
       
       if (indirectError) throw indirectError;
@@ -247,6 +248,22 @@ export default function ServiceOrderDetails() {
       
       return uniqueInvoices;
     },
+  });
+
+  // Fetch AR invoices
+  const { data: arInvoices = [] } = useQuery({
+    queryKey: ["service-order-ar-invoices", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*, customers(name)")
+        .eq("service_order_id", id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
   });
 
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
@@ -467,234 +484,183 @@ export default function ServiceOrderDetails() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id, first_name, last_name")
+        .select("tenant_id")
         .eq("id", user.id)
         .single();
-      
+
       if (!profile) throw new Error("Profile not found");
 
-      const invoiceLineItems = lineItems.map((item: any) => ({
+      // Insert line items into the selected invoice
+      const lineItemsToAdd = lineItems.map((item: any) => ({
         invoice_id: invoiceId,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
         line_total: item.line_total,
-        source_type: "service_order",
-        source_id: id,
-        line_item_id: item.id,
-        item_order: item.item_order,
+        cost_price: item.cost_price,
         tenant_id: profile.tenant_id,
       }));
 
-      const { error: insertError } = await supabase
+      const { error } = await supabase
         .from("invoice_line_items")
-        .insert(invoiceLineItems);
-      
-      if (insertError) throw insertError;
+        .insert(lineItemsToAdd);
 
-      const { data: invoice } = await supabase
-        .from("invoices")
-        .select("invoice_number, subtotal, tax_rate")
-        .eq("id", invoiceId)
-        .single();
-
-      const oldSubtotal = invoice?.subtotal || 0;
-      const lineItemsTotal = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
-      const newSubtotal = oldSubtotal + lineItemsTotal;
-      const taxAmount = newSubtotal * ((invoice?.tax_rate || 0) / 100);
-      const totalAmount = newSubtotal + taxAmount;
-
-      const { error: updateError } = await supabase
-        .from("invoices")
-        .update({
-          subtotal: newSubtotal,
-          tax_amount: taxAmount,
-          total_amount: totalAmount,
-        })
-        .eq("id", invoiceId);
-      
-      if (updateError) throw updateError;
-
-      // Create audit log entry for the service order showing it was added to invoice
-      const userName = `${profile.first_name} ${profile.last_name || ''}`.trim();
-      await supabase
-        .from("audit_logs")
-        .insert({
-          tenant_id: profile.tenant_id,
-          user_id: user.id,
-          user_name: userName,
-          table_name: 'service_orders',
-          record_id: id,
-          action: 'update',
-          field_name: 'billing_status',
-          old_value: order?.billing_status || 'not_billed',
-          new_value: 'partially_billed',
-          note: `Added ${lineItems.length} line item(s) to invoice ${invoice?.invoice_number || invoiceId}. Total amount: $${lineItemsTotal.toFixed(2)}. Link: /invoices/${invoiceId}`,
-        });
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["service_order", id] });
-      queryClient.invalidateQueries({ queryKey: ["audit-logs", "service_orders", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
       setAddToInvoiceDialogOpen(false);
-      toast({ title: "Service order added to invoice" });
+      toast({ title: "Line items added to invoice" });
     },
     onError: (error: any) => {
-      toast({ title: "Error adding to invoice", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error adding to invoice", 
+        description: error.message,
+        variant: "destructive" 
+      });
     },
   });
 
+  const handleCreateInvoice = () => {
+    if (!order) return;
+    navigate("/invoices/new", { 
+      state: { 
+        serviceOrderId: id 
+      } 
+    });
+  };
+
   if (isLoading || !order) {
-    return (
-      <DocumentDetailLayout
-        title="Loading..."
-        backPath="/service-orders"
-        tabs={[]}
-        isLoading={isLoading}
-        notFoundMessage={!isLoading && !order ? "Order not found" : undefined}
-      />
-    );
+    return <div>Loading...</div>;
   }
 
-  // Status badges configuration
   const statusBadges: StatusBadge[] = [
-    {
-      label: statusLabels[order?.status as keyof typeof statusLabels] || order?.status.replace('_', ' ') || '',
-      variant: "outline",
-      className: statusColors[order?.status as keyof typeof statusColors] || 'bg-muted text-muted-foreground',
-    },
-    {
-      label: order?.priority || '',
-      variant: "outline",
-      className: priorityColors[order?.priority as keyof typeof priorityColors] || 'bg-muted text-muted-foreground',
-    },
-    {
-      label: (order as any)?.billing_status?.replace('_', ' ') || 'not billed',
-      variant: "outline",
-      className: (order as any)?.billing_status === 'billed' ? 'bg-success/10 text-success' :
-                 (order as any)?.billing_status === 'partially_billed' ? 'bg-warning/10 text-warning' :
-                 'bg-muted text-muted-foreground',
-    },
+    { label: statusLabels[order.status] || order.status, variant: "default", className: statusColors[order.status as keyof typeof statusColors] },
+    { label: order.priority.charAt(0).toUpperCase() + order.priority.slice(1), variant: "outline", className: priorityColors[order.priority as keyof typeof priorityColors] },
   ];
 
-  // Primary actions - primary buttons shown always
   const primaryActions: DocumentAction[] = [
-    {
-      label: "Complete Order",
-      icon: <CheckCircle className="h-4 w-4" />,
-      onClick: handleCompleteOrder,
-      variant: "default",
-      show: order?.status !== "completed",
-    },
-    {
-      label: "Run Billing",
-      icon: <Receipt className="h-4 w-4" />,
-      onClick: () => navigate("/invoices/create", { state: { serviceOrderId: id } }),
-      variant: "outline",
-      show: order?.billing_status !== "billed",
-    },
-    {
-      label: "Add to Draft Invoice",
-      icon: <FileText className="h-4 w-4" />,
-      onClick: () => setAddToInvoiceDialogOpen(true),
-      variant: "outline",
-      show: order?.billing_status !== "billed",
-    },
     {
       label: "Edit",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
       variant: "outline",
-      show: true,
     },
   ];
 
-  // Secondary actions - moved to dropdown menu
   const secondaryActions: DocumentAction[] = [
+    {
+      label: "Create Invoice",
+      icon: <Receipt className="h-4 w-4" />,
+      onClick: handleCreateInvoice,
+    },
+    {
+      label: "Add to Invoice",
+      icon: <Plus className="h-4 w-4" />,
+      onClick: () => setAddToInvoiceDialogOpen(true),
+    },
+    {
+      label: "Create PO",
+      icon: <ShoppingCart className="h-4 w-4" />,
+      onClick: () => setPurchaseOrderDialogOpen(true),
+    },
     {
       label: "Duplicate",
       icon: <Copy className="h-4 w-4" />,
-      onClick: () => {/* Duplicate order */},
-      variant: "ghost",
-      show: true,
+      onClick: () => console.log("duplicate"),
     },
     {
-      label: "Set to Waiting",
-      onClick: () => updateOrderStatusMutation.mutate("draft"),
-      variant: "ghost",
-      show: order?.status !== "draft",
+      label: "Complete Order",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: handleCompleteOrder,
     },
     {
       label: "Cancel Order",
       icon: <XCircle className="h-4 w-4" />,
       onClick: () => setCancelConfirmOpen(true),
-      variant: "ghost",
-      show: order?.status !== "cancelled",
     },
     {
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: handleDelete,
-      variant: "ghost",
-      show: true,
+      variant: "destructive",
     },
   ];
 
-  // Key information section
-  const keyInfoSection = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3">
-          {/* Customer & Location Info */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-2 pt-3 px-4">
-              <CardTitle className="text-sm">Customer & Location</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5 px-4 pb-3">
-              <div className="flex items-start gap-3">
-                <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{order.customers?.name}</div>
-                  {order.customers?.email && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Mail className="h-3 w-3" />
-                      {order.customers.email}
-                    </div>
-                  )}
-                  {order.customers?.phone && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Phone className="h-3 w-3" />
-                      {order.customers.phone}
-                    </div>
-                  )}
-                </div>
-              </div>
+  const costBreakdown = {
+    materials: totalCost,
+    labor: 0,
+    other: 0,
+  };
 
-              {order.customer_locations && (
-                <>
-                  <Separator />
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{order.customer_locations.name}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {order.customer_locations.address}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {order.customer_locations.city}, {order.customer_locations.state} {order.customer_locations.postcode}
-                      </div>
-                    </div>
+  const keyInfoSection = (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+          {/* Customer Details */}
+          <Card>
+            <CardHeader className="pb-2 pt-3 px-4">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Customer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div 
+                className="cursor-pointer hover:bg-muted/50 -mx-3 -mt-3 -mb-3 p-3 rounded-lg transition-colors"
+                onClick={() => navigate(`/customers/${order.customer_id}`)}
+              >
+                <div className="font-medium text-sm">{order.customers?.name}</div>
+                {order.customers?.email && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                    <Mail className="h-3 w-3" />
+                    {order.customers.email}
                   </div>
-                </>
+                )}
+                {order.customers?.phone && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                    <Phone className="h-3 w-3" />
+                    {order.customers.phone}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location & Contact */}
+          <Card>
+            <CardHeader className="pb-2 pt-3 px-4">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Location
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 space-y-3">
+              {order.customer_locations ? (
+                <div>
+                  <div className="text-sm font-medium mb-1">{order.customer_locations.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {order.customer_locations.address}
+                    {order.customer_locations.city && <>, {order.customer_locations.city}</>}
+                    {order.customer_locations.state && <> {order.customer_locations.state}</>}
+                    {order.customer_locations.postcode && <> {order.customer_locations.postcode}</>}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">No location</div>
               )}
-              
+
+              <Separator />
+
+              {/* Contact Section */}
               {(() => {
                 const contact = (order as any).contacts;
-                return (contact || !order.customer_contact_id) && (
-                  <>
-                    <Separator />
-                    {contact ? (
-                      <div className="flex items-start gap-3">
+                return (
+                <>
+                  <div className="text-xs font-medium text-muted-foreground">Contact</div>
+                  {contact ? (
+                      <div className="flex items-start gap-2">
                         <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">
+                          <div className="text-sm font-medium">
                             {contact.first_name} {contact.last_name}
                           </div>
                           {contact.position && (
@@ -805,6 +771,49 @@ export default function ServiceOrderDetails() {
             </CardContent>
           </Card>
 
+          {/* Schedule Information */}
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-2 pt-3 px-4">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 space-y-3">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1.5">Preferred Service Date</div>
+                <div className="bg-primary/10 border-l-4 border-primary px-3 py-2.5 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="text-sm font-semibold text-primary">
+                      {order.preferred_date
+                        ? format(new Date(order.preferred_date), "PPP")
+                        : "Not specified"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {((order as any).date_range_start || (order as any).date_range_end) && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1.5">Alternative Date Window</div>
+                  <div className="bg-muted/50 border border-border px-3 py-2.5 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="text-sm font-medium">
+                        {(order as any).date_range_start && format(new Date((order as any).date_range_start), "PP")}
+                        {(order as any).date_range_start && (order as any).date_range_end && (
+                          <span className="mx-2 text-muted-foreground">—</span>
+                        )}
+                        {(order as any).date_range_end && format(new Date((order as any).date_range_end), "PP")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Project Assignment - Only show if integration is enabled */}
           {integrationSettings?.projects_service_orders_integration && (
             <Card>
@@ -830,20 +839,6 @@ export default function ServiceOrderDetails() {
               </CardContent>
             </Card>
           )}
-
-          {/* Profit & Loss Card */}
-          <div className="lg:col-span-2">
-            <ServiceOrderProfitLossCard
-              totalRevenue={totalRevenue}
-              actualCost={actualCost}
-              costOfMaterials={totalCost}
-              costOfLabor={0}
-              apInvoiceCosts={apInvoiceCosts}
-              otherCosts={0}
-              profitMargin={profitMargin}
-              pendingPOCosts={pendingPOCosts}
-            />
-          </div>
     </div>
   );
 
@@ -1055,6 +1050,30 @@ export default function ServiceOrderDetails() {
       ),
     },
     {
+      value: "profit-loss",
+      label: "Profit & Loss",
+      icon: <DollarSign className="h-4 w-4" />,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Financial Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ServiceOrderProfitLossCard
+              totalRevenue={totalRevenue}
+              actualCost={actualCost}
+              costOfMaterials={totalCost}
+              costOfLabor={0}
+              apInvoiceCosts={apInvoiceCosts}
+              otherCosts={0}
+              profitMargin={profitMargin}
+              pendingPOCosts={pendingPOCosts}
+            />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
       value: "attachments",
       label: "Attachments",
       icon: <Paperclip className="h-4 w-4" />,
@@ -1073,7 +1092,105 @@ export default function ServiceOrderDetails() {
       value: "invoices",
       label: "Invoices",
       icon: <Receipt className="h-4 w-4" />,
-      content: <RelatedInvoicesCard sourceType="service_order" sourceId={id!} />,
+      content: (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Invoices</h3>
+            <Button onClick={handleCreateInvoice}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          </div>
+
+          {/* AR Invoices Section */}
+          <div>
+            <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Customer Invoices (AR)</h4>
+            {!arInvoices || arInvoices.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  No customer invoices created yet
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {arInvoices.map((invoice) => (
+                  <Card
+                    key={invoice.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/invoices/${invoice.id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold">{invoice.invoice_number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {invoice.customers?.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(invoice.invoice_date), "PPP")}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">
+                            ${Number(invoice.total_amount).toFixed(2)}
+                          </p>
+                          <Badge variant="secondary" className="mt-1">
+                            {invoice.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* AP Invoices Section */}
+          <div>
+            <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Supplier Bills (AP)</h4>
+            {!apInvoices || apInvoices.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  No supplier invoices linked yet
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {apInvoices.map((invoice) => (
+                  <Card
+                    key={invoice.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/ap-invoices/${invoice.id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold">{invoice.invoice_number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {(invoice as any).suppliers?.name || "No supplier"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(invoice.invoice_date), "PPP")}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">
+                            ${Number(invoice.total_amount).toFixed(2)}
+                          </p>
+                          <Badge variant="secondary" className="mt-1">
+                            {invoice.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ),
     },
     {
       value: "purchase-orders",
@@ -1336,12 +1453,12 @@ export default function ServiceOrderDetails() {
         }}
       />
 
-      {/* Quick Contact Dialog */}
-      <QuickContactDialog
+      {/* Contact Selector Dialog */}
+      <ContactSelectorDialog
         open={contactDialogOpen}
         onOpenChange={setContactDialogOpen}
         customerId={order?.customer_id || ''}
-        onContactCreated={async (contactId) => {
+        onContactSelected={async (contactId) => {
           // Update service order with new contact
           const { error } = await supabase
             .from('service_orders')
