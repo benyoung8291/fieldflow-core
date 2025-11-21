@@ -124,6 +124,11 @@ export default function InvoiceDetails() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
+      // Check if invoice is released in Acumatica
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot modify invoice status - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
+      }
+
       const { error } = await supabase
         .from("invoices")
         .update({ status })
@@ -146,8 +151,8 @@ export default function InvoiceDetails() {
             console.error("Accounting sync error:", syncError);
             toast.error("Invoice approved but sync to accounting failed: " + syncError.message);
           } else {
-            console.log("Accounting sync response:", data);
-            toast.success("Invoice approved and synced to accounting system");
+            console.log("Accounting sync successful:", data);
+            toast.success("Invoice approved and synced to accounting successfully");
           }
         } catch (syncError: any) {
           console.error("Accounting sync exception:", syncError);
@@ -162,13 +167,18 @@ export default function InvoiceDetails() {
         toast.success("Invoice status updated successfully");
       }
     },
-    onError: () => {
-      toast.error("Failed to update invoice status");
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update invoice status");
     },
   });
 
   const updateLineItemMutation = useMutation({
     mutationFn: async ({ itemId, updates, isFromSource }: { itemId: string; updates: any; isFromSource: boolean }) => {
+      // Check if invoice is released in Acumatica
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot modify line items - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -271,6 +281,11 @@ export default function InvoiceDetails() {
 
   const addLineItemMutation = useMutation({
     mutationFn: async (newItem: any) => {
+      // Check if invoice is released in Acumatica
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot add line items - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -357,6 +372,11 @@ export default function InvoiceDetails() {
 
   const deleteLineItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
+      // Check if invoice is released in Acumatica
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot delete line items - invoice is Released in MYOB Acumatica. Contact admin to void or reverse.");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -519,6 +539,10 @@ export default function InvoiceDetails() {
     );
   }
 
+  // Check if invoice is locked due to Acumatica Released status
+  const isAcumaticaReleased = invoice.acumatica_status === "Released";
+  const canEdit = invoice.status === "draft" && !isAcumaticaReleased;
+
   // Status badges configuration
   const statusBadges: StatusBadge[] = [
     {
@@ -530,46 +554,55 @@ export default function InvoiceDetails() {
       variant: "outline" as const,
       className: "text-xs",
     }] : []),
+    ...(invoice.acumatica_status ? [{
+      label: `Acumatica: ${invoice.acumatica_status}`,
+      variant: invoice.acumatica_status === "Released" ? "destructive" as const : "secondary" as const,
+      className: "text-xs",
+    }] : []),
   ];
 
   // Primary actions configuration
   const primaryActions: DocumentAction[] = [];
   
-  if (invoice.status === "draft") {
-    primaryActions.push({
-      label: draftSaved ? "Saved" : "Save Draft",
-      icon: draftSaved ? <Check className="h-4 w-4" /> : undefined,
-      onClick: () => {
-        setDraftSaved(true);
-        toast.success("Draft saved successfully");
-        setTimeout(() => setDraftSaved(false), 2000);
-      },
-      variant: "outline",
-    });
-    primaryActions.push({
-      label: "Send to Customer",
-      icon: <Send className="h-4 w-4" />,
-      onClick: () => updateStatusMutation.mutate("sent"),
-      variant: "default",
-    });
-  } else if (invoice.status === "sent") {
-    primaryActions.push({
-      label: "Back to Draft",
-      onClick: () => updateStatusMutation.mutate("draft"),
-      variant: "outline",
-    });
-    primaryActions.push({
-      label: "Mark as Approved",
-      icon: <CheckCircle className="h-4 w-4" />,
-      onClick: () => updateStatusMutation.mutate("approved"),
-      variant: "default",
-    });
-  } else if (invoice.status === "approved") {
-    primaryActions.push({
-      label: "Unapprove",
-      onClick: () => updateStatusMutation.mutate("sent"),
-      variant: "outline",
-    });
+  // Only show actions if invoice is not Released in Acumatica
+  if (!isAcumaticaReleased) {
+    if (invoice.status === "draft") {
+      primaryActions.push({
+        label: draftSaved ? "Saved" : "Save Draft",
+        icon: draftSaved ? <Check className="h-4 w-4" /> : undefined,
+        onClick: () => {
+          setDraftSaved(true);
+          toast.success("Draft saved successfully");
+          setTimeout(() => setDraftSaved(false), 2000);
+        },
+        variant: "outline",
+      });
+      primaryActions.push({
+        label: "Send to Customer",
+        icon: <Send className="h-4 w-4" />,
+        onClick: () => updateStatusMutation.mutate("sent"),
+        variant: "default",
+      });
+    } else if (invoice.status === "sent") {
+      primaryActions.push({
+        label: "Back to Draft",
+        onClick: () => updateStatusMutation.mutate("draft"),
+        variant: "outline",
+      });
+      primaryActions.push({
+        label: "Mark as Approved",
+        icon: <CheckCircle className="h-4 w-4" />,
+        onClick: () => updateStatusMutation.mutate("approved"),
+        variant: "default",
+      });
+    } else if (invoice.status === "approved" && !invoice.acumatica_status) {
+      // Only allow unapprove if not yet synced to Acumatica
+      primaryActions.push({
+        label: "Unapprove",
+        onClick: () => updateStatusMutation.mutate("sent"),
+        variant: "outline",
+      });
+    }
   }
 
   primaryActions.push({
@@ -591,33 +624,66 @@ export default function InvoiceDetails() {
 
   // Key info section
   const keyInfoSection = (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <KeyInfoCard
-        icon={User}
-        label="Customer"
-        value={invoice.customers?.name || "N/A"}
-        iconColor="text-primary"
-      />
-      <KeyInfoCard
-        icon={Calendar}
-        label="Invoice Date"
-        value={format(new Date(invoice.invoice_date), "dd MMM yyyy")}
-        description={invoice.due_date ? `Due: ${format(new Date(invoice.due_date), "dd MMM yyyy")}` : undefined}
-        iconColor="text-blue-500"
-      />
-      <KeyInfoCard
-        icon={FileText}
-        label="Line Items"
-        value={lineItems?.lineItems?.length || 0}
-        iconColor="text-purple-500"
-      />
-      <KeyInfoCard
-        icon={DollarSign}
-        label="Total Amount"
-        value={`$${invoice.total_amount.toFixed(2)}`}
-        description={`Subtotal: $${invoice.subtotal.toFixed(2)}`}
-        iconColor="text-green-500"
-      />
+    <div className="space-y-4">
+      {isAcumaticaReleased && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <ExternalLink className="h-5 w-5 text-destructive mt-0.5" />
+            <div className="flex-1">
+              <div className="font-semibold text-destructive">Invoice Locked - Released in MYOB Acumatica</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                This invoice has been released in MYOB Acumatica and cannot be modified. 
+                {invoice.acumatica_reference_nbr && ` Reference: ${invoice.acumatica_reference_nbr}`}
+                {" "}Contact an administrator to void or reverse this invoice if changes are required.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {invoice.acumatica_reference_nbr && !isAcumaticaReleased && (
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div className="flex-1">
+              <div className="font-semibold text-blue-600 dark:text-blue-400">Synced to MYOB Acumatica</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Reference: {invoice.acumatica_reference_nbr}
+                {invoice.synced_to_accounting_at && ` • Synced: ${format(new Date(invoice.synced_to_accounting_at), "dd MMM yyyy HH:mm")}`}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <KeyInfoCard
+          icon={User}
+          label="Customer"
+          value={invoice.customers?.name || "N/A"}
+          iconColor="text-primary"
+        />
+        <KeyInfoCard
+          icon={Calendar}
+          label="Invoice Date"
+          value={format(new Date(invoice.invoice_date), "dd MMM yyyy")}
+          description={invoice.due_date ? `Due: ${format(new Date(invoice.due_date), "dd MMM yyyy")}` : undefined}
+          iconColor="text-blue-500"
+        />
+        <KeyInfoCard
+          icon={FileText}
+          label="Line Items"
+          value={lineItems?.lineItems?.length || 0}
+          iconColor="text-purple-500"
+        />
+        <KeyInfoCard
+          icon={DollarSign}
+          label="Total Amount"
+          value={`$${invoice.total_amount.toFixed(2)}`}
+          description={`Subtotal: $${invoice.subtotal.toFixed(2)}`}
+          iconColor="text-green-500"
+        />
+      </div>
     </div>
   );
 
@@ -633,7 +699,7 @@ export default function InvoiceDetails() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium">Invoice Line Items</div>
-                {invoice.status === "draft" && (
+                {canEdit && (
                   <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Add Line
@@ -662,7 +728,7 @@ export default function InvoiceDetails() {
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    {invoice.status === "draft" && <TableHead className="w-[100px]"></TableHead>}
+                    {canEdit && <TableHead className="w-[100px]"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -675,7 +741,7 @@ export default function InvoiceDetails() {
                         key={item.id}
                         item={item}
                         sourceDoc={sourceDoc}
-                        canEdit={invoice.status === "draft"}
+                        canEdit={canEdit}
                         onUpdate={() => {
                           queryClient.invalidateQueries({ queryKey: ["invoice-line-items", id] });
                           queryClient.invalidateQueries({ queryKey: ["invoice", id] });

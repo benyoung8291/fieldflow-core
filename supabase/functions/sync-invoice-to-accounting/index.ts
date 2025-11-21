@@ -69,10 +69,21 @@ serve(async (req) => {
     // Sync to each enabled integration
     for (const integration of integrations) {
       try {
-        let result;
+        let result: any;
         
         if (integration.provider === "myob_acumatica") {
           result = await syncToAcumatica(invoice, integration);
+          
+          // Update invoice with Acumatica details
+          await supabaseClient
+            .from("invoices")
+            .update({
+              acumatica_invoice_id: result.acumatica_invoice_id,
+              acumatica_reference_nbr: result.acumatica_reference_nbr,
+              acumatica_status: result.acumatica_status,
+              synced_to_accounting_at: new Date().toISOString(),
+            })
+            .eq("id", invoice_id);
         } else if (integration.provider === "xero") {
           result = await syncToXero(invoice, integration);
         }
@@ -92,6 +103,10 @@ serve(async (req) => {
           provider: integration.provider,
           status: "success",
           external_id: result?.external_id,
+          ...(result?.acumatica_invoice_id && {
+            acumatica_invoice_id: result.acumatica_invoice_id,
+            acumatica_reference_nbr: result.acumatica_reference_nbr,
+          }),
         });
       } catch (error) {
         // Log failed sync
@@ -142,20 +157,14 @@ async function syncToAcumatica(invoice: any, integration: any) {
     instanceUrl: integration.acumatica_instance_url,
     companyName: integration.acumatica_company_name,
     invoiceNumber: invoice.invoice_number,
-    customerId: invoice.customers?.name
+    customerId: invoice.customers?.acumatica_customer_id
   });
 
   // Remove trailing slash from instance URL if present
   const instanceUrl = integration.acumatica_instance_url.replace(/\/$/, '');
 
   // Authenticate
-  console.log("Attempting Acumatica authentication:", {
-    url: `${instanceUrl}/entity/auth/login`,
-    username: username,
-    company: integration.acumatica_company_name,
-    hasPassword: !!password
-  });
-
+  console.log("Attempting Acumatica authentication...");
   const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -166,19 +175,9 @@ async function syncToAcumatica(invoice: any, integration: any) {
     }),
   });
 
-  console.log("Auth response:", {
-    status: authResponse.status,
-    statusText: authResponse.statusText,
-    hasCookies: !!authResponse.headers.get("set-cookie")
-  });
-
   if (!authResponse.ok) {
     const authErrorText = await authResponse.text();
-    console.error("Acumatica authentication failed:", {
-      status: authResponse.status,
-      statusText: authResponse.statusText,
-      error: authErrorText
-    });
+    console.error("Acumatica authentication failed:", authErrorText);
     throw new Error(`Failed to authenticate with Acumatica (${authResponse.status}): ${authErrorText || authResponse.statusText}`);
   }
 
@@ -187,73 +186,48 @@ async function syncToAcumatica(invoice: any, integration: any) {
     throw new Error("No authentication cookies received from Acumatica");
   }
 
-  console.log("Authentication successful, cookies received");
+  console.log("Authentication successful");
 
-  // Test session validity and get Bearer token
-  console.log("Getting bearer token for API access...");
-  const tokenResponse = await fetch(`${instanceUrl}/entity/Default/20.200.001`, {
-    method: "GET",
-    headers: {
-      "Cookie": cookies,
-      "Accept": "application/json",
-    },
-  });
-  
-  // Extract bearer token from response or headers
-  const bearerToken = tokenResponse.headers.get("authorization") || 
-                      authResponse.headers.get("authorization");
-  
-  console.log("Token response:", {
-    status: tokenResponse.status,
-    hasAuthHeader: !!bearerToken,
-    cookies: !!cookies
-  });
+  // Get customer's Acumatica ID
+  const customerId = invoice.customers?.acumatica_customer_id;
+  if (!customerId) {
+    await fetch(`${instanceUrl}/entity/auth/logout`, {
+      method: "POST",
+      headers: { "Cookie": cookies },
+    });
+    throw new Error("Customer does not have an Acumatica customer ID mapped");
+  }
 
-  // Test session validity with a simple GET request first
-  console.log("Testing session validity with GET request...");
-  const testResponse = await fetch(`${instanceUrl}/entity/Default/20.200.001/SalesInvoice`, {
-    method: "GET",
-    headers: {
-      "Cookie": cookies,
-      "Accept": "application/json",
-    },
-  });
-  
-  console.log("Session test response:", {
-    status: testResponse.status,
-    statusText: testResponse.statusText,
-    authHeader: testResponse.headers.get("www-authenticate")
-  });
+  // Prepare invoice description with invoice number prefix
+  const description = `${invoice.invoice_number} - ${invoice.description || 'Invoice'}`;
 
-  // Use cookies for authentication (Acumatica uses session cookies, not Bearer tokens)
+  // Build Acumatica invoice payload
   const acumaticaInvoice = {
     Type: { value: "Invoice" },
-    CustomerID: { value: invoice.customers?.xero_contact_id || invoice.customers?.name?.substring(0, 30) },
-    Date: { value: invoice.invoice_date },
-    DueDate: { value: invoice.due_date },
-    Terms: { value: "NET30DAYS" },
+    ReferenceNbr: { value: "<NEW>" },
+    Customer: { value: customerId },
+    LocationID: { value: "MAIN" },
+    LinkARAccount: { value: "16100" },
     Project: { value: "X" },
-    Location: { value: "MAIN" }, // Default location - will be overridden by customer's default location
-    Description: { value: invoice.description || `Invoice ${invoice.invoice_number}` },
-    CustomerOrder: { value: invoice.invoice_number },
+    Date: { value: invoice.invoice_date },
+    Description: { value: description },
+    Terms: { value: "NET30DAYS" },
+    DiscountDate: { value: invoice.invoice_date },
+    DueDate: { value: invoice.due_date || invoice.invoice_date },
+    Hold: { value: true },
     Details: invoice.invoice_line_items?.map((item: any) => ({
-      InventoryID: { value: item.description?.substring(0, 30) || "MISC" },
-      TransactionDescription: { value: item.description || "" },
-      Quantity: { value: item.quantity },
+      Branch: { value: "PREMREST" },
+      InventoryID: { value: "CLEANING" },
+      Qty: { value: item.quantity },
+      UOM: { value: "EACH" },
       UnitPrice: { value: item.unit_price },
-      Amount: { value: item.line_total },
-      AccountID: item.account_code ? { value: item.account_code } : undefined,
-      SubAccount: item.sub_account ? { value: item.sub_account } : undefined,
+      TransactionDescription: { value: item.description || "" },
+      Account: { value: item.account_code || integration.default_sales_account_code },
+      Subaccount: { value: item.sub_account || integration.default_sales_sub_account },
     })) || [],
   };
 
-  console.log("Sending to Acumatica:", JSON.stringify(acumaticaInvoice, null, 2));
-
-  console.log("Making invoice creation request with cookies:", {
-    url: `${instanceUrl}/entity/Default/20.200.001/SalesInvoice`,
-    hasCookies: !!cookies,
-    cookieLength: cookies?.length
-  });
+  console.log("Creating invoice in Acumatica:", JSON.stringify(acumaticaInvoice, null, 2));
 
   const invoiceResponse = await fetch(
     `${instanceUrl}/entity/Default/20.200.001/SalesInvoice`,
@@ -268,22 +242,9 @@ async function syncToAcumatica(invoice: any, integration: any) {
     }
   );
 
-  console.log("Invoice creation response:", {
-    status: invoiceResponse.status,
-    statusText: invoiceResponse.statusText,
-    headers: Object.fromEntries(invoiceResponse.headers.entries())
-  });
-
   if (!invoiceResponse.ok) {
     const errorText = await invoiceResponse.text();
-    console.error("Acumatica invoice creation failed:", {
-      status: invoiceResponse.status,
-      statusText: invoiceResponse.statusText,
-      errorBody: errorText,
-      responseHeaders: Object.fromEntries(invoiceResponse.headers.entries()),
-      sentPayload: acumaticaInvoice,
-      cookiesUsed: cookies
-    });
+    console.error("Acumatica invoice creation failed:", errorText);
     
     // Logout even on error
     await fetch(`${instanceUrl}/entity/auth/logout`, {
@@ -294,17 +255,26 @@ async function syncToAcumatica(invoice: any, integration: any) {
     throw new Error(`Failed to create invoice in Acumatica (${invoiceResponse.status}): ${errorText || invoiceResponse.statusText}`);
   }
 
-  // Logout on success
+  const createdInvoice = await invoiceResponse.json();
+  console.log("Successfully created Acumatica invoice:", createdInvoice);
+
+  // Logout after success
   await fetch(`${instanceUrl}/entity/auth/logout`, {
     method: "POST",
     headers: { "Cookie": cookies },
   });
 
-  const createdInvoice = await invoiceResponse.json();
-  console.log("Successfully created Acumatica invoice:", createdInvoice.ReferenceNbr?.value);
+  // Extract ID and ReferenceNbr
+  const acumaticaInvoiceId = createdInvoice.id?.value;
+  const referenceNbr = createdInvoice.ReferenceNbr?.value;
+
+  console.log("Acumatica invoice created:", { id: acumaticaInvoiceId, referenceNbr });
   
   return {
-    external_id: createdInvoice.ReferenceNbr?.value,
+    external_id: referenceNbr,
+    acumatica_invoice_id: acumaticaInvoiceId,
+    acumatica_reference_nbr: referenceNbr,
+    acumatica_status: "Balanced",
     response: createdInvoice,
   };
 }
