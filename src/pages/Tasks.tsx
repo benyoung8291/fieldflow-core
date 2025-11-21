@@ -717,23 +717,28 @@ export default function Tasks() {
       const taskTitle = (currentTask as any).title as string;
       const tenantId = (currentTask as any).tenant_id as string;
 
+      // Build update object with only provided fields
+      const updateData: any = {};
+      
+      if (data.title !== undefined) updateData.title = data.title;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.status !== undefined) {
+        updateData.status = data.status;
+        updateData.completed_at = data.status === "completed" ? new Date().toISOString() : null;
+      }
+      if (data.priority !== undefined) updateData.priority = data.priority;
+      if (data.assigned_to !== undefined) updateData.assigned_to = data.assigned_to || null;
+      if (data.due_date !== undefined) updateData.due_date = data.due_date?.toISOString() || null;
+      if (data.start_date !== undefined) updateData.start_date = data.start_date?.toISOString()?.split('T')[0] || null;
+      if (data.end_date !== undefined) updateData.end_date = data.end_date?.toISOString()?.split('T')[0] || null;
+      if (data.estimated_hours !== undefined) updateData.estimated_hours = data.estimated_hours ? parseFloat(data.estimated_hours) : null;
+      if (data.progress_percentage !== undefined) updateData.progress_percentage = data.progress_percentage ? parseInt(data.progress_percentage) : 0;
+      if (data.tags !== undefined) updateData.tags = data.tags || [];
+      if (data.show_description_on_card !== undefined) updateData.show_description_on_card = data.show_description_on_card;
+
       const {
         error
-      } = await supabase.from("tasks" as any).update({
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        assigned_to: data.assigned_to || null,
-        due_date: data.due_date?.toISOString() || null,
-        start_date: data.start_date?.toISOString()?.split('T')[0] || null,
-        end_date: data.end_date?.toISOString()?.split('T')[0] || null,
-        estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
-        progress_percentage: data.progress_percentage ? parseInt(data.progress_percentage) : 0,
-        tags: data.tags || [],
-        show_description_on_card: data.show_description_on_card !== undefined ? data.show_description_on_card : false,
-        completed_at: data.status === "completed" ? new Date().toISOString() : null
-      }).eq("id", id);
+      } = await supabase.from("tasks" as any).update(updateData).eq("id", id);
       if (error) throw error;
 
       // Create notification if assigned user changed
