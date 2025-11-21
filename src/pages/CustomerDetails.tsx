@@ -276,7 +276,38 @@ export default function CustomerDetails() {
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">ABN</div>
-                        <div className="font-medium">{customer.abn || "-"}</div>
+                        <div className="space-y-2">
+                          <div className="font-medium">{customer.abn || "-"}</div>
+                          {customer.abn && (
+                            <>
+                              {customer.abn_validation_status === 'valid' && (
+                                <Badge variant="outline" className="bg-success/10 text-success">
+                                  Validated
+                                </Badge>
+                              )}
+                              {customer.abn_validation_status === 'invalid' && (
+                                <Badge variant="destructive">
+                                  Invalid ABN
+                                </Badge>
+                              )}
+                              {customer.abn_validation_status === 'pending' && (
+                                <Badge variant="outline" className="bg-warning/10 text-warning">
+                                  Validation Pending
+                                </Badge>
+                              )}
+                              {customer.abn_validated_at && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Last checked: {new Date(customer.abn_validated_at).toLocaleDateString()} at {new Date(customer.abn_validated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              )}
+                              {customer.abn_validation_status === 'invalid' && customer.abn_validation_error && (
+                                <div className="text-xs text-destructive mt-1">
+                                  {customer.abn_validation_error}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Status</div>
