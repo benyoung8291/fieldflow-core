@@ -56,6 +56,7 @@ import Workflows from "@/pages/Workflows";
 import WorkflowBuilder from "@/pages/WorkflowBuilder";
 import WorkflowTemplateSelector from "@/pages/WorkflowTemplateSelector";
 import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
+import FieldReports from "@/pages/FieldReports";
 import APInvoicesList from "./pages/APInvoicesList";
 import APInvoiceDetails from "./pages/APInvoiceDetails";
 import APInvoiceApprovalQueue from "./pages/APInvoiceApprovalQueue";
