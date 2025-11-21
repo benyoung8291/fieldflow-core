@@ -141,6 +141,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
       setFormData(prev => ({
         ...prev,
         legalName: data.legalName || prev.legalName,
+        tradingName: prev.tradingName || data.legalName || prev.tradingName,
         gstRegistered: data.gstRegistered,
       }));
 
