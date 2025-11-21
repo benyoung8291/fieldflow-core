@@ -267,6 +267,7 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
       let importedCount = 0;
       let updatedCount = 0;
       let skippedCount = 0;
+      const suppliersWithABN: string[] = [];
 
       for (const row of mappedData) {
         // Check if this row has a duplicate resolution
@@ -299,21 +300,59 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
 
           if (error) throw error;
           updatedCount++;
+          
+          // Track for ABN validation
+          if (supplierData.abn) {
+            suppliersWithABN.push(duplicate.existingSupplier.id);
+          }
         } else {
-          const { error } = await supabase
+          const { data: inserted, error } = await supabase
             .from("suppliers")
-            .insert([supplierData]);
+            .insert([supplierData])
+            .select()
+            .single();
 
           if (error) throw error;
           importedCount++;
+          
+          // Track for ABN validation
+          if (supplierData.abn && inserted) {
+            suppliersWithABN.push(inserted.id);
+          }
         }
       }
 
+      // Trigger background ABN validation for all imported suppliers with ABN
+      if (suppliersWithABN.length > 0) {
+        console.log(`Triggering background ABN validation for ${suppliersWithABN.length} suppliers`);
+        // Fire and forget - don't wait for validation to complete
+        Promise.all(
+          suppliersWithABN.map(async (supplierId) => {
+            try {
+              const { data: supplier } = await supabase
+                .from("suppliers")
+                .select("abn")
+                .eq("id", supplierId)
+                .single();
+
+              if (supplier?.abn) {
+                await supabase.functions.invoke("validate-abn", {
+                  body: { abn: supplier.abn },
+                });
+              }
+            } catch (err) {
+              console.error(`ABN validation failed for supplier ${supplierId}:`, err);
+            }
+          })
+        ).catch(err => console.error("Background ABN validation error:", err));
+      }
+
       await queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      await queryClient.invalidateQueries({ queryKey: ["vendors"] });
 
       toast({
         title: "Import complete",
-        description: `Imported ${importedCount} new suppliers, updated ${updatedCount}, skipped ${skippedCount}`,
+        description: `Imported ${importedCount} new suppliers, updated ${updatedCount}, skipped ${skippedCount}. ABN validation running in background.`,
       });
 
       handleClose();
@@ -397,7 +436,7 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                 <li>Legal Company Name (required)</li>
                 <li>Trading Name</li>
-                <li>ABN (11 digits)</li>
+                <li>ABN (11 digits) - will be validated automatically</li>
                 <li>Email</li>
                 <li>Phone</li>
                 <li>Mobile</li>
@@ -405,6 +444,9 @@ export function SupplierImportDialog({ open, onOpenChange, onImportComplete }: S
                 <li>Payment Terms (days as number)</li>
                 <li>Notes</li>
               </ul>
+              <p className="text-xs text-muted-foreground mt-2">
+                Note: ABN validation will run in the background after import to verify and enrich supplier data.
+              </p>
             </div>
           </div>
         )}
