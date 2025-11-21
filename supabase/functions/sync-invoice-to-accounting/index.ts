@@ -250,24 +250,16 @@ async function syncToAcumatica(invoice: any, integration: any) {
 
   // Build line items
   const lineItems = invoice.invoice_line_items?.map((item: any) => {
-    const lineItem: any = {
+    return {
       Branch: { value: "PREMREST" },
       InventoryID: { value: "CLEANING" },
       Qty: { value: parseFloat(item.quantity) },
       UOM: { value: "EACH" },
       UnitPrice: { value: parseFloat(item.unit_price) },
       TransactionDescription: { value: item.description || "" },
+      Account: { value: item.account_code || integration.default_sales_account_code },
+      Subaccount: { value: item.sub_account || integration.default_sales_sub_account },
     };
-
-    // Add account and subaccount if provided
-    if (item.account_code || integration.default_sales_account_code) {
-      lineItem.Account = { value: item.account_code || integration.default_sales_account_code };
-    }
-    if (item.sub_account || integration.default_sales_sub_account) {
-      lineItem.Subaccount = { value: item.sub_account || integration.default_sales_sub_account };
-    }
-
-    return lineItem;
   }) || [];
 
   // Build Acumatica invoice payload - exactly matching the user's working example
