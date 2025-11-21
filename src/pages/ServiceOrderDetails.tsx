@@ -641,13 +641,13 @@ export default function ServiceOrderDetails() {
 
   // Key information section
   const keyInfoSection = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3">
           {/* Customer & Location Info */}
           <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-sm">Customer & Location</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2.5 px-4 pb-3">
               <div className="flex items-start gap-3">
                 <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -714,16 +714,16 @@ export default function ServiceOrderDetails() {
                           )}
                         </div>
                       </div>
-                    ) : (
+                  ) : (
                       <Button
                         variant="outline"
                         size="sm"
                         className="w-full"
-                      onClick={() => setContactDialogOpen(true)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Link or Create Contact
-                    </Button>
+                        onClick={() => setContactDialogOpen(true)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Link or Create Contact
+                      </Button>
                   )}
                 </>
               );
@@ -733,13 +733,13 @@ export default function ServiceOrderDetails() {
 
           {/* Financial Summary */}
           <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-sm flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
                 Financial Summary
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Total</div>
@@ -771,13 +771,13 @@ export default function ServiceOrderDetails() {
 
           {/* Hours Summary */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Hours
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-3">
               <div className="space-y-2">
                 <div>
                   <div className="text-xs text-muted-foreground">Estimated</div>
@@ -808,10 +808,10 @@ export default function ServiceOrderDetails() {
           {/* Project Assignment - Only show if integration is enabled */}
           {integrationSettings?.projects_service_orders_integration && (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 pt-3 px-4">
                 <CardTitle className="text-sm">Project</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-3">
                 {(order as any).projects ? (
                   <div 
                     className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 -mx-3 -mt-3 -mb-3 p-3 rounded-lg transition-colors"
@@ -1333,6 +1333,27 @@ export default function ServiceOrderDetails() {
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["service-order-purchase-orders", id] });
           queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+        }}
+      />
+
+      {/* Quick Contact Dialog */}
+      <QuickContactDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        customerId={order?.customer_id || ''}
+        onContactCreated={async (contactId) => {
+          // Update service order with new contact
+          const { error } = await supabase
+            .from('service_orders')
+            .update({ customer_contact_id: contactId })
+            .eq('id', id);
+          
+          if (!error) {
+            queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+            toast({ title: "Contact linked successfully" });
+          } else {
+            toast({ title: "Error linking contact", description: error.message, variant: "destructive" });
+          }
         }}
       />
     </>

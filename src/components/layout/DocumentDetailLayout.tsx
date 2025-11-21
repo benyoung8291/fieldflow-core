@@ -258,8 +258,8 @@ export default function DocumentDetailLayout({
     <DashboardLayout>
       <div className="space-y-6">
         {/* Toolbar */}
-        <div className="flex items-center justify-between border-b pb-4">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="flex items-center justify-between border-b pb-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -269,8 +269,8 @@ export default function DocumentDetailLayout({
             </Button>
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-3xl font-bold text-foreground truncate">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold text-foreground truncate">
                   {title}
                 </h1>
                 {statusBadges.map((badge, idx) => (
@@ -284,7 +284,7 @@ export default function DocumentDetailLayout({
                 ))}
               </div>
               {subtitle && (
-                <p className="text-muted-foreground mt-1 truncate">{subtitle}</p>
+                <p className="text-sm text-muted-foreground mt-0.5 truncate">{subtitle}</p>
               )}
             </div>
           </div>
