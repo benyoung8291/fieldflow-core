@@ -98,7 +98,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
       console.log('ABN validation response:', data);
 
       if (!data.valid) {
-        toast.error(data.error || 'ABN is not valid');
+        toast.error(data.message || 'ABN is not valid');
         setAbnValidated(false);
         setGstRegistered(null);
         return;
@@ -137,18 +137,18 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
       }
 
       setAbnValidated(true);
-      setGstRegistered(data.gstRegistered);
-      setAvailableTradingNames(data.tradingNames || []);
+      setGstRegistered(data.business_details?.gst_registered || false);
+      setAvailableTradingNames(data.business_details?.trading_names || []);
       
-      console.log('Setting form data with legal name:', data.legalName);
+      console.log('Setting form data with legal name:', data.business_details?.legal_name);
       console.log('Current trading name:', formData.tradingName);
       
       setFormData(prev => {
         const newData = {
           ...prev,
-          legalName: data.legalName || '',
-          tradingName: prev.tradingName || data.legalName || '',
-          gstRegistered: data.gstRegistered,
+          legalName: data.business_details?.legal_name || '',
+          tradingName: prev.tradingName || data.business_details?.legal_name || '',
+          gstRegistered: data.business_details?.gst_registered || false,
         };
         console.log('New form data:', newData);
         return newData;
@@ -158,7 +158,7 @@ export default function SupplierDialog({ open, onOpenChange, vendor }: VendorDia
         <div>
           <div className="font-medium">ABN Validated Successfully</div>
           <div className="text-sm text-muted-foreground">
-            {data.entityType} • GST {data.gstRegistered ? 'Registered ✓' : 'Not Registered'}
+            {data.business_details?.entity_type} • GST {data.business_details?.gst_registered ? 'Registered ✓' : 'Not Registered'}
           </div>
         </div>
       );
