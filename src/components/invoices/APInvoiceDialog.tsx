@@ -329,7 +329,8 @@ export default function APInvoiceDialog({
         .insert([{
           tenant_id: profile.tenant_id,
           invoice_number: invoiceNumberData || 'AP-001',
-          customer_id: supplierId,
+          supplier_id: supplierId,
+          invoice_type: 'ap',
           invoice_date: invoiceDate,
           due_date: dueDate,
           total_amount: totalAmount,
