@@ -130,6 +130,26 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         legalName: data.legalName || prev.legalName,
       }));
 
+      // If editing an existing customer, update the validation status in the database
+      if (customer?.id) {
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update({
+            abn_validation_status: 'valid',
+            abn_validated_at: new Date().toISOString(),
+            abn_validation_error: null,
+          })
+          .eq('id', customer.id);
+
+        if (updateError) {
+          console.error('Failed to update ABN validation status:', updateError);
+        } else {
+          // Invalidate queries to refresh the UI
+          queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
+          queryClient.invalidateQueries({ queryKey: ["customers"] });
+        }
+      }
+
       toast.success(
         <div>
           <div className="font-medium">ABN Validated Successfully</div>
