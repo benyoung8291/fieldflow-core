@@ -214,11 +214,13 @@ function AppointmentCard({
             </span>
           </div>
 
-          {appointment.assigned_to_profile && (
+          {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
             <div className="flex items-center gap-1.5 text-[10px]">
               <User className="h-3 w-3" />
               <span className="truncate">
-                {appointment.assigned_to_profile.first_name} {appointment.assigned_to_profile.last_name}
+                {appointment.appointment_workers.map((aw: any) => 
+                  aw.profiles ? `${aw.profiles.first_name} ${aw.profiles.last_name}` : ''
+                ).filter(Boolean).join(', ')}
               </span>
             </div>
           )}

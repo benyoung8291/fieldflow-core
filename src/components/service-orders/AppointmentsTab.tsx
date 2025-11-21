@@ -136,12 +136,6 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                         {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
                       </span>
                     </div>
-                    {appointment.assigned_to_profile && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="h-4 w-4" />
-                        <span>{appointment.assigned_to_profile.first_name} {appointment.assigned_to_profile.last_name}</span>
-                      </div>
-                    )}
                   </div>
                   
                   {appointment.assigned_workers?.length > 0 && (
