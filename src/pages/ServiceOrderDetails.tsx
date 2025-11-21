@@ -97,6 +97,19 @@ export default function ServiceOrderDetails() {
     },
   });
 
+  // Fetch general settings for overhead percentage
+  const { data: generalSettings } = useQuery({
+    queryKey: ["general-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings")
+        .select("overhead_percentage")
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+  });
+
   const { data: order, isLoading } = useQuery({
     queryKey: ["service_order", id],
     queryFn: async () => {
@@ -327,6 +340,7 @@ export default function ServiceOrderDetails() {
   const totalRevenue = lineItems.reduce((sum: number, item: any) => sum + item.line_total, 0);
   
   // Calculate estimated labor costs from appointments
+  const overheadPercentage = generalSettings?.overhead_percentage || 0;
   const estimatedLaborCost = appointments.reduce((sum: number, apt: any) => {
     if (!apt.start_time || !apt.end_time || !apt.appointment_workers?.length) return sum;
     
@@ -337,10 +351,10 @@ export default function ServiceOrderDetails() {
       const hourlyRate = worker?.pay_rate_category?.hourly_rate;
       if (!hourlyRate) return workerSum;
       
-      // TODO: Add loading percentage when available in pay_rate_categories table
-      const rateWithLoading = hourlyRate;
+      // Apply overhead loading from general settings
+      const rateWithOverhead = hourlyRate * (1 + overheadPercentage / 100);
       
-      return workerSum + (hours * rateWithLoading);
+      return workerSum + (hours * rateWithOverhead);
     }, 0);
     
     return sum + appointmentLaborCost;
