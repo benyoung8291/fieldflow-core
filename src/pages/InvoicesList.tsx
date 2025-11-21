@@ -153,35 +153,38 @@ export default function InvoicesList() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Invoice Date</TableHead>
                   <TableHead>Due Date</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead className="text-right">Total (ex GST)</TableHead>
+                  <TableHead className="text-right">Total (inc GST)</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Acumatica Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInvoices?.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                  <TableRow 
+                    key={invoice.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/invoices/${invoice.id}`)}
+                  >
                     <TableCell className="font-medium font-mono">{invoice.invoice_number}</TableCell>
                     <TableCell>{invoice.customers?.name}</TableCell>
                     <TableCell>{format(new Date(invoice.invoice_date), "dd MMM yyyy")}</TableCell>
                     <TableCell>
                       {invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "-"}
                     </TableCell>
-                    <TableCell className="font-medium">${invoice.total_amount.toFixed(2)}</TableCell>
+                    <TableCell className="font-medium text-right">
+                      ${((invoice.total_amount || 0) - (invoice.tax_amount || 0)).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="font-medium text-right">${(invoice.total_amount || 0).toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/invoices/${invoice.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <TableCell>
+                      {invoice.acumatica_status ? (
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {invoice.acumatica_status}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
