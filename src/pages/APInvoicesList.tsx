@@ -195,7 +195,6 @@ export default function APInvoicesList() {
           </div>
         )}
       </div>
-      </div>
 
       <APInvoiceDialog
         open={dialogOpen}
