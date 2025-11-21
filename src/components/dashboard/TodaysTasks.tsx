@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckSquare, Circle, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format, isPast, startOfDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -98,6 +99,8 @@ export function TodaysTasks() {
 
   const overdueTasks = tasks.filter(t => isOverdue(t.due_date));
   const todayTasks = tasks.filter(t => !isOverdue(t.due_date));
+  const displayTasks = tasks.slice(0, 5);
+  const hasMoreTasks = tasks.length > 5;
 
   if (isLoading) {
     return (
@@ -128,9 +131,9 @@ export function TodaysTasks() {
           <p>No pending tasks</p>
         </div>
       ) : (
-        <ScrollArea className="h-[calc(100vh-200px)]">
-          <div className="space-y-2 pr-2">
-            {tasks.map((task) => {
+        <div>
+          <div className="space-y-2">
+            {displayTasks.map((task) => {
               const taskIsOverdue = isOverdue(task.due_date);
               
               return (
@@ -177,7 +180,16 @@ export function TodaysTasks() {
               );
             })}
           </div>
-        </ScrollArea>
+          {hasMoreTasks && (
+            <Button
+              variant="link"
+              onClick={() => navigate("/tasks")}
+              className="w-full mt-3 text-xs"
+            >
+              View all {tasks.length} tasks →
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
