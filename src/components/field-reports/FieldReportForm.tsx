@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
-import { Camera, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import PhotoCapture from '@/components/worker/PhotoCapture';
 import SignaturePad from '@/components/worker/SignaturePad';
+import BeforeAfterPhotoUpload from './BeforeAfterPhotoUpload';
+import { useQuery } from '@tanstack/react-query';
 
 interface FieldReportFormProps {
   appointmentId?: string;
@@ -20,13 +21,18 @@ interface FieldReportFormProps {
   onSave?: () => void;
 }
 
-interface Photo {
+interface PhotoPair {
   id: string;
-  file_url: string;
-  file_name: string;
-  photo_type: string;
-  notes?: string;
-  paired_photo_id?: string;
+  before?: {
+    file: File;
+    preview: string;
+    notes: string;
+  };
+  after?: {
+    file: File;
+    preview: string;
+    notes: string;
+  };
 }
 
 export default function FieldReportForm({
@@ -37,15 +43,15 @@ export default function FieldReportForm({
   onSave
 }: FieldReportFormProps) {
   const [loading, setLoading] = useState(false);
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photoPairs, setPhotoPairs] = useState<PhotoPair[]>([]);
   
   const [formData, setFormData] = useState({
     worker_name: '',
     service_date: new Date().toISOString().split('T')[0],
     arrival_time: '',
-    work_order_number: '',
+    linked_appointment_id: appointmentId || '',
+    linked_service_order_id: serviceOrderId || '',
     carpet_condition_arrival: 3,
     hard_floor_condition_arrival: 3,
     flooring_state_description: '',
@@ -64,58 +70,51 @@ export default function FieldReportForm({
     customer_signature_date: '',
   });
 
-  const handlePhotoSave = async (file: File, category: string, notes: string) => {
-    try {
+  // Auto-populate logged-in user name
+  useEffect(() => {
+    const loadUserName = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile) throw new Error('Profile not found');
-
-      const fileName = `${Date.now()}-${file.name}`;
-      const { error: uploadError, data } = await supabase.storage
-        .from('field-report-photos')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('field-report-photos')
-        .getPublicUrl(fileName);
-
-      const newPhoto: Photo = {
-        id: crypto.randomUUID(),
-        file_url: publicUrl,
-        file_name: file.name,
-        photo_type: category,
-        notes: notes || undefined,
-      };
-
-      setPhotos([...photos, newPhoto]);
-      setShowPhotoCapture(false);
-    } catch (error) {
-      console.error('Error saving photo:', error);
-      throw error;
-    }
-  };
-
-  const handlePairPhotos = (photoId: string, pairedId: string) => {
-    setPhotos(photos.map(p => {
-      if (p.id === photoId) {
-        return { ...p, paired_photo_id: pairedId };
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+        if (profile?.full_name) {
+          setFormData(prev => ({ ...prev, worker_name: profile.full_name }));
+        }
       }
-      if (p.id === pairedId) {
-        return { ...p, paired_photo_id: photoId };
-      }
-      return p;
-    }));
-    toast.success('Photos paired successfully');
-  };
+    };
+    loadUserName();
+  }, []);
+
+  // Fetch open appointments
+  const { data: appointments } = useQuery({
+    queryKey: ['open-appointments'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('appointments')
+        .select('id, title, start_time')
+        .in('status', ['scheduled', 'in_progress'])
+        .order('start_time', { ascending: true })
+        .limit(50);
+      return data || [];
+    },
+  });
+
+  // Fetch service orders
+  const { data: serviceOrders } = useQuery({
+    queryKey: ['service-orders'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('service_orders')
+        .select('id, work_order_number, title')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return data || [];
+    },
+  });
 
   const handleSubmit = async () => {
     try {
@@ -138,8 +137,8 @@ export default function FieldReportForm({
         .from('field_reports')
         .insert({
           tenant_id: profile.tenant_id,
-          appointment_id: appointmentId,
-          service_order_id: serviceOrderId,
+          appointment_id: formData.linked_appointment_id || null,
+          service_order_id: formData.linked_service_order_id || null,
           customer_id: customerId,
           location_id: locationId,
           report_number: reportNumber,
@@ -154,8 +153,48 @@ export default function FieldReportForm({
       if (reportError) throw reportError;
 
       // Save photos
-      if (photos.length > 0) {
-        const photoInserts = photos.map((photo, index) => ({
+      const allPhotos: any[] = [];
+      for (const pair of photoPairs) {
+        if (pair.before) {
+          const fileName = `${Date.now()}-before-${pair.before.file.name}`;
+          const { data: uploadData } = await supabase.storage
+            .from('field-report-photos')
+            .upload(fileName, pair.before.file);
+          
+          if (uploadData) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('field-report-photos')
+              .getPublicUrl(fileName);
+            allPhotos.push({
+              file_url: publicUrl,
+              file_name: pair.before.file.name,
+              photo_type: 'before',
+              notes: pair.before.notes,
+            });
+          }
+        }
+        if (pair.after) {
+          const fileName = `${Date.now()}-after-${pair.after.file.name}`;
+          const { data: uploadData } = await supabase.storage
+            .from('field-report-photos')
+            .upload(fileName, pair.after.file);
+          
+          if (uploadData) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('field-report-photos')
+              .getPublicUrl(fileName);
+            allPhotos.push({
+              file_url: publicUrl,
+              file_name: pair.after.file.name,
+              photo_type: 'after',
+              notes: pair.after.notes,
+            });
+          }
+        }
+      }
+
+      if (allPhotos.length > 0) {
+        const photoInserts = allPhotos.map((photo, index) => ({
           tenant_id: profile.tenant_id,
           field_report_id: report.id,
           file_url: photo.file_url,
@@ -164,7 +203,6 @@ export default function FieldReportForm({
           photo_type: photo.photo_type,
           notes: photo.notes,
           display_order: index,
-          paired_photo_id: photo.paired_photo_id,
           uploaded_by: user.id,
         }));
 
@@ -184,10 +222,6 @@ export default function FieldReportForm({
       setLoading(false);
     }
   };
-
-  const beforePhotos = photos.filter(p => p.photo_type === 'before');
-  const afterPhotos = photos.filter(p => p.photo_type === 'after');
-  const otherPhotos = photos.filter(p => !['before', 'after'].includes(p.photo_type));
 
   return (
     <>
@@ -209,12 +243,40 @@ export default function FieldReportForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="work_order_number">Work Order / Appointment Number</Label>
-                <Input
-                  id="work_order_number"
-                  value={formData.work_order_number}
-                  onChange={(e) => setFormData({ ...formData, work_order_number: e.target.value })}
-                />
+                <Label htmlFor="appointment">Link to Appointment (Optional)</Label>
+                <Select
+                  value={formData.linked_appointment_id}
+                  onValueChange={(val) => setFormData({ ...formData, linked_appointment_id: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select appointment..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appointments?.map((apt) => (
+                      <SelectItem key={apt.id} value={apt.id}>
+                        {apt.title} - {new Date(apt.start_time).toLocaleDateString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="service_order">Link to Service Order (Optional)</Label>
+                <Select
+                  value={formData.linked_service_order_id}
+                  onValueChange={(val) => setFormData({ ...formData, linked_service_order_id: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select service order..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceOrders?.map((so) => (
+                      <SelectItem key={so.id} value={so.id}>
+                        {so.work_order_number} - {so.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="service_date">Date of Service *</Label>
@@ -344,85 +406,11 @@ export default function FieldReportForm({
 
             {/* Photos */}
             <div className="space-y-4 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Photos</h3>
-                <Button onClick={() => setShowPhotoCapture(true)} size="sm">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Add Photo
-                </Button>
-              </div>
-
-              {/* Before/After Pairs */}
-              {beforePhotos.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Before & After Photos</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {beforePhotos.map(beforePhoto => {
-                      const pairedAfter = afterPhotos.find(a => a.id === beforePhoto.paired_photo_id);
-                      return (
-                        <div key={beforePhoto.id} className="space-y-2">
-                          <div className="relative">
-                            <img src={beforePhoto.file_url} alt="Before" className="w-full h-48 object-cover rounded" />
-                            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs">
-                              Before
-                            </div>
-                          </div>
-                          {pairedAfter ? (
-                            <div className="relative">
-                              <img src={pairedAfter.file_url} alt="After" className="w-full h-48 object-cover rounded" />
-                              <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-                                After
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="border-2 border-dashed rounded h-48 flex items-center justify-center">
-                              <div className="text-center text-sm text-muted-foreground">
-                                <p>No after photo</p>
-                                {afterPhotos.filter(a => !a.paired_photo_id).length > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="mt-2"
-                                    onClick={() => {
-                                      const unpaired = afterPhotos.find(a => !a.paired_photo_id);
-                                      if (unpaired) handlePairPhotos(beforePhoto.id, unpaired.id);
-                                    }}
-                                  >
-                                    <LinkIcon className="h-3 w-3 mr-1" />
-                                    Link
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Other Photos */}
-              {otherPhotos.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Other Photos</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {otherPhotos.map(photo => (
-                      <div key={photo.id} className="relative">
-                        <img src={photo.file_url} alt={photo.photo_type} className="w-full h-32 object-cover rounded" />
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-1 right-1"
-                          onClick={() => setPhotos(photos.filter(p => p.id !== photo.id))}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <h3 className="font-semibold">Before & After Photos</h3>
+              <BeforeAfterPhotoUpload
+                onPhotosChange={setPhotoPairs}
+                initialPairs={photoPairs}
+              />
             </div>
 
             {/* Problem Areas */}
@@ -485,12 +473,12 @@ export default function FieldReportForm({
 
               {formData.had_incident && (
                 <div className="space-y-2">
-                  <Label htmlFor="incident_description">Describe incident</Label>
+                  <Label htmlFor="incident_description">Incident description</Label>
                   <Textarea
                     id="incident_description"
                     value={formData.incident_description}
                     onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })}
-                    rows={3}
+                    rows={4}
                   />
                 </div>
               )}
@@ -498,54 +486,44 @@ export default function FieldReportForm({
 
             {/* Customer Signature */}
             <div className="space-y-4 border-t pt-4">
-              <Label>Customer Signature</Label>
+              <h3 className="font-semibold">Customer Signature</h3>
               {formData.customer_signature_data ? (
                 <div className="space-y-2">
-                  <img src={formData.customer_signature_data} alt="Signature" className="border rounded h-32" />
-                  <Button variant="outline" size="sm" onClick={() => setFormData({ ...formData, customer_signature_data: '' })}>
-                    Clear Signature
+                  <img src={formData.customer_signature_data} alt="Signature" className="border rounded p-2 bg-white" />
+                  <Button variant="outline" onClick={() => setShowSignaturePad(true)}>
+                    Update Signature
                   </Button>
                 </div>
               ) : (
-                <Button onClick={() => setShowSignaturePad(true)} variant="outline">
+                <Button onClick={() => setShowSignaturePad(true)}>
                   Capture Signature
                 </Button>
               )}
-              {formData.customer_signature_data && (
-                <div className="space-y-2">
-                  <Label htmlFor="sig_name">Customer Name</Label>
-                  <Input
-                    id="sig_name"
-                    value={formData.customer_signature_name}
-                    onChange={(e) => setFormData({ ...formData, customer_signature_name: e.target.value })}
-                  />
-                </div>
-              )}
             </div>
 
-            <Button onClick={handleSubmit} disabled={loading} className="w-full" size="lg">
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="w-full"
+              size="lg"
+            >
               {loading ? 'Submitting...' : 'Submit Field Report'}
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {showPhotoCapture && (
-        <PhotoCapture
-          onSave={handlePhotoSave}
-          onClose={() => setShowPhotoCapture(false)}
-        />
-      )}
-
       {showSignaturePad && (
         <SignaturePad
-          onSave={(signature) => {
+          onSave={(signatureData, name) => {
             setFormData({
               ...formData,
-              customer_signature_data: signature,
+              customer_signature_data: signatureData,
+              customer_signature_name: name,
               customer_signature_date: new Date().toISOString(),
             });
             setShowSignaturePad(false);
+            toast.success('Signature captured');
           }}
           onClose={() => setShowSignaturePad(false)}
         />
