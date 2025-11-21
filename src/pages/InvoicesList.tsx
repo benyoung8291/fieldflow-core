@@ -34,6 +34,7 @@ export default function InvoicesList() {
             name
           )
         `)
+        .neq("invoice_type", "ap")
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {

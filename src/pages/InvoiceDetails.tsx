@@ -600,6 +600,9 @@ export default function InvoiceDetails() {
   
   // Only show actions if invoice is not Released in Acumatica
   if (!isAcumaticaReleased) {
+    // @ts-ignore - invoice_type exists
+    const isAPInvoice = invoice.invoice_type === 'ap';
+    
     if (invoice.status === "draft") {
       primaryActions.push({
         label: draftSaved ? "Saved" : "Save Draft",
@@ -611,12 +614,23 @@ export default function InvoiceDetails() {
         },
         variant: "outline",
       });
-      primaryActions.push({
-        label: "Send to Customer",
-        icon: <Send className="h-4 w-4" />,
-        onClick: () => updateStatusMutation.mutate("sent"),
-        variant: "default",
-      });
+      
+      // For AP invoices, go directly to approved. For AR invoices, send to customer first
+      if (isAPInvoice) {
+        primaryActions.push({
+          label: "Approve",
+          icon: <CheckCircle className="h-4 w-4" />,
+          onClick: () => updateStatusMutation.mutate("approved"),
+          variant: "default",
+        });
+      } else {
+        primaryActions.push({
+          label: "Send to Customer",
+          icon: <Send className="h-4 w-4" />,
+          onClick: () => updateStatusMutation.mutate("sent"),
+          variant: "default",
+        });
+      }
     } else if (invoice.status === "sent") {
       primaryActions.push({
         label: "Back to Draft",
@@ -633,7 +647,7 @@ export default function InvoiceDetails() {
       // Only allow unapprove if not yet synced to Acumatica
       primaryActions.push({
         label: "Unapprove",
-        onClick: () => updateStatusMutation.mutate("sent"),
+        onClick: () => updateStatusMutation.mutate(isAPInvoice ? "draft" : "sent"),
         variant: "outline",
       });
     }
@@ -750,7 +764,7 @@ export default function InvoiceDetails() {
           icon={DollarSign}
           label="Total Amount"
           value={`$${invoice.total_amount.toFixed(2)}`}
-          description={`Subtotal: $${invoice.subtotal.toFixed(2)}`}
+          description={`Subtotal: $${invoice.subtotal.toFixed(2)} • Tax: $${invoice.tax_amount.toFixed(2)}`}
           iconColor="text-green-500"
         />
       </div>
