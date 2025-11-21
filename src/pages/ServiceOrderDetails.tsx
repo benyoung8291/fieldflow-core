@@ -827,11 +827,14 @@ export default function ServiceOrderDetails() {
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Profit</div>
+                  <div className="text-xs text-muted-foreground mb-1">Estimated Profit</div>
                   <div className="text-2xl font-bold text-success">
-                    ${totalProfit.toFixed(2)}
+                    ${(totalRevenue - totalCost - estimatedLaborCost).toFixed(2)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
+                    Actual: ${totalProfit.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
                     Margin: {profitMargin.toFixed(1)}%
                   </div>
                   <div className="text-xs text-muted-foreground">
