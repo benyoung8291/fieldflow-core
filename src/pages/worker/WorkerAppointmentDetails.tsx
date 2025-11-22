@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import PhotoCapture from '@/components/worker/PhotoCapture';
 import SignaturePad from '@/components/worker/SignaturePad';
 import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHelp';
+import { cacheAppointments } from '@/lib/offlineSync';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { queueTimeEntry } from '@/lib/offlineSync';
 import TimeLogsTable from '@/components/service-orders/TimeLogsTable';
@@ -91,36 +92,67 @@ export default function WorkerAppointmentDetails() {
         }
       }
 
-      // Load appointment with assigned workers and line items
+      // Optimized: Load appointment with only essential fields first
       const { data: aptData } = await supabase
         .from('appointments')
         .select(`
-          *,
-          service_order:service_orders(
-            id,
-            work_order_number,
-            description,
-            customer:customers(name, phone, email, address, city, state, postcode),
-            line_items:service_order_line_items(
-              id,
-              description,
-              quantity,
-              estimated_hours
-            )
-          ),
-          appointment_workers(
-            id,
-            worker:workers(
-              id,
-              first_name,
-              last_name,
-              mobile_phone,
-              email
-            )
-          )
+          id,
+          title,
+          description,
+          start_time,
+          end_time,
+          status,
+          location_address,
+          location_lat,
+          location_lng,
+          gps_check_in_radius,
+          check_in_time,
+          check_out_time,
+          notes,
+          service_order_id
         `)
         .eq('id', id)
         .single();
+
+      if (aptData) {
+        setAppointment(aptData as any);
+        // Load related data in parallel
+        const [serviceOrderData, workersData] = await Promise.all([
+          aptData.service_order_id
+            ? supabase
+                .from('service_orders')
+                .select(`
+                  id,
+                  work_order_number,
+                  description,
+                  customer:customers(name, phone, email, address, city, state, postcode),
+                  line_items:service_order_line_items(id, description, quantity, estimated_hours)
+                `)
+                .eq('id', aptData.service_order_id)
+                .single()
+            : Promise.resolve({ data: null }),
+          supabase
+            .from('appointment_workers')
+            .select(`
+              id,
+              worker:workers(id, first_name, last_name, phone, email)
+            `)
+            .eq('appointment_id', id)
+        ]);
+
+        // Merge data into appointment object
+        const fullAptData = {
+          ...aptData,
+          service_order: serviceOrderData.data,
+          appointment_workers: workersData.data || []
+        };
+        
+        setAppointment(fullAptData as any);
+        await cacheAppointments([fullAptData]);
+      }
+
+      // Then load remaining data
+      setAppointment((prev: any) => ({ ...prev, ...aptData }));
 
       setAppointment(aptData);
 
@@ -976,11 +1008,11 @@ export default function WorkerAppointmentDetails() {
                       <p className="text-xs text-muted-foreground">{aw.worker.email}</p>
                     )}
                   </div>
-                  {aw.worker?.mobile_phone && (
+                  {aw.worker?.phone && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.href = `tel:${aw.worker.mobile_phone}`}
+                      onClick={() => window.location.href = `tel:${aw.worker.phone}`}
                     >
                       <Phone className="h-4 w-4" />
                     </Button>
