@@ -15,8 +15,6 @@ interface FieldReportsListProps {
 export default function FieldReportsList({ appointmentId, onReportStateChange }: FieldReportsListProps) {
   const navigate = useNavigate();
 
-  console.log('FieldReportsList rendered with appointmentId:', appointmentId);
-
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
@@ -28,7 +26,6 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
   const { data: fieldReports = [], isLoading } = useQuery({
     queryKey: ['field-reports', appointmentId],
     queryFn: async () => {
-      console.log('Fetching field reports for appointment:', appointmentId);
       const { data, error } = await supabase
         .from('field_reports')
         .select(`
@@ -41,12 +38,7 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
         .eq('appointment_id', appointmentId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching field reports:', error);
-        throw error;
-      }
-      
-      console.log('Fetched field reports:', data);
+      if (error) throw error;
       return data;
     },
   });
