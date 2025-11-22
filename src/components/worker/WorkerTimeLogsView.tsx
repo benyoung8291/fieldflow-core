@@ -35,10 +35,12 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
     },
   });
 
-  const { data: timeLogs = [], isLoading } = useQuery({
+  const { data: timeLogs = [], isLoading, refetch } = useQuery({
     queryKey: ["worker-time-logs", appointmentId, currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) return [];
+      
+      console.log('[WorkerTimeLogsView] Fetching time logs for user:', currentUser.id, 'appointment:', appointmentId);
       
       const { data, error } = await supabase
         .from("time_logs")
@@ -47,10 +49,16 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
         .eq("worker_id", currentUser.id)
         .order("clock_in", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WorkerTimeLogsView] Error fetching time logs:', error);
+        throw error;
+      }
+      
+      console.log('[WorkerTimeLogsView] Fetched time logs:', data);
       return data || [];
     },
     enabled: !!currentUser?.id,
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   if (isLoading) {
