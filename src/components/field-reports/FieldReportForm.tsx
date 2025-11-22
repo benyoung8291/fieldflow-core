@@ -78,27 +78,74 @@ export default function FieldReportForm({
     customer_signature_date: '',
   });
 
-  // Load saved draft from local storage on mount
+  // Load saved draft from local storage and database on mount
   useEffect(() => {
-    const savedDraft = localStorage.getItem(storageKey);
-    if (savedDraft) {
-      try {
-        const parsed = JSON.parse(savedDraft);
-        setFormData(parsed.formData);
-        if (parsed.photoPairs) {
-          setPhotoPairs(parsed.photoPairs);
+    const loadDraft = async () => {
+      // First try localStorage
+      const savedDraft = localStorage.getItem(storageKey);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          setFormData(parsed.formData);
+          if (parsed.photoPairs) {
+            setPhotoPairs(parsed.photoPairs);
+          }
+          if (parsed.draftReportId) {
+            setDraftReportId(parsed.draftReportId);
+            
+            // Load photos from database for this draft
+            const { data: photos } = await supabase
+              .from('field_report_photos')
+              .select('*')
+              .eq('field_report_id', parsed.draftReportId)
+              .order('display_order');
+              
+            if (photos && photos.length > 0) {
+              // Reconstruct photo pairs from database
+              const pairs: PhotoPair[] = [];
+              photos.forEach((photo) => {
+                const photoData = {
+                  fileUrl: photo.file_url,
+                  preview: photo.file_url,
+                  notes: photo.notes || '',
+                  fileName: photo.file_name,
+                };
+                
+                if (photo.photo_type === 'before') {
+                  // Find or create pair for this before photo
+                  const existingPair = pairs.find(p => !p.before);
+                  if (existingPair) {
+                    existingPair.before = photoData;
+                  } else {
+                    pairs.push({ id: crypto.randomUUID(), before: photoData });
+                  }
+                } else if (photo.photo_type === 'after') {
+                  // Find or create pair for this after photo
+                  const existingPair = pairs.find(p => p.before && !p.after);
+                  if (existingPair) {
+                    existingPair.after = photoData;
+                  } else {
+                    pairs.push({ id: crypto.randomUUID(), after: photoData });
+                  }
+                }
+              });
+              
+              if (pairs.length > 0) {
+                setPhotoPairs(pairs);
+              }
+            }
+          }
+          setLastSaved(new Date(parsed.savedAt));
+          toast.info('Draft restored', {
+            description: 'Your previous work has been restored'
+          });
+        } catch (error) {
+          console.error('Error loading draft:', error);
         }
-        if (parsed.draftReportId) {
-          setDraftReportId(parsed.draftReportId);
-        }
-        setLastSaved(new Date(parsed.savedAt));
-        toast.info('Draft restored', {
-          description: 'Your previous work has been restored'
-        });
-      } catch (error) {
-        console.error('Error loading draft:', error);
       }
-    }
+    };
+    
+    loadDraft();
   }, [storageKey]);
 
   // Auto-save to local storage and database whenever form data or photos change
@@ -165,6 +212,52 @@ export default function FieldReportForm({
               .from('field_reports')
               .update(reportData)
               .eq('id', draftReportId);
+              
+            // Save/update photo records for draft
+            if (photoPairs.length > 0) {
+              // Delete existing photos first
+              await supabase
+                .from('field_report_photos')
+                .delete()
+                .eq('field_report_id', draftReportId);
+                
+              // Insert new photo records
+              const photoInserts: any[] = [];
+              photoPairs.forEach((pair, index) => {
+                if (pair.before) {
+                  photoInserts.push({
+                    tenant_id: profile.tenant_id,
+                    field_report_id: draftReportId,
+                    file_url: pair.before.fileUrl,
+                    file_name: pair.before.fileName,
+                    file_type: 'image/jpeg',
+                    photo_type: 'before',
+                    notes: pair.before.notes,
+                    display_order: index * 2,
+                    uploaded_by: user.id,
+                  });
+                }
+                if (pair.after) {
+                  photoInserts.push({
+                    tenant_id: profile.tenant_id,
+                    field_report_id: draftReportId,
+                    file_url: pair.after.fileUrl,
+                    file_name: pair.after.fileName,
+                    file_type: 'image/jpeg',
+                    photo_type: 'after',
+                    notes: pair.after.notes,
+                    display_order: index * 2 + 1,
+                    uploaded_by: user.id,
+                  });
+                }
+              });
+              
+              if (photoInserts.length > 0) {
+                await supabase
+                  .from('field_report_photos')
+                  .insert(photoInserts);
+              }
+            }
           } else {
             // Create new draft
             const { data: newReport } = await supabase
@@ -181,6 +274,45 @@ export default function FieldReportForm({
               
             if (newReport) {
               setDraftReportId(newReport.id);
+              
+              // Save photo records for new draft
+              if (photoPairs.length > 0) {
+                const photoInserts: any[] = [];
+                photoPairs.forEach((pair, index) => {
+                  if (pair.before) {
+                    photoInserts.push({
+                      tenant_id: profile.tenant_id,
+                      field_report_id: newReport.id,
+                      file_url: pair.before.fileUrl,
+                      file_name: pair.before.fileName,
+                      file_type: 'image/jpeg',
+                      photo_type: 'before',
+                      notes: pair.before.notes,
+                      display_order: index * 2,
+                      uploaded_by: user.id,
+                    });
+                  }
+                  if (pair.after) {
+                    photoInserts.push({
+                      tenant_id: profile.tenant_id,
+                      field_report_id: newReport.id,
+                      file_url: pair.after.fileUrl,
+                      file_name: pair.after.fileName,
+                      file_type: 'image/jpeg',
+                      photo_type: 'after',
+                      notes: pair.after.notes,
+                      display_order: index * 2 + 1,
+                      uploaded_by: user.id,
+                    });
+                  }
+                });
+                
+                if (photoInserts.length > 0) {
+                  await supabase
+                    .from('field_report_photos')
+                    .insert(photoInserts);
+                }
+              }
             }
           }
         } catch (error) {
@@ -381,6 +513,13 @@ export default function FieldReportForm({
 
       if (allPhotos.length > 0) {
         console.log('Saving photo records to database...');
+        
+        // Delete existing photos first (in case they were saved during draft)
+        await supabase
+          .from('field_report_photos')
+          .delete()
+          .eq('field_report_id', report.id);
+        
         const photoInserts = allPhotos.map((photo, index) => ({
           tenant_id: profile.tenant_id,
           field_report_id: report.id,
