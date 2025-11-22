@@ -69,10 +69,6 @@ export default function Timesheets() {
             id,
             title,
             location_address
-          ),
-          profiles:worker_id (
-            first_name,
-            last_name
           )
         `)
         .gte("clock_in", selectedWeek.toISOString())
@@ -80,6 +76,22 @@ export default function Timesheets() {
         .order("clock_in", { ascending: true });
 
       if (error) throw error;
+
+      // Fetch worker profiles separately
+      if (data && data.length > 0) {
+        const workerIds = [...new Set(data.map(t => t.worker_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", workerIds);
+
+        // Map profiles to time logs
+        return data.map(log => ({
+          ...log,
+          profiles: profiles?.find(p => p.id === log.worker_id)
+        })) as any[];
+      }
+
       return data || [];
     },
   });
@@ -89,7 +101,7 @@ export default function Timesheets() {
   const processedLogs = timeLogs.filter(log => log.timesheet_id);
 
   // Group unprocessed logs by worker
-  const logsByWorker = unprocessedLogs.reduce((acc, log) => {
+  const logsByWorker = unprocessedLogs.reduce((acc: any, log: any) => {
     const workerId = log.worker_id;
     if (!acc[workerId]) {
       acc[workerId] = {
@@ -177,25 +189,37 @@ export default function Timesheets() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {timesheets.map((timesheet) => (
-                  <div 
-                    key={timesheet.id} 
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                    onClick={() => navigate(`/timesheets/${timesheet.id}`)}
-                  >
-                    <div className="space-y-1">
-                      <div className="font-medium">
-                        Timesheet #{timesheet.id.slice(0, 8)}
+                {timesheets.map((timesheet: any) => {
+                  // Get time logs count for this timesheet
+                  const timesheetLogs = timeLogs.filter(log => log.timesheet_id === timesheet.id);
+                  const timesheetHours = timesheetLogs.reduce((sum, log) => sum + (log.total_hours || 0), 0);
+                  const workerName = timesheetLogs[0]?.profiles ? 
+                    `${timesheetLogs[0].profiles.first_name} ${timesheetLogs[0].profiles.last_name}` : 
+                    "Unknown";
+
+                  return (
+                    <div 
+                      key={timesheet.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                      onClick={() => navigate(`/timesheets/${timesheet.id}`)}
+                    >
+                      <div className="space-y-1 flex-1">
+                        <div className="font-medium">
+                          {workerName} - Week of {format(new Date(timesheet.week_start_date), "MMM d")}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {timesheetLogs.length} time log{timesheetLogs.length !== 1 ? 's' : ''} • {timesheetHours.toFixed(2)}h total
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Created by {timesheet.creator?.first_name} {timesheet.creator?.last_name} on {format(new Date(timesheet.created_at), "MMM d, yyyy")}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        Created by {timesheet.creator?.first_name} {timesheet.creator?.last_name} on {format(new Date(timesheet.created_at), "MMM d, yyyy")}
-                      </div>
+                      <Badge className={getStatusColor(timesheet.status)}>
+                        {timesheet.status}
+                      </Badge>
                     </div>
-                    <Badge className={getStatusColor(timesheet.status)}>
-                      {timesheet.status}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -218,7 +242,7 @@ export default function Timesheets() {
               </div>
             ) : (
               <div className="space-y-4">
-                {Object.entries(logsByWorker).map(([workerId, data]) => (
+                {Object.entries(logsByWorker).map(([workerId, data]: [string, any]) => (
                   <div key={workerId} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -244,7 +268,7 @@ export default function Timesheets() {
         </Card>
 
         {/* Stats Card */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Total Time Logs</CardTitle>
@@ -252,7 +276,19 @@ export default function Timesheets() {
             <CardContent>
               <div className="text-2xl font-bold">{timeLogs.length}</div>
               <p className="text-xs text-muted-foreground">
-                {processedLogs.length} processed, {unprocessedLogs.length} unprocessed
+                This pay week
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Processed Logs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{processedLogs.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {((processedLogs.length / Math.max(timeLogs.length, 1)) * 100).toFixed(0)}% complete
               </p>
             </CardContent>
           </Card>
@@ -273,12 +309,12 @@ export default function Timesheets() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Timesheets Created</CardTitle>
+              <CardTitle className="text-sm font-medium">Timesheets</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{timesheets.length}</div>
               <p className="text-xs text-muted-foreground">
-                For this pay week
+                Created this week
               </p>
             </CardContent>
           </Card>
