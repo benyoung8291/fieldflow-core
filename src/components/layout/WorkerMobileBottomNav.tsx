@@ -5,6 +5,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -37,6 +38,19 @@ export const WorkerMobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -65,6 +79,9 @@ export const WorkerMobileBottomNav = () => {
 
   // Only show on mobile devices
   if (!isMobile) return null;
+
+  // Don't show when not authenticated
+  if (!isAuthenticated) return null;
 
   // Only show on worker app routes
   if (!location.pathname.startsWith('/worker')) return null;
