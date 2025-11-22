@@ -57,8 +57,8 @@ export default function FieldReportForm({
     worker_name: '',
     service_date: new Date().toISOString().split('T')[0],
     arrival_time: '',
-    linked_appointment_id: appointmentId || '',
-    linked_service_order_id: serviceOrderId || '',
+    appointment_id: appointmentId || '',
+    service_order_id: serviceOrderId || '',
     carpet_condition_arrival: 3,
     hard_floor_condition_arrival: 3,
     flooring_state_description: '',
@@ -207,8 +207,8 @@ export default function FieldReportForm({
         .from('field_reports')
         .insert({
           tenant_id: profile.tenant_id,
-          appointment_id: formData.linked_appointment_id || null,
-          service_order_id: formData.linked_service_order_id || null,
+          appointment_id: formData.appointment_id || null,
+          service_order_id: formData.service_order_id || null,
           customer_id: customerId,
           location_id: locationId,
           report_number: reportNumber,
@@ -320,8 +320,8 @@ export default function FieldReportForm({
               <div className="space-y-2">
                 <Label htmlFor="appointment">Link to Appointment (Optional)</Label>
                 <Select
-                  value={formData.linked_appointment_id}
-                  onValueChange={(val) => setFormData({ ...formData, linked_appointment_id: val })}
+                  value={formData.appointment_id}
+                  onValueChange={(val) => setFormData({ ...formData, appointment_id: val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select appointment..." />
@@ -338,8 +338,8 @@ export default function FieldReportForm({
               <div className="space-y-2">
                 <Label htmlFor="service_order">Link to Service Order (Optional)</Label>
                 <Select
-                  value={formData.linked_service_order_id}
-                  onValueChange={(val) => setFormData({ ...formData, linked_service_order_id: val })}
+                  value={formData.service_order_id}
+                  onValueChange={(val) => setFormData({ ...formData, service_order_id: val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select service order..." />
