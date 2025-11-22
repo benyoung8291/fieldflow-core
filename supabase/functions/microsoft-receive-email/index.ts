@@ -26,28 +26,67 @@ serve(async (req) => {
     const notifications = await req.json();
     console.log("Received notifications:", JSON.stringify(notifications, null, 2));
 
-    for (const notification of notifications.value || []) {
+    // Validate notification structure
+    if (!notifications.value || !Array.isArray(notifications.value)) {
+      console.error("Invalid notification structure: missing or invalid 'value' array");
+      return new Response(
+        JSON.stringify({ error: "Invalid notification structure" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+
+    for (const notification of notifications.value) {
       try {
-        // Get the resource (email) from the notification
-        const resourceUrl = notification.resource;
-        
-        // Extract email account ID from subscription client state if available
-        const clientState = notification.clientState;
-        
-        if (!clientState) {
-          console.warn("No client state in notification, skipping");
+        // Validate required notification fields
+        if (!notification.subscriptionId || !notification.resource || !notification.clientState) {
+          console.warn("Notification missing required fields, skipping");
           continue;
         }
 
-        // Get the email account
-        const { data: account } = await supabaseClient
+        // Get the resource (email) from the notification
+        const resourceUrl = notification.resource;
+        
+        // Validate resource URL format (must be a Microsoft Graph messages endpoint)
+        if (!resourceUrl.includes('/messages/')) {
+          console.warn("Invalid resource URL format, skipping:", resourceUrl);
+          continue;
+        }
+        
+        // Extract email account ID from subscription client state
+        const clientState = notification.clientState;
+        
+        // Validate clientState format (should be a UUID)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(clientState)) {
+          console.warn("Invalid clientState format, skipping:", clientState);
+          continue;
+        }
+
+        // Get the email account and verify it exists with matching subscription
+        const { data: account, error: accountError } = await supabaseClient
           .from("helpdesk_email_accounts")
           .select("*")
           .eq("microsoft_account_id", clientState)
+          .eq("is_active", true)
           .single();
 
-        if (!account) {
-          console.warn("Email account not found for client state:", clientState);
+        if (accountError || !account) {
+          console.warn("Email account not found or inactive for client state:", clientState);
+          continue;
+        }
+
+        // Verify the account belongs to a valid tenant
+        const { data: tenant, error: tenantError } = await supabaseClient
+          .from("tenants")
+          .select("id")
+          .eq("id", account.tenant_id)
+          .single();
+
+        if (tenantError || !tenant) {
+          console.error("Invalid tenant for account:", account.tenant_id);
           continue;
         }
 
