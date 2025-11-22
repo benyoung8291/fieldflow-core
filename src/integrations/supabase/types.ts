@@ -6223,39 +6223,60 @@ export type Database = {
       }
       tenants: {
         Row: {
+          billing_email: string | null
           created_at: string | null
           email_domain: string | null
           id: string
+          is_active: boolean | null
           logo_url: string | null
+          monthly_price: number | null
           name: string
           primary_color: string | null
           secondary_color: string | null
           status: Database["public"]["Enums"]["tenant_status"] | null
           subdomain: string
+          subscription_ends_at: string | null
+          subscription_plan: string | null
+          subscription_starts_at: string | null
+          subscription_status: string | null
           updated_at: string | null
         }
         Insert: {
+          billing_email?: string | null
           created_at?: string | null
           email_domain?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
+          monthly_price?: number | null
           name: string
           primary_color?: string | null
           secondary_color?: string | null
           status?: Database["public"]["Enums"]["tenant_status"] | null
           subdomain: string
+          subscription_ends_at?: string | null
+          subscription_plan?: string | null
+          subscription_starts_at?: string | null
+          subscription_status?: string | null
           updated_at?: string | null
         }
         Update: {
+          billing_email?: string | null
           created_at?: string | null
           email_domain?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
+          monthly_price?: number | null
           name?: string
           primary_color?: string | null
           secondary_color?: string | null
           status?: Database["public"]["Enums"]["tenant_status"] | null
           subdomain?: string
+          subscription_ends_at?: string | null
+          subscription_plan?: string | null
+          subscription_starts_at?: string | null
+          subscription_status?: string | null
           updated_at?: string | null
         }
         Relationships: []
