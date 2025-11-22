@@ -221,14 +221,67 @@ export default function WorkerAppointmentDetails() {
             });
             return false;
           }
+          
+          if (permission.state === 'granted') {
+            return true;
+          }
+          
+          // If state is 'prompt', trigger the permission request
+          if (permission.state === 'prompt') {
+            console.log('[Permission] Triggering permission prompt...');
+            return new Promise<boolean>((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                () => {
+                  console.log('[Permission] Permission granted');
+                  resolve(true);
+                },
+                (error) => {
+                  console.log('[Permission] Permission denied or error:', error);
+                  if (error.code === 1) {
+                    toast.error('📍 Location blocked! Tap "Location Help" button above for instructions.', {
+                      duration: 8000,
+                    });
+                    resolve(false);
+                  } else {
+                    // Other errors - let the main flow handle it
+                    resolve(true);
+                  }
+                },
+                {
+                  enableHighAccuracy: false,
+                  timeout: 5000,
+                  maximumAge: 0,
+                }
+              );
+            });
+          }
         } catch (permError) {
           // Permissions API might not be fully supported, continue anyway
           console.warn('Permissions API error:', permError);
         }
       }
 
-      // Permission is either granted or prompt - continue
-      return true;
+      // Fallback for browsers without Permissions API - trigger permission request
+      return new Promise<boolean>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          () => resolve(true),
+          (error) => {
+            if (error.code === 1) {
+              toast.error('📍 Location blocked! Tap "Location Help" button above for instructions.', {
+                duration: 8000,
+              });
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 0,
+          }
+        );
+      });
     } catch (error) {
       console.error('Permission check error:', error);
       return true; // Still try to get location
@@ -1088,6 +1141,14 @@ export default function WorkerAppointmentDetails() {
                       src={file.file_url}
                       alt={file.file_name}
                       className="w-full h-32 object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Image failed to load:', file.file_url);
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="w-full h-32 flex items-center justify-center bg-muted"><p class="text-xs text-muted-foreground">Image unavailable</p></div>';
+                        }
+                      }}
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-2">
                       <p className="text-xs truncate">{file.category}</p>
