@@ -25,14 +25,16 @@ interface FieldReportFormProps {
 interface PhotoPair {
   id: string;
   before?: {
-    file: File;
+    fileUrl: string; // Uploaded URL
     preview: string;
     notes: string;
+    fileName: string;
   };
   after?: {
-    file: File;
+    fileUrl: string; // Uploaded URL
     preview: string;
     notes: string;
+    fileName: string;
   };
 }
 
@@ -82,6 +84,9 @@ export default function FieldReportForm({
       try {
         const parsed = JSON.parse(savedDraft);
         setFormData(parsed.formData);
+        if (parsed.photoPairs) {
+          setPhotoPairs(parsed.photoPairs);
+        }
         setLastSaved(new Date(parsed.savedAt));
         toast.info('Draft restored', {
           description: 'Your previous work has been restored'
@@ -92,11 +97,12 @@ export default function FieldReportForm({
     }
   }, [storageKey]);
 
-  // Auto-save to local storage whenever form data changes
+  // Auto-save to local storage whenever form data or photos change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const draftData = {
         formData,
+        photoPairs,
         savedAt: new Date().toISOString()
       };
       localStorage.setItem(storageKey, JSON.stringify(draftData));
@@ -104,7 +110,7 @@ export default function FieldReportForm({
     }, 1000); // Debounce by 1 second
 
     return () => clearTimeout(timeoutId);
-  }, [formData, storageKey]);
+  }, [formData, photoPairs, storageKey]);
 
   // Auto-populate logged-in user name
   useEffect(() => {
@@ -221,58 +227,28 @@ export default function FieldReportForm({
       
       console.log('Field report created successfully:', report.id);
 
-      // Save photos
-      console.log(`Uploading ${photoPairs.length} photo pairs...`);
+      // Prepare photo records (photos already uploaded in background)
+      console.log(`Preparing ${photoPairs.length} photo pairs...`);
       const allPhotos: any[] = [];
       for (const pair of photoPairs) {
         if (pair.before) {
-          const fileName = `${Date.now()}-before-${pair.before.file.name}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('field-report-photos')
-            .upload(fileName, pair.before.file);
-          
-          if (uploadError) {
-            console.error('Before photo upload error:', uploadError);
-            throw new Error(`Failed to upload before photo: ${uploadError.message}`);
-          }
-          
-          if (uploadData) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('field-report-photos')
-              .getPublicUrl(fileName);
-            allPhotos.push({
-              file_url: publicUrl,
-              file_name: pair.before.file.name,
-              photo_type: 'before',
-              notes: pair.before.notes,
-            });
-          }
+          allPhotos.push({
+            file_url: pair.before.fileUrl,
+            file_name: pair.before.fileName,
+            photo_type: 'before',
+            notes: pair.before.notes,
+          });
         }
         if (pair.after) {
-          const fileName = `${Date.now()}-after-${pair.after.file.name}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('field-report-photos')
-            .upload(fileName, pair.after.file);
-          
-          if (uploadError) {
-            console.error('After photo upload error:', uploadError);
-            throw new Error(`Failed to upload after photo: ${uploadError.message}`);
-          }
-          
-          if (uploadData) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('field-report-photos')
-              .getPublicUrl(fileName);
-            allPhotos.push({
-              file_url: publicUrl,
-              file_name: pair.after.file.name,
-              photo_type: 'after',
-              notes: pair.after.notes,
-            });
-          }
+          allPhotos.push({
+            file_url: pair.after.fileUrl,
+            file_name: pair.after.fileName,
+            photo_type: 'after',
+            notes: pair.after.notes,
+          });
         }
       }
-      console.log(`Uploaded ${allPhotos.length} photos successfully`);
+      console.log(`Prepared ${allPhotos.length} photos`);
 
       if (allPhotos.length > 0) {
         console.log('Saving photo records to database...');
