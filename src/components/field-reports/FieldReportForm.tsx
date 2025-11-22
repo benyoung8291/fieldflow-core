@@ -19,6 +19,7 @@ interface FieldReportFormProps {
   customerId?: string;
   locationId?: string;
   serviceOrderId?: string;
+  reportId?: string; // For editing existing reports
   onSave?: () => void;
 }
 
@@ -43,6 +44,7 @@ export default function FieldReportForm({
   customerId,
   locationId,
   serviceOrderId,
+  reportId,
   onSave
 }: FieldReportFormProps) {
   const [loading, setLoading] = useState(false);
@@ -82,6 +84,87 @@ export default function FieldReportForm({
   useEffect(() => {
     const loadDraft = async () => {
       try {
+        // If reportId is provided, load that specific report for editing
+        if (reportId) {
+          const { data: existingReport } = await supabase
+            .from('field_reports')
+            .select('*')
+            .eq('id', reportId)
+            .single();
+            
+          if (existingReport) {
+            setDraftReportId(existingReport.id);
+            setFormData({
+              worker_name: existingReport.worker_name,
+              service_date: existingReport.service_date,
+              arrival_time: existingReport.arrival_time,
+              appointment_id: existingReport.appointment_id || '',
+              service_order_id: existingReport.service_order_id || '',
+              carpet_condition_arrival: existingReport.carpet_condition_arrival || 3,
+              hard_floor_condition_arrival: existingReport.hard_floor_condition_arrival || 3,
+              flooring_state_description: existingReport.flooring_state_description || '',
+              has_signed_swms: existingReport.has_signed_swms,
+              equipment_tested_tagged: existingReport.equipment_tested_tagged,
+              equipment_clean_working: existingReport.equipment_clean_working,
+              work_description: existingReport.work_description,
+              internal_notes: existingReport.internal_notes || '',
+              had_problem_areas: existingReport.had_problem_areas,
+              problem_areas_description: existingReport.problem_areas_description || '',
+              methods_attempted: existingReport.methods_attempted || '',
+              had_incident: existingReport.had_incident,
+              incident_description: existingReport.incident_description || '',
+              customer_signature_data: existingReport.customer_signature_data || '',
+              customer_signature_name: existingReport.customer_signature_name || '',
+              customer_signature_date: existingReport.customer_signature_date || '',
+            });
+            
+            // Load photos from database
+            const { data: photos } = await supabase
+              .from('field_report_photos')
+              .select('*')
+              .eq('field_report_id', existingReport.id)
+              .order('display_order');
+                
+            if (photos && photos.length > 0) {
+              const pairMap = new Map<number, PhotoPair>();
+              
+              photos.forEach((photo) => {
+                const photoData = {
+                  fileUrl: photo.file_url,
+                  preview: photo.file_url,
+                  notes: photo.notes || '',
+                  fileName: photo.file_name,
+                };
+                
+                const pairIndex = Math.floor(photo.display_order / 2);
+                
+                if (!pairMap.has(pairIndex)) {
+                  pairMap.set(pairIndex, { id: crypto.randomUUID() });
+                }
+                
+                const pair = pairMap.get(pairIndex)!;
+                
+                if (photo.photo_type === 'before') {
+                  pair.before = photoData;
+                } else if (photo.photo_type === 'after') {
+                  pair.after = photoData;
+                }
+              });
+              
+              const pairs = Array.from(pairMap.entries())
+                .sort(([a], [b]) => a - b)
+                .map(([_, pair]) => pair);
+              
+              if (pairs.length > 0) {
+                setPhotoPairs(pairs);
+              }
+            }
+            
+            setLastSaved(existingReport.updated_at ? new Date(existingReport.updated_at) : null);
+            return;
+          }
+        }
+        
         // First check database for existing draft by appointment_id
         if (appointmentId) {
           const { data: existingDraft } = await supabase
@@ -191,7 +274,7 @@ export default function FieldReportForm({
     };
     
     loadDraft();
-  }, [appointmentId, storageKey]);
+  }, [appointmentId, storageKey, reportId]);
 
   // Auto-save to local storage and database whenever form data or photos change
   useEffect(() => {
@@ -543,9 +626,9 @@ export default function FieldReportForm({
       };
       
       if (draftReportId) {
-        // Update existing draft to submitted
-        console.log('Updating draft to submitted...');
-        const reportNumber = `FR-${Date.now()}`;
+        // Update existing draft or submitted report
+        console.log('Updating report to submitted...');
+        const reportNumber = report ? report.report_number : `FR-${Date.now()}`;
         const { data: updatedReport, error: updateError } = await supabase
           .from('field_reports')
           .update({
@@ -673,12 +756,20 @@ export default function FieldReportForm({
         console.log('Photo records saved successfully');
       }
 
-      // Clear local storage draft on successful submission
-      localStorage.removeItem(storageKey);
+      // Clear local storage draft on successful submission (only if not editing existing report)
+      if (!reportId) {
+        localStorage.removeItem(storageKey);
+      }
       
       console.log('Field report submission completed successfully');
       toast.success('Field report submitted successfully');
-      onSave?.();
+      
+      // Navigate back to appointment if we came from one
+      if (appointmentId) {
+        window.location.href = `/appointments/${appointmentId}`;
+      } else {
+        onSave?.();
+      }
     } catch (error: any) {
       console.error('Error submitting report:', error);
       const errorMessage = error?.message || 'Failed to submit field report. Please try again.';

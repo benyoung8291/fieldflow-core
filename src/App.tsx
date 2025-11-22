@@ -67,6 +67,8 @@ import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
 import WorkerFieldReport from "./pages/worker/WorkerFieldReport";
 import WorkerFieldReportStandalone from "./pages/worker/WorkerFieldReportStandalone";
+import EditFieldReport from "./pages/worker/EditFieldReport";
+import ViewFieldReport from "./pages/worker/ViewFieldReport";
 import SupervisorDashboard from "./pages/worker/supervisor/SupervisorDashboard";
 import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashboard";
 import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
@@ -235,6 +237,8 @@ const App = () => {
             <Route path="/worker/appointments" element={isAuthenticated ? <WorkerAppointments /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/appointments/:id" element={isAuthenticated ? <WorkerAppointmentDetails /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:id" element={isAuthenticated ? <WorkerFieldReport /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/field-report/:appointmentId/edit/:reportId" element={isAuthenticated ? <EditFieldReport /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/field-report/:appointmentId/view/:reportId" element={isAuthenticated ? <ViewFieldReport /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report-new" element={isAuthenticated ? <WorkerFieldReportStandalone /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/schedule" element={isAuthenticated ? <WorkerSchedule /> : <Navigate to="/worker/auth" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
