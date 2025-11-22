@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getAcumaticaCredentials } from "../_shared/vault-credentials.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -10,10 +11,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const username = Deno.env.get("ACUMATICA_USERNAME");
-    const password = Deno.env.get("ACUMATICA_PASSWORD");
 
-    if (!supabaseUrl || !supabaseKey || !username || !password) {
+    if (!supabaseUrl || !supabaseKey) {
       throw new Error("Missing required environment variables");
     }
 
@@ -25,7 +24,7 @@ serve(async (req) => {
     // Fetch expense with related data
     const { data: expense, error: expenseError } = await supabase
       .from("expenses")
-      .select("*, vendor:vendors(*)")
+      .select("*, vendor:suppliers(*)")
       .eq("id", expenseId)
       .single();
 
@@ -51,7 +50,7 @@ serve(async (req) => {
       .from("accounting_integrations")
       .select("*")
       .eq("tenant_id", expense.tenant_id)
-      .eq("provider", "acumatica")
+      .eq("provider", "myob_acumatica")
       .eq("is_enabled", true)
       .single();
 
@@ -61,13 +60,16 @@ serve(async (req) => {
 
     const { acumatica_instance_url: instanceUrl, acumatica_company_name: companyName } = integration;
 
+    // Get credentials from vault
+    const credentials = await getAcumaticaCredentials(supabase, integration.id);
+
     // Authenticate with Acumatica
     const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: username,
-        password: password,
+        name: credentials.username,
+        password: credentials.password,
         company: companyName,
       }),
     });
@@ -91,7 +93,7 @@ serve(async (req) => {
     // Create AP Bill in Acumatica
     const acumaticaBill = {
       Type: { value: "Bill" },
-      VendorID: { value: vendor?.xero_contact_id || vendor?.name?.substring(0, 30) || "VENDOR" },
+      VendorID: { value: vendor?.acumatica_supplier_id || vendor?.name?.substring(0, 30) || "VENDOR" },
       Date: { value: expense.expense_date },
       VendorRef: { value: expense.expense_number },
       Description: { value: expense.description || `Expense ${expense.expense_number}` },
