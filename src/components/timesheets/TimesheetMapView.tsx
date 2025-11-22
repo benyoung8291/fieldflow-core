@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Loader } from "@googlemaps/js-api-loader";
 
 interface TimesheetMapViewProps {
   timeLog: any;
@@ -10,6 +11,8 @@ interface TimesheetMapViewProps {
 
 export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
   const [open, setOpen] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   
   const hasAppointmentLocation = timeLog.appointments?.location_lat && timeLog.appointments?.location_lng;
   const hasCheckInLocation = timeLog.check_in_lat && timeLog.check_in_lng;
@@ -61,6 +64,107 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
     if (distance <= 500) return "text-warning";
     return "text-destructive";
   };
+
+  useEffect(() => {
+    if (!open || !mapRef.current) return;
+
+    const initializeMap = async () => {
+      const loader = new Loader({
+        apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+        version: "weekly",
+        libraries: ['maps', 'marker'],
+      });
+
+      // @ts-ignore - Loader API varies by version
+      const google = await loader.load();
+
+      const center = hasAppointmentLocation
+        ? { lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng }
+        : hasCheckInLocation
+        ? { lat: timeLog.check_in_lat, lng: timeLog.check_in_lng }
+        : { lat: timeLog.check_out_lat, lng: timeLog.check_out_lng };
+
+      const mapInstance = new google.maps.Map(mapRef.current!, {
+        center,
+        zoom: 16,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+      });
+
+      setMap(mapInstance);
+
+      // Add appointment location marker (blue)
+      if (hasAppointmentLocation) {
+        new google.maps.Marker({
+          position: { lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng },
+          map: mapInstance,
+          title: "Appointment Location",
+          label: {
+            text: "A",
+            color: "white",
+            fontWeight: "bold",
+          },
+          icon: {
+            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          },
+        });
+      }
+
+      // Add check-in marker (green)
+      if (hasCheckInLocation) {
+        new google.maps.Marker({
+          position: { lat: timeLog.check_in_lat, lng: timeLog.check_in_lng },
+          map: mapInstance,
+          title: "Check In Location",
+          label: {
+            text: "I",
+            color: "white",
+            fontWeight: "bold",
+          },
+          icon: {
+            url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+          },
+        });
+      }
+
+      // Add check-out marker (red)
+      if (hasCheckOutLocation) {
+        new google.maps.Marker({
+          position: { lat: timeLog.check_out_lat, lng: timeLog.check_out_lng },
+          map: mapInstance,
+          title: "Check Out Location",
+          label: {
+            text: "O",
+            color: "white",
+            fontWeight: "bold",
+          },
+          icon: {
+            url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+          },
+        });
+      }
+
+      // Fit bounds to show all markers
+      const bounds = new google.maps.LatLngBounds();
+      if (hasAppointmentLocation) {
+        bounds.extend({ lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng });
+      }
+      if (hasCheckInLocation) {
+        bounds.extend({ lat: timeLog.check_in_lat, lng: timeLog.check_in_lng });
+      }
+      if (hasCheckOutLocation) {
+        bounds.extend({ lat: timeLog.check_out_lat, lng: timeLog.check_out_lng });
+      }
+      mapInstance.fitBounds(bounds);
+      
+      // Adjust zoom if only one marker
+      const markerCount = [hasAppointmentLocation, hasCheckInLocation, hasCheckOutLocation].filter(Boolean).length;
+      if (markerCount === 1) {
+        mapInstance.setZoom(16);
+      }
+    };
+
+    initializeMap();
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -135,17 +239,7 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden h-[500px]">
-            <iframe
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBmJ3nHV0wshsuHZkP3UBrMNDq5HT1Xvlk'}&q=${hasAppointmentLocation ? `${timeLog.appointments.location_lat},${timeLog.appointments.location_lng}` : `${hasCheckInLocation ? `${timeLog.check_in_lat},${timeLog.check_in_lng}` : '0,0'}`}&zoom=16`}
-            />
-          </div>
+          <div ref={mapRef} className="border rounded-lg overflow-hidden h-[500px] w-full" />
         </div>
       </DialogContent>
     </Dialog>
