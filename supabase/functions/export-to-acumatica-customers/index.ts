@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAcumaticaCredentials } from "../_shared/vault-credentials.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,18 +13,51 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const username = Deno.env.get("ACUMATICA_USERNAME");
-    const password = Deno.env.get("ACUMATICA_PASSWORD");
-    
-    if (!username || !password) {
-      throw new Error("Acumatica credentials not configured");
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header");
     }
 
-    const { customerIds, instanceUrl, companyName } = await req.json();
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    if (!customerIds || !instanceUrl || !companyName) {
+    if (authError || !user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Get user's tenant
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.tenant_id) {
+      throw new Error("User has no tenant");
+    }
+
+    // Get Acumatica integration
+    const { data: integration, error: integrationError } = await supabase
+      .from("accounting_integrations")
+      .select("*")
+      .eq("tenant_id", profile.tenant_id)
+      .eq("provider", "myob_acumatica")
+      .eq("is_enabled", true)
+      .single();
+
+    if (integrationError || !integration) {
+      throw new Error("Acumatica integration not configured");
+    }
+
+    // Get credentials from vault
+    const credentials = await getAcumaticaCredentials(supabase, integration.id);
+
+    const { customerIds } = await req.json();
+    
+    if (!customerIds || !Array.isArray(customerIds) || customerIds.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Customer IDs, instance URL, and company name are required" }),
+        JSON.stringify({ error: "Customer IDs are required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -31,10 +65,14 @@ serve(async (req) => {
     console.log("Exporting customers to Acumatica:", { count: customerIds.length });
 
     // Authenticate with Acumatica
-    const authResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
+    const authResponse = await fetch(`${integration.acumatica_instance_url}/entity/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: username, password: password, company: companyName }),
+      body: JSON.stringify({ 
+        name: credentials.username, 
+        password: credentials.password, 
+        company: integration.acumatica_company_name 
+      }),
     });
 
     if (!authResponse.ok) {
@@ -73,7 +111,7 @@ serve(async (req) => {
         };
 
         const createResponse = await fetch(
-          `${instanceUrl}/entity/Default/20.200.001/Customer`,
+          `${integration.acumatica_instance_url}/entity/Default/20.200.001/Customer`,
           {
             method: "PUT",
             headers: {
@@ -111,7 +149,7 @@ serve(async (req) => {
     }
 
     // Logout
-    await fetch(`${instanceUrl}/entity/auth/logout`, {
+    await fetch(`${integration.acumatica_instance_url}/entity/auth/logout`, {
       method: "POST",
       headers: { "Cookie": cookies },
     });

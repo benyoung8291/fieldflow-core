@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sanitizeError, sanitizeAuthError } from "../_shared/errorHandler.ts";
+import { getAcumaticaCredentials } from "../_shared/vault-credentials.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -53,9 +54,11 @@ serve(async (req) => {
       );
     }
 
-    const { acumatica_username, acumatica_password, acumatica_instance_url, acumatica_company_name } = integration;
+    // Get credentials from vault
+    const credentials = await getAcumaticaCredentials(supabase, integration.id);
+    const { acumatica_instance_url, acumatica_company_name } = integration;
     
-    if (!acumatica_username || !acumatica_password || !acumatica_instance_url || !acumatica_company_name) {
+    if (!credentials.username || !credentials.password || !acumatica_instance_url || !acumatica_company_name) {
       console.error("Missing Acumatica credentials or configuration");
       return new Response(
         JSON.stringify({ error: "Acumatica integration not fully configured" }),
@@ -88,8 +91,8 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            name: acumatica_username,
-            password: acumatica_password,
+            name: credentials.username,
+            password: credentials.password,
             company: acumatica_company_name,
           }),
         });

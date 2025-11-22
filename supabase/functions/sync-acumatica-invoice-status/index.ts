@@ -1,4 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAcumaticaCredentials } from "../_shared/vault-credentials.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,14 +84,17 @@ Deno.serve(async (req) => {
       // Authenticate with Acumatica once per tenant
       console.log(`Authenticating with Acumatica for tenant ${integration.tenant_id}`);
       
+      // Get credentials from vault
+      const credentials = await getAcumaticaCredentials(supabase, integration.id);
+      
       const authResponse = await fetch(`${integration.acumatica_instance_url}/entity/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: integration.acumatica_username,
-          password: integration.acumatica_password,
+          name: credentials.username,
+          password: credentials.password,
           company: integration.acumatica_company_name,
         }),
       });
