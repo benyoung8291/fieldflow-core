@@ -80,6 +80,8 @@ import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
 import { useRealtimeNotifications } from "./hooks/useNotifications";
+import { MobileBottomNav } from "./components/layout/MobileBottomNav";
+import { WorkerMobileBottomNav } from "./components/layout/WorkerMobileBottomNav";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -176,6 +178,8 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
+              <MobileBottomNav />
+              <WorkerMobileBottomNav />
               <Routes>
               <Route path="/" element={<Navigate to="/auth" replace />} />
               <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
