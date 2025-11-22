@@ -38,62 +38,68 @@ export default function WorkerAppointments() {
         const weekStart = format(startOfWeek(new Date()), 'yyyy-MM-dd');
         const weekEnd = format(endOfWeek(new Date()), 'yyyy-MM-dd');
 
+        // Optimized query - only fetch needed fields and join time_logs in one query
         const { data } = await supabase
-          .from('appointments')
+          .from('appointment_workers')
           .select(`
-            *,
-            service_order:service_orders(
+            appointment:appointments!inner(
               id,
-              work_order_number,
-              customer:customers(name, phone, email)
+              title,
+              description,
+              start_time,
+              status,
+              location_address,
+              service_order_id,
+              service_orders!inner(
+                work_order_number,
+                customers!inner(name)
+              )
             )
           `)
-          .contains('assigned_workers', [user.id])
-          .gte('start_time', weekStart)
-          .lte('start_time', weekEnd)
-          .order('start_time');
+          .eq('worker_id', user.id)
+          .gte('appointment.start_time', weekStart)
+          .lte('appointment.start_time', weekEnd)
+          .order('appointment(start_time)');
 
         if (data) {
-          setAppointments(data);
-          await cacheAppointments(data);
+          // Extract appointments from the response
+          const appointments = data.map((item: any) => item.appointment).filter(Boolean);
+          setAppointments(appointments);
+          await cacheAppointments(appointments);
           
-          // Load active time logs for all appointments
-          const appointmentIds = data.map(apt => apt.id);
-          const { data: timeLogs } = await supabase
-            .from('time_logs')
-            .select('*')
-            .in('appointment_id', appointmentIds)
-            .eq('worker_id', user.id)
-            .is('clock_out', null);
-          
-          // Create a map of appointment_id -> time_log
-          const timeLogsMap: Record<string, any> = {};
-          timeLogs?.forEach(log => {
-            timeLogsMap[log.appointment_id] = log;
-          });
-          setActiveTimeLogs(timeLogsMap);
+          // Load time logs in parallel
+          const appointmentIds = appointments.map((apt: any) => apt.id);
+          if (appointmentIds.length > 0) {
+            const { data: timeLogs } = await supabase
+              .from('time_logs')
+              .select('appointment_id, clock_in')
+              .in('appointment_id', appointmentIds)
+              .eq('worker_id', user.id)
+              .is('clock_out', null);
+            
+            const timeLogsMap: Record<string, any> = {};
+            timeLogs?.forEach(log => {
+              timeLogsMap[log.appointment_id] = log;
+            });
+            setActiveTimeLogs(timeLogsMap);
+          }
         }
       } else {
         // Offline mode - load from cache
         const cached = await getCachedAppointments();
         setAppointments(cached);
         
-        // Load cached time logs
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const db = await getDB();
-          const cachedTimeLogs = await db.getAll('timeEntries');
-          
-          // Filter for active (clock_in without clock_out) time logs for this worker
-          const timeLogsMap: Record<string, any> = {};
-          cachedTimeLogs
-            .filter(log => log.workerId === user.id && log.action === 'clock_in')
-            .forEach(log => {
-              timeLogsMap[log.appointmentId] = log;
-            });
-          
-          setActiveTimeLogs(timeLogsMap);
-        }
+        const db = await getDB();
+        const cachedTimeLogs = await db.getAll('timeEntries');
+        
+        const timeLogsMap: Record<string, any> = {};
+        cachedTimeLogs
+          .filter(log => log.workerId === user.id && log.action === 'clock_in')
+          .forEach(log => {
+            timeLogsMap[log.appointmentId] = log;
+          });
+        
+        setActiveTimeLogs(timeLogsMap);
       }
     } catch (error) {
       console.error('Error loading appointments:', error);
@@ -186,13 +192,13 @@ export default function WorkerAppointments() {
                               <span className="text-xs font-medium text-green-600">Clocked In</span>
                             </div>
                             <Badge variant="outline" className="text-xs font-mono border-green-200 text-green-700">
-                              {formatElapsedTime(isClockedIn.timestamp || isClockedIn.clock_in)}
+                              {formatElapsedTime(isClockedIn.clock_in)}
                             </Badge>
                           </div>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
-                        {apt.service_order?.customer?.name}
+                        {apt.service_orders?.customers?.name}
                       </p>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
                         <Calendar className="h-4 w-4" />

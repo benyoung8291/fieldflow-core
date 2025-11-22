@@ -4,7 +4,7 @@ interface UsePaginationProps {
   initialPageSize?: number;
 }
 
-export function usePagination({ initialPageSize = 50 }: UsePaginationProps = {}) {
+export function usePagination({ initialPageSize = 20 }: UsePaginationProps = {}) {
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [currentPage, setCurrentPage] = useState(0);
 
