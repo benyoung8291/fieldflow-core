@@ -11,6 +11,7 @@ import { BrandColorsProvider } from "@/components/BrandColorsProvider";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
+import SuperAdmin from "./pages/SuperAdmin";
 import Quotes from "./pages/Quotes";
 import QuoteDetails from "./pages/QuoteDetails";
 import Projects from "./pages/Projects";
@@ -185,8 +186,9 @@ const App = () => {
               <WorkerMobileBottomNav />
               <Routes>
               <Route path="/" element={<Navigate to="/auth" replace />} />
-              <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
+            <Route path="/auth" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Auth />} />
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/auth" replace />} />
+            <Route path="/super-admin" element={isAuthenticated ? <SuperAdmin /> : <Navigate to="/auth" replace />} />
             <Route path="/users" element={isAuthenticated ? <UserManagement /> : <Navigate to="/auth" replace />} />
             <Route path="/quotes" element={isAuthenticated ? <Quotes /> : <Navigate to="/auth" replace />} />
             <Route path="/quotes/:id" element={isAuthenticated ? <QuoteDetails /> : <Navigate to="/auth" replace />} />
