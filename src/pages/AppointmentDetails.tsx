@@ -23,6 +23,7 @@ import { useViewMode } from "@/contexts/ViewModeContext";
 import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import { cn } from "@/lib/utils";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
+import FieldReportsList from "@/components/field-reports/FieldReportsList";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -765,6 +766,16 @@ export default function AppointmentDetails() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Field Reports */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Field Reports</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FieldReportsList appointmentId={id!} />
+              </CardContent>
+            </Card>
 
             {/* Tasks */}
             <Card>
