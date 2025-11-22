@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getAcumaticaCredentials } from "../_shared/vault-credentials.ts";
 
 // Sync AP invoices to Acumatica as Bills using session-based authentication
 const corsHeaders = {
@@ -148,6 +149,9 @@ serve(async (req) => {
       let retryCount = 0;
       const maxRetries = 3;
 
+      // Get credentials from vault
+      const credentials = await getAcumaticaCredentials(supabase, integration.id);
+      
       while (retryCount < maxRetries) {
         console.log(`Attempting authentication... (attempt ${retryCount + 1})`);
         authResponse = await fetch(`${baseUrl}/entity/auth/login`, {
@@ -156,8 +160,8 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: integration.acumatica_username,
-            password: integration.acumatica_password,
+            name: credentials.username,
+            password: credentials.password,
             company: integration.acumatica_company_name,
           }),
         });

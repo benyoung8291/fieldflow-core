@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getXeroCredentials, updateXeroTokens } from "../_shared/vault-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +44,7 @@ serve(async (req) => {
     // Get Xero integration
     const { data: integration, error: integrationError } = await supabase
       .from("accounting_integrations")
-      .select("xero_access_token, xero_refresh_token, xero_token_expires_at, xero_client_id, xero_client_secret, xero_tenant_id")
+      .select("id, xero_token_expires_at, xero_client_id, xero_tenant_id")
       .eq("tenant_id", profile.tenant_id)
       .eq("provider", "xero")
       .single();
@@ -61,7 +62,10 @@ serve(async (req) => {
       );
     }
 
-    if (!integration.xero_client_id || !integration.xero_client_secret || !integration.xero_refresh_token) {
+    // Get credentials from vault
+    const credentials = await getXeroCredentials(supabase, integration.id);
+    
+    if (!integration.xero_client_id || !credentials.client_secret || !credentials.refresh_token) {
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -87,11 +91,11 @@ serve(async (req) => {
       );
     }
 
-    let accessToken = integration.xero_access_token;
+    let accessToken = credentials.access_token;
 
     console.log("🔍 Token status:", {
-      hasAccessToken: !!integration.xero_access_token,
-      hasRefreshToken: !!integration.xero_refresh_token,
+      hasAccessToken: !!credentials.access_token,
+      hasRefreshToken: !!credentials.refresh_token,
       expiresAt: integration.xero_token_expires_at,
       isExpired: integration.xero_token_expires_at ? new Date(integration.xero_token_expires_at) <= new Date() : 'no expiry set'
     });
@@ -103,7 +107,7 @@ serve(async (req) => {
     if (needsRefresh) {
       console.log("🔄 Refreshing Xero access token...");
       
-      if (!integration.xero_refresh_token) {
+      if (!credentials.refresh_token) {
         console.error("❌ No refresh token available");
         return new Response(
           JSON.stringify({ 
@@ -122,11 +126,11 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
+          "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${credentials.client_secret}`)}`,
         },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          refresh_token: integration.xero_refresh_token,
+          refresh_token: credentials.refresh_token,
         }),
       });
 
@@ -164,19 +168,20 @@ serve(async (req) => {
       accessToken = tokens.access_token;
       console.log("✅ Token refreshed successfully, new expiry:", new Date(Date.now() + tokens.expires_in * 1000).toISOString());
 
-      // Update tokens in database
+      // Update tokens in vault
+      await updateXeroTokens(supabase, integration.id, tokens.access_token, tokens.refresh_token);
+      
+      // Update expiry in database
       const { error: updateError } = await supabase
         .from("accounting_integrations")
         .update({
-          xero_access_token: tokens.access_token,
-          xero_refresh_token: tokens.refresh_token,
           xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         })
         .eq("tenant_id", profile.tenant_id)
         .eq("provider", "xero");
       
       if (updateError) {
-        console.error("⚠️ Failed to update tokens in database:", updateError);
+        console.error("⚠️ Failed to update token expiry in database:", updateError);
       }
     } else {
       console.log("✅ Using existing valid access token");
@@ -206,11 +211,11 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
+          "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${credentials.client_secret}`)}`,
         },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          refresh_token: integration.xero_refresh_token,
+          refresh_token: credentials.refresh_token,
         }),
       });
 
@@ -219,12 +224,13 @@ serve(async (req) => {
         accessToken = tokens.access_token;
         console.log("✅ Token refreshed, retrying API call");
 
-        // Update tokens in database
+        // Update tokens in vault
+        await updateXeroTokens(supabase, integration.id, tokens.access_token, tokens.refresh_token);
+        
+        // Update expiry in database
         await supabase
           .from("accounting_integrations")
           .update({
-            xero_access_token: tokens.access_token,
-            xero_refresh_token: tokens.refresh_token,
             xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
           })
           .eq("tenant_id", profile.tenant_id)
