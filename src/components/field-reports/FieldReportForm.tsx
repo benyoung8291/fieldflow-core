@@ -77,11 +77,12 @@ export default function FieldReportForm({
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name')
+          .select('first_name, last_name')
           .eq('id', user.id)
           .single();
-        if (profile?.full_name) {
-          setFormData(prev => ({ ...prev, worker_name: profile.full_name }));
+        if (profile?.first_name) {
+          const fullName = `${profile.first_name} ${profile.last_name || ''}`.trim();
+          setFormData(prev => ({ ...prev, worker_name: fullName }));
         }
       }
     };
@@ -95,7 +96,7 @@ export default function FieldReportForm({
       const { data } = await supabase
         .from('appointments')
         .select('id, title, start_time')
-        .in('status', ['scheduled', 'in_progress'])
+        .in('status', ['published', 'checked_in'])
         .order('start_time', { ascending: true })
         .limit(50);
       return data || [];
@@ -109,7 +110,7 @@ export default function FieldReportForm({
       const { data } = await supabase
         .from('service_orders')
         .select('id, work_order_number, title')
-        .eq('status', 'active')
+        .in('status', ['scheduled', 'in_progress'])
         .order('created_at', { ascending: false })
         .limit(50);
       return data || [];
@@ -407,7 +408,11 @@ export default function FieldReportForm({
             {/* Photos */}
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-semibold">Before & After Photos</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload after photos to match the before photos taken during the appointment.
+              </p>
               <BeforeAfterPhotoUpload
+                appointmentId={appointmentId}
                 onPhotosChange={setPhotoPairs}
                 initialPairs={photoPairs}
               />
@@ -515,11 +520,11 @@ export default function FieldReportForm({
 
       {showSignaturePad && (
         <SignaturePad
-          onSave={(signatureData, name) => {
+          onSave={(signatureData) => {
             setFormData({
               ...formData,
               customer_signature_data: signatureData,
-              customer_signature_name: name,
+              customer_signature_name: '',
               customer_signature_date: new Date().toISOString(),
             });
             setShowSignaturePad(false);
