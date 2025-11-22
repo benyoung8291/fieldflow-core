@@ -7372,6 +7372,10 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: undefined
       }
+      is_worker_with_time_logs: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
       link_purchase_order_to_project: {
         Args: { p_po_id: string; p_project_id: string }
         Returns: undefined
