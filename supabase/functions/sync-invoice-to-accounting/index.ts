@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAcumaticaCredentials, getXeroCredentials, updateXeroTokens } from "../_shared/vault-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -146,8 +147,16 @@ serve(async (req) => {
 });
 
 async function syncToAcumatica(invoice: any, integration: any) {
+  // Create Supabase client for vault access
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  // Get credentials from vault
+  const credentials = await getAcumaticaCredentials(supabase, integration.id);
   const username = integration.acumatica_username;
-  const password = integration.acumatica_password;
+  const password = credentials.password;
   
   if (!username || !password) {
     throw new Error("Acumatica credentials not configured in integration settings");
@@ -352,10 +361,17 @@ async function syncToAcumatica(invoice: any, integration: any) {
 }
 
 async function syncToXero(invoice: any, integration: any) {
-  // Get credentials from secrets
-  const clientId = Deno.env.get("XERO_CLIENT_ID");
-  const clientSecret = Deno.env.get("XERO_CLIENT_SECRET");
-  const refreshToken = Deno.env.get("XERO_REFRESH_TOKEN");
+  // Create Supabase client for vault access
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  // Get credentials from vault
+  const credentials = await getXeroCredentials(supabase, integration.id);
+  const clientId = integration.xero_client_id;
+  const clientSecret = credentials.client_secret;
+  const refreshToken = credentials.refresh_token;
 
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error("Xero credentials not configured");
@@ -380,6 +396,9 @@ async function syncToXero(invoice: any, integration: any) {
 
   const tokenData = await tokenResponse.json();
   const accessToken = tokenData.access_token;
+
+  // Update tokens in vault
+  await updateXeroTokens(supabase, integration.id, tokenData.access_token, tokenData.refresh_token);
 
   // Create invoice in Xero
   const invoiceData = {

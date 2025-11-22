@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getMicrosoftCredentials, updateMicrosoftTokens } from "../_shared/vault-credentials.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -50,8 +51,11 @@ serve(async (req) => {
 
     const emailAccount = ticket.email_account;
 
+    // Get credentials from vault
+    const credentials = await getMicrosoftCredentials(supabase, emailAccount.id);
+
     // Check if token needs refresh
-    let accessToken = emailAccount.microsoft_access_token;
+    let accessToken = credentials.access_token;
     const tokenExpiresAt = new Date(emailAccount.microsoft_token_expires_at);
     const now = new Date();
 
@@ -67,9 +71,9 @@ serve(async (req) => {
           },
           body: new URLSearchParams({
             client_id: Deno.env.get("MICROSOFT_CLIENT_ID")!,
-            client_secret: Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
+            client_secret: credentials.client_secret || Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
             grant_type: "refresh_token",
-            refresh_token: emailAccount.microsoft_refresh_token,
+            refresh_token: credentials.refresh_token,
             scope: "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.ReadWrite https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/User.Read offline_access",
           }),
         }
@@ -82,11 +86,12 @@ serve(async (req) => {
       const tokenData = await tokenResponse.json();
       accessToken = tokenData.access_token;
 
+      // Update the token in vault and database
+      await updateMicrosoftTokens(supabase, emailAccount.id, tokenData.access_token, tokenData.refresh_token);
+      
       await supabase
         .from("helpdesk_email_accounts")
         .update({
-          microsoft_access_token: tokenData.access_token,
-          microsoft_refresh_token: tokenData.refresh_token,
           microsoft_token_expires_at: new Date(
             Date.now() + tokenData.expires_in * 1000
           ).toISOString(),

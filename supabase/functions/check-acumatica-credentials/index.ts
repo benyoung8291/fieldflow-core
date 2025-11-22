@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAcumaticaCredentials } from "../_shared/vault-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,15 +40,23 @@ serve(async (req) => {
       throw new Error("User has no tenant");
     }
 
-    // Check if Acumatica credentials exist in database
+    // Check if Acumatica credentials exist in database and vault
     const { data: integration } = await supabase
       .from("accounting_integrations")
-      .select("acumatica_username, acumatica_password")
+      .select("id, acumatica_username")
       .eq("tenant_id", profile.tenant_id)
       .eq("provider", "myob_acumatica")
       .single();
 
-    const configured = !!(integration?.acumatica_username && integration?.acumatica_password);
+    let configured = false;
+    if (integration?.acumatica_username) {
+      try {
+        const credentials = await getAcumaticaCredentials(supabase, integration.id);
+        configured = !!(credentials.username && credentials.password);
+      } catch {
+        configured = false;
+      }
+    }
 
     return new Response(
       JSON.stringify({ configured }),

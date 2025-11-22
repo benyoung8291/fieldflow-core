@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getXeroCredentials, updateXeroTokens } from "../_shared/vault-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +44,7 @@ serve(async (req) => {
     // Get Xero integration
     const { data: integration, error: integrationError } = await supabase
       .from("accounting_integrations")
-      .select("xero_access_token, xero_refresh_token, xero_token_expires_at, xero_client_id, xero_client_secret")
+      .select("id, xero_token_expires_at, xero_client_id")
       .eq("tenant_id", profile.tenant_id)
       .eq("provider", "xero")
       .single();
@@ -52,7 +53,10 @@ serve(async (req) => {
       throw new Error("Xero integration not found");
     }
 
-    let accessToken = integration.xero_access_token;
+    // Get credentials from vault
+    const credentials = await getXeroCredentials(supabase, integration.id);
+
+    let accessToken = credentials.access_token;
 
     // Check if token needs refresh
     if (integration.xero_token_expires_at) {
@@ -63,11 +67,11 @@ serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
+            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${credentials.client_secret}`)}`,
           },
           body: new URLSearchParams({
             grant_type: "refresh_token",
-            refresh_token: integration.xero_refresh_token!,
+            refresh_token: credentials.refresh_token,
           }),
         });
 
@@ -78,12 +82,12 @@ serve(async (req) => {
         const tokens = await tokenResponse.json();
         accessToken = tokens.access_token;
 
-        // Update tokens
+        // Update tokens in vault and database
+        await updateXeroTokens(supabase, integration.id, tokens.access_token, tokens.refresh_token);
+        
         await supabase
           .from("accounting_integrations")
           .update({
-            xero_access_token: tokens.access_token,
-            xero_refresh_token: tokens.refresh_token,
             xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
           })
           .eq("tenant_id", profile.tenant_id)
