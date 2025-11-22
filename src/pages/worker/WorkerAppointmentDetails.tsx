@@ -202,90 +202,37 @@ export default function WorkerAppointmentDetails() {
     }
   };
 
-  const requestLocationPermission = async (): Promise<boolean> => {
-    try {
-      // Check if geolocation is supported
-      if (!navigator.geolocation) {
-        toast.error('Geolocation is not supported by your browser');
-        return false;
-      }
-
-      // Check current permission state using Permissions API if available
-      if ('permissions' in navigator) {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          
-          if (permission.state === 'denied') {
-            toast.error('Location access is blocked. Please tap "Location Help" above to enable it.', {
-              duration: 8000,
-            });
-            return false;
-          }
-          
-          if (permission.state === 'granted') {
-            return true;
-          }
-          
-          // If state is 'prompt', trigger the permission request
-          if (permission.state === 'prompt') {
-            console.log('[Permission] Triggering permission prompt...');
-            return new Promise<boolean>((resolve) => {
-              navigator.geolocation.getCurrentPosition(
-                () => {
-                  console.log('[Permission] Permission granted');
-                  resolve(true);
-                },
-                (error) => {
-                  console.log('[Permission] Permission denied or error:', error);
-                  if (error.code === 1) {
-                    toast.error('📍 Location blocked! Tap "Location Help" button above for instructions.', {
-                      duration: 8000,
-                    });
-                    resolve(false);
-                  } else {
-                    // Other errors - let the main flow handle it
-                    resolve(true);
-                  }
-                },
-                {
-                  enableHighAccuracy: false,
-                  timeout: 5000,
-                  maximumAge: 0,
-                }
-              );
-            });
-          }
-        } catch (permError) {
-          // Permissions API might not be fully supported, continue anyway
-          console.warn('Permissions API error:', permError);
-        }
-      }
-
-      // Fallback for browsers without Permissions API - trigger permission request
-      return new Promise<boolean>((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          () => resolve(true),
-          (error) => {
-            if (error.code === 1) {
-              toast.error('📍 Location blocked! Tap "Location Help" button above for instructions.', {
-                duration: 8000,
-              });
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          },
-          {
-            enableHighAccuracy: false,
-            timeout: 5000,
-            maximumAge: 0,
-          }
-        );
-      });
-    } catch (error) {
-      console.error('Permission check error:', error);
-      return true; // Still try to get location
+  const getLocationWithPermission = async (): Promise<GeolocationPosition> => {
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      throw new Error('GEOLOCATION_NOT_SUPPORTED');
     }
+
+    // Check current permission state if Permissions API is available
+    if ('permissions' in navigator) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        
+        if (permission.state === 'denied') {
+          throw new Error('PERMISSION_DENIED');
+        }
+      } catch (permError) {
+        console.warn('Permissions API not fully supported:', permError);
+      }
+    }
+
+    // Get the location - browser will prompt for permission if needed
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        reject,
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        }
+      );
+    });
   };
 
   const handleClockIn = async () => {
@@ -293,30 +240,11 @@ export default function WorkerAppointmentDetails() {
     try {
       console.log('[Clock In] Starting clock-in process...', { isOnline });
       
-      // First check/request location permission
-      const hasPermission = await requestLocationPermission();
-      if (!hasPermission) {
-        console.log('[Clock In] Location permission denied');
-        setProcessing(false);
-        return;
-      }
-
-      console.log('[Clock In] Permission granted, getting location...');
-      
       // Show loading toast while getting location
       const loadingToast = toast.loading('Getting your location...');
 
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve, 
-          reject, 
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0,
-          }
-        );
-      });
+      // Get location - browser will prompt for permission automatically if needed
+      const position = await getLocationWithPermission();
 
       console.log('[Clock In] Location obtained:', {
         latitude: position.coords.latitude,
@@ -453,9 +381,11 @@ export default function WorkerAppointmentDetails() {
     } catch (error: any) {
       console.error('[Clock In] Error caught:', error);
       
-      // Geolocation errors
-      if (error.code === 1) {
-        toast.error('📍 Location blocked! Tap "Location Help" button above for step-by-step instructions to enable location access.', {
+      // Handle custom error messages
+      if (error.message === 'GEOLOCATION_NOT_SUPPORTED') {
+        toast.error('Geolocation is not supported by your browser');
+      } else if (error.message === 'PERMISSION_DENIED' || error.code === 1) {
+        toast.error('📍 Location access blocked! Tap "Location Help" button above for instructions to enable it.', {
           duration: 10000,
         });
       } else if (error.code === 2) {
@@ -491,27 +421,11 @@ export default function WorkerAppointmentDetails() {
     setProcessing(true);
     try {
       console.log('[Clock Out] Starting clock-out process...', { isOnline });
-      
-      // Check location permission
-      const hasPermission = await requestLocationPermission();
-      if (!hasPermission) {
-        setProcessing(false);
-        return;
-      }
 
       const loadingToast = toast.loading('Getting your location...');
 
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve, 
-          reject, 
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0,
-          }
-        );
-      });
+      // Get location using the shared function
+      const position = await getLocationWithPermission();
 
       toast.dismiss(loadingToast);
 
@@ -580,9 +494,11 @@ export default function WorkerAppointmentDetails() {
     } catch (error: any) {
       console.error('Clock out error:', error);
       
-      if (error.code === 1) {
-        toast.error('Location permission denied. Please enable location access and try again.', {
-          duration: 6000,
+      if (error.message === 'GEOLOCATION_NOT_SUPPORTED') {
+        toast.error('Geolocation is not supported by your browser');
+      } else if (error.message === 'PERMISSION_DENIED' || error.code === 1) {
+        toast.error('📍 Location access blocked! Tap "Location Help" button above for instructions.', {
+          duration: 8000,
         });
       } else if (error.code === 2) {
         toast.error('Unable to determine your location. Please check your device settings.');
