@@ -33,6 +33,8 @@ import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { queueTimeEntry } from '@/lib/offlineSync';
 import TimeLogsTable from '@/components/service-orders/TimeLogsTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useQuery } from '@tanstack/react-query';
+import FieldReportsList from '@/components/field-reports/FieldReportsList';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
@@ -48,6 +50,29 @@ export default function WorkerAppointmentDetails() {
   const [workNotes, setWorkNotes] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isPaused, setIsPaused] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
+  const { data: fieldReports = [], refetch: refetchFieldReports } = useQuery({
+    queryKey: ['field-reports', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('field_reports')
+        .select('id, status, created_by, approved_at, pdf_url')
+        .eq('appointment_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     loadAppointmentData();
@@ -1102,27 +1127,51 @@ export default function WorkerAppointmentDetails() {
           </CardContent>
         </Card>
 
-        {/* Complete Job */}
-        {timeLog && !timeLog.clock_out && !isCompleted && (
-          <div className="space-y-2">
+        {/* Field Reports */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Field Reports
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <Button
-              onClick={handleCompleteAppointment}
-              size="lg"
-              className="w-full"
-            >
-              <FileSignature className="h-5 w-5 mr-2" />
-              Complete Job & Get Signature
-            </Button>
-            <Button
-              onClick={() => navigate(`/worker/appointments/${id}/field-report`)}
-              size="lg"
+              onClick={() => {
+                const userReport = fieldReports.find((r: any) => r.created_by === currentUser?.id);
+                if (userReport && !userReport.approved_at && !userReport.pdf_url) {
+                  navigate(`/worker/field-report/${id}/edit/${userReport.id}`);
+                } else {
+                  navigate(`/worker/field-report/${id}`);
+                }
+              }}
               variant="outline"
               className="w-full"
             >
-              <FileText className="h-5 w-5 mr-2" />
-              Create Field Report
+              <FileText className="h-4 w-4 mr-2" />
+              {(() => {
+                const userReport = fieldReports.find((r: any) => r.created_by === currentUser?.id);
+                if (!userReport) return 'Create Field Report';
+                const isLocked = userReport.approved_at && userReport.pdf_url;
+                if (userReport.status === 'draft') return 'Finish Field Report';
+                if (userReport.status === 'submitted' && !isLocked) return 'Edit Submitted Report';
+                return 'View Field Report';
+              })()}
             </Button>
-          </div>
+            <FieldReportsList appointmentId={id!} onReportStateChange={refetchFieldReports} />
+          </CardContent>
+        </Card>
+
+        {/* Complete Job */}
+        {timeLog && !timeLog.clock_out && !isCompleted && (
+          <Button
+            onClick={handleCompleteAppointment}
+            size="lg"
+            className="w-full"
+          >
+            <FileSignature className="h-5 w-5 mr-2" />
+            Complete Job & Get Signature
+          </Button>
         )}
 
         {/* Time Logs */}
