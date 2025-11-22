@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { updateXeroTokens } from "../_shared/vault-credentials.ts";
 
 serve(async (req) => {
   const url = new URL(req.url);
@@ -51,7 +52,7 @@ serve(async (req) => {
     // Get the integration record to retrieve client credentials
     const { data: integration, error: fetchError } = await supabase
       .from('accounting_integrations')
-      .select('*')
+      .select('id, xero_client_id')
       .eq('id', state)
       .single();
 
@@ -59,8 +60,12 @@ serve(async (req) => {
       throw new Error('Integration not found');
     }
 
+    // Get client secret from vault
+    const { getXeroCredentials } = await import("../_shared/vault-credentials.ts");
+    const credentials = await getXeroCredentials(supabase, integration.id);
+
     const clientId = integration.xero_client_id;
-    const clientSecret = integration.xero_client_secret;
+    const clientSecret = credentials.client_secret;
 
     if (!clientId || !clientSecret) {
       throw new Error('Client credentials not configured');
@@ -93,12 +98,12 @@ serve(async (req) => {
     // Calculate token expiry
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // Update integration with tokens (tenant ID will be selected by user)
+    // Update tokens in vault and database
+    await updateXeroTokens(supabase, integration.id, tokens.access_token, tokens.refresh_token);
+    
     const { error: updateError } = await supabase
       .from('accounting_integrations')
       .update({
-        xero_access_token: tokens.access_token,
-        xero_refresh_token: tokens.refresh_token,
         xero_token_expires_at: expiresAt.toISOString(),
         updated_at: new Date().toISOString()
       })
