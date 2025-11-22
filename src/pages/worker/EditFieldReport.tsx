@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import FieldReportForm from "@/components/field-reports/FieldReportForm";
@@ -36,21 +35,21 @@ export default function EditFieldReport() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-background pb-20">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Loading field report...</div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (!report) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-background pb-20">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Field report not found</div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
@@ -60,7 +59,7 @@ export default function EditFieldReport() {
 
   if (!isCreator) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-background pb-20">
         <div className="max-w-2xl mx-auto p-6">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -75,13 +74,13 @@ export default function EditFieldReport() {
             </Button>
           </div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (isLocked) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-background pb-20">
         <div className="max-w-2xl mx-auto p-6">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -96,35 +95,30 @@ export default function EditFieldReport() {
             </Button>
           </div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="sticky top-0 z-10 bg-background border-b pb-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/appointments/${appointmentId}`)}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Edit Field Report</h1>
-              <p className="text-muted-foreground">Make changes to your field report</p>
-            </div>
-          </div>
-        </div>
-
-        <FieldReportForm
-          appointmentId={appointmentId}
-          reportId={reportId}
-          onSave={() => navigate(`/appointments/${appointmentId}`)}
-        />
+    <div className="min-h-screen bg-background pb-20">
+      <div className="sticky top-0 z-10 bg-background border-b p-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/appointments/${appointmentId}`)}
+          className="mb-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">Edit Field Report</h1>
       </div>
-    </DashboardLayout>
+
+      <FieldReportForm
+        appointmentId={appointmentId}
+        reportId={reportId}
+        onSave={() => navigate(`/appointments/${appointmentId}`)}
+      />
+    </div>
   );
 }
