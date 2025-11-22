@@ -65,7 +65,7 @@ export default function WorkerAppointmentDetails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('field_reports')
-        .select('id, status, created_by, approved_at, pdf_url')
+        .select('id, status, created_by, approved_at, pdf_url, created_at, submitted_at, report_number')
         .eq('appointment_id', id)
         .order('created_at', { ascending: false });
 
