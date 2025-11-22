@@ -6538,6 +6538,50 @@ export type Database = {
           },
         ]
       }
+      worker_availability: {
+        Row: {
+          created_at: string | null
+          day_of_week: string
+          end_time: string
+          id: string
+          is_available: boolean | null
+          start_time: string
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: string
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: string
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_availability_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_certificates: {
         Row: {
           certificate_name: string
