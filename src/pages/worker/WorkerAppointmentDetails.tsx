@@ -222,11 +222,51 @@ export default function WorkerAppointmentDetails() {
         if (permission.state === 'granted') {
           return true;
         }
+
+        // If state is 'prompt', we need to trigger the permission request
+        // by attempting to get the position - this will show the browser's permission dialog
+        if (permission.state === 'prompt') {
+          return new Promise<boolean>((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              () => resolve(true), // Permission granted
+              (error) => {
+                if (error.code === 1) { // PERMISSION_DENIED
+                  toast.error('Location permission denied. Please enable location access in your browser settings and try again.');
+                  resolve(false);
+                } else {
+                  // Other geolocation errors - we'll handle them later
+                  resolve(true);
+                }
+              },
+              {
+                enableHighAccuracy: false,
+                timeout: 5000,
+                maximumAge: 0,
+              }
+            );
+          });
+        }
       }
 
-      // Request permission by attempting to get position
-      // This will trigger the browser's permission prompt
-      return true;
+      // Fallback: try to request permission by attempting to get position
+      return new Promise<boolean>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          () => resolve(true),
+          (error) => {
+            if (error.code === 1) {
+              toast.error('Location permission denied. Please enable location access in your browser settings and try again.');
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 0,
+          }
+        );
+      });
     } catch (error) {
       console.error('Permission check error:', error);
       return true; // Still try to get location
