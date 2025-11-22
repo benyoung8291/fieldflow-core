@@ -13,12 +13,26 @@ import TimesheetMapView from "@/components/timesheets/TimesheetMapView";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function TimesheetDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{
+    clock_in: string;
+    clock_out: string;
+  }>({ clock_in: "", clock_out: "" });
 
   // Fetch timesheet
   const { data: timesheet, isLoading: timesheetLoading } = useQuery({
@@ -148,6 +162,37 @@ export default function TimesheetDetails() {
     },
   });
 
+  // Update time log
+  const updateTimeLogMutation = useMutation({
+    mutationFn: async ({ logId, clockIn, clockOut }: { logId: string; clockIn: string; clockOut: string }) => {
+      // Get current edit count
+      const { data: currentLog } = await supabase
+        .from("time_logs")
+        .select("edit_count")
+        .eq("id", logId)
+        .single();
+
+      const { error } = await supabase
+        .from("time_logs")
+        .update({
+          clock_in: clockIn,
+          clock_out: clockOut,
+          edit_count: (currentLog?.edit_count || 0) + 1,
+        })
+        .eq("id", logId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Time log updated");
+      queryClient.invalidateQueries({ queryKey: ["timesheet-logs", id] });
+      setEditingLogId(null);
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update time log: ${error.message}`);
+    },
+  });
+
   // Export timesheet
   const exportMutation = useMutation({
     mutationFn: async () => {
@@ -203,6 +248,38 @@ export default function TimesheetDetails() {
       case "exported": return "bg-purple-500";
       default: return "bg-gray-500";
     }
+  };
+
+  const handleEditLog = (log: any) => {
+    setEditingLogId(log.id);
+    setEditData({
+      clock_in: log.clock_in,
+      clock_out: log.clock_out || "",
+    });
+  };
+
+  const handleSaveEdit = (logId: string) => {
+    if (!editData.clock_in) {
+      toast.error("Clock in time is required");
+      return;
+    }
+    updateTimeLogMutation.mutate({
+      logId,
+      clockIn: editData.clock_in,
+      clockOut: editData.clock_out,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLogId(null);
+    setEditData({ clock_in: "", clock_out: "" });
+  };
+
+  const calculateTotalHours = (clockIn: string, clockOut: string | null) => {
+    if (!clockOut) return 0;
+    const start = new Date(clockIn);
+    const end = new Date(clockOut);
+    return ((end.getTime() - start.getTime()) / (1000 * 60 * 60));
   };
 
   if (timesheetLoading || timeLogsLoading) {
@@ -361,45 +438,117 @@ export default function TimesheetDetails() {
                 <p>No time logs in this timesheet</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {timeLogs.map((log: any) => (
-                  <div key={log.id} className="border-l-2 border-primary pl-4 py-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-1">
-                        <div className="font-medium">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Appointment</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Clock In</TableHead>
+                      <TableHead>Clock Out</TableHead>
+                      <TableHead className="text-right">Hours</TableHead>
+                      <TableHead>Status</TableHead>
+                      {timesheet.status === "draft" && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {timeLogs.map((log: any) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-medium">
                           {log.appointments?.title || 'Appointment'}
-                        </div>
-                        {log.appointments?.location_address && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            {log.appointments.location_address}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm">
+                            {log.appointments?.location_address ? (
+                              <>
+                                <MapPin className="h-3 w-3" />
+                                {log.appointments.location_address}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">No location</span>
+                            )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {editingLogId === log.id ? (
+                            <Input
+                              type="datetime-local"
+                              value={editData.clock_in ? format(new Date(editData.clock_in), "yyyy-MM-dd'T'HH:mm") : ""}
+                              onChange={(e) => setEditData({ ...editData, clock_in: new Date(e.target.value).toISOString() })}
+                              className="w-48"
+                            />
+                          ) : (
+                            format(new Date(log.clock_in), "MMM d, h:mm a")
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingLogId === log.id ? (
+                            <Input
+                              type="datetime-local"
+                              value={editData.clock_out ? format(new Date(editData.clock_out), "yyyy-MM-dd'T'HH:mm") : ""}
+                              onChange={(e) => setEditData({ ...editData, clock_out: e.target.value ? new Date(e.target.value).toISOString() : "" })}
+                              className="w-48"
+                            />
+                          ) : (
+                            log.clock_out ? format(new Date(log.clock_out), "MMM d, h:mm a") : "In Progress"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {editingLogId === log.id && editData.clock_in && editData.clock_out ? (
+                            <span className="font-medium">
+                              {calculateTotalHours(editData.clock_in, editData.clock_out).toFixed(2)}h
+                            </span>
+                          ) : (
+                            <span className="font-medium">
+                              {(log.total_hours || 0).toFixed(2)}h
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <TimesheetMapView timeLog={log} />
+                            {log.edit_count > 0 && (
+                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                                Edited {log.edit_count}x
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        {timesheet.status === "draft" && (
+                          <TableCell className="text-right">
+                            {editingLogId === log.id ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveEdit(log.id)}
+                                  disabled={updateTimeLogMutation.isPending}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                  disabled={updateTimeLogMutation.isPending}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditLog(log)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                          </TableCell>
                         )}
-                        <div className="flex items-center gap-4 text-sm">
-                          <span>
-                            {format(new Date(log.clock_in), "EEE, MMM d h:mm a")}
-                          </span>
-                          <span>→</span>
-                          <span>
-                            {log.clock_out 
-                              ? format(new Date(log.clock_out), "h:mm a")
-                              : "In Progress"
-                            }
-                          </span>
-                          <Badge variant="outline" className="ml-auto">
-                            {(log.total_hours || 0).toFixed(2)}h
-                          </Badge>
-                        </div>
-                      </div>
-                      <TimesheetMapView timeLog={log} />
-                    </div>
-                    {log.edit_count > 0 && (
-                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 mt-2">
-                        Edited {log.edit_count}x
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
