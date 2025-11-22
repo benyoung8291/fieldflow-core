@@ -1,5 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { getXeroCredentials, updateXeroTokens } from '../_shared/vault-credentials.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -7,9 +8,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('VITE_SUPABASE_PUBLISHABLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const authHeader = req.headers.get('Authorization')!;
     const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
@@ -23,10 +24,6 @@ Deno.serve(async (req) => {
 
     const tenantId = profile?.tenant_id;
     if (!tenantId) throw new Error('No tenant found');
-
-    // Get Xero credentials
-    const xeroClientId = Deno.env.get('XERO_CLIENT_ID');
-    const xeroClientSecret = Deno.env.get('XERO_CLIENT_SECRET');
     
     const { data: integration } = await supabase
       .from('accounting_integrations')
@@ -39,9 +36,45 @@ Deno.serve(async (req) => {
       throw new Error('Xero integration not configured');
     }
 
-    // Refresh Xero token (simplified - you'd need proper OAuth refresh)
-    // This assumes you have refresh token stored somewhere
-    
+    // Get credentials from vault
+    const credentials = await getXeroCredentials(supabase, integration.id);
+
+    // Check if token needs refresh
+    let accessToken = credentials.access_token;
+    if (integration.xero_token_expires_at) {
+      const expiresAt = new Date(integration.xero_token_expires_at);
+      if (expiresAt <= new Date()) {
+        // Refresh token
+        const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${credentials.client_secret}`)}`,
+          },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            refresh_token: credentials.refresh_token,
+          }),
+        });
+
+        if (!tokenResponse.ok) {
+          throw new Error('Failed to refresh Xero token');
+        }
+
+        const tokens = await tokenResponse.json();
+        accessToken = tokens.access_token;
+
+        // Update tokens
+        await updateXeroTokens(supabase, integration.id, tokens.access_token, tokens.refresh_token);
+        await supabase
+          .from('accounting_integrations')
+          .update({
+            xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          })
+          .eq('id', integration.id);
+      }
+    }
+
     // Get all credit cards for tenant
     const { data: cards } = await supabase
       .from('company_credit_cards')
@@ -54,7 +87,7 @@ Deno.serve(async (req) => {
       `https://api.xero.com/api.xro/2.0/BankTransactions?where=Type=="SPEND"`,
       {
         headers: {
-          'Authorization': `Bearer ${integration.xero_tenant_id}`, // You'd use actual access token
+          'Authorization': `Bearer ${accessToken}`,
           'xero-tenant-id': integration.xero_tenant_id,
           'Accept': 'application/json',
         },
@@ -73,7 +106,6 @@ Deno.serve(async (req) => {
       let assignedTo = null;
       let cardId = null;
 
-      // Auto-assign based on description
       const description = txn.Reference || txn.LineItems?.[0]?.Description || '';
       
       // Try to match card number in description
@@ -83,7 +115,6 @@ Deno.serve(async (req) => {
           assignedTo = card.assigned_to;
           break;
         }
-        // For Amex, check last 4 digits
         if (card.card_provider === 'amex' && description.includes(card.last_four_digits)) {
           cardId = card.id;
           assignedTo = card.assigned_to;
@@ -91,7 +122,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // If not assigned by card number, try matching user name in description
+      // If not assigned by card number, try matching user name
       if (!assignedTo && cards) {
         for (const card of cards) {
           const userName = card.assignedUser ? `${card.assignedUser.first_name || ''} ${card.assignedUser.last_name || ''}`.trim() : '';

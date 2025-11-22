@@ -72,3 +72,19 @@ verify_jwt = true
 [functions.validate-abn]
 verify_jwt = true
 
+[functions.check-xero-credentials]
+verify_jwt = true
+
+[functions.sync-credit-card-transactions-acumatica]
+verify_jwt = true
+
+[functions.sync-credit-card-transactions-xero]
+verify_jwt = true
+
+[functions.sync-expense-to-acumatica]
+verify_jwt = true
+
+[functions.sync-expense-to-xero]
+verify_jwt = true
+
+

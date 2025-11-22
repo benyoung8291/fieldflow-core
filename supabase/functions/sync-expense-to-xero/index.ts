@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getXeroCredentials, updateXeroTokens } from "../_shared/vault-credentials.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -10,11 +11,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const clientId = Deno.env.get("XERO_CLIENT_ID");
-    const clientSecret = Deno.env.get("XERO_CLIENT_SECRET");
-    const refreshToken = Deno.env.get("XERO_REFRESH_TOKEN");
 
-    if (!supabaseUrl || !supabaseKey || !clientId || !clientSecret || !refreshToken) {
+    if (!supabaseUrl || !supabaseKey) {
       throw new Error("Missing required environment variables");
     }
 
@@ -26,7 +24,7 @@ serve(async (req) => {
     // Fetch expense with related data
     const { data: expense, error: expenseError } = await supabase
       .from("expenses")
-      .select("*, vendor:vendors(*)")
+      .select("*, vendor:suppliers(*)")
       .eq("id", expenseId)
       .single();
 
@@ -60,25 +58,44 @@ serve(async (req) => {
       throw new Error("Xero integration not configured");
     }
 
-    // Refresh access token
-    const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }),
-    });
+    // Get credentials from vault
+    const credentials = await getXeroCredentials(supabase, integration.id);
 
-    if (!tokenResponse.ok) {
-      throw new Error("Failed to refresh Xero access token");
+    // Check if token needs refresh
+    let accessToken = credentials.access_token;
+    if (integration.xero_token_expires_at) {
+      const expiresAt = new Date(integration.xero_token_expires_at);
+      if (expiresAt <= new Date()) {
+        // Refresh access token
+        const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${credentials.client_secret}`)}`,
+          },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            refresh_token: credentials.refresh_token,
+          }),
+        });
+
+        if (!tokenResponse.ok) {
+          throw new Error("Failed to refresh Xero access token");
+        }
+
+        const tokenData = await tokenResponse.json();
+        accessToken = tokenData.access_token;
+
+        // Update tokens in vault
+        await updateXeroTokens(supabase, integration.id, tokenData.access_token, tokenData.refresh_token);
+        await supabase
+          .from("accounting_integrations")
+          .update({
+            xero_token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+          })
+          .eq("id", integration.id);
+      }
     }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
 
     // Fetch contact (vendor) in Xero
     let contactId = null;

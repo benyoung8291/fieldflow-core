@@ -1,5 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { getAcumaticaCredentials } from '../_shared/vault-credentials.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -7,9 +8,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('VITE_SUPABASE_PUBLISHABLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const authHeader = req.headers.get('Authorization')!;
     const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
@@ -23,21 +24,20 @@ Deno.serve(async (req) => {
 
     const tenantId = profile?.tenant_id;
     if (!tenantId) throw new Error('No tenant found');
-
-    // Get Acumatica credentials
-    const acumaticaUsername = Deno.env.get('ACUMATICA_USERNAME');
-    const acumaticaPassword = Deno.env.get('ACUMATICA_PASSWORD');
     
     const { data: integration } = await supabase
       .from('accounting_integrations')
       .select('*')
       .eq('tenant_id', tenantId)
-      .eq('provider', 'acumatica')
+      .eq('provider', 'myob_acumatica')
       .single();
 
     if (!integration?.acumatica_instance_url) {
       throw new Error('Acumatica integration not configured');
     }
+
+    // Get credentials from vault
+    const credentials = await getAcumaticaCredentials(supabase, integration.id);
 
     const instanceUrl = integration.acumatica_instance_url;
     const companyName = integration.acumatica_company_name;
@@ -46,7 +46,11 @@ Deno.serve(async (req) => {
     const loginResponse = await fetch(`${instanceUrl}/entity/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: acumaticaUsername, password: acumaticaPassword, company: companyName }),
+      body: JSON.stringify({ 
+        name: credentials.username, 
+        password: credentials.password, 
+        company: companyName 
+      }),
     });
 
     if (!loginResponse.ok) throw new Error('Acumatica authentication failed');
