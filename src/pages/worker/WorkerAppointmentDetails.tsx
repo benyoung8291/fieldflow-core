@@ -91,7 +91,7 @@ export default function WorkerAppointmentDetails() {
         }
       }
 
-      // Load appointment from network
+      // Load appointment with assigned workers and line items
       const { data: aptData } = await supabase
         .from('appointments')
         .select(`
@@ -100,7 +100,23 @@ export default function WorkerAppointmentDetails() {
             id,
             work_order_number,
             description,
-            customer:customers(name, phone, email, address, city, state, postcode)
+            customer:customers(name, phone, email, address, city, state, postcode),
+            line_items:service_order_line_items(
+              id,
+              description,
+              quantity,
+              estimated_hours
+            )
+          ),
+          appointment_workers(
+            id,
+            worker:workers(
+              id,
+              first_name,
+              last_name,
+              mobile_phone,
+              email
+            )
           )
         `)
         .eq('id', id)
@@ -936,6 +952,67 @@ export default function WorkerAppointmentDetails() {
                 <Navigation className="h-4 w-4 mr-2" />
                 Get Directions
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Assigned Workers */}
+        {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Assigned Workers ({appointment.appointment_workers.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {appointment.appointment_workers.map((aw: any) => (
+                <div key={aw.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {aw.worker?.first_name} {aw.worker?.last_name}
+                    </p>
+                    {aw.worker?.email && (
+                      <p className="text-xs text-muted-foreground">{aw.worker.email}</p>
+                    )}
+                  </div>
+                  {aw.worker?.mobile_phone && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.href = `tel:${aw.worker.mobile_phone}`}
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Line Items */}
+        {appointment.service_order?.line_items && appointment.service_order.line_items.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Items</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {appointment.service_order.line_items.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-start p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{item.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Quantity: {item.quantity}
+                    </p>
+                  </div>
+                  {item.estimated_hours > 0 && (
+                    <Badge variant="outline">
+                      {item.estimated_hours}h
+                    </Badge>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
