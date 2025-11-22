@@ -6,7 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, X, Edit2, Trash2 } from "lucide-react";
+import { Save, X, Edit2, Trash2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 
@@ -164,147 +164,169 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
         <tbody className="divide-y divide-border/50">
           {timeLogs.map((log: any) => {
             const isEditing = editingId === log.id;
+            const hasLocationDenied = log.notes && log.notes.includes('LOCATION PERMISSIONS DENIED');
+            const hasLocationUnavailable = log.notes && log.notes.includes('LOCATION NOT AVAILABLE') && !log.notes.includes('DENIED');
 
             return (
-              <tr key={log.id} className="hover:bg-muted/30">
-                <td className="py-2 px-2 text-xs">
-                  {log.worker && `${log.worker.first_name} ${log.worker.last_name}`}
-                </td>
-                <td className="py-2 px-2 text-xs">
-                  {isEditing ? (
-                    <Input
-                      type="datetime-local"
-                      value={editData.clock_in}
-                      onChange={(e) => setEditData({ ...editData, clock_in: e.target.value })}
-                      className="h-7 text-xs"
-                    />
-                  ) : (
-                    format(new Date(log.clock_in), "MMM d, h:mm a")
-                  )}
-                </td>
-                <td className="py-2 px-2 text-xs">
-                  {isEditing ? (
-                    <Input
-                      type="datetime-local"
-                      value={editData.clock_out}
-                      onChange={(e) => setEditData({ ...editData, clock_out: e.target.value })}
-                      className="h-7 text-xs"
-                    />
-                  ) : log.clock_out ? (
-                    format(new Date(log.clock_out), "MMM d, h:mm a")
-                  ) : (
-                    <Badge variant="outline" className="bg-warning/10 text-warning text-[9px]">
-                      In Progress
-                    </Badge>
-                  )}
-                </td>
-                <td className="py-2 px-2 text-right text-xs font-medium">
-                  {log.total_hours ? log.total_hours.toFixed(2) : "-"}
-                </td>
-                {!hideFinancials && (
-                  <>
-                    <td className="py-2 px-2 text-right text-xs">
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editData.hourly_rate}
-                          onChange={(e) => setEditData({ ...editData, hourly_rate: e.target.value })}
-                          className="h-7 text-xs text-right"
-                        />
-                      ) : (
-                        `${formatCurrency(log.hourly_rate)}/hr`
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-right text-xs">
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={editData.overhead_percentage}
-                          onChange={(e) =>
-                            setEditData({ ...editData, overhead_percentage: e.target.value })
-                          }
-                          className="h-7 text-xs text-right"
-                        />
-                      ) : (
-                        `${log.overhead_percentage}%`
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-right text-xs font-bold">
-                      {log.total_cost ? formatCurrency(log.total_cost) : "-"}
-                    </td>
-                  </>
-                )}
-                <td className="py-2 px-2 text-xs">
-                  {isEditing ? (
-                    <select
-                      value={editData.status}
-                      onChange={(e) => setEditData({ ...editData, status: e.target.value })}
-                      className="h-7 text-xs border rounded px-2"
-                    >
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="approved">Approved</option>
-                    </select>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className={`${statusColors[log.status as keyof typeof statusColors]} text-[9px] py-0 px-1`}
-                    >
-                      {log.status.replace("_", " ")}
-                    </Badge>
-                  )}
-                </td>
-                {canEdit && (
-                  <td className="py-2 px-2 text-right">
+              <>
+                <tr key={log.id} className="hover:bg-muted/30">
+                  <td className="py-2 px-2 text-xs">
+                    {log.worker && `${log.worker.first_name} ${log.worker.last_name}`}
+                  </td>
+                  <td className="py-2 px-2 text-xs">
                     {isEditing ? (
-                      <div className="flex gap-1 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSave(log.id)}
-                          className="h-6 w-6 p-0"
-                          disabled={updateMutation.isPending}
-                        >
-                          <Save className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleCancel}
-                          className="h-6 w-6 p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <Input
+                        type="datetime-local"
+                        value={editData.clock_in}
+                        onChange={(e) => setEditData({ ...editData, clock_in: e.target.value })}
+                        className="h-7 text-xs"
+                      />
                     ) : (
-                      <div className="flex gap-1 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(log)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm("Delete this time log?")) {
-                              deleteMutation.mutate(log.id);
-                            }
-                          }}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
+                      format(new Date(log.clock_in), "MMM d, h:mm a")
                     )}
                   </td>
+                  <td className="py-2 px-2 text-xs">
+                    {isEditing ? (
+                      <Input
+                        type="datetime-local"
+                        value={editData.clock_out}
+                        onChange={(e) => setEditData({ ...editData, clock_out: e.target.value })}
+                        className="h-7 text-xs"
+                      />
+                    ) : log.clock_out ? (
+                      format(new Date(log.clock_out), "MMM d, h:mm a")
+                    ) : (
+                      <Badge variant="outline" className="bg-warning/10 text-warning text-[9px]">
+                        In Progress
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="py-2 px-2 text-right text-xs font-medium">
+                    {log.total_hours ? log.total_hours.toFixed(2) : "-"}
+                  </td>
+                  {!hideFinancials && (
+                    <>
+                      <td className="py-2 px-2 text-right text-xs">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editData.hourly_rate}
+                            onChange={(e) => setEditData({ ...editData, hourly_rate: e.target.value })}
+                            className="h-7 text-xs text-right"
+                          />
+                        ) : (
+                          `${formatCurrency(log.hourly_rate)}/hr`
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-right text-xs">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={editData.overhead_percentage}
+                            onChange={(e) =>
+                              setEditData({ ...editData, overhead_percentage: e.target.value })
+                            }
+                            className="h-7 text-xs text-right"
+                          />
+                        ) : (
+                          `${log.overhead_percentage}%`
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-right text-xs font-bold">
+                        {log.total_cost ? formatCurrency(log.total_cost) : "-"}
+                      </td>
+                    </>
+                  )}
+                  <td className="py-2 px-2 text-xs">
+                    {isEditing ? (
+                      <select
+                        value={editData.status}
+                        onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                        className="h-7 text-xs border rounded px-2"
+                      >
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="approved">Approved</option>
+                      </select>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className={`${statusColors[log.status as keyof typeof statusColors]} text-[9px] py-0 px-1`}
+                      >
+                        {log.status.replace("_", " ")}
+                      </Badge>
+                    )}
+                  </td>
+                  {canEdit && (
+                    <td className="py-2 px-2 text-right">
+                      {isEditing ? (
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSave(log.id)}
+                            className="h-6 w-6 p-0"
+                            disabled={updateMutation.isPending}
+                          >
+                            <Save className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancel}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(log)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm("Delete this time log?")) {
+                                deleteMutation.mutate(log.id);
+                              }
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  )}
+                </tr>
+                {(hasLocationDenied || hasLocationUnavailable) && (
+                  <tr key={`${log.id}-location-warning`} className="bg-muted/20">
+                    <td colSpan={canEdit ? (hideFinancials ? 6 : 9) : (hideFinancials ? 5 : 8)} className="py-2 px-2">
+                      {hasLocationDenied && (
+                        <Badge variant="destructive" className="text-[9px] flex items-center gap-1 w-fit">
+                          <AlertTriangle className="h-3 w-3" />
+                          Location Access Denied
+                        </Badge>
+                      )}
+                      {hasLocationUnavailable && (
+                        <Badge variant="outline" className="text-[9px] flex items-center gap-1 w-fit border-warning text-warning">
+                          <AlertTriangle className="h-3 w-3" />
+                          Location Unavailable
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
                 )}
-              </tr>
+              </>
             );
           })}
         </tbody>
