@@ -1,13 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useState } from "react";
+import { format } from "date-fns";
+import { AlertCircle } from "lucide-react";
 
 const daysOfWeek = [
   { value: "monday", label: "Monday" },
@@ -33,6 +36,10 @@ interface AvailabilityData {
 export default function WorkerCalendar() {
   const queryClient = useQueryClient();
   const [availability, setAvailability] = useState<AvailabilityData>({});
+  const [isUnavailable, setIsUnavailable] = useState(false);
+  const [unavailableFrom, setUnavailableFrom] = useState("");
+  const [unavailableTo, setUnavailableTo] = useState("");
+  const [unavailableReason, setUnavailableReason] = useState("");
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -49,11 +56,17 @@ export default function WorkerCalendar() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('tenant_id')
+        .select('tenant_id, status')
         .eq('id', currentUser.id)
         .single();
 
       if (error) throw error;
+      
+      // Set unavailable status based on profile
+      if (data?.status === 'unavailable') {
+        setIsUnavailable(true);
+      }
+      
       return data;
     },
     enabled: !!currentUser?.id,
@@ -107,14 +120,27 @@ export default function WorkerCalendar() {
       }));
 
       // Upsert all availability records
-      const { error } = await supabase
+      const { error: availError } = await supabase
         .from("worker_availability")
         .upsert(updates, { onConflict: 'worker_id,day_of_week' });
 
-      if (error) throw error;
+      if (availError) throw availError;
+
+      // Update profile status
+      const newStatus = isUnavailable ? 'unavailable' : 'available';
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ 
+          status: newStatus,
+          status_updated_at: new Date().toISOString()
+        })
+        .eq('id', currentUser.id);
+
+      if (profileError) throw profileError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["worker-availability"] });
+      queryClient.invalidateQueries({ queryKey: ["worker-profile"] });
       toast.success("Availability updated");
     },
     onError: () => {
@@ -150,9 +176,88 @@ export default function WorkerCalendar() {
         </Button>
       </div>
 
+      {/* Unavailability Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Unavailability Status</CardTitle>
+          <CardDescription>
+            Mark yourself as unavailable for a period of time (e.g., leave, sick days)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={isUnavailable}
+              onCheckedChange={setIsUnavailable}
+            />
+            <Label className="text-base">
+              I am currently unavailable
+            </Label>
+          </div>
+
+          {isUnavailable && (
+            <div className="space-y-4 pl-8 border-l-2 border-warning">
+              <div className="flex items-start gap-2 text-warning">
+                <AlertCircle className="h-5 w-5 mt-0.5" />
+                <p className="text-sm">
+                  You will not be assigned to new appointments while marked as unavailable
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="unavailable-from">Unavailable From (Optional)</Label>
+                  <input
+                    id="unavailable-from"
+                    type="date"
+                    value={unavailableFrom}
+                    onChange={(e) => setUnavailableFrom(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unavailable-to">Unavailable Until (Optional)</Label>
+                  <input
+                    id="unavailable-to"
+                    type="date"
+                    value={unavailableTo}
+                    onChange={(e) => setUnavailableTo(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                    min={unavailableFrom}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="unavailable-reason">Reason (Optional)</Label>
+                <Textarea
+                  id="unavailable-reason"
+                  value={unavailableReason}
+                  onChange={(e) => setUnavailableReason(e.target.value)}
+                  placeholder="e.g., Annual leave, medical appointment, etc."
+                  className="resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {unavailableFrom && unavailableTo && (
+                <p className="text-sm text-muted-foreground">
+                  You will be unavailable from {format(new Date(unavailableFrom), 'MMM d, yyyy')} to {format(new Date(unavailableTo), 'MMM d, yyyy')}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Weekly Schedule */}
       <Card>
         <CardHeader>
           <CardTitle>Weekly Schedule</CardTitle>
+          <CardDescription>
+            Set your regular working hours for each day of the week
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {daysOfWeek.map((day) => {
