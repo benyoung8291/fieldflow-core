@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import DOMPurify from "dompurify";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Trash2, Copy } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -341,7 +342,12 @@ export default function QuoteDescriptionTemplateDialog({
                 <Label>Current Description Preview</Label>
                 <ScrollArea className="h-[200px] border rounded-md p-4">
                   <div 
-                    dangerouslySetInnerHTML={{ __html: currentDescription || "<i>No description entered yet</i>" }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(currentDescription || "<i>No description entered yet</i>", {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'i'],
+                        ALLOWED_ATTR: []
+                      })
+                    }}
                     className="prose prose-sm max-w-none"
                   />
                 </ScrollArea>

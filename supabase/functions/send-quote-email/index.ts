@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 import { sanitizeError, sanitizeAuthError, sanitizeDatabaseError } from '../_shared/errorHandler.ts';
+import DOMPurify from "https://esm.sh/dompurify@3.0.6";
+import { JSDOM } from "https://esm.sh/jsdom@23.0.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,6 +49,20 @@ serve(async (req) => {
 
     const { quote_id, to, subject, message, pdf_html }: EmailData = await req.json();
 
+    // Initialize DOMPurify with JSDOM for server-side sanitization
+    const window = new JSDOM('').window;
+    const purify = DOMPurify(window as any);
+    
+    // Sanitize user-controlled HTML content
+    const sanitizedMessage = purify.sanitize(message, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote'],
+      ALLOWED_ATTR: []
+    });
+    const sanitizedPdfHtml = purify.sanitize(pdf_html, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+      ALLOWED_ATTR: ['class', 'style']
+    });
+
     // Fetch quote data
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
@@ -81,11 +97,11 @@ serve(async (req) => {
           <h1 style="margin: 0;">Quotation ${quote.quote_number}</h1>
         </div>
         <div style="padding: 30px; background: #f8f9fa;">
-          <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${sanitizedMessage}</p>
         </div>
         <div style="padding: 20px; background: white;">
           <p style="margin: 0 0 15px 0;"><strong>Quote Details:</strong></p>
-          ${pdf_html}
+          ${sanitizedPdfHtml}
         </div>
         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #e5e7eb;">
           <p>This is an automated message. Please do not reply to this email.</p>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import DOMPurify from "dompurify";
 import DocumentDetailLayout, {
   DocumentAction,
   FileMenuAction,
@@ -1248,7 +1249,12 @@ export default function QuoteDetails() {
               ) : quote.description ? (
                 <div 
                   className="text-sm text-muted-foreground mt-1 prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: quote.description }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(quote.description, {
+                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
+                      ALLOWED_ATTR: []
+                    })
+                  }}
                 />
               ) : null}
             </div>
