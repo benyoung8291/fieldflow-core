@@ -221,7 +221,7 @@ export default function FieldReportForm({
                 .delete()
                 .eq('field_report_id', draftReportId);
                 
-              // Insert new photo records
+              // Step 1: Insert all photos without paired_photo_id
               const photoInserts: any[] = [];
               photoPairs.forEach((pair, index) => {
                 if (pair.before) {
@@ -253,9 +253,37 @@ export default function FieldReportForm({
               });
               
               if (photoInserts.length > 0) {
-                await supabase
+                const { data: insertedPhotos } = await supabase
                   .from('field_report_photos')
-                  .insert(photoInserts);
+                  .insert(photoInserts)
+                  .select('id, file_url, photo_type');
+                  
+                // Step 2: Update paired_photo_id for paired photos
+                if (insertedPhotos) {
+                  for (const pair of photoPairs) {
+                    if (pair.before && pair.after) {
+                      const beforePhoto = insertedPhotos.find(
+                        p => p.file_url === pair.before?.fileUrl && p.photo_type === 'before'
+                      );
+                      const afterPhoto = insertedPhotos.find(
+                        p => p.file_url === pair.after?.fileUrl && p.photo_type === 'after'
+                      );
+                      
+                      if (beforePhoto && afterPhoto) {
+                        await Promise.all([
+                          supabase
+                            .from('field_report_photos')
+                            .update({ paired_photo_id: afterPhoto.id })
+                            .eq('id', beforePhoto.id),
+                          supabase
+                            .from('field_report_photos')
+                            .update({ paired_photo_id: beforePhoto.id })
+                            .eq('id', afterPhoto.id)
+                        ]);
+                      }
+                    }
+                  }
+                }
               }
             }
           } else {
@@ -308,9 +336,37 @@ export default function FieldReportForm({
                 });
                 
                 if (photoInserts.length > 0) {
-                  await supabase
+                  const { data: insertedPhotos } = await supabase
                     .from('field_report_photos')
-                    .insert(photoInserts);
+                    .insert(photoInserts)
+                    .select('id, file_url, photo_type');
+                    
+                  // Update paired_photo_id for paired photos
+                  if (insertedPhotos) {
+                    for (const pair of photoPairs) {
+                      if (pair.before && pair.after) {
+                        const beforePhoto = insertedPhotos.find(
+                          p => p.file_url === pair.before?.fileUrl && p.photo_type === 'before'
+                        );
+                        const afterPhoto = insertedPhotos.find(
+                          p => p.file_url === pair.after?.fileUrl && p.photo_type === 'after'
+                        );
+                        
+                        if (beforePhoto && afterPhoto) {
+                          await Promise.all([
+                            supabase
+                              .from('field_report_photos')
+                              .update({ paired_photo_id: afterPhoto.id })
+                              .eq('id', beforePhoto.id),
+                            supabase
+                              .from('field_report_photos')
+                              .update({ paired_photo_id: beforePhoto.id })
+                              .eq('id', afterPhoto.id)
+                          ]);
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -520,6 +576,7 @@ export default function FieldReportForm({
           .delete()
           .eq('field_report_id', report.id);
         
+        // Step 1: Insert all photos without paired_photo_id
         const photoInserts = allPhotos.map((photo, index) => ({
           tenant_id: profile.tenant_id,
           field_report_id: report.id,
@@ -532,13 +589,41 @@ export default function FieldReportForm({
           uploaded_by: user.id,
         }));
 
-        const { error: photosError } = await supabase
+        const { data: insertedPhotos, error: photosError } = await supabase
           .from('field_report_photos')
-          .insert(photoInserts);
+          .insert(photoInserts)
+          .select('id, file_url, photo_type');
 
         if (photosError) {
           console.error('Photo records save error:', photosError);
           throw new Error(`Failed to save photo records: ${photosError.message}`);
+        }
+        
+        // Step 2: Update paired_photo_id for paired photos
+        if (insertedPhotos) {
+          for (const pair of photoPairs) {
+            if (pair.before && pair.after) {
+              const beforePhoto = insertedPhotos.find(
+                p => p.file_url === pair.before?.fileUrl && p.photo_type === 'before'
+              );
+              const afterPhoto = insertedPhotos.find(
+                p => p.file_url === pair.after?.fileUrl && p.photo_type === 'after'
+              );
+              
+              if (beforePhoto && afterPhoto) {
+                await Promise.all([
+                  supabase
+                    .from('field_report_photos')
+                    .update({ paired_photo_id: afterPhoto.id })
+                    .eq('id', beforePhoto.id),
+                  supabase
+                    .from('field_report_photos')
+                    .update({ paired_photo_id: beforePhoto.id })
+                    .eq('id', afterPhoto.id)
+                ]);
+              }
+            }
+          }
         }
         console.log('Photo records saved successfully');
       }
