@@ -22,6 +22,7 @@ const statusColors = {
 };
 
 export default function TimeLogsTable({ appointmentId, hideFinancials = false }: TimeLogsTableProps) {
+  console.log('[TimeLogsTable] Component loaded - DELETE BUTTON REMOVED VERSION');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, userRoles } = usePermissions();
