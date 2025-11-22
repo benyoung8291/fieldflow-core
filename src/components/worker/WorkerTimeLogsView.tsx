@@ -1,9 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { Clock, CheckCircle2, AlertCircle } from "lucide-react";
-import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { format, parseISO } from "date-fns";
+import { Clock, CheckCircle2, AlertCircle, Edit2, Save, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface WorkerTimeLogsViewProps {
   appointmentId: string;
@@ -28,6 +31,13 @@ const statusConfig = {
 };
 
 export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsViewProps) {
+  const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{ clock_in: string; clock_out: string }>({
+    clock_in: "",
+    clock_out: "",
+  });
+
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
@@ -96,6 +106,40 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
     };
   }, [appointmentId, currentUser?.id, refetch]);
 
+  const handleEdit = (log: any) => {
+    setEditingId(log.id);
+    setEditData({
+      clock_in: format(parseISO(log.clock_in), "yyyy-MM-dd'T'HH:mm"),
+      clock_out: log.clock_out ? format(parseISO(log.clock_out), "yyyy-MM-dd'T'HH:mm") : "",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditData({ clock_in: "", clock_out: "" });
+  };
+
+  const handleSaveEdit = async (logId: string) => {
+    try {
+      const { error } = await supabase
+        .from("time_logs")
+        .update({
+          clock_in: new Date(editData.clock_in).toISOString(),
+          clock_out: editData.clock_out ? new Date(editData.clock_out).toISOString() : null,
+        })
+        .eq("id", logId);
+
+      if (error) throw error;
+
+      toast.success("Time log updated successfully");
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["worker-time-logs", appointmentId, currentUser?.id] });
+    } catch (error) {
+      console.error("Error updating time log:", error);
+      toast.error("Failed to update time log");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8 text-muted-foreground">
@@ -153,27 +197,81 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
             </div>
 
             {/* Time Info */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="text-muted-foreground text-xs mb-1">Clock In</div>
-                <div className="font-medium">
-                  {format(new Date(log.clock_in), "MMM d, h:mm a")}
+            {editingId === log.id ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Clock In</label>
+                  <Input
+                    type="datetime-local"
+                    value={editData.clock_in}
+                    onChange={(e) => setEditData({ ...editData, clock_in: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Clock Out</label>
+                  <Input
+                    type="datetime-local"
+                    value={editData.clock_out}
+                    onChange={(e) => setEditData({ ...editData, clock_out: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveEdit(log.id)}
+                    className="flex-1"
+                  >
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    className="flex-1"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Cancel
+                  </Button>
                 </div>
               </div>
-              
-              <div>
-                <div className="text-muted-foreground text-xs mb-1">Clock Out</div>
-                <div className="font-medium">
-                  {log.clock_out ? (
-                    format(new Date(log.clock_out), "MMM d, h:mm a")
-                  ) : (
-                    <Badge variant="outline" className="bg-warning/10 text-warning">
-                      In Progress
-                    </Badge>
-                  )}
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Clock In</div>
+                    <div className="font-medium">
+                      {format(new Date(log.clock_in), "MMM d, h:mm a")}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Clock Out</div>
+                    <div className="font-medium">
+                      {log.clock_out ? (
+                        format(new Date(log.clock_out), "MMM d, h:mm a")
+                      ) : (
+                        <Badge variant="outline" className="bg-warning/10 text-warning">
+                          In Progress
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleEdit(log)}
+                  className="w-full mt-2"
+                >
+                  <Edit2 className="h-3 w-3 mr-1" />
+                  Edit Times
+                </Button>
+              </>
+            )}
 
             {/* Hours */}
             <div className="flex items-center justify-between pt-2 border-t border-border/50">
