@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { useEffect } from "react";
 
 interface WorkerTimeLogsViewProps {
   appointmentId: string;
@@ -31,6 +32,7 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
     queryKey: ['current-user'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('[WorkerTimeLogsView] Current user:', user?.id);
       return user;
     },
   });
@@ -38,7 +40,10 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
   const { data: timeLogs = [], isLoading, refetch } = useQuery({
     queryKey: ["worker-time-logs", appointmentId, currentUser?.id],
     queryFn: async () => {
-      if (!currentUser?.id) return [];
+      if (!currentUser?.id) {
+        console.log('[WorkerTimeLogsView] No current user, skipping fetch');
+        return [];
+      }
       
       console.log('[WorkerTimeLogsView] Fetching time logs for user:', currentUser.id, 'appointment:', appointmentId);
       
@@ -58,8 +63,38 @@ export default function WorkerTimeLogsView({ appointmentId }: WorkerTimeLogsView
       return data || [];
     },
     enabled: !!currentUser?.id,
-    refetchInterval: 5000, // Refetch every 5 seconds
   });
+
+  // Set up realtime subscription for time logs
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    console.log('[WorkerTimeLogsView] Setting up realtime subscription');
+    
+    const channel = supabase
+      .channel(`time_logs:${appointmentId}:${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_logs',
+          filter: `appointment_id=eq.${appointmentId}`,
+        },
+        (payload) => {
+          console.log('[WorkerTimeLogsView] Realtime update:', payload);
+          refetch();
+        }
+      )
+      .subscribe((status) => {
+        console.log('[WorkerTimeLogsView] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('[WorkerTimeLogsView] Cleaning up subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [appointmentId, currentUser?.id, refetch]);
 
   if (isLoading) {
     return (
