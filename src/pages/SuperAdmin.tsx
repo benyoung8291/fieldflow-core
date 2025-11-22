@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,17 +80,15 @@ export default function SuperAdmin() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                You do not have permission to access this area.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              You do not have permission to access this area.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -120,8 +118,8 @@ export default function SuperAdmin() {
     : [];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <SidebarProvider>
+      <div className="min-h-screen w-full p-6 space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
@@ -326,6 +324,6 @@ export default function SuperAdmin() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </SidebarProvider>
   );
 }
