@@ -81,25 +81,50 @@ export default function FieldReportForm({
   // Load saved draft from local storage and database on mount
   useEffect(() => {
     const loadDraft = async () => {
-      // First try localStorage
-      const savedDraft = localStorage.getItem(storageKey);
-      if (savedDraft) {
-        try {
-          const parsed = JSON.parse(savedDraft);
-          setFormData(parsed.formData);
-          if (parsed.photoPairs) {
-            setPhotoPairs(parsed.photoPairs);
-          }
-          if (parsed.draftReportId) {
-            setDraftReportId(parsed.draftReportId);
+      try {
+        // First check database for existing draft by appointment_id
+        if (appointmentId) {
+          const { data: existingDraft } = await supabase
+            .from('field_reports')
+            .select('*')
+            .eq('appointment_id', appointmentId)
+            .eq('status', 'draft')
+            .maybeSingle();
             
-            // Load photos from database for this draft
+          if (existingDraft) {
+            // Load the draft report data
+            setDraftReportId(existingDraft.id);
+            setFormData({
+              worker_name: existingDraft.worker_name,
+              service_date: existingDraft.service_date,
+              arrival_time: existingDraft.arrival_time,
+              appointment_id: existingDraft.appointment_id || '',
+              service_order_id: existingDraft.service_order_id || '',
+              carpet_condition_arrival: existingDraft.carpet_condition_arrival || 3,
+              hard_floor_condition_arrival: existingDraft.hard_floor_condition_arrival || 3,
+              flooring_state_description: existingDraft.flooring_state_description || '',
+              has_signed_swms: existingDraft.has_signed_swms,
+              equipment_tested_tagged: existingDraft.equipment_tested_tagged,
+              equipment_clean_working: existingDraft.equipment_clean_working,
+              work_description: existingDraft.work_description,
+              internal_notes: existingDraft.internal_notes || '',
+              had_problem_areas: existingDraft.had_problem_areas,
+              problem_areas_description: existingDraft.problem_areas_description || '',
+              methods_attempted: existingDraft.methods_attempted || '',
+              had_incident: existingDraft.had_incident,
+              incident_description: existingDraft.incident_description || '',
+              customer_signature_data: existingDraft.customer_signature_data || '',
+              customer_signature_name: existingDraft.customer_signature_name || '',
+              customer_signature_date: existingDraft.customer_signature_date || '',
+            });
+            
+            // Load photos from database
             const { data: photos } = await supabase
               .from('field_report_photos')
               .select('*')
-              .eq('field_report_id', parsed.draftReportId)
+              .eq('field_report_id', existingDraft.id)
               .order('display_order');
-              
+                
             if (photos && photos.length > 0) {
               // Reconstruct photo pairs from database using display_order
               // Photos are saved with display_order: index*2 (before) and index*2+1 (after)
@@ -138,19 +163,35 @@ export default function FieldReportForm({
                 setPhotoPairs(pairs);
               }
             }
+            
+            setLastSaved(existingDraft.updated_at ? new Date(existingDraft.updated_at) : null);
+            toast.info('Draft restored', {
+              description: 'Your previous work has been restored'
+            });
+            return;
+          }
+        }
+        
+        // Fallback to localStorage if no DB draft found
+        const savedDraft = localStorage.getItem(storageKey);
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          setFormData(parsed.formData);
+          if (parsed.photoPairs) {
+            setPhotoPairs(parsed.photoPairs);
+          }
+          if (parsed.draftReportId) {
+            setDraftReportId(parsed.draftReportId);
           }
           setLastSaved(new Date(parsed.savedAt));
-          toast.info('Draft restored', {
-            description: 'Your previous work has been restored'
-          });
-        } catch (error) {
-          console.error('Error loading draft:', error);
         }
+      } catch (error) {
+        console.error('Error loading draft:', error);
       }
     };
     
     loadDraft();
-  }, [storageKey]);
+  }, [appointmentId, storageKey]);
 
   // Auto-save to local storage and database whenever form data or photos change
   useEffect(() => {
