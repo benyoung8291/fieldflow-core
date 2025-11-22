@@ -210,63 +210,25 @@ export default function WorkerAppointmentDetails() {
         return false;
       }
 
-      // Check current permission state
+      // Check current permission state using Permissions API if available
       if ('permissions' in navigator) {
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        
-        if (permission.state === 'denied') {
-          toast.error('Location permission denied. Please enable location access in your browser settings.');
-          return false;
-        }
-        
-        if (permission.state === 'granted') {
-          return true;
-        }
-
-        // If state is 'prompt', we need to trigger the permission request
-        // by attempting to get the position - this will show the browser's permission dialog
-        if (permission.state === 'prompt') {
-          return new Promise<boolean>((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              () => resolve(true), // Permission granted
-              (error) => {
-                if (error.code === 1) { // PERMISSION_DENIED
-                  toast.error('Location permission denied. Please enable location access in your browser settings and try again.');
-                  resolve(false);
-                } else {
-                  // Other geolocation errors - we'll handle them later
-                  resolve(true);
-                }
-              },
-              {
-                enableHighAccuracy: false,
-                timeout: 5000,
-                maximumAge: 0,
-              }
-            );
-          });
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          
+          if (permission.state === 'denied') {
+            toast.error('Location access is blocked. Please tap "Location Help" above to enable it.', {
+              duration: 8000,
+            });
+            return false;
+          }
+        } catch (permError) {
+          // Permissions API might not be fully supported, continue anyway
+          console.warn('Permissions API error:', permError);
         }
       }
 
-      // Fallback: try to request permission by attempting to get position
-      return new Promise<boolean>((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          () => resolve(true),
-          (error) => {
-            if (error.code === 1) {
-              toast.error('Location permission denied. Please enable location access in your browser settings and try again.');
-              resolve(false);
-            } else {
-              resolve(true);
-            }
-          },
-          {
-            enableHighAccuracy: false,
-            timeout: 5000,
-            maximumAge: 0,
-          }
-        );
-      });
+      // Permission is either granted or prompt - continue
+      return true;
     } catch (error) {
       console.error('Permission check error:', error);
       return true; // Still try to get location
@@ -440,13 +402,17 @@ export default function WorkerAppointmentDetails() {
       
       // Geolocation errors
       if (error.code === 1) {
-        toast.error('Location permission denied. Please enable location access in your browser settings and try again.', {
-          duration: 6000,
+        toast.error('📍 Location blocked! Tap "Location Help" button above for step-by-step instructions to enable location access.', {
+          duration: 10000,
         });
       } else if (error.code === 2) {
-        toast.error('Unable to determine your location. Please check your device settings.');
+        toast.error('Unable to determine your location. Please check that location services are enabled on your device.', {
+          duration: 8000,
+        });
       } else if (error.code === 3) {
-        toast.error('Location request timed out. Please try again.');
+        toast.error('Location request timed out. Please try again in a moment.', {
+          duration: 6000,
+        });
       } else if (error.message?.includes('Worker profile not found')) {
         toast.error('Worker profile not found. Please contact support.');
       } else if (error.message?.includes('Not authenticated')) {
