@@ -49,6 +49,7 @@ export default function FieldReportForm({
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [photoPairs, setPhotoPairs] = useState<PhotoPair[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [draftReportId, setDraftReportId] = useState<string | null>(null);
   
   // Generate a unique key for this field report
   const storageKey = `field-report-draft-${appointmentId || 'standalone'}`;
@@ -87,6 +88,9 @@ export default function FieldReportForm({
         if (parsed.photoPairs) {
           setPhotoPairs(parsed.photoPairs);
         }
+        if (parsed.draftReportId) {
+          setDraftReportId(parsed.draftReportId);
+        }
         setLastSaved(new Date(parsed.savedAt));
         toast.info('Draft restored', {
           description: 'Your previous work has been restored'
@@ -97,20 +101,80 @@ export default function FieldReportForm({
     }
   }, [storageKey]);
 
-  // Auto-save to local storage whenever form data or photos change
+  // Auto-save to local storage and database whenever form data or photos change
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
+      const savedAt = new Date().toISOString();
       const draftData = {
         formData,
         photoPairs,
-        savedAt: new Date().toISOString()
+        draftReportId,
+        savedAt
       };
+      
+      // Save to local storage
       localStorage.setItem(storageKey, JSON.stringify(draftData));
       setLastSaved(new Date());
-    }, 1000); // Debounce by 1 second
+      
+      // Also save to database if online (for supervisor visibility)
+      if (navigator.onLine) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('tenant_id')
+            .eq('id', user.id)
+            .single();
+            
+          if (!profile) return;
+          
+          const reportNumber = draftReportId ? undefined : `FR-DRAFT-${Date.now()}`;
+          
+          if (draftReportId) {
+            // Update existing draft
+            await supabase
+              .from('field_reports')
+              .update({
+                ...formData,
+                appointment_id: formData.appointment_id || null,
+                service_order_id: formData.service_order_id || null,
+                customer_id: customerId || null,
+                location_id: locationId || null,
+              })
+              .eq('id', draftReportId);
+          } else {
+            // Create new draft
+            const { data: newReport } = await supabase
+              .from('field_reports')
+              .insert({
+                tenant_id: profile.tenant_id,
+                appointment_id: formData.appointment_id || null,
+                service_order_id: formData.service_order_id || null,
+                customer_id: customerId || null,
+                location_id: locationId || null,
+                report_number: reportNumber!,
+                created_by: user.id,
+                status: 'draft',
+                ...formData,
+              })
+              .select('id')
+              .single();
+              
+            if (newReport) {
+              setDraftReportId(newReport.id);
+            }
+          }
+        } catch (error) {
+          console.error('Error saving draft to database:', error);
+          // Continue silently - local storage still saved
+        }
+      }
+    }, 2000); // Debounce by 2 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [formData, photoPairs, storageKey]);
+  }, [formData, photoPairs, storageKey, draftReportId, customerId, locationId]);
 
   // Auto-populate logged-in user name
   useEffect(() => {
@@ -199,33 +263,58 @@ export default function FieldReportForm({
         throw new Error('Unable to load your profile. Please try again.');
       }
 
-      // Generate report number
-      const reportNumber = `FR-${Date.now()}`;
+      let report;
+      
+      if (draftReportId) {
+        // Update existing draft to submitted
+        console.log('Updating draft to submitted...');
+        const reportNumber = `FR-${Date.now()}`;
+        const { data: updatedReport, error: updateError } = await supabase
+          .from('field_reports')
+          .update({
+            status: 'submitted',
+            submitted_at: new Date().toISOString(),
+            report_number: reportNumber,
+            ...formData,
+          })
+          .eq('id', draftReportId)
+          .select()
+          .single();
+          
+        if (updateError) {
+          console.error('Field report update error:', updateError);
+          throw new Error(`Failed to update report: ${updateError.message}`);
+        }
+        report = updatedReport;
+      } else {
+        // Create new report
+        const reportNumber = `FR-${Date.now()}`;
+        console.log('Creating field report...');
+        const { data: newReport, error: reportError } = await supabase
+          .from('field_reports')
+          .insert({
+            tenant_id: profile.tenant_id,
+            appointment_id: formData.appointment_id || null,
+            service_order_id: formData.service_order_id || null,
+            customer_id: customerId,
+            location_id: locationId,
+            report_number: reportNumber,
+            created_by: user.id,
+            status: 'submitted',
+            submitted_at: new Date().toISOString(),
+            ...formData,
+          })
+          .select()
+          .single();
 
-      console.log('Creating field report...');
-      const { data: report, error: reportError } = await supabase
-        .from('field_reports')
-        .insert({
-          tenant_id: profile.tenant_id,
-          appointment_id: formData.appointment_id || null,
-          service_order_id: formData.service_order_id || null,
-          customer_id: customerId,
-          location_id: locationId,
-          report_number: reportNumber,
-          created_by: user.id,
-          status: 'submitted',
-          submitted_at: new Date().toISOString(),
-          ...formData,
-        })
-        .select()
-        .single();
-
-      if (reportError) {
-        console.error('Field report creation error:', reportError);
-        throw new Error(`Failed to create report: ${reportError.message}`);
+        if (reportError) {
+          console.error('Field report creation error:', reportError);
+          throw new Error(`Failed to create report: ${reportError.message}`);
+        }
+        report = newReport;
       }
       
-      console.log('Field report created successfully:', report.id);
+      console.log('Field report saved successfully:', report.id);
 
       // Prepare photo records (photos already uploaded in background)
       console.log(`Preparing ${photoPairs.length} photo pairs...`);
