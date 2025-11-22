@@ -243,10 +243,32 @@ export default function BeforeAfterPhotoUpload({
     e.stopPropagation();
   };
 
-  const removePhoto = (pairId: string, type: 'before' | 'after') => {
-    const updatedPairs = pairs.map(pair => {
-      if (pair.id === pairId) {
-        const updated = { ...pair };
+  const removePhoto = async (pairId: string, type: 'before' | 'after') => {
+    const pair = pairs.find(p => p.id === pairId);
+    
+    // Delete from database if it's an after photo
+    if (type === 'after' && pair?.after?.fileUrl) {
+      try {
+        const { error } = await supabase
+          .from('field_report_photos')
+          .delete()
+          .eq('file_url', pair.after.fileUrl);
+        
+        if (error) {
+          console.error('Error deleting photo from database:', error);
+          toast.error('Failed to delete photo');
+          return;
+        }
+      } catch (error) {
+        console.error('Error deleting photo:', error);
+        toast.error('Failed to delete photo');
+        return;
+      }
+    }
+    
+    const updatedPairs = pairs.map(p => {
+      if (p.id === pairId) {
+        const updated = { ...p };
         if (type === 'before') {
           delete updated.before;
         } else {
@@ -254,7 +276,7 @@ export default function BeforeAfterPhotoUpload({
         }
         return updated;
       }
-      return pair;
+      return p;
     });
     
     // When from appointment, keep all pairs. Otherwise filter empty ones
