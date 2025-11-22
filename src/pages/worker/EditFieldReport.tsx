@@ -68,7 +68,7 @@ export default function EditFieldReport() {
             </AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={() => navigate(`/appointments/${appointmentId}`)}>
+            <Button onClick={() => navigate(`/worker/appointments/${appointmentId}`)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Appointment
             </Button>
@@ -89,7 +89,7 @@ export default function EditFieldReport() {
             </AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={() => navigate(`/appointments/${appointmentId}`)}>
+            <Button onClick={() => navigate(`/worker/appointments/${appointmentId}`)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Appointment
             </Button>
@@ -105,7 +105,7 @@ export default function EditFieldReport() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/appointments/${appointmentId}`)}
+          onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
           className="mb-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -117,7 +117,7 @@ export default function EditFieldReport() {
       <FieldReportForm
         appointmentId={appointmentId}
         reportId={reportId}
-        onSave={() => navigate(`/appointments/${appointmentId}`)}
+        onSave={() => navigate(`/worker/appointments/${appointmentId}`)}
       />
     </div>
   );
