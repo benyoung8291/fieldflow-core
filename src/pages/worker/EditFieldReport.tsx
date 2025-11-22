@@ -103,17 +103,19 @@ export default function EditFieldReport() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(`/appointments/${appointmentId}`)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Field Report</h1>
-            <p className="text-muted-foreground">Make changes to your field report</p>
+        <div className="sticky top-0 z-10 bg-background border-b pb-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/appointments/${appointmentId}`)}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Edit Field Report</h1>
+              <p className="text-muted-foreground">Make changes to your field report</p>
+            </div>
           </div>
         </div>
 
