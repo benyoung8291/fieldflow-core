@@ -6,7 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, X, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { Save, X, Edit2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 
@@ -34,7 +34,10 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
     queryFn: async () => {
       const { data, error } = await supabase
         .from("time_logs")
-        .select("*")
+        .select(`
+          *,
+          edited_by_user:profiles!time_logs_edited_by_fkey(first_name, last_name)
+        `)
         .eq("appointment_id", appointmentId)
         .order("clock_in", { ascending: false });
 
@@ -74,28 +77,6 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
     onError: (error: any) => {
       toast({
         title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("time_logs")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["time-logs", appointmentId] });
-      toast({ title: "Time log deleted successfully" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Delete failed",
         description: error.message,
         variant: "destructive",
       });
@@ -170,8 +151,17 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
             return (
               <>
                 <tr key={log.id} className="hover:bg-muted/30">
-                  <td className="py-2 px-2 text-xs">
-                    {log.worker && `${log.worker.first_name} ${log.worker.last_name}`}
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs">
+                        {log.worker && `${log.worker.first_name} ${log.worker.last_name}`}
+                      </span>
+                      {log.edit_count > 0 && (
+                        <Badge variant="outline" className="text-[8px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300">
+                          Edited {log.edit_count}x
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2 px-2 text-xs">
                     {isEditing ? (
@@ -282,35 +272,21 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                           </Button>
                         </div>
                       ) : (
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(log)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm("Delete this time log?")) {
-                                deleteMutation.mutate(log.id);
-                              }
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(log)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
                       )}
                     </td>
                   )}
                 </tr>
                 {(hasLocationDenied || hasLocationUnavailable) && (
                   <tr key={`${log.id}-location-warning`} className="bg-muted/20">
-                    <td colSpan={canEdit ? (hideFinancials ? 6 : 9) : (hideFinancials ? 5 : 8)} className="py-2 px-2">
+                    <td colSpan={canEdit ? (hideFinancials ? 5 : 8) : (hideFinancials ? 4 : 7)} className="py-2 px-2">
                       {hasLocationDenied && (
                         <Badge variant="destructive" className="text-[9px] flex items-center gap-1 w-fit">
                           <AlertTriangle className="h-3 w-3" />
