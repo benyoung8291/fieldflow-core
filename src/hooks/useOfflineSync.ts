@@ -76,6 +76,7 @@ export const useOfflineSync = () => {
             // Update existing time log for clock out
             const updateData: any = {
               clock_out: timestamp,
+              status: 'completed',
             };
 
             if (notes) {
