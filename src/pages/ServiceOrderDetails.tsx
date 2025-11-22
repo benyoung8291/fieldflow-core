@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import DOMPurify from "dompurify";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, X, Check, CalendarIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -1138,7 +1139,12 @@ export default function ServiceOrderDetails() {
                     </div>
                     <div 
                       className="text-sm prose prose-sm max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: order.description || "No description" }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(order.description || "No description", {
+                          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
+                          ALLOWED_ATTR: []
+                        })
+                      }}
                     />
                   </div>
 
