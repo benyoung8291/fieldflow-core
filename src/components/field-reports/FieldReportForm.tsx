@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SignaturePad from '@/components/worker/SignaturePad';
 import BeforeAfterPhotoUpload from './BeforeAfterPhotoUpload';
 import { useQuery } from '@tanstack/react-query';
+import { Save } from 'lucide-react';
 
 interface FieldReportFormProps {
   appointmentId?: string;
@@ -45,6 +46,10 @@ export default function FieldReportForm({
   const [loading, setLoading] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [photoPairs, setPhotoPairs] = useState<PhotoPair[]>([]);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
+  // Generate a unique key for this field report
+  const storageKey = `field-report-draft-${appointmentId || 'standalone'}`;
   
   const [formData, setFormData] = useState({
     worker_name: '',
@@ -69,6 +74,37 @@ export default function FieldReportForm({
     customer_signature_name: '',
     customer_signature_date: '',
   });
+
+  // Load saved draft from local storage on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(storageKey);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        setFormData(parsed.formData);
+        setLastSaved(new Date(parsed.savedAt));
+        toast.info('Draft restored', {
+          description: 'Your previous work has been restored'
+        });
+      } catch (error) {
+        console.error('Error loading draft:', error);
+      }
+    }
+  }, [storageKey]);
+
+  // Auto-save to local storage whenever form data changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const draftData = {
+        formData,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(storageKey, JSON.stringify(draftData));
+      setLastSaved(new Date());
+    }, 1000); // Debounce by 1 second
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, storageKey]);
 
   // Auto-populate logged-in user name
   useEffect(() => {
@@ -214,6 +250,9 @@ export default function FieldReportForm({
         if (photosError) throw photosError;
       }
 
+      // Clear local storage draft on successful submission
+      localStorage.removeItem(storageKey);
+      
       toast.success('Field report submitted successfully');
       onSave?.();
     } catch (error) {
@@ -229,7 +268,15 @@ export default function FieldReportForm({
       <div className="space-y-6 max-w-4xl mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Field Report</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Field Report</CardTitle>
+              {lastSaved && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Save className="h-4 w-4" />
+                  <span>Draft saved {lastSaved.toLocaleTimeString()}</span>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Basic Information */}
