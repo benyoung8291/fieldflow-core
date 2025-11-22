@@ -92,8 +92,8 @@ export default function WorkerAppointmentDetails() {
         }
       }
 
-      // Optimized: Load appointment with only essential fields first
-      const { data: aptData } = await supabase
+      // Load appointment with only essential fields first
+      const { data: aptData, error: aptError } = await supabase
         .from('appointments')
         .select(`
           id,
@@ -114,89 +114,86 @@ export default function WorkerAppointmentDetails() {
         .eq('id', id)
         .single();
 
-      if (aptData) {
-        setAppointment(aptData as any);
-        // Load related data in parallel
-        const [serviceOrderData, workersData] = await Promise.all([
-          aptData.service_order_id
-            ? supabase
-                .from('service_orders')
-                .select(`
-                  id,
-                  work_order_number,
-                  description,
-                  customer:customers(name, phone, email, address, city, state, postcode),
-                  line_items:service_order_line_items(id, description, quantity, estimated_hours)
-                `)
-                .eq('id', aptData.service_order_id)
-                .single()
-            : Promise.resolve({ data: null }),
-          supabase
-            .from('appointment_workers')
-            .select(`
-              id,
-              worker:workers(id, first_name, last_name, phone, email)
-            `)
-            .eq('appointment_id', id)
-        ]);
-
-        // Merge data into appointment object
-        const fullAptData = {
-          ...aptData,
-          service_order: serviceOrderData.data,
-          appointment_workers: workersData.data || []
-        };
-        
-        setAppointment(fullAptData as any);
-        await cacheAppointments([fullAptData]);
+      if (aptError || !aptData) {
+        console.error('Error loading appointment:', aptError);
+        toast.error('Failed to load appointment');
+        setLoading(false);
+        return;
       }
 
-      // Then load remaining data
-      setAppointment((prev: any) => ({ ...prev, ...aptData }));
+      // Load related data in parallel for speed
+      const [serviceOrderData, workersData] = await Promise.all([
+        aptData.service_order_id
+          ? supabase
+              .from('service_orders')
+              .select(`
+                id,
+                work_order_number,
+                description,
+                customer:customers(name, phone, email, address, city, state, postcode),
+                line_items:service_order_line_items(id, description, quantity, estimated_hours)
+              `)
+              .eq('id', aptData.service_order_id)
+              .single()
+          : Promise.resolve({ data: null }),
+        supabase
+          .from('appointment_workers')
+          .select(`
+            id,
+            worker:workers(id, first_name, last_name, phone)
+          `)
+          .eq('appointment_id', id)
+      ]);
 
-      setAppointment(aptData);
+      // Merge all data into single appointment object
+      const fullAptData = {
+        ...aptData,
+        service_order: serviceOrderData.data,
+        appointment_workers: workersData.data || []
+      };
+      
+      // Single state update with complete data
+      setAppointment(fullAptData as any);
+      
+      // Cache for offline access
+      await cacheAppointments([fullAptData]);
 
-      // Get worker data (worker ID is same as user ID)
+      // Get worker data and load time log + attachments in parallel
       const { data: worker } = await supabase
         .from('workers')
         .select('id')
         .eq('id', user.id)
         .single();
 
-      if (!worker) return;
-
-      // Load active time log
-      console.log('[Load Data] Querying for active time log...', { appointmentId: id, workerId: worker.id });
-      const { data: logData, error: logError } = await supabase
-        .from('time_logs')
-        .select('*')
-        .eq('appointment_id', id)
-        .eq('worker_id', worker.id)
-        .is('clock_out', null)
-        .maybeSingle();
-
-      console.log('[Load Data] Time log query result:', { logData, logError });
-      setTimeLog(logData);
-      
-      // Cache appointment and time log for offline access
-      if (aptData) {
-        const { cacheAppointments, cacheActiveTimeLogs } = await import('@/lib/offlineSync');
-        await cacheAppointments([aptData]);
-        
-        // Cache active time log if exists
-        if (logData) {
-          await cacheActiveTimeLogs(id!, logData);
-        }
+      if (!worker) {
+        setLoading(false);
+        return;
       }
 
-      // Load attachments
-      const { data: files } = await supabase
-        .from('appointment_attachments')
-        .select('*')
-        .eq('appointment_id', id)
-        .order('uploaded_at', { ascending: false });
+      // Load time log and attachments in parallel
+      const [logResult, filesResult] = await Promise.all([
+        supabase
+          .from('time_logs')
+          .select('*')
+          .eq('appointment_id', id)
+          .eq('worker_id', worker.id)
+          .is('clock_out', null)
+          .maybeSingle(),
+        supabase
+          .from('appointment_attachments')
+          .select('*')
+          .eq('appointment_id', id)
+          .order('uploaded_at', { ascending: false })
+      ]);
 
-      setAttachments(files || []);
+      setTimeLog(logResult.data);
+      setAttachments(filesResult.data || []);
+      
+      // Cache time log if exists
+      if (logResult.data) {
+        const { cacheActiveTimeLogs } = await import('@/lib/offlineSync');
+        await cacheActiveTimeLogs(id!, logResult.data);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load appointment');
