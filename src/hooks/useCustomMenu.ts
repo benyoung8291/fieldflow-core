@@ -73,6 +73,16 @@ const defaultNavigation = [
     ]
   },
   { name: "Help Desk", href: "/helpdesk", icon: "Headphones", color: "#ec4899", isFolder: false },
+  { 
+    name: "Compliance", 
+    href: null, 
+    icon: "Shield", 
+    color: "#14b8a6", 
+    isFolder: true,
+    children: [
+      { name: "Timesheets", href: "/timesheets", icon: "Clock", color: "#14b8a6", isFolder: false },
+    ]
+  },
   { name: "Analytics", href: "/analytics", icon: "BarChart3", color: "#ec4899", isFolder: false },
   { name: "Settings", href: "/settings", icon: "Settings", color: "#6366f1", isFolder: false },
 ];
