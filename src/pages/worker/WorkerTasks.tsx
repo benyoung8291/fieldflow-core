@@ -57,6 +57,7 @@ const priorityConfig = {
 
 export default function WorkerTasks() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -152,9 +153,18 @@ export default function WorkerTasks() {
     <div className="container mx-auto p-4 space-y-4 pb-20">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Tasks</h1>
-        <Badge variant="outline" className="text-lg">
-          {tasks.filter((t: any) => t.status !== 'completed').length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCompleted(!showCompleted)}
+          >
+            {showCompleted ? 'Hide' : 'Show'} Completed
+          </Button>
+          <Badge variant="outline" className="text-lg">
+            {tasks.filter((t: any) => t.status !== 'completed').length}
+          </Badge>
+        </div>
       </div>
 
       {tasks.length === 0 ? (
@@ -230,7 +240,7 @@ export default function WorkerTasks() {
           )}
 
           {/* Completed Tasks */}
-          {groupedTasks.completed.length > 0 && (
+          {showCompleted && groupedTasks.completed.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold text-muted-foreground">
                 Completed ({groupedTasks.completed.length})
