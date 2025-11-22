@@ -4,12 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from "lucide-react";
+import { format, startOfWeek, addWeeks, subWeeks } from "date-fns";
+import { ChevronLeft, ChevronRight, Calendar, Clock, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import TimesheetMapView from "@/components/timesheets/TimesheetMapView";
+import DashboardLayout from "@/components/DashboardLayout";
+import { CreateTimesheetDialog } from "@/components/timesheets/CreateTimesheetDialog";
+import { useNavigate } from "react-router-dom";
 
 export default function Timesheets() {
+  const navigate = useNavigate();
+  
   // Pay week is Thu-Wed, so week starts on Thursday
   const getPayWeekStart = (date: Date) => {
     const weekStart = startOfWeek(date, { weekStartsOn: 4 }); // 4 = Thursday
@@ -21,7 +25,40 @@ export default function Timesheets() {
   const weekEnd = addWeeks(selectedWeek, 1);
   const weekEndDisplay = new Date(weekEnd.getTime() - 1); // Show Wed as end
 
-  const { data: timeLogs = [], isLoading } = useQuery({
+  // Fetch timesheets for the selected week
+  const { data: timesheets = [], isLoading: timesheetsLoading } = useQuery({
+    queryKey: ["timesheets", selectedWeek.toISOString()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("timesheets")
+        .select("*")
+        .gte("week_start_date", format(selectedWeek, "yyyy-MM-dd"))
+        .lt("week_end_date", format(weekEnd, "yyyy-MM-dd"))
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch creator profiles separately
+      if (data && data.length > 0) {
+        const creatorIds = [...new Set(data.map(t => t.created_by))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", creatorIds);
+
+        // Map profiles to timesheets
+        return data.map(timesheet => ({
+          ...timesheet,
+          creator: profiles?.find(p => p.id === timesheet.created_by)
+        })) as any[];
+      }
+
+      return data || [];
+    },
+  });
+
+  // Fetch time logs for the selected week to show summary
+  const { data: timeLogs = [], isLoading: timeLogsLoading } = useQuery({
     queryKey: ["timesheet-time-logs", selectedWeek.toISOString()],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -31,9 +68,7 @@ export default function Timesheets() {
           appointments (
             id,
             title,
-            location_address,
-            location_lat,
-            location_lng
+            location_address
           ),
           profiles:worker_id (
             first_name,
@@ -49,8 +84,12 @@ export default function Timesheets() {
     },
   });
 
-  // Group by worker
-  const timeLogsByWorker = timeLogs.reduce((acc, log) => {
+  // Group time logs by timesheet status
+  const unprocessedLogs = timeLogs.filter(log => !log.timesheet_id);
+  const processedLogs = timeLogs.filter(log => log.timesheet_id);
+
+  // Group unprocessed logs by worker
+  const logsByWorker = unprocessedLogs.reduce((acc, log) => {
     const workerId = log.worker_id;
     if (!acc[workerId]) {
       acc[workerId] = {
@@ -68,119 +107,183 @@ export default function Timesheets() {
   const nextWeek = () => setSelectedWeek(addWeeks(selectedWeek, 1));
   const currentWeek = () => setSelectedWeek(getPayWeekStart(new Date()));
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "draft": return "bg-gray-500";
+      case "submitted": return "bg-blue-500";
+      case "approved": return "bg-green-500";
+      case "exported": return "bg-purple-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const isLoading = timesheetsLoading || timeLogsLoading;
+
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-96 w-full" />
-      </div>
+      <DashboardLayout>
+        <div className="container mx-auto p-6 space-y-6">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Timesheets</h1>
-          <p className="text-muted-foreground">
-            Manage and approve worker time logs
-          </p>
+    <DashboardLayout>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Timesheets</h1>
+            <p className="text-muted-foreground">
+              Manage worker timesheets for payroll processing
+            </p>
+          </div>
+          <CreateTimesheetDialog selectedWeekStart={selectedWeek} />
+        </div>
+
+        {/* Week Navigation */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Pay Week: {format(selectedWeek, "MMM d")} - {format(weekEndDisplay, "MMM d, yyyy")}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={previousWeek}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={currentWeek}>
+                  Current Week
+                </Button>
+                <Button variant="outline" size="sm" onClick={nextWeek}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Created Timesheets */}
+        {timesheets.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Created Timesheets ({timesheets.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {timesheets.map((timesheet) => (
+                  <div 
+                    key={timesheet.id} 
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                    onClick={() => navigate(`/timesheets/${timesheet.id}`)}
+                  >
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        Timesheet #{timesheet.id.slice(0, 8)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Created by {timesheet.creator?.first_name} {timesheet.creator?.last_name} on {format(new Date(timesheet.created_at), "MMM d, yyyy")}
+                      </div>
+                    </div>
+                    <Badge className={getStatusColor(timesheet.status)}>
+                      {timesheet.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Unprocessed Time Logs Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Unprocessed Time Logs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(logsByWorker).length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No unprocessed time logs for this week</p>
+                <p className="text-sm mt-2">All time logs have been added to timesheets</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(logsByWorker).map(([workerId, data]) => (
+                  <div key={workerId} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {data.worker?.first_name} {data.worker?.last_name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {data.logs.length} time log{data.logs.length !== 1 ? 's' : ''} ready to process
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold">
+                          {data.totalHours.toFixed(2)}h
+                        </div>
+                        <p className="text-xs text-muted-foreground">Total Hours</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stats Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Total Time Logs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{timeLogs.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {processedLogs.length} processed, {unprocessedLogs.length} unprocessed
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {timeLogs.reduce((sum, log) => sum + (log.total_hours || 0), 0).toFixed(2)}h
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Across all workers
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Timesheets Created</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{timesheets.length}</div>
+              <p className="text-xs text-muted-foreground">
+                For this pay week
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Pay Week: {format(selectedWeek, "MMM d")} - {format(weekEndDisplay, "MMM d, yyyy")}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={previousWeek}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={currentWeek}>
-                Current Week
-              </Button>
-              <Button variant="outline" size="sm" onClick={nextWeek}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {Object.keys(timeLogsByWorker).length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No time logs for this week</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {Object.entries(timeLogsByWorker).map(([workerId, data]) => (
-                <div key={workerId} className="border rounded-lg p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        {data.worker?.first_name} {data.worker?.last_name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {data.logs.length} time log{data.logs.length !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">
-                        {data.totalHours.toFixed(2)}h
-                      </div>
-                      <p className="text-xs text-muted-foreground">Total Hours</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {data.logs.map((log: any) => (
-                      <div key={log.id} className="border-l-2 border-primary pl-4 py-2">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-1">
-                            <div className="font-medium">
-                              {log.appointments?.title || 'Appointment'}
-                            </div>
-                            {log.appointments?.location_address && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                {log.appointments.location_address}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-4 text-sm">
-                              <span>
-                                {format(new Date(log.clock_in), "EEE, MMM d h:mm a")}
-                              </span>
-                              <span>→</span>
-                              <span>
-                                {log.clock_out 
-                                  ? format(new Date(log.clock_out), "h:mm a")
-                                  : "In Progress"
-                                }
-                              </span>
-                              <Badge variant="outline" className="ml-auto">
-                                {(log.total_hours || 0).toFixed(2)}h
-                              </Badge>
-                            </div>
-                          </div>
-                          <TimesheetMapView timeLog={log} />
-                        </div>
-                        {log.edit_count > 0 && (
-                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 mt-2">
-                            Edited {log.edit_count}x
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    </DashboardLayout>
   );
 }
