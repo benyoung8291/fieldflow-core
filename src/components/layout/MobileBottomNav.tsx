@@ -2,6 +2,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase, Building2, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -49,9 +51,25 @@ export const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Only show on mobile devices
   if (!isMobile) return null;
+
+  // Don't show when not authenticated
+  if (!isAuthenticated) return null;
 
   // Don't show on worker app routes
   if (location.pathname.startsWith('/worker')) return null;
