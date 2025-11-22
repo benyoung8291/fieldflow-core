@@ -67,6 +67,7 @@ import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
 import WorkerTimeLogs from "./pages/worker/WorkerTimeLogs";
 import WorkerTasks from "./pages/worker/WorkerTasks";
+import WorkerCalendar from "./pages/worker/WorkerCalendar";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
 import WorkerFieldReport from "./pages/worker/WorkerFieldReport";
 import WorkerFieldReportStandalone from "./pages/worker/WorkerFieldReportStandalone";
@@ -246,6 +247,7 @@ const App = () => {
             <Route path="/worker/appointments/:id" element={isAuthenticated ? <WorkerAppointmentDetails /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/time-logs" element={isAuthenticated ? <WorkerTimeLogs /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/tasks" element={isAuthenticated ? <WorkerTasks /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/calendar" element={isAuthenticated ? <WorkerCalendar /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:id" element={isAuthenticated ? <WorkerFieldReport /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:appointmentId/edit/:reportId" element={isAuthenticated ? <EditFieldReport /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:appointmentId/view/:reportId" element={isAuthenticated ? <ViewFieldReport /> : <Navigate to="/worker/auth" replace />} />

@@ -2,6 +2,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Calendar, Clock, MoreHorizontal, FileText, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -15,17 +18,18 @@ interface NavItem {
   icon: typeof Home;
   label: string;
   path: string;
+  badge?: number;
 }
 
 const primaryNavItems: NavItem[] = [
   { icon: Home, label: "Home", path: "/worker/dashboard" },
   { icon: Calendar, label: "Appointments", path: "/worker/appointments" },
-  { icon: Clock, label: "Time Logs", path: "/worker/time-logs" },
+  { icon: FileText, label: "Tasks", path: "/worker/tasks" },
 ];
 
 const moreNavItems: NavItem[] = [
   { icon: Calendar, label: "Calendar", path: "/worker/calendar" },
-  { icon: FileText, label: "Tasks", path: "/worker/tasks" },
+  { icon: Clock, label: "Time Logs", path: "/worker/time-logs" },
   { icon: User, label: "Profile", path: "/worker/profile" },
 ];
 
@@ -33,6 +37,31 @@ export const WorkerMobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
+  const { data: openTasksCount = 0 } = useQuery({
+    queryKey: ["open-tasks-count", currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser?.id) return 0;
+      
+      const { count, error } = await supabase
+        .from("tasks")
+        .select("*", { count: 'exact', head: true })
+        .eq("assigned_to", currentUser.id)
+        .neq("status", "completed");
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser?.id,
+  });
 
   // Only show on mobile devices
   if (!isMobile) return null;
@@ -42,10 +71,15 @@ export const WorkerMobileBottomNav = () => {
 
   const isActivePath = (path: string) => location.pathname === path;
 
+  // Add badge to tasks nav item
+  const navItemsWithBadge = primaryNavItems.map(item => 
+    item.path === "/worker/tasks" ? { ...item, badge: openTasksCount } : item
+  );
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border shadow-lg pb-safe">
       <div className="flex items-center justify-around h-14 px-4 safe-padding-x">
-        {primaryNavItems.map((item) => {
+        {navItemsWithBadge.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(item.path);
           
@@ -54,13 +88,23 @@ export const WorkerMobileBottomNav = () => {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-md transition-colors flex-1 min-w-0",
+                "flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-md transition-colors flex-1 min-w-0 relative",
                 isActive
                   ? "text-sidebar-primary"
                   : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
               )}
             >
-              <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
+              <div className="relative">
+                <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center p-0 text-[9px]"
+                  >
+                    {item.badge}
+                  </Badge>
+                )}
+              </div>
               <span className="text-[10px] font-medium truncate">{item.label}</span>
             </button>
           );
