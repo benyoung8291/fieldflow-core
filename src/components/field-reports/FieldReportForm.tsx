@@ -101,8 +101,10 @@ export default function FieldReportForm({
               .order('display_order');
               
             if (photos && photos.length > 0) {
-              // Reconstruct photo pairs from database
-              const pairs: PhotoPair[] = [];
+              // Reconstruct photo pairs from database using display_order
+              // Photos are saved with display_order: index*2 (before) and index*2+1 (after)
+              const pairMap = new Map<number, PhotoPair>();
+              
               photos.forEach((photo) => {
                 const photoData = {
                   fileUrl: photo.file_url,
@@ -111,24 +113,26 @@ export default function FieldReportForm({
                   fileName: photo.file_name,
                 };
                 
+                // Calculate pair index from display_order
+                const pairIndex = Math.floor(photo.display_order / 2);
+                
+                if (!pairMap.has(pairIndex)) {
+                  pairMap.set(pairIndex, { id: crypto.randomUUID() });
+                }
+                
+                const pair = pairMap.get(pairIndex)!;
+                
                 if (photo.photo_type === 'before') {
-                  // Find or create pair for this before photo
-                  const existingPair = pairs.find(p => !p.before);
-                  if (existingPair) {
-                    existingPair.before = photoData;
-                  } else {
-                    pairs.push({ id: crypto.randomUUID(), before: photoData });
-                  }
+                  pair.before = photoData;
                 } else if (photo.photo_type === 'after') {
-                  // Find or create pair for this after photo
-                  const existingPair = pairs.find(p => p.before && !p.after);
-                  if (existingPair) {
-                    existingPair.after = photoData;
-                  } else {
-                    pairs.push({ id: crypto.randomUUID(), after: photoData });
-                  }
+                  pair.after = photoData;
                 }
               });
+              
+              // Convert map to array, sorted by pair index
+              const pairs = Array.from(pairMap.entries())
+                .sort(([a], [b]) => a - b)
+                .map(([_, pair]) => pair);
               
               if (pairs.length > 0) {
                 setPhotoPairs(pairs);
