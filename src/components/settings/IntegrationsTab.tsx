@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Key, CheckCircle2 } from "lucide-react";
+import { Loader2, Key, CheckCircle2, Edit2, Shield } from "lucide-react";
 import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 export default function IntegrationsTab() {
@@ -22,6 +22,8 @@ export default function IntegrationsTab() {
   const [acumaticaPassword, setAcumaticaPassword] = useState("");
   const [acumaticaDefaultSalesAccount, setAcumaticaDefaultSalesAccount] = useState("");
   const [acumaticaDefaultSalesSubAccount, setAcumaticaDefaultSalesSubAccount] = useState("");
+  const [acumaticaHasEncryptedCredentials, setAcumaticaHasEncryptedCredentials] = useState(false);
+  const [updatingAcumaticaCredentials, setUpdatingAcumaticaCredentials] = useState(false);
   
   const [xeroEnabled, setXeroEnabled] = useState(false);
   const [xeroTenantId, setXeroTenantId] = useState("");
@@ -29,6 +31,8 @@ export default function IntegrationsTab() {
   const [xeroClientSecret, setXeroClientSecret] = useState("");
   const [xeroIntegrationId, setXeroIntegrationId] = useState<string | null>(null);
   const [xeroConnected, setXeroConnected] = useState(false);
+  const [xeroHasEncryptedCredentials, setXeroHasEncryptedCredentials] = useState(false);
+  const [updatingXeroCredentials, setUpdatingXeroCredentials] = useState(false);
   const [testingXeroConnection, setTestingXeroConnection] = useState(false);
   const [connectingXero, setConnectingXero] = useState(false);
   const [showTenantSelector, setShowTenantSelector] = useState(false);
@@ -54,8 +58,15 @@ export default function IntegrationsTab() {
         setAcumaticaEnabled(acumatica.is_enabled);
         setAcumaticaUrl(acumatica.acumatica_instance_url || "");
         setAcumaticaCompany(acumatica.acumatica_company_name || "");
-        setAcumaticaUsername(acumatica.acumatica_username || "");
-        setAcumaticaPassword(acumatica.acumatica_password || "");
+        
+        // Check if credentials are encrypted
+        const hasEncryptedUsername = acumatica.acumatica_username === "[ENCRYPTED]";
+        const hasEncryptedPassword = acumatica.acumatica_password === "[ENCRYPTED]";
+        const hasEncryptedCreds = hasEncryptedUsername || hasEncryptedPassword;
+        
+        setAcumaticaHasEncryptedCredentials(hasEncryptedCreds);
+        setAcumaticaUsername(hasEncryptedCreds ? "" : acumatica.acumatica_username || "");
+        setAcumaticaPassword(hasEncryptedCreds ? "" : acumatica.acumatica_password || "");
         setAcumaticaDefaultSalesAccount(acumatica.default_sales_account_code || "");
         setAcumaticaDefaultSalesSubAccount(acumatica.default_sales_sub_account || "");
       }
@@ -66,8 +77,15 @@ export default function IntegrationsTab() {
         setXeroEnabled(xero.is_enabled);
         setXeroTenantId(xero.xero_tenant_id || "");
         setXeroIntegrationId(xero.id);
-        setXeroClientId(xero.xero_client_id || "");
-        setXeroClientSecret(xero.xero_client_secret || "");
+        
+        // Check if credentials are encrypted
+        const hasEncryptedClientId = xero.xero_client_id === "[ENCRYPTED]";
+        const hasEncryptedClientSecret = xero.xero_client_secret === "[ENCRYPTED]";
+        const hasEncryptedCreds = hasEncryptedClientId || hasEncryptedClientSecret;
+        
+        setXeroHasEncryptedCredentials(hasEncryptedCreds);
+        setXeroClientId(hasEncryptedCreds ? "" : xero.xero_client_id || "");
+        setXeroClientSecret(hasEncryptedCreds ? "" : xero.xero_client_secret || "");
         
         const hasRefreshToken = !!xero.xero_refresh_token;
         const hasTenantId = !!xero.xero_tenant_id;
@@ -526,34 +544,69 @@ export default function IntegrationsTab() {
             />
           </div>
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="acumatica-username">API Username</Label>
-              <Input
-                id="acumatica-username"
-                type="text"
-                value={acumaticaUsername}
-                onChange={(e) => setAcumaticaUsername(e.target.value)}
-                placeholder="Enter API username"
-                disabled={!acumaticaEnabled}
-              />
-            </div>
-            <div>
-              <Label htmlFor="acumatica-password">API Password</Label>
-              <Input
-                id="acumatica-password"
-                type="password"
-                value={acumaticaPassword}
-                onChange={(e) => setAcumaticaPassword(e.target.value)}
-                placeholder="Enter API password"
-                disabled={!acumaticaEnabled}
-              />
-            </div>
-            <Alert>
-              <Key className="h-4 w-4" />
-              <AlertDescription>
-                API credentials are stored securely in encrypted storage and never exposed.
-              </AlertDescription>
-            </Alert>
+            {acumaticaHasEncryptedCredentials && !updatingAcumaticaCredentials ? (
+              <Alert className="bg-accent/50">
+                <Shield className="h-4 w-4 text-primary" />
+                <AlertDescription>
+                  <div className="flex items-center justify-between">
+                    <span>✓ API credentials configured securely</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUpdatingAcumaticaCredentials(true)}
+                      disabled={!acumaticaEnabled}
+                    >
+                      <Edit2 className="h-3 w-3 mr-1" />
+                      Update Credentials
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="acumatica-username">API Username</Label>
+                  <Input
+                    id="acumatica-username"
+                    type="text"
+                    value={acumaticaUsername}
+                    onChange={(e) => setAcumaticaUsername(e.target.value)}
+                    placeholder="Enter API username"
+                    disabled={!acumaticaEnabled}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="acumatica-password">API Password</Label>
+                  <Input
+                    id="acumatica-password"
+                    type="password"
+                    value={acumaticaPassword}
+                    onChange={(e) => setAcumaticaPassword(e.target.value)}
+                    placeholder="Enter API password"
+                    disabled={!acumaticaEnabled}
+                  />
+                </div>
+                {updatingAcumaticaCredentials && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setUpdatingAcumaticaCredentials(false);
+                      setAcumaticaUsername("");
+                      setAcumaticaPassword("");
+                    }}
+                  >
+                    Cancel Update
+                  </Button>
+                )}
+                <Alert>
+                  <Key className="h-4 w-4" />
+                  <AlertDescription>
+                    API credentials are stored securely in encrypted storage and never exposed.
+                  </AlertDescription>
+                </Alert>
+              </>
+            )}
           </div>
           
           <div className="space-y-2">
@@ -614,29 +667,65 @@ export default function IntegrationsTab() {
             </Alert>
           ) : null}
           <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="xero-client-id">Client ID</Label>
-              <Input
-                id="xero-client-id"
-                type="text"
-                value={xeroClientId}
-                onChange={(e) => setXeroClientId(e.target.value)}
-                placeholder="Enter Xero Client ID from developer portal"
-                disabled={xeroConnected}
-              />
-            </div>
+            {xeroHasEncryptedCredentials && !updatingXeroCredentials && !xeroConnected ? (
+              <Alert className="bg-accent/50">
+                <Shield className="h-4 w-4 text-primary" />
+                <AlertDescription>
+                  <div className="flex items-center justify-between">
+                    <span>✓ OAuth credentials configured securely</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUpdatingXeroCredentials(true)}
+                      disabled={xeroConnected}
+                    >
+                      <Edit2 className="h-3 w-3 mr-1" />
+                      Update Credentials
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="xero-client-id">Client ID</Label>
+                  <Input
+                    id="xero-client-id"
+                    type="text"
+                    value={xeroClientId}
+                    onChange={(e) => setXeroClientId(e.target.value)}
+                    placeholder="Enter Xero Client ID from developer portal"
+                    disabled={xeroConnected}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="xero-client-secret">Client Secret</Label>
-              <Input
-                id="xero-client-secret"
-                type="password"
-                value={xeroClientSecret}
-                onChange={(e) => setXeroClientSecret(e.target.value)}
-                placeholder="Enter Xero Client Secret from developer portal"
-                disabled={xeroConnected}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="xero-client-secret">Client Secret</Label>
+                  <Input
+                    id="xero-client-secret"
+                    type="password"
+                    value={xeroClientSecret}
+                    onChange={(e) => setXeroClientSecret(e.target.value)}
+                    placeholder="Enter Xero Client Secret from developer portal"
+                    disabled={xeroConnected}
+                  />
+                </div>
+                
+                {updatingXeroCredentials && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setUpdatingXeroCredentials(false);
+                      setXeroClientId("");
+                      setXeroClientSecret("");
+                    }}
+                  >
+                    Cancel Update
+                  </Button>
+                )}
+              </>
+            )}
 
             {xeroConnected && (
               <Alert>
