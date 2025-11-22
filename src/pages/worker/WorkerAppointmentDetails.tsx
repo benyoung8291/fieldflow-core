@@ -550,6 +550,7 @@ export default function WorkerAppointmentDetails() {
         .update({
           clock_out: timestamp,
           notes: clockOutNotes,
+          status: 'completed',
         })
         .eq('id', timeLog.id);
 
@@ -589,6 +590,7 @@ export default function WorkerAppointmentDetails() {
         .update({
           clock_out: timestamp,
           notes: (timeLog.notes || '') + '\n[Paused]',
+          status: 'completed',
         })
         .eq('id', timeLog.id);
       
