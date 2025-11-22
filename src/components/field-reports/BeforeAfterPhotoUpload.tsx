@@ -47,8 +47,9 @@ export default function BeforeAfterPhotoUpload({
   }, [initialPairs]);
 
   // Load before photos from appointment attachments if appointmentId provided
+  // BUT only if we don't already have initialPairs (from draft restore)
   useEffect(() => {
-    if (appointmentId) {
+    if (appointmentId && initialPairs.length === 0) {
       loadBeforePhotos();
     }
   }, [appointmentId]);
