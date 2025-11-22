@@ -735,10 +735,16 @@ export default function WorkerAppointmentDetails() {
 
   const openInMaps = () => {
     const customer = appointment?.service_order?.customer;
-    if (!customer) return;
-
-    const address = `${customer.address}, ${customer.city}, ${customer.state} ${customer.postcode}`;
-    const query = encodeURIComponent(address);
+    let query = '';
+    
+    if (appointment?.location_address) {
+      query = encodeURIComponent(appointment.location_address);
+    } else if (customer?.address) {
+      const address = `${customer.address}, ${customer.city}, ${customer.state} ${customer.postcode}`;
+      query = encodeURIComponent(address);
+    } else {
+      return;
+    }
 
     if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
       window.open(`maps://maps.apple.com/?q=${query}`);
@@ -920,10 +926,15 @@ export default function WorkerAppointmentDetails() {
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Time</p>
+                <p className="text-sm text-muted-foreground">Scheduled Time</p>
                 <p className="font-medium">
-                  {format(parseISO(appointment.start_time), 'h:mm a')} • {appointment.estimated_hours || 0}h estimated
+                  {format(parseISO(appointment.start_time), 'h:mm a')} - {format(parseISO(appointment.end_time), 'h:mm a')}
                 </p>
+                {appointment.service_order?.line_items && appointment.service_order.line_items.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Est. {appointment.service_order.line_items.reduce((sum: number, item: any) => sum + (item.estimated_hours || 0), 0)}h total
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -963,7 +974,7 @@ export default function WorkerAppointmentDetails() {
         </Card>
 
         {/* Location */}
-        {customer?.address && (
+        {(appointment.location_address || customer?.address) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -973,9 +984,13 @@ export default function WorkerAppointmentDetails() {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm">
-                {customer.address}
-                <br />
-                {customer.city}, {customer.state} {customer.postcode}
+                {appointment.location_address || (
+                  <>
+                    {customer.address}
+                    <br />
+                    {customer.city}, {customer.state} {customer.postcode}
+                  </>
+                )}
               </p>
               <Button onClick={openInMaps} className="w-full">
                 <Navigation className="h-4 w-4 mr-2" />
@@ -1001,8 +1016,8 @@ export default function WorkerAppointmentDetails() {
                     <p className="font-medium">
                       {aw.worker?.first_name} {aw.worker?.last_name}
                     </p>
-                    {aw.worker?.email && (
-                      <p className="text-xs text-muted-foreground">{aw.worker.email}</p>
+                    {aw.worker?.phone && (
+                      <p className="text-xs text-muted-foreground">{aw.worker.phone}</p>
                     )}
                   </div>
                   {aw.worker?.phone && (
