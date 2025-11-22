@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Camera, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Camera, Image as ImageIcon, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface PhotoPair {
   id: string;
@@ -32,6 +33,7 @@ export default function BeforeAfterPhotoUpload({
 }: BeforeAfterPhotoUploadProps) {
   const [pairs, setPairs] = useState<PhotoPair[]>(initialPairs.length > 0 ? initialPairs : [{ id: crypto.randomUUID() }]);
   const [loading, setLoading] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<{ preview: string; notes: string; index: number } | null>(null);
   const afterInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const beforeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
@@ -313,8 +315,17 @@ export default function BeforeAfterPhotoUpload({
                     <img 
                       src={pair.before.preview} 
                       alt="Before" 
-                      className="w-full h-48 object-cover rounded border"
+                      className="w-full h-48 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setViewingPhoto({ preview: pair.before!.preview, notes: pair.before!.notes, index: index + 1 })}
                     />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setViewingPhoto({ preview: pair.before!.preview, notes: pair.before!.notes, index: index + 1 })}
+                    >
+                      <ZoomIn className="h-3 w-3" />
+                    </Button>
                     {!appointmentId && (
                       <Button
                         variant="destructive"
@@ -421,6 +432,28 @@ export default function BeforeAfterPhotoUpload({
           </div>
         ))}
       </div>
+
+      {/* Image Viewer Dialog */}
+      <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
+        <DialogContent className="max-w-4xl w-full max-h-[90vh]">
+          <DialogTitle>Before Photo #{viewingPhoto?.index}</DialogTitle>
+          <div className="space-y-4">
+            <div className="relative w-full overflow-auto">
+              <img 
+                src={viewingPhoto?.preview} 
+                alt="Before photo enlarged" 
+                className="w-full h-auto object-contain max-h-[70vh]"
+              />
+            </div>
+            {viewingPhoto?.notes && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-1">Notes:</p>
+                <p className="text-sm text-muted-foreground">{viewingPhoto.notes}</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
