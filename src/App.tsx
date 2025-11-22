@@ -20,6 +20,7 @@ import ServiceOrderDetails from "./pages/ServiceOrderDetails";
 import ServiceContracts from "./pages/ServiceContracts";
 import ServiceContractDetails from "./pages/ServiceContractDetails";
 import Timesheets from "./pages/Timesheets";
+import TimesheetDetails from "./pages/TimesheetDetails";
 import Scheduler from "./pages/Scheduler";
 import Appointments from "./pages/Appointments";
 import AppointmentDetails from "./pages/AppointmentDetails";
@@ -196,6 +197,7 @@ const App = () => {
             <Route path="/service-contracts" element={isAuthenticated ? <ServiceContracts /> : <Navigate to="/auth" replace />} />
             <Route path="/service-contracts/:id" element={isAuthenticated ? <ServiceContractDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/timesheets" element={isAuthenticated ? <Timesheets /> : <Navigate to="/auth" replace />} />
+            <Route path="/timesheets/:id" element={isAuthenticated ? <TimesheetDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/scheduler" element={isAuthenticated ? <Scheduler /> : <Navigate to="/auth" replace />} />
             <Route path="/appointments" element={isAuthenticated ? <Appointments /> : <Navigate to="/auth" replace />} />
             <Route path="/appointments/:id" element={isAuthenticated ? <AppointmentDetails /> : <Navigate to="/auth" replace />} />
