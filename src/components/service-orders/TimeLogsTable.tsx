@@ -22,7 +22,8 @@ const statusColors = {
 };
 
 export default function TimeLogsTable({ appointmentId, hideFinancials = false }: TimeLogsTableProps) {
-  console.log('[TimeLogsTable] Component loaded - DELETE BUTTON REMOVED VERSION');
+  // Version 2.0 - Delete functionality permanently removed
+  console.log('[TimeLogsTable v2.0] Component loaded - NO DELETE ALLOWED');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, userRoles } = usePermissions();
@@ -140,7 +141,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
               </>
             )}
             <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Status</th>
-            {canEdit && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-20"></th>}
+            {canEdit && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-20">Actions</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/50">
@@ -260,6 +261,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                             onClick={() => handleSave(log.id)}
                             className="h-6 w-6 p-0"
                             disabled={updateMutation.isPending}
+                            title="Save changes"
                           >
                             <Save className="h-3 w-3" />
                           </Button>
@@ -268,6 +270,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                             size="sm"
                             onClick={handleCancel}
                             className="h-6 w-6 p-0"
+                            title="Cancel"
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -278,6 +281,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                           size="sm"
                           onClick={() => handleEdit(log)}
                           className="h-6 w-6 p-0"
+                          title="Edit time log"
                         >
                           <Edit2 className="h-3 w-3" />
                         </Button>
