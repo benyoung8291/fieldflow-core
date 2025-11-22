@@ -6354,6 +6354,8 @@ export type Database = {
       time_logs: {
         Row: {
           appointment_id: string
+          check_out_lat: number | null
+          check_out_lng: number | null
           clock_in: string
           clock_out: string | null
           created_at: string | null
@@ -6366,8 +6368,12 @@ export type Database = {
           longitude: number | null
           notes: string | null
           overhead_percentage: number
+          processed_at: string | null
+          processed_by: string | null
           status: string
           tenant_id: string
+          timesheet_id: string | null
+          timesheet_status: string | null
           total_cost: number | null
           total_hours: number | null
           updated_at: string | null
@@ -6375,6 +6381,8 @@ export type Database = {
         }
         Insert: {
           appointment_id: string
+          check_out_lat?: number | null
+          check_out_lng?: number | null
           clock_in: string
           clock_out?: string | null
           created_at?: string | null
@@ -6387,8 +6395,12 @@ export type Database = {
           longitude?: number | null
           notes?: string | null
           overhead_percentage?: number
+          processed_at?: string | null
+          processed_by?: string | null
           status?: string
           tenant_id: string
+          timesheet_id?: string | null
+          timesheet_status?: string | null
           total_cost?: number | null
           total_hours?: number | null
           updated_at?: string | null
@@ -6396,6 +6408,8 @@ export type Database = {
         }
         Update: {
           appointment_id?: string
+          check_out_lat?: number | null
+          check_out_lng?: number | null
           clock_in?: string
           clock_out?: string | null
           created_at?: string | null
@@ -6408,8 +6422,12 @@ export type Database = {
           longitude?: number | null
           notes?: string | null
           overhead_percentage?: number
+          processed_at?: string | null
+          processed_by?: string | null
           status?: string
           tenant_id?: string
+          timesheet_id?: string | null
+          timesheet_status?: string | null
           total_cost?: number | null
           total_hours?: number | null
           updated_at?: string | null
@@ -6421,6 +6439,69 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_logs_timesheet_id_fkey"
+            columns: ["timesheet_id"]
+            isOneToOne: false
+            referencedRelation: "timesheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheets: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string
+          exported_at: string | null
+          id: string
+          notes: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          tenant_id: string
+          week_end_date: string
+          week_start_date: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by: string
+          exported_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id: string
+          week_end_date: string
+          week_start_date: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string
+          exported_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id?: string
+          week_end_date?: string
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

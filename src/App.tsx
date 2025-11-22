@@ -19,6 +19,7 @@ import ServiceOrders from "./pages/ServiceOrders";
 import ServiceOrderDetails from "./pages/ServiceOrderDetails";
 import ServiceContracts from "./pages/ServiceContracts";
 import ServiceContractDetails from "./pages/ServiceContractDetails";
+import Timesheets from "./pages/Timesheets";
 import Scheduler from "./pages/Scheduler";
 import Appointments from "./pages/Appointments";
 import AppointmentDetails from "./pages/AppointmentDetails";
@@ -64,6 +65,7 @@ import WorkerDashboard from "./pages/worker/WorkerDashboard";
 import WorkerAuth from "./pages/worker/WorkerAuth";
 import WorkerAppointments from "./pages/worker/WorkerAppointments";
 import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
+import WorkerTimeLogs from "./pages/worker/WorkerTimeLogs";
 import WorkerSchedule from "./pages/worker/WorkerSchedule";
 import WorkerFieldReport from "./pages/worker/WorkerFieldReport";
 import WorkerFieldReportStandalone from "./pages/worker/WorkerFieldReportStandalone";
@@ -187,6 +189,7 @@ const App = () => {
             <Route path="/service-orders/:id" element={isAuthenticated ? <ServiceOrderDetails /> : <Navigate to="/auth" replace />} />
             <Route path="/service-contracts" element={isAuthenticated ? <ServiceContracts /> : <Navigate to="/auth" replace />} />
             <Route path="/service-contracts/:id" element={isAuthenticated ? <ServiceContractDetails /> : <Navigate to="/auth" replace />} />
+            <Route path="/timesheets" element={isAuthenticated ? <Timesheets /> : <Navigate to="/auth" replace />} />
             <Route path="/scheduler" element={isAuthenticated ? <Scheduler /> : <Navigate to="/auth" replace />} />
             <Route path="/appointments" element={isAuthenticated ? <Appointments /> : <Navigate to="/auth" replace />} />
             <Route path="/appointments/:id" element={isAuthenticated ? <AppointmentDetails /> : <Navigate to="/auth" replace />} />
@@ -236,6 +239,7 @@ const App = () => {
             <Route path="/worker/supervisor/service-orders" element={isAuthenticated ? <SupervisorServiceOrders /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/appointments" element={isAuthenticated ? <WorkerAppointments /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/appointments/:id" element={isAuthenticated ? <WorkerAppointmentDetails /> : <Navigate to="/worker/auth" replace />} />
+            <Route path="/worker/time-logs" element={isAuthenticated ? <WorkerTimeLogs /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:id" element={isAuthenticated ? <WorkerFieldReport /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:appointmentId/edit/:reportId" element={isAuthenticated ? <EditFieldReport /> : <Navigate to="/worker/auth" replace />} />
             <Route path="/worker/field-report/:appointmentId/view/:reportId" element={isAuthenticated ? <ViewFieldReport /> : <Navigate to="/worker/auth" replace />} />
