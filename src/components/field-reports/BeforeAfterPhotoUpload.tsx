@@ -39,6 +39,13 @@ export default function BeforeAfterPhotoUpload({
   const afterInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const beforeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
+  // Sync pairs with initialPairs when they change (e.g., draft restored from localStorage)
+  useEffect(() => {
+    if (initialPairs.length > 0) {
+      setPairs(initialPairs);
+    }
+  }, [initialPairs]);
+
   // Load before photos from appointment attachments if appointmentId provided
   useEffect(() => {
     if (appointmentId) {
