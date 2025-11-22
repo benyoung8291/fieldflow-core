@@ -51,7 +51,7 @@ serve(async (req) => {
     // Get integration settings from database
     const { data: integration, error: integrationError } = await supabase
       .from("accounting_integrations")
-      .select("*")
+      .select("id, acumatica_username, acumatica_instance_url, acumatica_company_name")
       .eq("tenant_id", tenantId)
       .eq("provider", "myob_acumatica")
       .eq("is_enabled", true)
@@ -65,15 +65,22 @@ serve(async (req) => {
       );
     }
 
-    const { acumatica_username, acumatica_password, acumatica_instance_url, acumatica_company_name } = integration;
+    // Get encrypted password from vault
+    const { data: password } = await supabase
+      .rpc("get_acumatica_password", { integration_id: integration.id })
+      .single();
     
-    if (!acumatica_username || !acumatica_password || !acumatica_instance_url || !acumatica_company_name) {
+    const { acumatica_username, acumatica_instance_url, acumatica_company_name } = integration;
+    
+    if (!acumatica_username || !password || !acumatica_instance_url || !acumatica_company_name) {
       console.error("Missing Acumatica credentials in integration settings");
       return new Response(
         JSON.stringify({ error: "Acumatica integration not properly configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
+
+    const acumatica_password = password;
 
     const { forceRefresh } = await req.json();
     const instanceUrl = acumatica_instance_url;

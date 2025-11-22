@@ -46,23 +46,32 @@ serve(async (req) => {
       throw new Error("Username and password are required");
     }
 
-    // Update the accounting_integrations table with credentials
-    const { error: updateError } = await supabase
+    // Get integration ID
+    const { data: integration } = await supabase
       .from("accounting_integrations")
-      .update({
-        acumatica_username: username,
-        acumatica_password: password,
-        updated_at: new Date().toISOString(),
-      })
+      .select("id")
       .eq("tenant_id", profile.tenant_id)
-      .eq("provider", "myob_acumatica");
+      .eq("provider", "myob_acumatica")
+      .single();
 
-    if (updateError) {
-      console.error("Error storing credentials:", updateError);
+    if (!integration) {
+      throw new Error("Acumatica integration not found");
+    }
+
+    // Store credentials using vault encryption
+    const { error: storeError } = await supabase
+      .rpc("store_acumatica_credentials", {
+        integration_id: integration.id,
+        username: username,
+        password: password,
+      });
+
+    if (storeError) {
+      console.error("Error storing credentials:", storeError);
       throw new Error("Failed to store credentials");
     }
 
-    console.log("Credentials stored successfully for tenant:", profile.tenant_id);
+    console.log("Credentials stored securely in vault for tenant:", profile.tenant_id);
 
     return new Response(
       JSON.stringify({ success: true, message: "Credentials stored securely" }),

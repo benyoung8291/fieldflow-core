@@ -7243,6 +7243,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_acumatica_password: {
+        Args: { integration_id: string }
+        Returns: string
+      }
       get_all_purchase_orders: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -7280,6 +7284,14 @@ export type Database = {
           name: string
         }[]
       }
+      get_microsoft_credentials: {
+        Args: { email_account_id: string }
+        Returns: {
+          access_token: string
+          client_secret: string
+          refresh_token: string
+        }[]
+      }
       get_next_sequential_number: {
         Args: { p_entity_type: string; p_tenant_id: string }
         Returns: string
@@ -7313,6 +7325,14 @@ export type Database = {
         }[]
       }
       get_user_tenant_id: { Args: never; Returns: string }
+      get_xero_credentials: {
+        Args: { integration_id: string }
+        Returns: {
+          access_token: string
+          client_secret: string
+          refresh_token: string
+        }[]
+      }
       has_permission: {
         Args: {
           _module: Database["public"]["Enums"]["app_module"]
@@ -7339,6 +7359,7 @@ export type Database = {
         Args: { p_po_id: string; p_service_order_id: string }
         Returns: undefined
       }
+      migrate_credentials_to_vault: { Args: never; Returns: undefined }
       perform_three_way_match: {
         Args: { p_invoice_id: string; p_tolerance_percentage?: number }
         Returns: Json
@@ -7351,11 +7372,31 @@ export type Database = {
         Args: { p_invoice_id: string; p_notes?: string }
         Returns: Json
       }
+      store_acumatica_credentials: {
+        Args: { integration_id: string; password: string; username: string }
+        Returns: undefined
+      }
+      update_microsoft_tokens: {
+        Args: {
+          email_account_id: string
+          new_access_token: string
+          new_refresh_token: string
+        }
+        Returns: undefined
+      }
       update_purchase_order_linkage: {
         Args: {
           p_po_id: string
           p_project_id?: string
           p_service_order_id?: string
+        }
+        Returns: undefined
+      }
+      update_xero_tokens: {
+        Args: {
+          integration_id: string
+          new_access_token: string
+          new_refresh_token: string
         }
         Returns: undefined
       }

@@ -41,7 +41,7 @@ serve(async (req) => {
     // Get the email account and verify user has access
     const { data: account, error: accountError } = await supabaseServiceClient
       .from("helpdesk_email_accounts")
-      .select("*, tenant_id")
+      .select("id, tenant_id")
       .eq("id", emailAccountId)
       .single();
 
@@ -60,6 +60,17 @@ serve(async (req) => {
       throw new Error("Unauthorized: User does not have access to this email account");
     }
 
+    // Get encrypted credentials from vault
+    const { data: credentials, error: credError } = await supabaseServiceClient
+      .rpc("get_microsoft_credentials", { email_account_id: emailAccountId })
+      .single();
+
+    const msCredentials = credentials as { client_secret: string | null; refresh_token: string | null; access_token: string | null } | null;
+
+    if (credError || !msCredentials || !msCredentials.refresh_token) {
+      throw new Error("Microsoft credentials not found");
+    }
+
     const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
     const clientSecret = Deno.env.get("MICROSOFT_CLIENT_SECRET");
     const tenantId = Deno.env.get("MICROSOFT_TENANT_ID");
@@ -73,7 +84,7 @@ serve(async (req) => {
         body: new URLSearchParams({
           client_id: clientId!,
           client_secret: clientSecret!,
-          refresh_token: account.microsoft_refresh_token,
+          refresh_token: msCredentials.refresh_token,
           grant_type: "refresh_token",
         }),
       }
@@ -87,21 +98,27 @@ serve(async (req) => {
 
     const tokens = await tokenResponse.json();
 
-    // Update the account with new tokens
+    // Update the tokens in vault
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
     
     const { error: updateError } = await supabaseServiceClient
-      .from("helpdesk_email_accounts")
-      .update({
-        microsoft_access_token: tokens.access_token,
-        microsoft_refresh_token: tokens.refresh_token || account.microsoft_refresh_token,
-        microsoft_token_expires_at: expiresAt.toISOString(),
-      })
-      .eq("id", emailAccountId);
+      .rpc("update_microsoft_tokens", {
+        email_account_id: emailAccountId,
+        new_access_token: tokens.access_token,
+        new_refresh_token: tokens.refresh_token || msCredentials.refresh_token,
+      });
 
     if (updateError) {
       throw updateError;
     }
+
+    // Update expiry in database
+    await supabaseServiceClient
+      .from("helpdesk_email_accounts")
+      .update({
+        microsoft_token_expires_at: expiresAt.toISOString(),
+      })
+      .eq("id", emailAccountId);
 
     console.log("Token refreshed successfully for account:", emailAccountId);
 
