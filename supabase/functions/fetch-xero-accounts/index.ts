@@ -43,7 +43,7 @@ serve(async (req) => {
     // Get Xero integration
     const { data: integration, error: integrationError } = await supabase
       .from("accounting_integrations")
-      .select("xero_access_token, xero_refresh_token, xero_token_expires_at, xero_client_id, xero_client_secret, xero_tenant_id")
+      .select("id, xero_token_expires_at, xero_client_id, xero_tenant_id")
       .eq("tenant_id", profile.tenant_id)
       .eq("provider", "xero")
       .single();
@@ -61,7 +61,14 @@ serve(async (req) => {
       );
     }
 
-    if (!integration.xero_client_id || !integration.xero_client_secret || !integration.xero_refresh_token) {
+    // Get encrypted credentials from vault
+    const { data: credentials, error: credError } = await supabase
+      .rpc("get_xero_credentials", { integration_id: integration.id })
+      .single();
+
+    const xeroCredentials = credentials as { client_secret: string | null; refresh_token: string | null; access_token: string | null } | null;
+
+    if (credError || !xeroCredentials || !integration.xero_client_id || !xeroCredentials.client_secret || !xeroCredentials.refresh_token) {
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -87,7 +94,7 @@ serve(async (req) => {
       );
     }
 
-    let accessToken = integration.xero_access_token;
+    let accessToken = xeroCredentials.access_token;
 
     // Check if token needs refresh
     if (integration.xero_token_expires_at) {
@@ -98,11 +105,11 @@ serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${integration.xero_client_secret}`)}`,
+            "Authorization": `Basic ${btoa(`${integration.xero_client_id}:${xeroCredentials.client_secret}`)}`,
           },
           body: new URLSearchParams({
             grant_type: "refresh_token",
-            refresh_token: integration.xero_refresh_token,
+            refresh_token: xeroCredentials.refresh_token,
           }),
         });
 
@@ -124,16 +131,20 @@ serve(async (req) => {
         const tokens = await tokenResponse.json();
         accessToken = tokens.access_token;
 
-        // Update tokens
+        // Update tokens in vault
+        await supabase.rpc("update_xero_tokens", {
+          integration_id: integration.id,
+          new_access_token: tokens.access_token,
+          new_refresh_token: tokens.refresh_token,
+        });
+
+        // Update expiry in database
         await supabase
           .from("accounting_integrations")
           .update({
-            xero_access_token: tokens.access_token,
-            xero_refresh_token: tokens.refresh_token,
             xero_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
           })
-          .eq("tenant_id", profile.tenant_id)
-          .eq("provider", "xero");
+          .eq("id", integration.id);
       }
     }
     console.log("Fetching chart of accounts from Xero for tenant:", integration.xero_tenant_id);
