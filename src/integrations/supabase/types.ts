@@ -7202,6 +7202,10 @@ export type Database = {
         Args: { p_current_date: string; p_frequency: string }
         Returns: string
       }
+      can_view_worker_profile: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
       check_variance_requires_approval: {
         Args: { p_invoice_id: string; p_total_variance: number }
         Returns: boolean
