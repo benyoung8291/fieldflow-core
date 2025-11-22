@@ -481,6 +481,22 @@ export default function AppointmentDetails() {
                   <TimeLogsTable appointmentId={id!} />
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="field-reports" className="border rounded-lg bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium">Field Reports</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 space-y-3">
+                  <Button onClick={handleCreateFieldReport} className="w-full">
+                    <FileText className="h-4 w-4 mr-2" />
+                    {getFieldReportButtonText()}
+                  </Button>
+                  <FieldReportsList appointmentId={id!} onReportStateChange={refetchAppointment} />
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </div>
         </div>
