@@ -9,9 +9,10 @@ import { useNavigate } from "react-router-dom";
 
 interface FieldReportsListProps {
   appointmentId: string;
+  onReportStateChange?: () => void;
 }
 
-export default function FieldReportsList({ appointmentId }: FieldReportsListProps) {
+export default function FieldReportsList({ appointmentId, onReportStateChange }: FieldReportsListProps) {
   const navigate = useNavigate();
 
   const { data: currentUser } = useQuery({

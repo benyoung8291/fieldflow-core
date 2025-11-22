@@ -57,8 +57,32 @@ export default function AppointmentDetails() {
     location_address: "",
   });
 
+  // Query for field reports to determine button state
+  const { data: fieldReports = [] } = useQuery({
+    queryKey: ['field-reports', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('field_reports')
+        .select('id, status, created_by, approved_at, pdf_url')
+        .eq('appointment_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
   // Fetch appointment details
-  const { data: appointment, isLoading } = useQuery({
+  const { data: appointment, isLoading, refetch: refetchAppointment } = useQuery({
     queryKey: ["appointment", id],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -267,6 +291,38 @@ export default function AppointmentDetails() {
       status: formDataFromEvent.get("status"),
       location_address: formData.location_address || appointment?.location_address,
     });
+  };
+
+  const handleCreateFieldReport = () => {
+    // Check if there's a draft or submitted report by current user
+    const userReport = fieldReports.find(r => r.created_by === currentUser?.id);
+    
+    if (userReport && !userReport.approved_at && !userReport.pdf_url) {
+      // Navigate to edit existing report
+      navigate(`/worker/field-report/${id}/edit/${userReport.id}`);
+    } else {
+      // Navigate to create new report
+      navigate(`/worker/field-report/${id}`);
+    }
+  };
+
+  // Determine button text based on report state
+  const getFieldReportButtonText = () => {
+    const userReport = fieldReports.find(r => r.created_by === currentUser?.id);
+    
+    if (!userReport) {
+      return "Create Field Report";
+    }
+    
+    if (userReport.status === 'draft') {
+      return "Finish Field Report";
+    }
+    
+    if (userReport.status === 'submitted' && !userReport.approved_at && !userReport.pdf_url) {
+      return "Edit Submitted Report";
+    }
+    
+    return "View Field Report";
   };
 
   if (isLoading) {
@@ -772,8 +828,12 @@ export default function AppointmentDetails() {
               <CardHeader>
                 <CardTitle>Field Reports</CardTitle>
               </CardHeader>
-              <CardContent>
-                <FieldReportsList appointmentId={id!} />
+              <CardContent className="space-y-3">
+                <Button onClick={handleCreateFieldReport} className="w-full">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {getFieldReportButtonText()}
+                </Button>
+                <FieldReportsList appointmentId={id!} onReportStateChange={refetchAppointment} />
               </CardContent>
             </Card>
 
