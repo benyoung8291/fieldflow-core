@@ -8,22 +8,56 @@ serve(async (req) => {
   }
 
   try {
+    // Get JWT token from Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("Missing authorization header");
+    }
+
     const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      throw new Error("Unauthorized: Invalid or missing authentication");
+    }
+
+    const { emailAccountId } = await req.json();
+
+    // Use service role client for database operations
+    const supabaseServiceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { emailAccountId } = await req.json();
-
-    // Get the email account
-    const { data: account, error: accountError } = await supabaseClient
+    // Get the email account and verify user has access
+    const { data: account, error: accountError } = await supabaseServiceClient
       .from("helpdesk_email_accounts")
-      .select("*")
+      .select("*, tenant_id")
       .eq("id", emailAccountId)
       .single();
 
     if (accountError || !account) {
       throw new Error("Email account not found");
+    }
+
+    // Verify user belongs to the same tenant as the email account
+    const { data: profile } = await supabaseServiceClient
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.tenant_id !== account.tenant_id) {
+      throw new Error("Unauthorized: User does not have access to this email account");
     }
 
     const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
@@ -56,7 +90,7 @@ serve(async (req) => {
     // Update the account with new tokens
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
     
-    const { error: updateError } = await supabaseClient
+    const { error: updateError } = await supabaseServiceClient
       .from("helpdesk_email_accounts")
       .update({
         microsoft_access_token: tokens.access_token,

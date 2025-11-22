@@ -56,22 +56,60 @@ serve(async (req) => {
   }
 
   try {
+    // Get JWT token from Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("Missing authorization header");
+    }
+
     const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      throw new Error("Unauthorized: Invalid or missing authentication");
+    }
+
+    const { emailAccountId, ticketId, to, cc, bcc, subject, body, replyTo, conversationId } = await req.json();
+
+    // Use service role client for database operations
+    const supabaseServiceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { emailAccountId, ticketId, to, cc, bcc, subject, body, replyTo, conversationId } = await req.json();
-
     // Get valid access token
-    const accessToken = await getValidAccessToken(supabaseClient, emailAccountId);
+    const accessToken = await getValidAccessToken(supabaseServiceClient, emailAccountId);
 
-    // Get account details
-    const { data: account } = await supabaseClient
+    // Get account details and verify user has access
+    const { data: account } = await supabaseServiceClient
       .from("helpdesk_email_accounts")
-      .select("*")
+      .select("*, tenant_id")
       .eq("id", emailAccountId)
       .single();
+
+    if (!account) {
+      throw new Error("Email account not found");
+    }
+
+    // Verify user belongs to the same tenant as the email account
+    const { data: profile } = await supabaseServiceClient
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.tenant_id !== account.tenant_id) {
+      throw new Error("Unauthorized: User does not have access to this email account");
+    }
 
     // Convert line breaks to HTML
     const htmlBody = body.replace(/\n/g, '<br>');
@@ -169,10 +207,10 @@ serve(async (req) => {
 
     // Create message record in database
     const recipientEmail = Array.isArray(to) ? to[0] : to;
-    const finalTicketId = ticketId || await getTicketIdFromAccount(supabaseClient, emailAccountId, recipientEmail);
+    const finalTicketId = ticketId || await getTicketIdFromAccount(supabaseServiceClient, emailAccountId, recipientEmail);
     
     if (finalTicketId) {
-      const { error: messageError } = await supabaseClient
+      const { error: messageError } = await supabaseServiceClient
         .from("helpdesk_messages")
         .insert({
           tenant_id: account.tenant_id,
@@ -198,7 +236,7 @@ serve(async (req) => {
       }
       
       // Update ticket's last_message_at
-      await supabaseClient
+      await supabaseServiceClient
         .from("helpdesk_tickets")
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", finalTicketId);

@@ -19,10 +19,10 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.microsoft-refresh-token]
-verify_jwt = false
+verify_jwt = true
 
 [functions.microsoft-send-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.microsoft-receive-email]
 verify_jwt = false
