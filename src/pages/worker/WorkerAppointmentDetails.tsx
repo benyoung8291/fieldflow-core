@@ -31,7 +31,7 @@ import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHe
 import { cacheAppointments } from '@/lib/offlineSync';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { queueTimeEntry } from '@/lib/offlineSync';
-import TimeLogsTable from '@/components/service-orders/TimeLogsTable';
+import WorkerTimeLogsView from '@/components/worker/WorkerTimeLogsView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import FieldReportsList from '@/components/field-reports/FieldReportsList';
@@ -556,11 +556,20 @@ export default function WorkerAppointmentDetails() {
 
       if (error) throw error;
 
-      // Update appointment status
-      await supabase
-        .from('appointments')
-        .update({ status: 'completed' })
-        .eq('id', id);
+      // Check if all workers have clocked out
+      const { data: remainingLogs } = await supabase
+        .from('time_logs')
+        .select('id, clock_out')
+        .eq('appointment_id', id)
+        .is('clock_out', null);
+
+      // Only update appointment status to completed if all workers have clocked out
+      if (!remainingLogs || remainingLogs.length === 0) {
+        await supabase
+          .from('appointments')
+          .update({ status: 'completed' })
+          .eq('id', id);
+      }
 
       toast.success('Clocked out successfully!');
       setWorkNotes('');
@@ -1195,10 +1204,10 @@ export default function WorkerAppointmentDetails() {
         {/* Time Logs */}
         <Card>
           <CardHeader>
-            <CardTitle>Time Logs</CardTitle>
+            <CardTitle>Your Time Logs</CardTitle>
           </CardHeader>
           <CardContent>
-            <TimeLogsTable appointmentId={id!} hideFinancials={true} />
+            <WorkerTimeLogsView appointmentId={id!} />
           </CardContent>
         </Card>
 

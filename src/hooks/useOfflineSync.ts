@@ -90,11 +90,20 @@ export const useOfflineSync = () => {
 
             if (error) throw error;
 
-            // Update appointment status
-            await supabase
-              .from('appointments')
-              .update({ status: 'completed' })
-              .eq('id', appointmentId);
+            // Check if all workers have clocked out before completing appointment
+            const { data: remainingLogs } = await supabase
+              .from('time_logs')
+              .select('id, clock_out')
+              .eq('appointment_id', appointmentId)
+              .is('clock_out', null);
+
+            // Only update appointment status to completed if all workers have clocked out
+            if (!remainingLogs || remainingLogs.length === 0) {
+              await supabase
+                .from('appointments')
+                .update({ status: 'completed' })
+                .eq('id', appointmentId);
+            }
           }
 
           await removeFromSyncQueue(item.id);
