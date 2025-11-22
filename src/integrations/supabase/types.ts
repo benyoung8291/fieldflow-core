@@ -6293,12 +6293,73 @@ export type Database = {
         }
         Relationships: []
       }
+      time_log_edit_history: {
+        Row: {
+          edit_reason: string | null
+          edited_at: string
+          edited_by: string
+          field_changed: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          tenant_id: string
+          time_log_id: string
+        }
+        Insert: {
+          edit_reason?: string | null
+          edited_at?: string
+          edited_by: string
+          field_changed: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          tenant_id: string
+          time_log_id: string
+        }
+        Update: {
+          edit_reason?: string | null
+          edited_at?: string
+          edited_by?: string
+          field_changed?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          tenant_id?: string
+          time_log_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_time_log"
+            columns: ["time_log_id"]
+            isOneToOne: false
+            referencedRelation: "time_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_log_edit_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_log_edit_history_time_log_id_fkey"
+            columns: ["time_log_id"]
+            isOneToOne: false
+            referencedRelation: "time_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_logs: {
         Row: {
           appointment_id: string
           clock_in: string
           clock_out: string | null
           created_at: string | null
+          edit_count: number | null
+          edited_at: string | null
+          edited_by: string | null
           hourly_rate: number
           id: string
           latitude: number | null
@@ -6317,6 +6378,9 @@ export type Database = {
           clock_in: string
           clock_out?: string | null
           created_at?: string | null
+          edit_count?: number | null
+          edited_at?: string | null
+          edited_by?: string | null
           hourly_rate?: number
           id?: string
           latitude?: number | null
@@ -6335,6 +6399,9 @@ export type Database = {
           clock_in?: string
           clock_out?: string | null
           created_at?: string | null
+          edit_count?: number | null
+          edited_at?: string | null
+          edited_by?: string | null
           hourly_rate?: number
           id?: string
           latitude?: number | null
