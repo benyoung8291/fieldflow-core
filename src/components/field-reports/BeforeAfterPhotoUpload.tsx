@@ -9,14 +9,16 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 interface PhotoPair {
   id: string;
   before?: {
-    file: File;
+    fileUrl: string; // Uploaded URL
     preview: string;
     notes: string;
+    fileName: string;
   };
   after?: {
-    file: File;
+    fileUrl: string; // Uploaded URL
     preview: string;
     notes: string;
+    fileName: string;
   };
 }
 
@@ -58,24 +60,15 @@ export default function BeforeAfterPhotoUpload({
       if (error) throw error;
 
       if (attachments && attachments.length > 0) {
-        const loadedPairs: PhotoPair[] = await Promise.all(
-          attachments.map(async (attachment) => {
-            // Fetch the image as blob to create a preview
-            const response = await fetch(attachment.file_url);
-            const blob = await response.blob();
-            const file = new File([blob], attachment.file_name, { type: attachment.file_type || 'image/jpeg' });
-            const preview = URL.createObjectURL(blob);
-            
-            return {
-              id: attachment.id,
-              before: {
-                file,
-                preview,
-                notes: attachment.notes || '',
-              },
-            };
-          })
-        );
+        const loadedPairs: PhotoPair[] = attachments.map((attachment) => ({
+          id: attachment.id,
+          before: {
+            fileUrl: attachment.file_url,
+            preview: attachment.file_url,
+            notes: attachment.notes || '',
+            fileName: attachment.file_name,
+          },
+        }));
         
         setPairs(loadedPairs);
         onPhotosChange(loadedPairs);
@@ -143,11 +136,28 @@ export default function BeforeAfterPhotoUpload({
     });
   };
 
+  const uploadToStorage = async (file: File): Promise<string> => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('field-report-photos')
+      .upload(fileName, file);
+    
+    if (uploadError) {
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('field-report-photos')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
+  };
+
   const handleFileSelect = async (pairId: string, type: 'before' | 'after', files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     try {
-      toast.info('Processing images...');
+      toast.info('Processing and uploading images...');
       
       const processedFiles = await Promise.all(
         Array.from(files).map(async (file) => {
@@ -155,17 +165,22 @@ export default function BeforeAfterPhotoUpload({
             toast.error(`${file.name} is not an image`);
             return null;
           }
+          
+          // Compress image
           const compressed = await compressImage(file);
-          const preview = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(compressed);
-          });
-          return { file: compressed, preview };
+          
+          // Upload to storage immediately (background upload)
+          const fileUrl = await uploadToStorage(compressed);
+          
+          return { 
+            fileUrl, 
+            preview: fileUrl, 
+            fileName: file.name 
+          };
         })
       );
 
-      const validFiles = processedFiles.filter((f): f is { file: File; preview: string } => f !== null);
+      const validFiles = processedFiles.filter((f): f is { fileUrl: string; preview: string; fileName: string } => f !== null);
       
       if (validFiles.length === 0) return;
 
@@ -201,10 +216,10 @@ export default function BeforeAfterPhotoUpload({
 
       setPairs(updatedPairs);
       onPhotosChange(updatedPairs);
-      toast.success(`${validFiles.length} image(s) added`);
+      toast.success(`${validFiles.length} image(s) uploaded`);
     } catch (error) {
       console.error('Error processing images:', error);
-      toast.error('Failed to process images');
+      toast.error('Failed to upload images');
     }
   };
 
