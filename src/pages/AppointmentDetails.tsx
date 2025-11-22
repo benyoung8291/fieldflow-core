@@ -57,6 +57,9 @@ export default function AppointmentDetails() {
     location_address: "",
   });
 
+  // Call useSwipeToClose unconditionally (only used in mobile layout)
+  const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/appointments"), true);
+
   // Query for field reports to determine button state
   const { data: fieldReports = [] } = useQuery({
     queryKey: ['field-reports', id],
@@ -347,8 +350,6 @@ export default function AppointmentDetails() {
 
   // Mobile Layout
   if (isMobile) {
-    const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/appointments"), true);
-    
     return (
       <DashboardLayout>
         <div ref={elementRef} className="min-h-screen bg-background pb-20">
