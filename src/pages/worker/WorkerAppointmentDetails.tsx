@@ -469,13 +469,41 @@ export default function WorkerAppointmentDetails() {
 
       const loadingToast = toast.loading('Getting your location...');
 
-      // Get location using the shared function
-      const position = await getLocationWithPermission();
+      // Try to get location, but allow clock-out even if it fails
+      let position: GeolocationPosition | null = null;
+      let locationDenied = false;
+      
+      try {
+        position = await getLocationWithPermission();
+        console.log('[Clock Out] Location obtained:', {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      } catch (locationError: any) {
+        console.warn('[Clock Out] Location access failed:', locationError);
+        locationDenied = true;
+        toast.warning('Location access denied - clocking out without GPS', {
+          description: 'Your supervisor will be notified that location was not available',
+          duration: 4000,
+        });
+      }
 
       toast.dismiss(loadingToast);
 
       const timestamp = new Date().toISOString();
-      const clockOutNotes = `${timeLog.notes || ''}\nClocked out at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}${workNotes ? `\nWork Notes: ${workNotes}` : ''}`.trim();
+      
+      // Build notes based on location availability
+      let locationNote = '';
+      if (locationDenied) {
+        locationNote = '⚠️ LOCATION PERMISSIONS DENIED - Worker clocked out without GPS verification';
+      } else if (position) {
+        locationNote = `Clocked out at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+      } else {
+        locationNote = '⚠️ LOCATION NOT AVAILABLE - Worker clocked out without GPS verification';
+      }
+      
+      const clockOutNotes = `${timeLog.notes || ''}\n${locationNote}${workNotes ? `\nWork Notes: ${workNotes}` : ''}`.trim();
 
       // If offline, queue the action
       if (!isOnline) {
@@ -491,10 +519,10 @@ export default function WorkerAppointmentDetails() {
           tenantId: timeLog.tenant_id || appointment?.tenant_id,
           action: 'clock_out',
           timestamp,
-          location: {
+          location: position ? {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          },
+          } : undefined,
           notes: clockOutNotes,
           timeLogId: timeLog.id,
         });
@@ -539,22 +567,10 @@ export default function WorkerAppointmentDetails() {
     } catch (error: any) {
       console.error('Clock out error:', error);
       
-      if (error.message === 'GEOLOCATION_NOT_SUPPORTED') {
-        toast.error('Geolocation is not supported by your browser');
-      } else if (error.message === 'PERMISSION_DENIED' || error.code === 1) {
-        toast.error('📍 Location access blocked! Tap "Location Help" button above for instructions.', {
-          duration: 8000,
-        });
-      } else if (error.code === 2) {
-        toast.error('Unable to determine your location. Please check your device settings.');
-      } else if (error.code === 3) {
-        toast.error('Location request timed out. Please try again.');
-      } else {
-        const errorMessage = error.message || error.hint || 'Unknown error';
-        toast.error(`Failed to clock out: ${errorMessage}`, {
-          duration: 6000,
-        });
-      }
+      const errorMessage = error.message || error.hint || 'Unknown error';
+      toast.error(`Failed to clock out: ${errorMessage}`, {
+        duration: 6000,
+      });
     } finally {
       setProcessing(false);
     }
