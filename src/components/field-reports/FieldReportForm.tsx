@@ -132,32 +132,49 @@ export default function FieldReportForm({
           
           const reportNumber = draftReportId ? undefined : `FR-DRAFT-${Date.now()}`;
           
+          // Build the data object with only valid database columns
+          const reportData = {
+            worker_name: formData.worker_name,
+            service_date: formData.service_date,
+            arrival_time: formData.arrival_time,
+            appointment_id: formData.appointment_id || null,
+            service_order_id: formData.service_order_id || null,
+            customer_id: customerId || null,
+            location_id: locationId || null,
+            carpet_condition_arrival: formData.carpet_condition_arrival,
+            hard_floor_condition_arrival: formData.hard_floor_condition_arrival,
+            flooring_state_description: formData.flooring_state_description,
+            has_signed_swms: formData.has_signed_swms,
+            equipment_tested_tagged: formData.equipment_tested_tagged,
+            equipment_clean_working: formData.equipment_clean_working,
+            work_description: formData.work_description,
+            internal_notes: formData.internal_notes,
+            had_problem_areas: formData.had_problem_areas,
+            problem_areas_description: formData.problem_areas_description,
+            methods_attempted: formData.methods_attempted,
+            had_incident: formData.had_incident,
+            incident_description: formData.incident_description,
+            customer_signature_data: formData.customer_signature_data,
+            customer_signature_name: formData.customer_signature_name,
+            customer_signature_date: formData.customer_signature_date,
+          };
+          
           if (draftReportId) {
             // Update existing draft
             await supabase
               .from('field_reports')
-              .update({
-                ...formData,
-                appointment_id: formData.appointment_id || null,
-                service_order_id: formData.service_order_id || null,
-                customer_id: customerId || null,
-                location_id: locationId || null,
-              })
+              .update(reportData)
               .eq('id', draftReportId);
           } else {
             // Create new draft
             const { data: newReport } = await supabase
               .from('field_reports')
               .insert({
+                ...reportData,
                 tenant_id: profile.tenant_id,
-                appointment_id: formData.appointment_id || null,
-                service_order_id: formData.service_order_id || null,
-                customer_id: customerId || null,
-                location_id: locationId || null,
                 report_number: reportNumber!,
                 created_by: user.id,
                 status: 'draft',
-                ...formData,
               })
               .select('id')
               .single();
@@ -265,6 +282,33 @@ export default function FieldReportForm({
 
       let report;
       
+      // Build the data object with only valid database columns
+      const reportData = {
+        worker_name: formData.worker_name,
+        service_date: formData.service_date,
+        arrival_time: formData.arrival_time,
+        appointment_id: formData.appointment_id || null,
+        service_order_id: formData.service_order_id || null,
+        customer_id: customerId || null,
+        location_id: locationId || null,
+        carpet_condition_arrival: formData.carpet_condition_arrival,
+        hard_floor_condition_arrival: formData.hard_floor_condition_arrival,
+        flooring_state_description: formData.flooring_state_description,
+        has_signed_swms: formData.has_signed_swms,
+        equipment_tested_tagged: formData.equipment_tested_tagged,
+        equipment_clean_working: formData.equipment_clean_working,
+        work_description: formData.work_description,
+        internal_notes: formData.internal_notes,
+        had_problem_areas: formData.had_problem_areas,
+        problem_areas_description: formData.problem_areas_description,
+        methods_attempted: formData.methods_attempted,
+        had_incident: formData.had_incident,
+        incident_description: formData.incident_description,
+        customer_signature_data: formData.customer_signature_data,
+        customer_signature_name: formData.customer_signature_name,
+        customer_signature_date: formData.customer_signature_date,
+      };
+      
       if (draftReportId) {
         // Update existing draft to submitted
         console.log('Updating draft to submitted...');
@@ -272,10 +316,10 @@ export default function FieldReportForm({
         const { data: updatedReport, error: updateError } = await supabase
           .from('field_reports')
           .update({
+            ...reportData,
             status: 'submitted',
             submitted_at: new Date().toISOString(),
             report_number: reportNumber,
-            ...formData,
           })
           .eq('id', draftReportId)
           .select()
@@ -293,16 +337,12 @@ export default function FieldReportForm({
         const { data: newReport, error: reportError } = await supabase
           .from('field_reports')
           .insert({
+            ...reportData,
             tenant_id: profile.tenant_id,
-            appointment_id: formData.appointment_id || null,
-            service_order_id: formData.service_order_id || null,
-            customer_id: customerId,
-            location_id: locationId,
             report_number: reportNumber,
             created_by: user.id,
             status: 'submitted',
             submitted_at: new Date().toISOString(),
-            ...formData,
           })
           .select()
           .single();
