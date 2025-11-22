@@ -60,18 +60,44 @@ export default function GPSCheckInDialog({
           setLoading(false);
         },
         (error) => {
+          let title = "Error getting location";
+          let description = "";
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              title = "Location permission denied";
+              description = "Please enable location access in your browser settings:\n\niPhone: Settings > Safari > Location > Allow\nAndroid: Settings > Apps > Browser > Permissions > Location";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              title = "Location unavailable";
+              description = "Unable to determine your location. Make sure location services are enabled on your device.";
+              break;
+            case error.TIMEOUT:
+              title = "Location request timed out";
+              description = "The location request took too long. Please try again.";
+              break;
+            default:
+              description = error.message;
+          }
+
           toast({ 
-            title: "Error getting location", 
-            description: error.message,
-            variant: "destructive" 
+            title, 
+            description,
+            variant: "destructive",
+            duration: 6000
           });
           setLoading(false);
         },
-        { enableHighAccuracy: true }
+        { 
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
       );
     } else {
       toast({ 
         title: "Geolocation not supported", 
+        description: "Your browser does not support location services.",
         variant: "destructive" 
       });
     }
