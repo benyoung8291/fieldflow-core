@@ -243,14 +243,25 @@ export default function WorkerAppointmentDetails() {
       // Show loading toast while getting location
       const loadingToast = toast.loading('Getting your location...');
 
-      // Get location - browser will prompt for permission automatically if needed
-      const position = await getLocationWithPermission();
-
-      console.log('[Clock In] Location obtained:', {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy
-      });
+      // Try to get location, but allow clock-in even if it fails
+      let position: GeolocationPosition | null = null;
+      let locationDenied = false;
+      
+      try {
+        position = await getLocationWithPermission();
+        console.log('[Clock In] Location obtained:', {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      } catch (locationError: any) {
+        console.warn('[Clock In] Location access failed:', locationError);
+        locationDenied = true;
+        toast.warning('Location access denied - clocking in without GPS', {
+          description: 'Your supervisor will be notified that location was not available',
+          duration: 4000,
+        });
+      }
 
       toast.dismiss(loadingToast);
 
@@ -295,7 +306,16 @@ export default function WorkerAppointmentDetails() {
 
       const hourlyRate = (worker.pay_rate_category as any)?.hourly_rate || 0;
       const timestamp = new Date().toISOString();
-      const notes = `Clocked in at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+      
+      // Build notes based on location availability
+      let notes = '';
+      if (locationDenied) {
+        notes = '⚠️ LOCATION PERMISSIONS DENIED - Worker clocked in without GPS verification';
+      } else if (position) {
+        notes = `Clocked in at GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+      } else {
+        notes = '⚠️ LOCATION NOT AVAILABLE - Worker clocked in without GPS verification';
+      }
 
       // If offline, queue the action
       if (!isOnline) {
@@ -306,10 +326,10 @@ export default function WorkerAppointmentDetails() {
           tenantId: worker.tenant_id,
           action: 'clock_in',
           timestamp,
-          location: {
+          location: position ? {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          },
+          } : null,
           hourlyRate,
           notes,
         });
@@ -343,8 +363,8 @@ export default function WorkerAppointmentDetails() {
         clock_in: timestamp,
         hourly_rate: hourlyRate,
         overhead_percentage: 0,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
+        latitude: position?.coords.latitude || null,
+        longitude: position?.coords.longitude || null,
         notes,
       };
       

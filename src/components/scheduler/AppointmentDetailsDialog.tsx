@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, differenceInHours, differenceInMinutes, formatDistanceToNow, isToday, isYesterday, isThisYear } from "date-fns";
-import { Calendar, Clock, MapPin, User, Users, FileText, Repeat, Edit, Trash2, History, UserPlus, UserMinus } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Users, FileText, Repeat, Edit, Trash2, History, UserPlus, UserMinus, AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -500,6 +500,18 @@ export default function AppointmentDetailsDialog({
                               )}
                               {!item.data.clock_out && (
                                 <Badge variant="outline" className="text-xs mt-1">Active</Badge>
+                              )}
+                              {item.data.notes && item.data.notes.includes('LOCATION PERMISSIONS DENIED') && (
+                                <Badge variant="destructive" className="text-xs mt-1 flex items-center gap-1 w-fit">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Location Access Denied
+                                </Badge>
+                              )}
+                              {item.data.notes && item.data.notes.includes('LOCATION NOT AVAILABLE') && !item.data.notes.includes('DENIED') && (
+                                <Badge variant="outline" className="text-xs mt-1 flex items-center gap-1 w-fit border-warning text-warning">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Location Unavailable
+                                </Badge>
                               )}
                             </div>
                             {item.data.notes && (
