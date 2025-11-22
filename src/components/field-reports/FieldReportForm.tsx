@@ -156,20 +156,47 @@ export default function FieldReportForm({
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      
+      // Validate required fields
+      if (!formData.worker_name) {
+        toast.error('Worker name is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.arrival_time) {
+        toast.error('Time of attendance is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.work_description) {
+        toast.error('Work description is required');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Starting field report submission...');
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        console.error('User not authenticated');
+        throw new Error('You must be logged in to submit a field report');
+      }
 
-      const { data: profile } = await supabase
+      console.log('User authenticated, fetching profile...');
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('tenant_id')
         .eq('id', user.id)
         .single();
 
-      if (!profile) throw new Error('Profile not found');
+      if (profileError || !profile) {
+        console.error('Profile error:', profileError);
+        throw new Error('Unable to load your profile. Please try again.');
+      }
 
       // Generate report number
       const reportNumber = `FR-${Date.now()}`;
 
+      console.log('Creating field report...');
       const { data: report, error: reportError } = await supabase
         .from('field_reports')
         .insert({
@@ -187,16 +214,27 @@ export default function FieldReportForm({
         .select()
         .single();
 
-      if (reportError) throw reportError;
+      if (reportError) {
+        console.error('Field report creation error:', reportError);
+        throw new Error(`Failed to create report: ${reportError.message}`);
+      }
+      
+      console.log('Field report created successfully:', report.id);
 
       // Save photos
+      console.log(`Uploading ${photoPairs.length} photo pairs...`);
       const allPhotos: any[] = [];
       for (const pair of photoPairs) {
         if (pair.before) {
           const fileName = `${Date.now()}-before-${pair.before.file.name}`;
-          const { data: uploadData } = await supabase.storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('field-report-photos')
             .upload(fileName, pair.before.file);
+          
+          if (uploadError) {
+            console.error('Before photo upload error:', uploadError);
+            throw new Error(`Failed to upload before photo: ${uploadError.message}`);
+          }
           
           if (uploadData) {
             const { data: { publicUrl } } = supabase.storage
@@ -212,9 +250,14 @@ export default function FieldReportForm({
         }
         if (pair.after) {
           const fileName = `${Date.now()}-after-${pair.after.file.name}`;
-          const { data: uploadData } = await supabase.storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('field-report-photos')
             .upload(fileName, pair.after.file);
+          
+          if (uploadError) {
+            console.error('After photo upload error:', uploadError);
+            throw new Error(`Failed to upload after photo: ${uploadError.message}`);
+          }
           
           if (uploadData) {
             const { data: { publicUrl } } = supabase.storage
@@ -229,8 +272,10 @@ export default function FieldReportForm({
           }
         }
       }
+      console.log(`Uploaded ${allPhotos.length} photos successfully`);
 
       if (allPhotos.length > 0) {
+        console.log('Saving photo records to database...');
         const photoInserts = allPhotos.map((photo, index) => ({
           tenant_id: profile.tenant_id,
           field_report_id: report.id,
@@ -247,17 +292,23 @@ export default function FieldReportForm({
           .from('field_report_photos')
           .insert(photoInserts);
 
-        if (photosError) throw photosError;
+        if (photosError) {
+          console.error('Photo records save error:', photosError);
+          throw new Error(`Failed to save photo records: ${photosError.message}`);
+        }
+        console.log('Photo records saved successfully');
       }
 
       // Clear local storage draft on successful submission
       localStorage.removeItem(storageKey);
       
+      console.log('Field report submission completed successfully');
       toast.success('Field report submitted successfully');
       onSave?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting report:', error);
-      toast.error('Failed to submit field report');
+      const errorMessage = error?.message || 'Failed to submit field report. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
