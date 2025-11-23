@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Briefcase, Calendar, FileText, Receipt, FolderKanban, CheckSquare, User, MapPin, X, ExternalLink, ClipboardList, DollarSign, Users, Package } from "lucide-react";
+import { Plus, Briefcase, Calendar, FileText, Receipt, FolderKanban, CheckSquare, User, MapPin, X, ExternalLink, ClipboardList, DollarSign, Users, Package, Link2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -254,6 +254,17 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
     return acc;
   }, {} as Record<string, any[]>) || {};
 
+  // Calculate total linked items count
+  const totalLinkedCount = useMemo(() => {
+    let count = 0;
+    if (ticket?.customer) count++;
+    if (ticket?.contact) count++;
+    if (ticket?.supplier) count++;
+    if (ticket?.lead) count++;
+    if (linkedDocs) count += linkedDocs.length;
+    return count;
+  }, [ticket, linkedDocs]);
+
   const handleDocumentClick = (docType: string, docId: string) => {
     setSelectedDocument({ type: docType, id: docId });
     setDetailsDialogOpen(true);
@@ -278,15 +289,42 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
   return (
     <div className="flex flex-col h-full border-l bg-background">
       <Tabs defaultValue="documents" className="flex flex-col h-full">
-        <div className="px-3 py-3 border-b">
+        <div className="px-3 py-3 border-b space-y-3">
           <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="documents" className="text-xs">Linked Documents</TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs relative">
+              Linked Documents
+              {totalLinkedCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                  {totalLinkedCount}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="actions" className="text-xs">Quick Actions</TabsTrigger>
           </TabsList>
+          
+          {totalLinkedCount > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+              <Link2 className="h-4 w-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-primary">
+                  {totalLinkedCount} {totalLinkedCount === 1 ? 'item' : 'items'} linked
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {[
+                    ticket?.customer && 'Customer',
+                    ticket?.contact && 'Contact', 
+                    ticket?.supplier && 'Supplier',
+                    ticket?.lead && 'Lead',
+                    linkedDocs && linkedDocs.length > 0 && `${linkedDocs.length} document${linkedDocs.length === 1 ? '' : 's'}`
+                  ].filter(Boolean).join(' • ')}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <TabsContent value="documents" className="flex-1 mt-0 p-0 overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-12rem)] p-3">
+          <ScrollArea className="h-[calc(100vh-14rem)] p-3">
         <div className="space-y-3">
           {/* Customer & Contact Section */}
           <div className="space-y-2">

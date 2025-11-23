@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,30 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as any[];
+      
+      // Fetch linked document counts for each ticket
+      const ticketsWithCounts = await Promise.all(
+        (data || []).map(async (ticket: any) => {
+          const { count } = await supabase
+            .from("helpdesk_linked_documents" as any)
+            .select("*", { count: 'exact', head: true })
+            .eq("ticket_id", ticket.id);
+          
+          // Count entity links
+          let entityLinkCount = 0;
+          if (ticket.customer_id) entityLinkCount++;
+          if (ticket.contact_id) entityLinkCount++;
+          if (ticket.supplier_id) entityLinkCount++;
+          if (ticket.lead_id) entityLinkCount++;
+          
+          return { 
+            ...ticket, 
+            linked_docs_count: (count || 0) + entityLinkCount
+          };
+        })
+      );
+      
+      return ticketsWithCounts as any[];
     },
   });
 
@@ -162,6 +185,12 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {ticket.linked_docs_count > 0 && (
+                      <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium">
+                        <Link2 className="h-2.5 w-2.5" />
+                        <span>{ticket.linked_docs_count}</span>
+                      </div>
+                    )}
                     <Badge variant="outline" className={cn("text-xs h-4 px-1.5", getPriorityColor(ticket.priority))}>
                       {ticket.priority}
                     </Badge>
