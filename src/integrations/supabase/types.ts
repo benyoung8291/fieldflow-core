@@ -7383,6 +7383,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: undefined
       }
+      is_super_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_worker_with_time_logs: {
         Args: { _profile_id: string }
         Returns: boolean
