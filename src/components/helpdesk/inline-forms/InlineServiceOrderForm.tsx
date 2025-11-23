@@ -28,7 +28,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
   const [formData, setFormData] = useState({
     title: parsedData?.title || ticket?.subject || "",
     description: parsedData?.description || ticket?.description || "",
-    preferred_date: parsedData?.preferred_date || "",
+    preferred_start_date: parsedData?.preferred_start_date || "",
+    preferred_end_date: parsedData?.preferred_end_date || "",
     priority: parsedData?.priority || "medium",
     tax_rate: 10,
   });
@@ -88,7 +89,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         .insert({
           title: formData.title,
           description: formData.description,
-          preferred_date: formData.preferred_date || null,
+          preferred_start_date: formData.preferred_start_date || null,
+          preferred_end_date: formData.preferred_end_date || null,
           priority: formData.priority,
           status: 'draft',
           subtotal,
@@ -187,29 +189,39 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="preferred_date">Preferred Date</Label>
+              <Label htmlFor="preferred_start_date">Preferred Start Date</Label>
               <Input
-                id="preferred_date"
+                id="preferred_start_date"
                 type="date"
-                value={formData.preferred_date}
-                onChange={(e) => setFormData({ ...formData, preferred_date: e.target.value })}
+                value={formData.preferred_start_date}
+                onChange={(e) => setFormData({ ...formData, preferred_start_date: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
-              <select
-                id="priority"
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
+              <Label htmlFor="preferred_end_date">Preferred End Date</Label>
+              <Input
+                id="preferred_end_date"
+                type="date"
+                value={formData.preferred_end_date}
+                onChange={(e) => setFormData({ ...formData, preferred_end_date: e.target.value })}
+              />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="priority">Priority</Label>
+            <select
+              id="priority"
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
           </div>
 
           <div className="space-y-3 pt-4 border-t">

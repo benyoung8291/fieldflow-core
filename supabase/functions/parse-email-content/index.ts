@@ -32,7 +32,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-flash-lite",
           messages: [
             {
               role: "system",
@@ -139,13 +139,20 @@ serve(async (req) => {
             properties: {
               title: { type: "string", description: "Brief title of service needed" },
               description: { type: "string", description: "Detailed description of service request" },
-              priority: { type: "string", enum: ["low", "medium", "high"], description: "Service priority" },
-              requested_date: { type: "string", description: "Requested service date in ISO format" },
-              location: { type: "string", description: "Service location address" },
-              contact_name: { type: "string", description: "Contact person name" },
-              contact_email: { type: "string", description: "Contact email" },
-              contact_phone: { type: "string", description: "Contact phone number" },
-              issue_category: { type: "string", description: "Type of issue (e.g., maintenance, repair, installation)" }
+              priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Service priority" },
+              preferred_start_date: { type: "string", description: "Preferred start date in ISO format (YYYY-MM-DD)" },
+              preferred_end_date: { type: "string", description: "Preferred end date in ISO format (YYYY-MM-DD)" },
+              line_items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    description: { type: "string" },
+                    quantity: { type: "number" },
+                    unit_price: { type: "number" }
+                  }
+                }
+              }
             },
             required: ["title", "description"]
           }
@@ -214,7 +221,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",
