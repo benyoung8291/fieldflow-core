@@ -7205,6 +7205,10 @@ export type Database = {
         Args: { p_current_date: string; p_frequency: string }
         Returns: string
       }
+      can_view_profile: {
+        Args: { profile_tenant_id: string }
+        Returns: boolean
+      }
       can_view_worker_profile: {
         Args: { _profile_id: string }
         Returns: boolean
