@@ -2029,6 +2029,7 @@ export type Database = {
           default_margin_percentage: number | null
           id: string
           overhead_percentage: number | null
+          service_order_generation_lookahead_days: number | null
           tenant_id: string
           updated_at: string | null
         }
@@ -2037,6 +2038,7 @@ export type Database = {
           default_margin_percentage?: number | null
           id?: string
           overhead_percentage?: number | null
+          service_order_generation_lookahead_days?: number | null
           tenant_id: string
           updated_at?: string | null
         }
@@ -2045,6 +2047,7 @@ export type Database = {
           default_margin_percentage?: number | null
           id?: string
           overhead_percentage?: number | null
+          service_order_generation_lookahead_days?: number | null
           tenant_id?: string
           updated_at?: string | null
         }

@@ -16,7 +16,105 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Authenticate user and verify admin role
+    // Parse request body
+    const body = await req.json().catch(() => ({}));
+    const { startDate: bodyStartDate, endDate: bodyEndDate, manualGeneration = false, automated = false } = body;
+
+    console.log("🚀 Starting service order generation...");
+    console.log(`📋 Manual generation: ${manualGeneration}, Automated: ${automated}`);
+
+    // Handle automated cron job - process all tenants
+    if (automated) {
+      console.log("🔄 Processing automated generation for all tenants...");
+      
+      // Get all active tenants
+      const { data: tenants, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('id, name');
+      
+      if (tenantsError) {
+        console.error("❌ Error fetching tenants:", tenantsError);
+        throw tenantsError;
+      }
+
+      const results = [];
+      
+      for (const tenant of tenants || []) {
+        try {
+          // Get lookahead days from settings
+          const { data: settings } = await supabase
+            .from('general_settings')
+            .select('service_order_generation_lookahead_days')
+            .eq('tenant_id', tenant.id)
+            .single();
+
+          const lookaheadDays = settings?.service_order_generation_lookahead_days || 30;
+          
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const startDate = today.toISOString().split("T")[0];
+          
+          const futureDate = new Date(today);
+          futureDate.setDate(futureDate.getDate() + lookaheadDays);
+          const endDate = futureDate.toISOString().split("T")[0];
+          
+          console.log(`📅 Processing tenant ${tenant.name} (${tenant.id}): ${startDate} to ${endDate} (${lookaheadDays} days)`);
+
+          // Get a system user for this tenant (first admin)
+          const { data: adminUser } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('role', 'tenant_admin')
+            .limit(1)
+            .single();
+
+          const userId = adminUser?.user_id || '00000000-0000-0000-0000-000000000000';
+
+          const { data, error } = await supabase.rpc('generate_service_orders_from_contracts', {
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_tenant_id: tenant.id,
+            p_user_id: userId
+          });
+
+          if (error) {
+            console.error(`❌ Error for tenant ${tenant.name}:`, error);
+            results.push({
+              tenant_id: tenant.id,
+              tenant_name: tenant.name,
+              success: false,
+              error: error.message
+            });
+          } else {
+            console.log(`✅ Tenant ${tenant.name}: ${data.summary.orders_created} orders created`);
+            results.push({
+              tenant_id: tenant.id,
+              tenant_name: tenant.name,
+              success: true,
+              ...data
+            });
+          }
+        } catch (error: any) {
+          console.error(`❌ Exception for tenant ${tenant.name}:`, error);
+          results.push({
+            tenant_id: tenant.id,
+            tenant_name: tenant.name,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          automated: true,
+          results
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Manual generation - requires authentication and admin role
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -66,14 +164,7 @@ serve(async (req) => {
 
     console.log(`✅ Authenticated admin user: ${user.id}`);
 
-    // Parse request body for manual generation parameters
-    const body = await req.json().catch(() => ({}));
-    const { startDate: bodyStartDate, endDate: bodyEndDate, manualGeneration = false } = body;
-
-    console.log("🚀 Starting service order generation...");
-    console.log(`📋 Manual generation: ${manualGeneration}`);
-
-    // Determine date range
+    // Determine date range for manual generation
     let startDate: string;
     let endDate: string;
 
@@ -82,11 +173,11 @@ serve(async (req) => {
       endDate = bodyEndDate;
       console.log(`📅 Manual generation for date range: ${startDate} to ${endDate}`);
     } else {
-      // Automatic generation - use today's date
+      // Default: use today's date
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       startDate = endDate = today.toISOString().split("T")[0];
-      console.log(`📅 Automatic generation for date: ${startDate}`);
+      console.log(`📅 Single-day generation for date: ${startDate}`);
     }
 
     // Call the database function to generate service orders
