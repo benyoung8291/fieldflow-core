@@ -37,38 +37,29 @@ export default function HelpDesk() {
   }, []);
 
   // Handle ticket selection from URL params (e.g., from search)
+  // URL is the single source of truth - only sync URL to state
   useEffect(() => {
     const ticketId = searchParams.get("ticket");
-    if (ticketId && ticketId !== selectedTicketId) {
-      // Check if the ticket is archived and enable filter if needed
-      const checkAndSelectTicket = async () => {
-        const { data: ticketData } = await supabase
-          .from("helpdesk_tickets")
-          .select("is_archived")
-          .eq("id", ticketId)
-          .single();
+    if (ticketId !== selectedTicketId) {
+      if (ticketId) {
+        // Check if the ticket is archived and enable filter if needed
+        const checkAndSelectTicket = async () => {
+          const { data: ticketData } = await supabase
+            .from("helpdesk_tickets")
+            .select("is_archived")
+            .eq("id", ticketId)
+            .single();
+          
+          if (ticketData?.is_archived) {
+            setFilterArchived(true);
+          }
+        };
         
-        if (ticketData?.is_archived) {
-          setFilterArchived(true);
-        }
-        
-        handleSelectTicket(ticketId);
-      };
-      
-      checkAndSelectTicket();
-      // Keep the ticket ID in the URL for proper navigation
-    }
-  }, [searchParams, selectedTicketId]);
-
-  // Update URL when ticket is selected
-  useEffect(() => {
-    if (selectedTicketId) {
-      const currentTicket = searchParams.get("ticket");
-      if (currentTicket !== selectedTicketId) {
-        setSearchParams({ ticket: selectedTicketId }, { replace: true });
+        checkAndSelectTicket();
       }
+      setSelectedTicketId(ticketId);
     }
-  }, [selectedTicketId]);
+  }, [searchParams.get("ticket")]);
 
   const { data: pipelines } = useQuery({
     queryKey: ["helpdesk-pipelines"],
@@ -117,21 +108,23 @@ export default function HelpDesk() {
     enabled: !!selectedTicketId,
   });
 
-  const handleSelectTicket = async (ticketId: string) => {
-    setSelectedTicketId(ticketId);
+  const handleSelectTicket = (ticketId: string) => {
+    // Update URL first - this is the source of truth
+    setSearchParams({ ticket: ticketId }, { replace: true });
     
-    // Mark ticket as read when opened
-    await supabase
+    // Mark ticket as read in background (fire and forget)
+    supabase
       .from("helpdesk_tickets")
       .update({ is_read: true })
-      .eq("id", ticketId);
+      .eq("id", ticketId)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      });
     
     // Also mark as read in Microsoft (fire and forget)
     supabase.functions.invoke("microsoft-mark-read", {
       body: { ticketId }
-    }).catch(err => console.error("Failed to sync read status to Microsoft:", err));
-    
-    queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+    });
   };
 
   const handleSyncEmails = async () => {
