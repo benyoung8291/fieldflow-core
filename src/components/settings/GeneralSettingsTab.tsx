@@ -29,6 +29,7 @@ export default function GeneralSettingsTab() {
     secondaryColor: "",
     renewalEmail: "",
   });
+  const [serviceOrderLookaheadDays, setServiceOrderLookaheadDays] = useState<number>(30);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
@@ -42,6 +43,19 @@ export default function GeneralSettingsTab() {
         .maybeSingle();
 
       if (error) throw error;
+      return data as any;
+    },
+  });
+
+  const { data: generalSettings } = useQuery({
+    queryKey: ["general-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings" as any)
+        .select("service_order_generation_lookahead_days")
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
       return data as any;
     },
   });
@@ -68,6 +82,12 @@ export default function GeneralSettingsTab() {
       });
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (generalSettings) {
+      setServiceOrderLookaheadDays(generalSettings.service_order_generation_lookahead_days || 30);
+    }
+  }, [generalSettings]);
 
   const handleLogoUpload = async (file: File) => {
     setUploadingLogo(true);
@@ -148,6 +168,7 @@ export default function GeneralSettingsTab() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
+      // Update tenant settings
       const updateData = {
         company_name: formData.companyName,
         company_legal_name: formData.companyLegalName,
@@ -168,7 +189,6 @@ export default function GeneralSettingsTab() {
       };
 
       if (settings) {
-        // Update existing settings
         const { error } = await supabase
           .from("tenant_settings" as any)
           .update(updateData)
@@ -176,7 +196,6 @@ export default function GeneralSettingsTab() {
 
         if (error) throw error;
       } else {
-        // Create new settings
         const { error } = await supabase
           .from("tenant_settings" as any)
           .insert({
@@ -186,9 +205,20 @@ export default function GeneralSettingsTab() {
 
         if (error) throw error;
       }
+
+      // Update general settings
+      const { error: generalError } = await supabase
+        .from("general_settings" as any)
+        .upsert({
+          tenant_id: profile.tenant_id,
+          service_order_generation_lookahead_days: serviceOrderLookaheadDays,
+        });
+
+      if (generalError) throw generalError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["general-settings"] });
       toast.success("Settings updated successfully");
     },
     onError: (error: any) => {
@@ -458,6 +488,34 @@ export default function GeneralSettingsTab() {
             />
             <p className="text-sm text-muted-foreground">
               Automated renewal reminders will be sent to this email address 30, 60, and 90 days before contract expiry
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Order Generation</CardTitle>
+          <CardDescription>
+            Configure automatic service order generation from contracts
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="lookahead-days">Generation Lookahead Days</Label>
+            <Input
+              id="lookahead-days"
+              type="number"
+              min="1"
+              max="365"
+              placeholder="30"
+              value={serviceOrderLookaheadDays}
+              onChange={(e) => setServiceOrderLookaheadDays(parseInt(e.target.value) || 30)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Number of days to look ahead when automatically generating service orders from contracts. 
+              The system will generate service orders for any contract items scheduled within this period. 
+              Runs daily at midnight. Default is 30 days.
             </p>
           </div>
         </CardContent>
