@@ -388,7 +388,7 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
             sell_price: parent.sell_price?.toString() || "0",
             line_total: parent.line_total,
             subItems,
-            expanded: subItems.length > 0,
+            expanded: subItems.length > 0, // Auto-expand items with sub-items
           };
         });
 
