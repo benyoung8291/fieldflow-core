@@ -28,9 +28,35 @@ export const usePWAUpdate = () => {
   useEffect(() => {
     if (needRefreshState) {
       setNeedRefresh(true);
-      // Automatically update without showing notification
-      updateServiceWorker(true);
-      setNeedRefreshState(false);
+      
+      // Detect device and browser
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      const isChrome = /Chrome/.test(navigator.userAgent);
+      const isFirefox = /Firefox/.test(navigator.userAgent);
+      const isEdge = /Edg/.test(navigator.userAgent);
+      
+      let instructions = "Refresh your browser to load the latest version.";
+      
+      if (isIOS && isSafari) {
+        instructions = "Tap and hold the refresh button, then select 'Reload Without Content Blockers' or press Cmd+R on keyboard.";
+      } else if (isChrome || isEdge) {
+        instructions = "Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to hard refresh.";
+      } else if (isFirefox) {
+        instructions = "Press Ctrl+F5 (Windows/Linux) or Cmd+Shift+R (Mac) to hard refresh.";
+      }
+      
+      toast("Update Available", {
+        description: instructions,
+        duration: 10000,
+        action: {
+          label: "Update Now",
+          onClick: () => {
+            updateServiceWorker(true);
+            setNeedRefreshState(false);
+          }
+        }
+      });
     }
   }, [needRefreshState, setNeedRefreshState, updateServiceWorker]);
 
