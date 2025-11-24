@@ -784,8 +784,9 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                           </Card>
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
               
               {/* Add Item Buttons - Inline in timeline */}
               <div className="relative flex flex-col gap-2 py-6">
