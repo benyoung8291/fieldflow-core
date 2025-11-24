@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { TicketList } from "@/components/helpdesk/TicketList";
 import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Link2, MessageSquare } from "lucide-react";
+import { RefreshCw, Filter, Link2, MessageSquare, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 
 export default function HelpDesk() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -364,10 +365,16 @@ export default function HelpDesk() {
               </PopoverContent>
             </Popover>
           </div>
-          <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-7 text-xs">
-            <RefreshCw className={`h-3 w-3 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate('/helpdesk/analytics')} variant="outline" size="sm" className="h-7 text-xs">
+              <BarChart3 className="h-3 w-3 mr-1.5" />
+              Analytics
+            </Button>
+            <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-7 text-xs">
+              <RefreshCw className={`h-3 w-3 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync"}
+            </Button>
+          </div>
         </div>
 
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
