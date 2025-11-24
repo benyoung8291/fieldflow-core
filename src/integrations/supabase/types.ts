@@ -7318,11 +7318,7 @@ export type Database = {
       }
       get_microsoft_credentials: {
         Args: { email_account_id: string }
-        Returns: {
-          access_token: string
-          client_secret: string
-          refresh_token: string
-        }[]
+        Returns: Json
       }
       get_next_sequential_number: {
         Args: { p_entity_type: string; p_tenant_id: string }
