@@ -174,10 +174,14 @@ export default function QuoteDetails() {
       const subItems = data?.filter(item => item.parent_line_item_id) || [];
       
       // Attach sub-items to their parents
-      const structured = parentItems.map(parent => ({
-        ...parent,
-        subItems: subItems.filter(sub => sub.parent_line_item_id === parent.id)
-      }));
+      const structured = parentItems.map(parent => {
+        const parentSubItems = subItems.filter(sub => sub.parent_line_item_id === parent.id);
+        return {
+          ...parent,
+          subItems: parentSubItems,
+          expanded: parentSubItems.length > 0 // Auto-expand items with sub-items
+        };
+      });
       
       return structured;
     },
