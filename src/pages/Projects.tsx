@@ -16,6 +16,7 @@ import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { useGenericPresence } from "@/hooks/useGenericPresence";
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -24,6 +25,14 @@ export default function Projects() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Track presence for currently viewed project
+  useGenericPresence({
+    recordId: selectedProjectId || null,
+    tableName: "projects",
+    displayField: "name",
+    moduleName: "Projects",
+  });
 
   const { data: projectsResponse, isLoading, refetch } = useQuery({
     queryKey: ["projects", searchQuery, pagination.currentPage, pagination.pageSize],
