@@ -343,15 +343,15 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
                   value={getLinkedValue(key) || ""}
                   onValueChange={(value) => updateLink(`${key}_id`, value || null)}
                   options={[
-                    { value: "", label: "None" },
+                    { value: "", label: "--" },
                     ...getOptions(key).map((item) => ({
                       value: item.id,
                       label: getOptionLabel(key, item),
                     }))
                   ]}
                   placeholder={`Select ${label.toLowerCase()}...`}
-                  searchPlaceholder={`Search ${label.toLowerCase()}...`}
-                  emptyText={`No ${label.toLowerCase()} found`}
+                  searchPlaceholder={`Search...`}
+                  emptyText=""
                   className="flex-1"
                 />
                 
