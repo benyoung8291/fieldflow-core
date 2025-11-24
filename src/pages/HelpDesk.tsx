@@ -310,10 +310,10 @@ export default function HelpDesk() {
   const CurrentFolderIcon = currentFolderConfig.icon;
 
   return (
-    <DashboardLayout disablePresence={false}>
+    <DashboardLayout disablePresence={false} noPadding={true}>
       <div className="flex flex-col h-full">
         {/* Header with Pipeline Selector, Quick Filters, and Sync */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+        <div className="flex items-center justify-between px-2 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

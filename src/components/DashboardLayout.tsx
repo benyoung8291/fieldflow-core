@@ -24,9 +24,10 @@ interface DashboardLayoutProps {
   children: ReactNode;
   showRightSidebar?: boolean;
   disablePresence?: boolean;
+  noPadding?: boolean;
 }
 
-export default function DashboardLayout({ children, showRightSidebar = false, disablePresence = false }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, showRightSidebar = false, disablePresence = false, noPadding = false }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
@@ -308,7 +309,10 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
 
           {/* Main Content */}
           <main className="flex-1 overflow-hidden">
-            <div className="px-3 sm:px-6 lg:px-8 h-full overflow-y-auto w-full">
+            <div className={cn(
+              "h-full overflow-y-auto w-full",
+              !noPadding && "px-3 sm:px-6 lg:px-8"
+            )}>
               {children}
             </div>
           </main>
