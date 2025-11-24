@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
@@ -44,12 +44,14 @@ interface AddContactActivityDialogProps {
   contactId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultActivityType?: string;
 }
 
 export default function AddContactActivityDialog({
   contactId,
   open,
   onOpenChange,
+  defaultActivityType,
 }: AddContactActivityDialogProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +65,13 @@ export default function AddContactActivityDialog({
       activity_date: new Date().toISOString().slice(0, 16),
     },
   });
+
+  // Update form when defaultActivityType changes
+  useEffect(() => {
+    if (defaultActivityType && open) {
+      form.setValue("activity_type", defaultActivityType as any);
+    }
+  }, [defaultActivityType, open, form]);
 
   const createMutation = useMutation({
     mutationFn: async (values: ActivityFormValues) => {
@@ -180,10 +189,11 @@ export default function AddContactActivityDialog({
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
                       placeholder="Additional details about this activity..."
-                      rows={4}
-                      {...field}
+                      className="min-h-[120px]"
                     />
                   </FormControl>
                   <FormMessage />
