@@ -23,13 +23,6 @@ export default function QuickLocationDialog({
   customerName,
   onLocationCreated,
 }: QuickLocationDialogProps) {
-  
-  // Reset form when dialog opens or customer changes
-  useEffect(() => {
-    if (open) {
-      resetForm();
-    }
-  }, [open, customerId]);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,6 +39,30 @@ export default function QuickLocationDialog({
     latitude: null as number | null,
     longitude: null as number | null,
   });
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      address: "",
+      city: "",
+      state: "",
+      postcode: "",
+      contact_name: "",
+      contact_phone: "",
+      contact_email: "",
+      location_notes: "",
+      customer_location_id: "",
+      latitude: null,
+      longitude: null,
+    });
+  };
+
+  // Reset form when dialog opens or customer changes
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open, customerId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,23 +114,6 @@ export default function QuickLocationDialog({
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      address: "",
-      city: "",
-      state: "",
-      postcode: "",
-      contact_name: "",
-      contact_phone: "",
-      contact_email: "",
-      location_notes: "",
-      customer_location_id: "",
-      latitude: null,
-      longitude: null,
-    });
   };
 
   if (!open) return null;
