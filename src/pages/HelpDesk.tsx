@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter } from "lucide-react";
+import { RefreshCw, Filter, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ export default function HelpDesk() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("all");
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
 
   useEffect(() => {
     // Load last used filter from localStorage
@@ -397,18 +398,38 @@ export default function HelpDesk() {
           )}
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        {sidebarVisible && <ResizableHandle withHandle />}
 
         {/* Right: Linked Documents */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
-          {selectedTicketId ? (
-            <LinkedDocumentsSidebar ticketId={selectedTicketId} ticket={ticket} />
-          ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground p-4">
-              <p className="text-sm text-center">Linked documents will appear here</p>
-            </div>
-          )}
-        </ResizablePanel>
+        {sidebarVisible && (
+          <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
+            {selectedTicketId ? (
+              <LinkedDocumentsSidebar 
+                ticketId={selectedTicketId} 
+                ticket={ticket}
+                onClose={() => setSidebarVisible(false)}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground p-4">
+                <p className="text-sm text-center">Linked documents will appear here</p>
+              </div>
+            )}
+          </ResizablePanel>
+        )}
+        
+        {/* Reopen sidebar button */}
+        {!sidebarVisible && selectedTicketId && (
+          <div className="fixed bottom-4 right-4 z-10">
+            <Button
+              onClick={() => setSidebarVisible(true)}
+              size="sm"
+              className="shadow-lg"
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              Show Links
+            </Button>
+          </div>
+        )}
       </ResizablePanelGroup>
       </div>
     </DashboardLayout>

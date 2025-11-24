@@ -943,7 +943,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                                 size: att.size,
                                 contentType: att.contentType,
                               }))}
-                              onDownload={async (attachment) => {
+                               onDownload={async (attachment) => {
                                 try {
                                   const { data, error } = await supabase.functions.invoke(
                                     "microsoft-download-attachment",
@@ -958,21 +958,37 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
                                   if (error) throw error;
 
-                                  // Create a blob from the response and download
-                                  const blob = new Blob([data], { type: attachment.contentType || 'application/octet-stream' });
-                                  const url = window.URL.createObjectURL(blob);
-                                  const a = document.createElement('a');
-                                  a.href = url;
-                                  a.download = attachment.name || 'attachment';
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  window.URL.revokeObjectURL(url);
-                                  document.body.removeChild(a);
+                                  // The edge function returns base64 encoded data
+                                  if (data && typeof data === 'object' && 'content' in data) {
+                                    // Decode base64 to binary
+                                    const binaryString = atob(data.content);
+                                    const bytes = new Uint8Array(binaryString.length);
+                                    for (let i = 0; i < binaryString.length; i++) {
+                                      bytes[i] = binaryString.charCodeAt(i);
+                                    }
+                                    
+                                    const blob = new Blob([bytes], { type: attachment.contentType || 'application/octet-stream' });
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = attachment.name || 'attachment';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    document.body.removeChild(a);
+                                    
+                                    toast({
+                                      title: "Download started",
+                                      description: attachment.name,
+                                    });
+                                  } else {
+                                    throw new Error('Invalid response format');
+                                  }
                                 } catch (error) {
                                   console.error('Failed to download attachment:', error);
                                   toast({
                                     title: "Download failed",
-                                    description: "Could not download the attachment",
+                                    description: error instanceof Error ? error.message : "Could not download the attachment",
                                     variant: "destructive",
                                   });
                                 }
