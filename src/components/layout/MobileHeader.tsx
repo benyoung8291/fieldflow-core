@@ -3,6 +3,7 @@ import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { IssueReportDialog } from "@/components/common/IssueReportDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ export const MobileHeader = () => {
         <div className="flex items-center gap-2">
           <ViewModeToggle />
           <ThemeToggle />
+          <IssueReportDialog />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
