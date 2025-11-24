@@ -418,9 +418,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic px-1">Not linked to any customer</p>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -482,9 +480,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic px-1">Not linked to any contact</p>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -544,9 +540,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic px-1">Not linked to any supplier</p>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -608,9 +602,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic px-1">Not linked to any lead</p>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
@@ -849,11 +841,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                         );
                       })}
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic px-1 mt-1">
-                      No {docType.label.toLowerCase()} linked
-                    </p>
-                  )}
+                  ) : null}
                   </div>
                 </div>
               );
