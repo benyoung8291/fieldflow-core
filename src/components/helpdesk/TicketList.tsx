@@ -265,45 +265,62 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                       !ticket.is_read && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary before:rounded-l-lg"
                     )}
                   >
-                {/* Top Row - Subject and Time */}
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className={cn(
-                    "font-semibold text-sm line-clamp-2 flex-1 min-w-0 leading-snug transition-colors group-hover:text-primary",
-                    !ticket.is_read && "text-foreground font-bold",
-                    selectedTicketId === ticket.id && "text-primary"
-                  )}>
-                    {ticket.subject}
-                  </h3>
-                  <span className="text-xs text-muted-foreground/80 whitespace-nowrap shrink-0 font-medium transition-colors group-hover:text-foreground/70">
+                {/* Time - Pinned to top right */}
+                <div className="absolute top-3 right-4">
+                  <span className="text-xs text-muted-foreground/80 whitespace-nowrap font-medium transition-colors group-hover:text-foreground/70">
                     {ticket.last_message_at 
                       ? formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true }).replace('about ', '').replace(' ago', '')
                       : 'New'}
                   </span>
                 </div>
 
-                {/* Second Row - Sender/Customer and Status */}
-                <div className="flex items-center justify-between gap-2">
+                {/* Top Row - Subject */}
+                <div className="pr-16">
+                  <h3 className={cn(
+                    "font-semibold text-sm line-clamp-2 leading-snug transition-colors group-hover:text-primary",
+                    !ticket.is_read && "text-foreground font-bold",
+                    selectedTicketId === ticket.id && "text-primary"
+                  )}>
+                    {ticket.subject}
+                  </h3>
+                </div>
+
+                {/* Second Row - Sender/Customer */}
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground truncate flex-1 min-w-0 font-medium">
                     {ticket.customer?.name || 
                      (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
                      ticket.external_email || "Unknown")}
                   </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                </div>
+
+                {/* Assignment Row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium">
+                    {ticket.assigned_user ? (
+                      <span className="text-primary">
+                        Assigned to {ticket.assigned_user.first_name} {ticket.assigned_user.last_name}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/70">Unassigned</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Metadata Row */}
+                <div className="flex items-center justify-between gap-2 text-[10px] pt-1">
+                  <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                    {/* Status badge */}
                     <Badge 
                       variant="outline" 
                       className={cn(
-                        "text-[10px] h-5 px-2 font-semibold transition-all",
+                        "text-[10px] h-5 px-2 font-semibold transition-all shrink-0",
                         getStatusColor(ticket.status)
                       )}
                     >
                       {ticket.status}
                     </Badge>
-                  </div>
-                </div>
 
-                {/* Third Row - Metadata */}
-                <div className="flex items-center justify-between gap-2 text-[10px] pt-1">
-                  <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                     {/* Pipeline indicator */}
                     {ticket.pipeline && (
                       <div className="hidden sm:flex items-center gap-1.5 shrink-0">
@@ -354,13 +371,6 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
 
                   {/* Right side indicators */}
                   <div className="flex items-center gap-2 shrink-0">
-                    {ticket.assigned_user && (
-                      <div className="flex items-center gap-1 text-muted-foreground/80">
-                        <span className="font-semibold text-[11px]">
-                          {ticket.assigned_user.first_name}
-                        </span>
-                      </div>
-                    )}
                     {ticket.linked_docs_count > 0 && (
                       <div className="flex items-center gap-1 bg-primary/15 text-primary px-2 py-1 rounded-md font-semibold transition-all group-hover:bg-primary/20">
                         <Link2 className="h-3 w-3" />
