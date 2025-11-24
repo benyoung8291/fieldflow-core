@@ -627,21 +627,23 @@ export default function AppointmentDetails() {
                         <p className="text-sm text-muted-foreground mt-1">{appointment.notes}</p>
                       </div>
                     )}
-                    {appointment.service_orders && (
+                    {(appointment.service_order_id || appointment.service_orders) && (
                       <div className="pt-4 border-t">
                         <span className="font-medium text-sm">Service Order:</span>
-                        <div className="mt-1 text-sm">
+                        <div className="mt-1 text-sm space-y-1">
                           <Button
                             variant="link"
-                            className="h-auto p-0 font-normal text-primary hover:underline"
-                            onClick={() => navigate(`/service-orders/${appointment.service_orders.id}`)}
+                            className="h-auto p-0 font-normal text-primary hover:underline text-left"
+                            onClick={() => navigate(`/service-orders/${appointment.service_order_id || appointment.service_orders?.id}`)}
                           >
-                            WO: {appointment.service_orders.work_order_number}
+                            {appointment.service_orders?.work_order_number 
+                              ? `WO: ${appointment.service_orders.work_order_number}`
+                              : 'View Service Order'}
                           </Button>
-                          {appointment.service_orders.purchase_order_number && (
+                          {appointment.service_orders?.purchase_order_number && (
                             <p className="text-muted-foreground">PO: {appointment.service_orders.purchase_order_number}</p>
                           )}
-                          {appointment.service_orders.customers && (
+                          {appointment.service_orders?.customers?.name && (
                             <p className="text-muted-foreground">Customer: {appointment.service_orders.customers.name}</p>
                           )}
                         </div>
