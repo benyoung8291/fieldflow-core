@@ -33,7 +33,7 @@ export default function PresencePanel() {
           <Users className="h-4 w-4" />
           <span className="hidden sm:inline">Team</span>
           {activeUserCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-semibold text-white">
               {activeUserCount}
             </span>
           )}

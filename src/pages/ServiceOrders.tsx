@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { useGenericPresence } from "@/hooks/useGenericPresence";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -77,6 +78,15 @@ export default function ServiceOrders() {
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Track presence for currently viewed service order
+  useGenericPresence({
+    recordId: selectedOrder,
+    tableName: "service_orders",
+    displayField: "title",
+    moduleName: "Service Orders",
+    numberField: "order_number",
+  });
 
   const { data: ordersResponse, isLoading, refetch } = useQuery({
     queryKey: ["service_orders", searchTerm, statusFilter, priorityFilter, customerFilter, pagination.currentPage, pagination.pageSize],

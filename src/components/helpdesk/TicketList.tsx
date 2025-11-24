@@ -382,7 +382,7 @@ export function TicketList({
   return (
     <div className="flex flex-col h-full border-r bg-background">
       {/* Enhanced Header */}
-      <div className="px-3 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 space-y-3">
+      <div className="px-0 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative group flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -405,7 +405,7 @@ export function TicketList({
 
       {/* Bulk Actions Toolbar */}
       {selectedTicketIds.size > 0 && (
-        <div className="px-3 py-2 border-b bg-primary/5 flex items-center justify-between gap-2">
+        <div className="px-0 py-2 border-b bg-primary/5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">
               {selectedTicketIds.size} selected
@@ -476,7 +476,7 @@ export function TicketList({
             ))}
           </div>
         ) : filteredTickets && filteredTickets.length > 0 ? (
-          <div className="p-2 space-y-1">
+          <div className="p-0 space-y-1">
             {filteredTickets.map((ticket, index) => (
               <ContextMenu key={ticket.id}>
                 <ContextMenuTrigger asChild>
@@ -484,7 +484,7 @@ export function TicketList({
                     onClick={(e) => handleTicketClick(ticket.id, index, e)}
                     style={{ animationDelay: `${index * 30}ms` }}
                     className={cn(
-                      "w-full px-3 py-3 text-left rounded-lg transition-all duration-200 flex flex-col gap-2 group relative overflow-hidden animate-fade-in-up",
+                      "w-full px-0 py-3 text-left rounded-lg transition-all duration-200 flex flex-col gap-2 group relative overflow-hidden animate-fade-in-up",
                       "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                       selectedTicketId === ticket.id 

@@ -34,6 +34,7 @@ import { MoreVertical } from "lucide-react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { useGenericPresence } from "@/hooks/useGenericPresence";
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -48,6 +49,15 @@ export default function Quotes() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<any>(null);
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Track presence for currently viewed quote
+  useGenericPresence({
+    recordId: selectedQuoteId || null,
+    tableName: "quotes",
+    displayField: "title",
+    moduleName: "Quotes",
+    numberField: "quote_number",
+  });
 
   const { data: quotesResponse, isLoading, refetch } = useQuery({
     queryKey: ["quotes", searchQuery, showArchived, statusFilter, pagination.currentPage, pagination.pageSize],
