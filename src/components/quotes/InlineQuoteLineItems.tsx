@@ -38,6 +38,36 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
     }, 600);
   };
 
+  const calculateAggregatedValues = (item: LineItem) => {
+    if (item.subItems && item.subItems.length > 0) {
+      const totalCost = item.subItems.reduce((sum, sub) => {
+        const qty = parseFloat(sub.quantity) || 0;
+        const cost = parseFloat(sub.cost_price) || 0;
+        return sum + (qty * cost);
+      }, 0);
+      
+      const totalSell = item.subItems.reduce((sum, sub) => {
+        const qty = parseFloat(sub.quantity) || 0;
+        const sell = parseFloat(sub.sell_price) || 0;
+        return sum + (qty * sell);
+      }, 0);
+      
+      const margin = totalCost > 0 ? ((totalSell - totalCost) / totalCost) * 100 : 0;
+      
+      return {
+        cost: totalCost,
+        sell: totalSell,
+        margin: margin,
+      };
+    }
+    
+    return {
+      cost: parseFloat(item.cost_price) || 0,
+      sell: parseFloat(item.sell_price) || 0,
+      margin: parseFloat(item.margin_percentage) || 0,
+    };
+  };
+
   const calculateLineTotal = (item: LineItem): number => {
     const qty = parseFloat(item.quantity) || 0;
     
@@ -259,17 +289,29 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                       <span className="text-sm">{item.quantity}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {!itemHasSubItems && (
+                      {itemHasSubItems ? (
+                        <span className="text-sm text-muted-foreground">
+                          {formatCurrency(calculateAggregatedValues(item).cost)}
+                        </span>
+                      ) : (
                         <span className="text-sm">{formatCurrency(parseFloat(item.cost_price))}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {!itemHasSubItems && (
+                      {itemHasSubItems ? (
+                        <span className="text-sm text-muted-foreground">
+                          {calculateAggregatedValues(item).margin.toFixed(2)}%
+                        </span>
+                      ) : (
                         <span className="text-sm">{parseFloat(item.margin_percentage).toFixed(2)}%</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {!itemHasSubItems && (
+                      {itemHasSubItems ? (
+                        <span className="text-sm text-muted-foreground">
+                          {formatCurrency(calculateAggregatedValues(item).sell)}
+                        </span>
+                      ) : (
                         <span className="text-sm">{formatCurrency(parseFloat(item.sell_price))}</span>
                       )}
                     </TableCell>
@@ -366,41 +408,56 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                     />
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.cost_price}
-                      onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      disabled={hasSubItems(item)}
-                      className="border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50"
-                    />
+                    {hasSubItems(item) ? (
+                      <div className="text-right text-sm text-muted-foreground pr-3">
+                        {formatCurrency(calculateAggregatedValues(item).cost)}
+                      </div>
+                    ) : (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.cost_price}
+                        onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.margin_percentage}
-                      onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      disabled={hasSubItems(item)}
-                      className={`border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50 transition-colors ${
-                        updatedFields[`${index}-margin_percentage`] ? 'bg-primary/20 animate-pulse' : ''
-                      }`}
-                    />
+                    {hasSubItems(item) ? (
+                      <div className="text-right text-sm text-muted-foreground pr-3">
+                        {calculateAggregatedValues(item).margin.toFixed(2)}%
+                      </div>
+                    ) : (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.margin_percentage}
+                        onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className={`border-0 focus-visible:ring-0 text-right bg-transparent transition-colors ${
+                          updatedFields[`${index}-margin_percentage`] ? 'bg-primary/20 animate-pulse' : ''
+                        }`}
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.sell_price}
-                      onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      disabled={hasSubItems(item)}
-                      className={`border-0 focus-visible:ring-0 text-right bg-transparent disabled:opacity-50 transition-colors ${
-                        updatedFields[`${index}-sell_price`] ? 'bg-primary/20 animate-pulse' : ''
-                      }`}
-                    />
+                    {hasSubItems(item) ? (
+                      <div className="text-right text-sm text-muted-foreground pr-3">
+                        {formatCurrency(calculateAggregatedValues(item).sell)}
+                      </div>
+                    ) : (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.sell_price}
+                        onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className={`border-0 focus-visible:ring-0 text-right bg-transparent transition-colors ${
+                          updatedFields[`${index}-sell_price`] ? 'bg-primary/20 animate-pulse' : ''
+                        }`}
+                      />
+                    )}
                   </TableCell>
                   <TableCell className={`text-right font-medium transition-colors ${
                     updatedFields[`${index}-line_total`] ? 'bg-primary/10 animate-pulse' : ''

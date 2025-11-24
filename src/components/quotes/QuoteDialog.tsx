@@ -858,7 +858,9 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
           numberLength = sequentialSetting.number_length || 5;
         }
 
-        quoteData.quote_number = `${prefix}-${String(nextNumber).padStart(numberLength, "0")}`;
+        // Check if prefix already ends with dash to avoid double dashes
+        const separator = prefix.endsWith('-') ? '' : '-';
+        quoteData.quote_number = `${prefix}${separator}${String(nextNumber).padStart(numberLength, "0")}`;
 
         const { data: newQuote, error } = await supabase
           .from("quotes")
