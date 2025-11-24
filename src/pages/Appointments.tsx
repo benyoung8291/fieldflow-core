@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, DollarSign, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
@@ -264,7 +264,7 @@ export default function Appointments() {
                   { label: "Est. Hours", value: `${appointment.estimatedHours.toFixed(2)} hrs` },
                   { label: "Cost", value: `$${appointment.currentCost.toFixed(2)}` },
                 ]}
-                onClick={() => navigate(`/appointments/${appointment.id}`)}
+                to={`/appointments/${appointment.id}`}
               />
             ))}
           </div>
@@ -324,58 +324,86 @@ export default function Appointments() {
                 </TableHeader>
                 <TableBody>
                   {sortedAppointments.map((appointment: any) => (
-                    <TableRow
-                      key={appointment.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/appointments/${appointment.id}`)}
-                    >
-                      <TableCell className="font-medium">{appointment.title}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={statusColors[appointment.status as keyof typeof statusColors]}
+                    <TableRow key={appointment.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        <Link 
+                          to={`/appointments/${appointment.id}`}
+                          className="block w-full"
                         >
-                          {appointment.status}
-                        </Badge>
+                          {appointment.title}
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        {appointment.service_orders ? (
-                          <div className="text-sm">
-                            <div className="font-medium">
-                              WO: {appointment.service_orders.work_order_number || "N/A"}
-                            </div>
-                            {appointment.service_orders.purchase_order_number && (
-                              <div className="text-muted-foreground">
-                                PO: {appointment.service_orders.purchase_order_number}
+                        <Link 
+                          to={`/appointments/${appointment.id}`}
+                          className="block w-full"
+                        >
+                          <Badge
+                            variant="outline"
+                            className={statusColors[appointment.status as keyof typeof statusColors]}
+                          >
+                            {appointment.status}
+                          </Badge>
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link 
+                          to={`/appointments/${appointment.id}`}
+                          className="block w-full"
+                        >
+                          {appointment.service_orders ? (
+                            <div className="text-sm">
+                              <div className="font-medium">
+                                WO: {appointment.service_orders.work_order_number || "N/A"}
                               </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">No service order</span>
-                        )}
+                              {appointment.service_orders.purchase_order_number && (
+                                <div className="text-muted-foreground">
+                                  PO: {appointment.service_orders.purchase_order_number}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No service order</span>
+                          )}
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            {format(new Date(appointment.start_time), "MMM d, yyyy")}
+                        <Link 
+                          to={`/appointments/${appointment.id}`}
+                          className="block w-full"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              {format(new Date(appointment.start_time), "MMM d, yyyy")}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              {format(new Date(appointment.start_time), "h:mm a")}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            {format(new Date(appointment.start_time), "h:mm a")}
-                          </div>
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm font-medium">
-                          {appointment.estimatedHours.toFixed(2)} hrs
-                        </div>
+                        <Link 
+                          to={`/appointments/${appointment.id}`}
+                          className="block w-full"
+                        >
+                          <div className="text-sm font-medium">
+                            {appointment.estimatedHours.toFixed(2)} hrs
+                          </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1 text-sm font-medium">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          {appointment.currentCost.toFixed(2)}
-                        </div>
+                        <Link 
+                          to={`/appointments/${appointment.id}`}
+                          className="block w-full"
+                        >
+                          <div className="flex items-center gap-1 text-sm font-medium">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            {appointment.currentCost.toFixed(2)}
+                          </div>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))}
