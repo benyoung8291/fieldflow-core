@@ -631,9 +631,18 @@ export default function AppointmentDetails() {
                       <div className="pt-4 border-t">
                         <span className="font-medium text-sm">Service Order:</span>
                         <div className="mt-1 text-sm">
-                          <p>WO: {appointment.service_orders.work_order_number}</p>
+                          <Button
+                            variant="link"
+                            className="h-auto p-0 font-normal text-primary hover:underline"
+                            onClick={() => navigate(`/service-orders/${appointment.service_orders.id}`)}
+                          >
+                            WO: {appointment.service_orders.work_order_number}
+                          </Button>
                           {appointment.service_orders.purchase_order_number && (
-                            <p>PO: {appointment.service_orders.purchase_order_number}</p>
+                            <p className="text-muted-foreground">PO: {appointment.service_orders.purchase_order_number}</p>
+                          )}
+                          {appointment.service_orders.customers && (
+                            <p className="text-muted-foreground">Customer: {appointment.service_orders.customers.name}</p>
                           )}
                         </div>
                       </div>
