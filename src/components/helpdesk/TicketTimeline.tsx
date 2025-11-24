@@ -588,42 +588,52 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header - Optimized */}
-      <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 sticky top-0 z-10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold mb-1 line-clamp-2">{ticket?.subject || "Loading..."}</h2>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-              <Badge variant="outline" className="font-mono text-xs">{ticket?.ticket_number}</Badge>
+      {/* Enhanced Header with Clear Hierarchy */}
+      <div className="px-5 py-4 border-b bg-gradient-to-r from-background via-background to-muted/10 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-3">
+            {/* Primary: Subject */}
+            <h2 className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{ticket?.subject || "Loading..."}</h2>
+            
+            {/* Secondary: Metadata Grid */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs font-medium">Ticket:</span>
+                <Badge variant="outline" className="font-mono text-xs">{ticket?.ticket_number}</Badge>
+              </div>
+              
               {ticket?.customer && (
-                <>
-                  <span>•</span>
-                  <span className="font-medium">{ticket.customer.name}</span>
-                </>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">Customer:</span>
+                  <span className="text-foreground font-semibold text-xs truncate">{ticket.customer.name}</span>
+                </div>
               )}
+              
               {ticket?.assigned_user && (
-                <>
-                  <span>•</span>
-                  <Badge variant="secondary" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">Assigned:</span>
+                  <span className="text-foreground font-semibold text-xs truncate">
                     {ticket.assigned_user.first_name} {ticket.assigned_user.last_name}
-                  </Badge>
-                </>
+                  </span>
+                </div>
               )}
+              
               {ticket?.priority && (
-                <>
-                  <span>•</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">Priority:</span>
                   <Badge 
                     variant="outline" 
                     className={cn(
-                      "text-xs",
-                      ticket.priority === "high" && "border-red-500 text-red-600 dark:text-red-400",
-                      ticket.priority === "medium" && "border-yellow-500 text-yellow-600 dark:text-yellow-400",
-                      ticket.priority === "low" && "border-green-500 text-green-600 dark:text-green-400"
+                      "text-xs font-semibold",
+                      ticket.priority === "urgent" && "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400",
+                      ticket.priority === "high" && "border-orange-500 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+                      ticket.priority === "medium" && "border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+                      ticket.priority === "low" && "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
                     )}
                   >
                     {ticket.priority}
                   </Badge>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -745,265 +755,37 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                          </div>
                        </div>
 
-                       <div className="flex-1 min-w-0">
-                          <div className={cn(
-                           "bg-card border rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200 group animate-fade-in",
-                           message.direction === "inbound" && "border-l-4 border-l-primary/40 hover:border-l-primary/60",
-                           message.direction === "outbound" && "border-l-4 border-l-accent/40 hover:border-l-accent/60",
-                           message.message_type === "internal_note" && "bg-yellow-50/50 dark:bg-yellow-950/10 border-yellow-200 dark:border-yellow-900 hover:bg-yellow-50/80 dark:hover:bg-yellow-950/20",
-                           message.message_type === "task" && "bg-blue-50/50 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900 hover:bg-blue-50/80 dark:hover:bg-blue-950/20",
-                           message.message_type === "checklist" && "bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-900 hover:bg-green-50/80 dark:hover:bg-green-950/20"
-                         )}>
-                           <div className="flex items-start justify-between gap-2 mb-2">
-                             <div className="flex-1 min-w-0">
-                               <div className="flex items-center gap-2 flex-wrap">
-                                 {getThreadingIcon(message) && (
-                                   <span className={cn(
-                                     "flex items-center transition-transform group-hover:scale-110",
-                                     messageIsForward ? "text-orange-500" : "text-blue-500"
-                                   )}>
-                                     {getThreadingIcon(message)}
-                                   </span>
-                                 )}
-                                 <span className="font-semibold text-sm">
-                                   {message.sender_name || 
-                                    message.from_name || 
-                                    (message.created_user?.first_name && message.created_user?.last_name 
-                                      ? `${message.created_user.first_name} ${message.created_user.last_name}` 
-                                      : message.created_user?.first_name || message.created_user?.last_name || "System")}
-                                 </span>
-                                 {(message.sender_email || message.from_email) && (
-                                   <span className="text-xs text-muted-foreground">
-                                     &lt;{message.sender_email || message.from_email}&gt;
-                                   </span>
-                                 )}
-                                 <Badge variant="outline" className="text-xs h-5 px-2 capitalize font-medium">
-                                   {message.message_type.replace("_", " ")}
-                                 </Badge>
-                                 {message.direction && (
-                                   <Badge 
-                                     variant="outline" 
-                                     className={cn(
-                                       "text-xs h-5 px-2 font-semibold",
-                                       message.direction === "inbound" && "bg-primary/15 text-primary border-primary/30",
-                                       message.direction === "outbound" && "bg-accent/15 text-accent-foreground border-accent/30"
-                                     )}
-                                   >
-                                     {message.direction === "inbound" ? "↓ In" : "↑ Out"}
-                                   </Badge>
-                                 )}
-                               </div>
-                             {message.to_email && (
-                               <p className="text-xs text-muted-foreground mt-1">
-                                 <span className="font-medium">To:</span> {message.to_email}
-                               </p>
-                             )}
-                           </div>
-                           <div className="flex items-center gap-1">
-                             <span className="text-xs text-muted-foreground whitespace-nowrap">
-                               {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
-                             </span>
-                             {isEmail && (
-                               <div className="flex items-center gap-0.5">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    composerRef.current?.reset();
-                                    setTimeout(() => {
-                                      const composer = document.querySelector('[data-composer]') as HTMLElement;
-                                      composer?.click();
-                                    }, 100);
-                                  }}
-                                  className="h-6 px-2 text-xs"
-                                  title="Reply"
-                                >
-                                  <CornerDownRight className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    // Copy email to clipboard
-                                    navigator.clipboard.writeText(message.body_html || message.body_text || message.body || '');
-                                    toast({ title: "Email copied to clipboard" });
-                                  }}
-                                  className="h-6 px-2 text-xs"
-                                  title="Copy"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
+                        <div className="flex-1 min-w-0">
+                          <Card className={cn(
+                            "p-4 transition-all duration-200 hover:shadow-md",
+                            message.direction === "inbound" && "border-l-4 border-l-primary",
+                            message.direction === "outbound" && "border-l-4 border-l-accent"
+                          )}>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {getThreadingIcon(message)}
+                                  <span className="font-semibold text-sm">
+                                    {message.sender_name || message.from_name || "System"}
+                                  </span>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {message.subject && message.message_type === "email" && (
-                          <p className="font-medium text-xs mb-1">{message.subject}</p>
-                        )}
-
-                        <div className="text-xs whitespace-pre-wrap max-w-full overflow-hidden">
-                          {message.body_html ? (
-                            <>
-                              <div 
-                                className="prose prose-xs max-w-none dark:prose-invert [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded"
-                                dangerouslySetInnerHTML={{ 
-                                  __html: DOMPurify.sanitize(
-                                    isEmail && !isExpanded ? stripQuotedReply(message.body_html) : message.body_html,
-                                    {
-                                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img'],
-                                      ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'title', 'class'],
-                                      ALLOW_DATA_ATTR: false
-                                    }
-                                  )
-                                }} 
-                              />
-                              {isEmail && message.body_html.length > 500 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleEmailExpanded(message.id)}
-                                  className="mt-1 h-6 text-xs"
-                                >
-                                  {isExpanded ? (
-                                    <>
-                                      <ChevronUp className="h-3 w-3 mr-1" />
-                                      Show less
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ChevronDown className="h-3 w-3 mr-1" />
-                                      Show full email
-                                    </>
-                                  )}
-                                </Button>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <div className="text-sm">
+                              {message.body_html ? (
+                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.body_html) }} />
+                              ) : (
+                                <div>{message.body_text || message.body}</div>
                               )}
-                            </>
-                          ) : message.message_type === "checklist" ? (
-                            (() => {
-                              const taskMatch = message.body.match(/^[☐☑]\s+(.+)$/);
-                              const taskTitle = taskMatch ? taskMatch[1] : message.body.replace(/^[☐☑]\s*/, '');
-                              const isCompleted = message.body.startsWith('☑');
-                              
-                              return (
-                                <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
-                                  <div className="flex items-center gap-3">
-                                    <button
-                                      onClick={() => toggleCheckboxMutation.mutate({ 
-                                        messageId: message.id, 
-                                        currentBody: message.body 
-                                      })}
-                                      disabled={toggleCheckboxMutation.isPending}
-                                      className={cn(
-                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 cursor-pointer",
-                                        "hover:scale-110 active:scale-95",
-                                        isCompleted 
-                                          ? 'bg-white border-green-500 hover:border-green-600' 
-                                          : 'border-green-400 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/30',
-                                        toggleCheckboxMutation.isPending && 'opacity-50 cursor-not-allowed'
-                                      )}
-                                    >
-                                      {isCompleted && <CheckSquare className="h-4 w-4 text-green-600 fill-green-600" />}
-                                    </button>
-                                    <span className={cn(
-                                      "text-sm font-medium",
-                                      isCompleted && 'line-through text-muted-foreground'
-                                    )}>
-                                      {taskTitle}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })()
-                          ) : message.message_type === "task" ? (
-                            <div className="space-y-2">
-                              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                                <div className="whitespace-pre-wrap text-sm font-medium">
-                                  {message.body.replace('Task created: ', '')}
-                                </div>
-                              </div>
                             </div>
-                          ) : message.message_type === "internal_note" ? (
-                            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
-                              <div className="whitespace-pre-wrap text-sm">{renderMentions(message.body_text || message.body || "")}</div>
-                            </div>
-                          ) : (
-                            <div className="whitespace-pre-wrap text-sm">{renderMentions(message.body_text || message.body || "")}</div>
-                          )}
-                        </div>
-
-                        {/* Attachments */}
-                        {message.attachments && message.attachments.length > 0 && (
-                          <div className="mt-3 pt-3 border-t">
-                            <p className="text-xs font-medium mb-2 text-muted-foreground">
-                              {message.attachments.length} {message.attachments.length === 1 ? 'Attachment' : 'Attachments'}
-                            </p>
-                            <AttachmentViewer
-                              attachments={message.attachments.map((att: any) => ({
-                                id: att.id,
-                                name: att.name,
-                                size: att.size,
-                                contentType: att.contentType,
-                              }))}
-                               onDownload={async (attachment) => {
-                                try {
-                                  const { data, error } = await supabase.functions.invoke(
-                                    "microsoft-download-attachment",
-                                    {
-                                      body: {
-                                        emailAccountId: ticket?.email_account_id,
-                                        messageId: message.microsoft_message_id,
-                                        attachmentId: attachment.id,
-                                      },
-                                    }
-                                  );
-
-                                  if (error) throw error;
-
-                                  // The edge function returns base64 encoded data
-                                  if (data && typeof data === 'object' && 'content' in data) {
-                                    // Decode base64 to binary
-                                    const binaryString = atob(data.content);
-                                    const bytes = new Uint8Array(binaryString.length);
-                                    for (let i = 0; i < binaryString.length; i++) {
-                                      bytes[i] = binaryString.charCodeAt(i);
-                                    }
-                                    
-                                    const blob = new Blob([bytes], { type: attachment.contentType || 'application/octet-stream' });
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = attachment.name || 'attachment';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    document.body.removeChild(a);
-                                    
-                                    toast({
-                                      title: "Download started",
-                                      description: attachment.name,
-                                    });
-                                  } else {
-                                    throw new Error('Invalid response format');
-                                  }
-                                } catch (error) {
-                                  console.error('Failed to download attachment:', error);
-                                  toast({
-                                    title: "Download failed",
-                                    description: error instanceof Error ? error.message : "Could not download the attachment",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            />
-                          </div>
-                        )}
+                          </Card>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
               
               {/* Add Item Buttons - Inline in timeline */}
               <div className="relative flex flex-col gap-2 py-6">
