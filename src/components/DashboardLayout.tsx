@@ -280,27 +280,29 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
             "z-40 bg-background border-b border-border transition-all duration-300",
             sidebarCollapsed ? "ml-0" : "ml-0"
           )}>
-            <div className="flex items-center px-4 py-3 gap-4">
+            <div className="flex items-center px-4 py-3 gap-2">
               <GlobalSearch />
               <div className="flex-1" />
-              <PresencePanel />
-              <NotificationCenter />
-              <IssueReportDialog />
-              <ViewModeToggle />
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/auth");
-                  toast.success("Signed out successfully");
-                }}
-                className="gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
+              <div className="flex items-center gap-2">
+                <PresencePanel />
+                <NotificationCenter />
+                <IssueReportDialog />
+                <ViewModeToggle />
+                <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate("/auth");
+                    toast.success("Signed out successfully");
+                  }}
+                  className="gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
 
