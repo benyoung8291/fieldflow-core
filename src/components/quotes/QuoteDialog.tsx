@@ -474,6 +474,13 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
     const updated = [...lineItems];
     const item = updated[index];
     
+    // For parent items with sub-items, don't allow direct price editing
+    if (item.subItems && item.subItems.length > 0 && 
+        (field === "cost_price" || field === "margin_percentage" || field === "sell_price")) {
+      // Only update quantity or description for parent items with sub-items
+      return;
+    }
+    
     if (field === "cost_price" || field === "margin_percentage" || field === "sell_price") {
       const pricing = calculatePricing(
         field === "cost_price" ? value : item.cost_price,
@@ -887,17 +894,41 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
       let itemOrder = 0;
 
       for (const item of lineItems) {
+        // Calculate aggregated values for parent items with sub-items
+        let parentCost = parseFloat(item.cost_price) || 0;
+        let parentSell = parseFloat(item.sell_price) || 0;
+        let parentMargin = parseFloat(item.margin_percentage) || 0;
+        
+        if (item.subItems && item.subItems.length > 0) {
+          // Aggregate from sub-items
+          const subTotalCost = item.subItems.reduce((sum, sub) => {
+            const qty = parseFloat(sub.quantity) || 0;
+            const cost = parseFloat(sub.cost_price) || 0;
+            return sum + (qty * cost);
+          }, 0);
+          
+          const subTotalSell = item.subItems.reduce((sum, sub) => {
+            const qty = parseFloat(sub.quantity) || 0;
+            const sell = parseFloat(sub.sell_price) || 0;
+            return sum + (qty * sell);
+          }, 0);
+          
+          parentCost = subTotalCost;
+          parentSell = subTotalSell;
+          parentMargin = parentCost > 0 ? ((parentSell - parentCost) / parentCost) * 100 : 0;
+        }
+
         const parentItem = {
           quote_id: savedQuoteId,
           tenant_id: profile?.tenant_id,
           item_order: itemOrder++,
           description: item.description,
-          quantity: parseFloat(item.quantity),
-          cost_price: parseFloat(item.cost_price),
-          margin_percentage: parseFloat(item.margin_percentage),
-          sell_price: parseFloat(item.sell_price),
+          quantity: parseFloat(item.quantity) || 1,
+          cost_price: parentCost,
+          margin_percentage: parentMargin,
+          sell_price: parentSell,
           line_total: item.line_total,
-          unit_price: parseFloat(item.sell_price), // For compatibility
+          unit_price: parentSell,
         };
 
         const { data: savedParent, error: parentError } = await supabase
@@ -911,18 +942,23 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         // Save sub-items
         if (item.subItems && item.subItems.length > 0) {
           for (const subItem of item.subItems) {
+            const subQty = parseFloat(subItem.quantity) || 0;
+            const subCost = parseFloat(subItem.cost_price) || 0;
+            const subSell = parseFloat(subItem.sell_price) || 0;
+            const subMargin = parseFloat(subItem.margin_percentage) || 0;
+            
             allItems.push({
               quote_id: savedQuoteId,
               tenant_id: profile?.tenant_id,
               parent_line_item_id: savedParent.id,
               item_order: itemOrder++,
               description: subItem.description,
-              quantity: parseFloat(subItem.quantity),
-              cost_price: parseFloat(subItem.cost_price),
-              margin_percentage: parseFloat(subItem.margin_percentage),
-              sell_price: parseFloat(subItem.sell_price),
+              quantity: subQty,
+              cost_price: subCost,
+              margin_percentage: subMargin,
+              sell_price: subSell,
               line_total: subItem.line_total,
-              unit_price: parseFloat(subItem.sell_price),
+              unit_price: subSell,
             });
           }
         }
