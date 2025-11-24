@@ -16,7 +16,7 @@ import {
   X,
   Link as LinkIcon
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectWithSearch } from "@/components/ui/select-with-search";
 
 interface LinkSuggestion {
   type: string;
@@ -223,22 +223,21 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
               </div>
               
               <div className="flex gap-2">
-                <Select
-                  value={getLinkedValue(key) || "none"}
-                  onValueChange={(value) => updateLink(`${key}_id`, value === "none" ? null : value)}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={`Select ${label.toLowerCase()}...`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {getOptions(key).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {getOptionLabel(key, item)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={getLinkedValue(key) || ""}
+                  onValueChange={(value) => updateLink(`${key}_id`, value || null)}
+                  options={[
+                    { value: "", label: "None" },
+                    ...getOptions(key).map((item) => ({
+                      value: item.id,
+                      label: getOptionLabel(key, item),
+                    }))
+                  ]}
+                  placeholder={`Select ${label.toLowerCase()}...`}
+                  searchPlaceholder={`Search ${label.toLowerCase()}...`}
+                  emptyText={`No ${label.toLowerCase()} found`}
+                  className="flex-1"
+                />
                 
                 {getLinkedValue(key) && (
                   <Button
