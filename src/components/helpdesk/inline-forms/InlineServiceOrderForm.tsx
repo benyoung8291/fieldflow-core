@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface LineItem {
   description: string;
@@ -25,7 +33,12 @@ interface InlineServiceOrderFormProps {
 export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel }: InlineServiceOrderFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [formData, setFormData] = useState({
+    customer_id: ticket?.customer_id || "",
+    location_id: "",
     title: parsedData?.title || ticket?.subject || "",
     description: parsedData?.description || ticket?.description || "",
     preferred_date: parsedData?.preferred_date || "",
@@ -39,6 +52,66 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
       ? parsedData.line_items 
       : [{ description: "", quantity: 1, unit_price: 0, line_total: 0 }]
   );
+
+  // Fetch customers on mount
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  // Fetch locations when customer changes
+  useEffect(() => {
+    if (formData.customer_id) {
+      fetchLocations(formData.customer_id);
+    } else {
+      setLocations([]);
+      // Clear location_id when customer changes
+      setFormData(prev => ({ ...prev, location_id: "" }));
+    }
+  }, [formData.customer_id]);
+
+  const fetchCustomers = async () => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    
+    if (error) {
+      toast({ 
+        title: "Error fetching customers", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    } else {
+      setCustomers(data || []);
+    }
+  };
+
+  const fetchLocations = async (customerId: string) => {
+    const { data, error } = await supabase
+      .from("customer_locations")
+      .select("id, name, address")
+      .eq("customer_id", customerId)
+      .eq("is_active", true)
+      .order("name");
+    
+    if (error) {
+      toast({ 
+        title: "Error fetching locations", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    } else {
+      setLocations(data || []);
+    }
+  };
+
+  const handleLocationCreated = (locationId: string) => {
+    setFormData({ ...formData, location_id: locationId });
+    if (formData.customer_id) {
+      fetchLocations(formData.customer_id);
+    }
+  };
 
   const calculateTotals = () => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
@@ -84,12 +157,25 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
 
       const { subtotal, tax_amount, total_amount } = calculateTotals();
 
+      // Validate required fields
+      if (!formData.customer_id) {
+        toast({
+          title: "Customer required",
+          description: "Please select a customer for this service order.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Create service order
       const { data: serviceOrder, error: orderError } = await supabase
         .from('service_orders' as any)
         .insert({
+          customer_id: formData.customer_id,
+          location_id: formData.location_id || null,
           title: formData.title,
           description: formData.description,
+          preferred_date: formData.preferred_date || null,
           preferred_start_date: formData.preferred_start_date || null,
           preferred_end_date: formData.preferred_end_date || null,
           priority: formData.priority,
@@ -98,6 +184,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
           tax_amount,
           total_amount,
           tenant_id: profile.tenant_id,
+          created_by: user.id,
         })
         .select()
         .single();
@@ -165,6 +252,58 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       <ScrollArea className="flex-1 px-4">
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer_id">Customer *</Label>
+            <Select
+              value={formData.customer_id}
+              onValueChange={(value) => setFormData({ ...formData, customer_id: value, location_id: "" })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a customer" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location_id">Location</Label>
+            <div className="flex gap-2">
+              <Select
+                value={formData.location_id}
+                onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                disabled={!formData.customer_id}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder={formData.customer_id ? "Select a location" : "Select customer first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name} {location.address && `- ${location.address}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowLocationDialog(true)}
+                disabled={!formData.customer_id}
+                title="Create new location"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input
@@ -341,6 +480,13 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
           Create Order
         </Button>
       </div>
+
+      <QuickLocationDialog
+        open={showLocationDialog}
+        onOpenChange={setShowLocationDialog}
+        customerId={formData.customer_id}
+        onLocationCreated={handleLocationCreated}
+      />
     </form>
   );
 }
