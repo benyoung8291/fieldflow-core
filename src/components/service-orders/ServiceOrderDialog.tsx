@@ -549,7 +549,24 @@ export default function ServiceOrderDialog({
 
       if (!orderId) {
         orderData.created_by = user.id;
-        orderData.order_number = `SO-${Date.now()}`;
+        
+        // Get the next sequential number from settings
+        const { data: seqNumber, error: seqError } = await supabase.rpc(
+          'get_next_sequential_number',
+          { p_tenant_id: profile?.tenant_id, p_entity_type: 'service_order' }
+        );
+        
+        if (seqError) {
+          console.error('Error getting sequential number:', seqError);
+          throw new Error('Failed to generate service order number');
+        }
+        
+        orderData.order_number = seqNumber;
+        
+        // If work_order_number is not provided, use the generated order_number
+        if (!orderData.work_order_number) {
+          orderData.work_order_number = seqNumber;
+        }
       }
 
       let savedOrderId = orderId;
