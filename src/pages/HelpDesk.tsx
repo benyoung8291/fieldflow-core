@@ -73,6 +73,29 @@ export default function HelpDesk() {
     },
   });
 
+  // Load last selected pipeline from localStorage
+  useEffect(() => {
+    if (pipelines && pipelines.length > 0) {
+      const lastPipelineId = localStorage.getItem('helpdeskLastPipeline');
+      if (lastPipelineId && lastPipelineId !== 'all') {
+        // Verify the pipeline still exists
+        const pipelineExists = pipelines.some(p => p.id === lastPipelineId);
+        if (pipelineExists) {
+          setSelectedPipelineId(lastPipelineId);
+        }
+      }
+    }
+  }, [pipelines]);
+
+  // Save selected pipeline to localStorage when it changes
+  useEffect(() => {
+    if (selectedPipelineId !== null) {
+      localStorage.setItem('helpdeskLastPipeline', selectedPipelineId);
+    } else {
+      localStorage.setItem('helpdeskLastPipeline', 'all');
+    }
+  }, [selectedPipelineId]);
+
   const { data: emailAccounts } = useQuery({
     queryKey: ["helpdesk-email-accounts-active"],
     queryFn: async () => {
