@@ -10,11 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Link2, MessageSquare, BarChart3 } from "lucide-react";
+import { RefreshCw, Filter, Link2, MessageSquare, BarChart3, Menu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function HelpDesk() {
   const { toast } = useToast();
@@ -276,11 +277,24 @@ export default function HelpDesk() {
 
   return (
     <DashboardLayout disablePresence={true}>
-      <div className="flex flex-col h-full -mx-3 sm:-mx-6 lg:-mx-8">
-        {/* Header with Pipeline Selector, Quick Filters, and Sync */}
-        <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background shrink-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold">Help Desk</h1>
+      <SidebarProvider>
+        <div className="flex w-full min-h-screen">
+          <MailboxFolderNav
+            selectedFolder={selectedFolder}
+            onSelectFolder={(folder) => {
+              setSelectedFolder(folder);
+              setFilterArchived(folder === "archive" || folder === "deleted" || folder === "junk");
+            }}
+          />
+          
+          <div className="flex flex-col flex-1 h-full -mx-3 sm:-mx-6 lg:-mx-8">
+            {/* Header with Pipeline Selector, Quick Filters, and Sync */}
+            <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background shrink-0">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="h-7 w-7">
+                  <Menu className="h-4 w-4" />
+                </SidebarTrigger>
+                <h1 className="text-lg font-semibold">Help Desk</h1>
             
             {/* Quick Filter Buttons */}
             <div className="flex items-center gap-1">
@@ -379,37 +393,23 @@ export default function HelpDesk() {
           </div>
         </div>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
-        {/* Folder Navigation */}
-        <ResizablePanel defaultSize={15} minSize={12} maxSize={20} className="relative">
-          <MailboxFolderNav
-            selectedFolder={selectedFolder}
-            onSelectFolder={(folder) => {
-              setSelectedFolder(folder);
-              // Update archived filter based on folder
-              setFilterArchived(folder === "archive" || folder === "deleted" || folder === "junk");
-            }}
-          />
-        </ResizablePanel>
+            <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
+              {/* Ticket List */}
+              <ResizablePanel defaultSize={30} minSize={20} maxSize={40} className="relative">
+                <TicketList
+                  selectedTicketId={selectedTicketId} 
+                  onSelectTicket={handleSelectTicket}
+                  pipelineId={selectedPipelineId}
+                  filterAssignment={filterAssignment}
+                  filterArchived={filterArchived}
+                  selectedFolder={selectedFolder}
+                />
+              </ResizablePanel>
 
-        <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
+              <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
 
-        {/* Ticket List */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
-          <TicketList
-            selectedTicketId={selectedTicketId} 
-            onSelectTicket={handleSelectTicket}
-            pipelineId={selectedPipelineId}
-            filterAssignment={filterAssignment}
-            filterArchived={filterArchived}
-            selectedFolder={selectedFolder}
-          />
-        </ResizablePanel>
-
-        <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
-
-        {/* Middle: Timeline View */}
-        <ResizablePanel defaultSize={50} minSize={35} className="relative bg-gradient-to-br from-background via-background to-muted/5">
+              {/* Middle: Timeline View */}
+              <ResizablePanel defaultSize={45} minSize={35} className="relative bg-gradient-to-br from-background via-background to-muted/5">
           {selectedTicketId ? (
             <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
           ) : (
@@ -426,14 +426,14 @@ export default function HelpDesk() {
                 </div>
               </div>
             </div>
-          )}
-        </ResizablePanel>
+                )}
+              </ResizablePanel>
 
-        {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />}
+              {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />}
 
-        {/* Right: Linked Documents */}
-        {sidebarVisible && (
-          <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
+              {/* Right: Linked Documents */}
+              {sidebarVisible && (
+                <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
             {selectedTicketId ? (
               <LinkedDocumentsSidebar 
                 ticketId={selectedTicketId} 
@@ -451,25 +451,27 @@ export default function HelpDesk() {
                   </p>
                 </div>
               </div>
-            )}
-          </ResizablePanel>
-        )}
-        
-        {/* Reopen sidebar button */}
-        {!sidebarVisible && selectedTicketId && (
-          <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
-            <Button
-              onClick={() => setSidebarVisible(true)}
-              size="lg"
-              className="shadow-2xl hover:shadow-2xl transition-all hover-lift h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50 font-semibold"
-            >
-              <Link2 className="h-5 w-5 mr-2" />
-              Show Links
-            </Button>
+                )}
+              </ResizablePanel>
+              )}
+              
+              {/* Reopen sidebar button */}
+              {!sidebarVisible && selectedTicketId && (
+                <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+                  <Button
+                    onClick={() => setSidebarVisible(true)}
+                    size="lg"
+                    className="shadow-2xl hover:shadow-2xl transition-all hover-lift h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50 font-semibold"
+                  >
+                    <Link2 className="h-5 w-5 mr-2" />
+                    Show Links
+                  </Button>
+                </div>
+              )}
+            </ResizablePanelGroup>
           </div>
-        )}
-      </ResizablePanelGroup>
-      </div>
+        </div>
+      </SidebarProvider>
     </DashboardLayout>
   );
 }
