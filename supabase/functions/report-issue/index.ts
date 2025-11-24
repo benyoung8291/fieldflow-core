@@ -56,17 +56,31 @@ serve(async (req) => {
     } = await req.json() as ReportIssueRequest;
 
     // Get all admin users for this tenant
-    const { data: adminUsersRaw, error: adminError } = await supabase
+    const { data: adminRoles, error: rolesError } = await supabase
       .from("user_roles")
-      .select("user_id, profiles!inner(id, first_name, last_name, email, tenant_id)")
-      .eq("role", "tenant_admin")
-      .eq("profiles.tenant_id", reporterProfile?.tenant_id);
+      .select("user_id")
+      .eq("role", "tenant_admin");
+
+    if (rolesError) {
+      console.error("Error fetching admin roles:", rolesError);
+    }
+
+    const adminUserIds = adminRoles?.map(r => r.user_id) || [];
+
+    const { data: adminUsersRaw, error: adminError } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name, email, tenant_id")
+      .in("id", adminUserIds)
+      .eq("tenant_id", reporterProfile?.tenant_id);
 
     if (adminError) {
       console.error("Error fetching admin users:", adminError);
     }
 
-    const adminUsers = (adminUsersRaw || []) as any[];
+    const adminUsers = (adminUsersRaw || []).map(profile => ({
+      user_id: profile.id,
+      profiles: profile
+    }));
 
     const reporterName = reporterProfile 
       ? `${reporterProfile.first_name || ''} ${reporterProfile.last_name || ''}`.trim() || reporterProfile.email
