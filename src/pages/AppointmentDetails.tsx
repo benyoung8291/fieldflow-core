@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, Download, Trash2, Calendar, Clock, MapPin, Users, FileText, Send } from "lucide-react";
+import { ArrowLeft, Upload, Download, Trash2, Calendar, Clock, MapPin, Users, FileText, Send, UserPlus, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import TimeLogsTable from "@/components/service-orders/TimeLogsTable";
@@ -56,6 +56,9 @@ export default function AppointmentDetails() {
   const [formData, setFormData] = useState({
     location_address: "",
   });
+  const [assignedWorkers, setAssignedWorkers] = useState<any[]>([]);
+  const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
+  const [showAddWorker, setShowAddWorker] = useState(false);
 
   // Call useSwipeToClose unconditionally (only used in mobile layout)
   const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/appointments"), true);
@@ -164,6 +167,120 @@ export default function AppointmentDetails() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Load assigned workers
+  const loadAssignedWorkers = async () => {
+    if (!id) return;
+    try {
+      const { data } = await supabase
+        .from('appointment_workers')
+        .select(`
+          worker_id,
+          profiles (
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('appointment_id', id);
+
+      setAssignedWorkers(data?.map(aw => aw.profiles).filter(Boolean) || []);
+    } catch (error) {
+      console.error('Error loading assigned workers:', error);
+    }
+  };
+
+  // Load available workers
+  const loadAvailableWorkers = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .eq('tenant_id', profile.tenant_id)
+        .order('first_name');
+
+      setAvailableWorkers(data || []);
+    } catch (error) {
+      console.error('Error loading available workers:', error);
+    }
+  };
+
+  // Load workers when appointment changes
+  useQuery({
+    queryKey: ['appointment-workers', id],
+    queryFn: async () => {
+      await loadAssignedWorkers();
+      await loadAvailableWorkers();
+      return null;
+    },
+    enabled: !!id,
+  });
+
+  // Add worker mutation
+  const addWorkerMutation = useMutation({
+    mutationFn: async (workerId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      const { error } = await supabase
+        .from('appointment_workers')
+        .insert({
+          appointment_id: id,
+          worker_id: workerId,
+          tenant_id: profile?.tenant_id
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointment', id] });
+      loadAssignedWorkers();
+      setShowAddWorker(false);
+      toast.success('Worker assigned successfully');
+    },
+    onError: () => {
+      toast.error('Failed to assign worker');
+    }
+  });
+
+  // Remove worker mutation
+  const removeWorkerMutation = useMutation({
+    mutationFn: async (workerId: string) => {
+      const { error } = await supabase
+        .from('appointment_workers')
+        .delete()
+        .eq('appointment_id', id)
+        .eq('worker_id', workerId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointment', id] });
+      loadAssignedWorkers();
+      toast.success('Worker removed successfully');
+    },
+    onError: () => {
+      toast.error('Failed to remove worker');
+    }
   });
 
   // Update appointment mutation
@@ -607,20 +724,26 @@ export default function AppointmentDetails() {
                       {updateAppointmentMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                   </form>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Date:</span>
-                        <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Time:</span>
-                        <span>{format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}</span>
-                      </div>
-                    </div>
+                 ) : (
+                   <div className="space-y-4">
+                     {appointment.appointment_number && (
+                       <div className="pb-4 border-b">
+                         <span className="font-medium text-sm">Appointment Number:</span>
+                         <p className="text-sm text-muted-foreground font-mono mt-1">{appointment.appointment_number}</p>
+                       </div>
+                     )}
+                     <div className="grid grid-cols-2 gap-4">
+                       <div className="flex items-center gap-2 text-sm">
+                         <Calendar className="h-4 w-4 text-muted-foreground" />
+                         <span className="font-medium">Date:</span>
+                         <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
+                       </div>
+                       <div className="flex items-center gap-2 text-sm">
+                         <Clock className="h-4 w-4 text-muted-foreground" />
+                         <span className="font-medium">Time:</span>
+                         <span>{format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}</span>
+                       </div>
+                     </div>
                     {appointment.location_address && (
                       <div className="flex items-start gap-2 text-sm">
                         <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -813,24 +936,71 @@ export default function AppointmentDetails() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {appointment.appointment_workers && appointment.appointment_workers.length > 0 ? (
-                  <div className="space-y-2">
-                    {appointment.appointment_workers.map((aw: any) => (
-                      <div key={aw.id} className="flex items-center gap-2 text-sm">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-medium">
-                            {aw.profiles?.first_name?.[0]}{aw.profiles?.last_name?.[0]}
+                <div className="space-y-3">
+                  {assignedWorkers.length > 0 ? (
+                    assignedWorkers.map((worker) => (
+                      <div key={worker.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-medium">
+                              {worker.first_name?.[0]}{worker.last_name?.[0]}
+                            </span>
+                          </div>
+                          <span className="text-sm">
+                            {worker.first_name} {worker.last_name}
                           </span>
                         </div>
-                        <span>
-                          {aw.profiles?.first_name} {aw.profiles?.last_name}
-                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeWorkerMutation.mutate(worker.id)}
+                          disabled={removeWorkerMutation.isPending}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No workers assigned</p>
-                )}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No workers assigned</p>
+                  )}
+                  
+                  {!showAddWorker ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddWorker(true)}
+                      className="w-full"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Worker
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <Select onValueChange={(value) => addWorkerMutation.mutate(value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select worker" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableWorkers
+                            .filter(w => !assignedWorkers.find(aw => aw.id === w.id))
+                            .map((worker) => (
+                              <SelectItem key={worker.id} value={worker.id}>
+                                {worker.first_name} {worker.last_name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddWorker(false)}
+                        className="w-full"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
