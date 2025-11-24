@@ -106,11 +106,13 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
     }
   };
 
-  const handleLocationCreated = (locationId: string) => {
-    setFormData({ ...formData, location_id: locationId });
+  const handleLocationCreated = async (locationId: string) => {
+    // Fetch updated locations first
     if (formData.customer_id) {
-      fetchLocations(formData.customer_id);
+      await fetchLocations(formData.customer_id);
     }
+    // Then update the form data with the new location using functional update
+    setFormData(prev => ({ ...prev, location_id: locationId }));
   };
 
   const calculateTotals = () => {
