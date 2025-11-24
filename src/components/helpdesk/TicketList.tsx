@@ -239,81 +239,87 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                   <button
                     onClick={() => onSelectTicket(ticket.id)}
                     className={cn(
-                      "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col justify-between border-b h-[100px]",
+                      "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b min-h-[90px]",
                       selectedTicketId === ticket.id && "bg-accent",
                       !ticket.is_read && "bg-muted/30"
                     )}
                   >
-                {/* Header Row - Pipeline and Badges */}
-                <div className="flex items-center justify-between gap-2 w-full">
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    {ticket.pipeline && (
-                      <>
-                        <div 
-                          className="h-1.5 w-1.5 rounded-full shrink-0" 
-                          style={{ backgroundColor: ticket.pipeline.color }}
-                        />
-                        <span className="text-xs text-muted-foreground truncate">{ticket.pipeline.name}</span>
-                      </>
-                    )}
-                  </div>
+                {/* Top Row - Subject and Time (always visible) */}
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-sm line-clamp-1 flex-1 min-w-0">
+                    {ticket.subject}
+                  </h3>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0 ml-2">
+                    {ticket.last_message_at 
+                      ? formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true }).replace('about ', '').replace(' ago', '')
+                      : 'New'}
+                  </span>
+                </div>
+
+                {/* Second Row - Sender/Customer and Status */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">
+                    {ticket.customer?.name || 
+                     (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
+                     ticket.external_email || "Unknown")}
+                  </span>
                   <div className="flex items-center gap-1 shrink-0">
-                    {ticket.linked_docs_count > 0 && (
-                      <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium">
-                        <Link2 className="h-2.5 w-2.5" />
-                        <span>{ticket.linked_docs_count}</span>
-                      </div>
-                    )}
-                    <Badge variant="outline" className={cn("text-xs h-4 px-1.5", getPriorityColor(ticket.priority))}>
-                      {ticket.priority}
-                    </Badge>
-                    <Badge variant="outline" className={cn("text-xs h-4 px-1.5", getStatusColor(ticket.status))}>
+                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5", getStatusColor(ticket.status))}>
                       {ticket.status}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Subject - Single line */}
-                <h3 className="font-semibold text-sm truncate">
-                  {ticket.subject}
-                </h3>
+                {/* Third Row - Metadata (responsive) */}
+                <div className="flex items-center justify-between gap-2 text-[10px]">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+                    {/* Pipeline indicator - hidden on very narrow */}
+                    {ticket.pipeline && (
+                      <div className="hidden sm:flex items-center gap-1 shrink-0">
+                        <div 
+                          className="h-1.5 w-1.5 rounded-full" 
+                          style={{ backgroundColor: ticket.pipeline.color }}
+                        />
+                        <span className="text-muted-foreground truncate max-w-[80px]">{ticket.pipeline.name}</span>
+                      </div>
+                    )}
+                    
+                    {/* Priority badge */}
+                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5 shrink-0", getPriorityColor(ticket.priority))}>
+                      {ticket.priority}
+                    </Badge>
 
-                {/* Sender and Assignment - Single line */}
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span className="truncate">
-                    {ticket.customer?.name || 
-                     (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
-                     ticket.external_email || "Unknown")}
-                  </span>
-                  {ticket.assigned_user && (
-                    <span className="shrink-0 text-xs font-medium">
-                      → {ticket.assigned_user.first_name}
-                    </span>
-                  )}
-                </div>
+                    {/* Tags - hidden on narrow, shown on wider */}
+                    {ticket.tags && ticket.tags.length > 0 && (
+                      <div className="hidden md:flex gap-1">
+                        {ticket.tags.slice(0, 1).map((tag: string) => (
+                          <Badge key={tag} variant="secondary" className="text-[10px] h-4 px-1.5">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {ticket.tags.length > 1 && (
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                            +{ticket.tags.length - 1}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Footer - Tags and Time */}
-                <div className="flex items-center justify-between gap-2 w-full">
-                  {ticket.tags && ticket.tags.length > 0 ? (
-                    <div className="flex gap-1 flex-1 min-w-0 overflow-hidden">
-                      {ticket.tags.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs h-4 px-1.5 shrink-0">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {ticket.tags.length > 2 && (
-                        <Badge variant="secondary" className="text-xs h-4 px-1.5 shrink-0">
-                          +{ticket.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  ) : <div className="flex-1" />}
-                  
-                  {ticket.last_message_at && (
-                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                      {formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true })}
-                    </span>
-                  )}
+                  {/* Right side indicators - always visible */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {ticket.assigned_user && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <span className="font-medium">{ticket.assigned_user.first_name}</span>
+                      </div>
+                    )}
+                    {ticket.linked_docs_count > 0 && (
+                      <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                        <Link2 className="h-2.5 w-2.5" />
+                        <span>{ticket.linked_docs_count}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                   </button>
                 </ContextMenuTrigger>
