@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect, useCallback } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -463,30 +462,6 @@ export function TicketList({
                       !ticket.is_read && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary before:rounded-l-lg"
                     )}
                   >
-                    {/* Checkbox for multi-select */}
-                    <div className="absolute top-3 left-4 z-10">
-                      <Checkbox
-                        checked={selectedTicketIds.has(ticket.id)}
-                        onCheckedChange={(checked) => {
-                          setSelectedTicketIds(prev => {
-                            const next = new Set(prev);
-                            if (checked) {
-                              next.add(ticket.id);
-                            } else {
-                              next.delete(ticket.id);
-                            }
-                            return next;
-                          });
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                          "transition-opacity",
-                          selectedTicketIds.size > 0 || selectedTicketIds.has(ticket.id)
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-100"
-                        )}
-                      />
-                    </div>
                 {/* Time - Pinned to top right */}
                 <div className="absolute top-3 right-4">
                   <span className="text-xs text-muted-foreground/80 whitespace-nowrap font-medium transition-colors group-hover:text-foreground/70">
@@ -497,7 +472,7 @@ export function TicketList({
                 </div>
 
                 {/* Top Row - Subject */}
-                <div className="pr-16 pl-6">
+                <div className="pr-16">
                   <h3 className={cn(
                     "font-semibold text-sm line-clamp-2 leading-snug transition-colors group-hover:text-primary",
                     !ticket.is_read && "text-foreground font-bold",
