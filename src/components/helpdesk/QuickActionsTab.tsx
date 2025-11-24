@@ -182,12 +182,14 @@ ${ticket?.description || ""}
           </Button>
           <h3 className="font-semibold text-sm">Create AP Invoice</h3>
         </div>
-        <InlineAPInvoiceForm 
-          parsedData={parsedData.invoice}
-          ticket={ticket}
-          onSuccess={(id) => handleDocumentCreated('ap_invoice', id)}
-          onCancel={() => setCurrentView('menu')}
-        />
+        <div className="flex-1 min-h-0">
+          <InlineAPInvoiceForm 
+            parsedData={parsedData.invoice}
+            ticket={ticket}
+            onSuccess={(id) => handleDocumentCreated('ap_invoice', id)}
+            onCancel={() => setCurrentView('menu')}
+          />
+        </div>
       </div>
     );
   }
@@ -202,12 +204,14 @@ ${ticket?.description || ""}
           </Button>
           <h3 className="font-semibold text-sm">Create Purchase Order</h3>
         </div>
-        <InlinePurchaseOrderForm 
-          parsedData={parsedData.purchase_order}
-          ticket={ticket}
-          onSuccess={(id) => handleDocumentCreated('purchase_order', id)}
-          onCancel={() => setCurrentView('menu')}
-        />
+        <div className="flex-1 min-h-0">
+          <InlinePurchaseOrderForm 
+            parsedData={parsedData.purchase_order}
+            ticket={ticket}
+            onSuccess={(id) => handleDocumentCreated('purchase_order', id)}
+            onCancel={() => setCurrentView('menu')}
+          />
+        </div>
       </div>
     );
   }
@@ -222,12 +226,14 @@ ${ticket?.description || ""}
           </Button>
           <h3 className="font-semibold text-sm">Create Service Order</h3>
         </div>
-        <InlineServiceOrderForm 
-          parsedData={parsedData.service_order}
-          ticket={ticket}
-          onSuccess={(id) => handleDocumentCreated('service_order', id)}
-          onCancel={() => setCurrentView('menu')}
-        />
+        <div className="flex-1 min-h-0">
+          <InlineServiceOrderForm 
+            parsedData={parsedData.service_order}
+            ticket={ticket}
+            onSuccess={(id) => handleDocumentCreated('service_order', id)}
+            onCancel={() => setCurrentView('menu')}
+          />
+        </div>
       </div>
     );
   }
@@ -242,12 +248,14 @@ ${ticket?.description || ""}
           </Button>
           <h3 className="font-semibold text-sm">Create Contact</h3>
         </div>
-        <InlineContactForm 
-          parsedData={parsedData.contact}
-          ticket={ticket}
-          onSuccess={(id) => handleDocumentCreated('contact', id)}
-          onCancel={() => setCurrentView('menu')}
-        />
+        <div className="flex-1 min-h-0">
+          <InlineContactForm 
+            parsedData={parsedData.contact}
+            ticket={ticket}
+            onSuccess={(id) => handleDocumentCreated('contact', id)}
+            onCancel={() => setCurrentView('menu')}
+          />
+        </div>
       </div>
     );
   }
@@ -262,12 +270,14 @@ ${ticket?.description || ""}
           </Button>
           <h3 className="font-semibold text-sm">Create Lead</h3>
         </div>
-        <InlineLeadForm 
-          parsedData={parsedData.lead}
-          ticket={ticket}
-          onSuccess={(id) => handleDocumentCreated('lead', id)}
-          onCancel={() => setCurrentView('menu')}
-        />
+        <div className="flex-1 min-h-0">
+          <InlineLeadForm 
+            parsedData={parsedData.lead}
+            ticket={ticket}
+            onSuccess={(id) => handleDocumentCreated('lead', id)}
+            onCancel={() => setCurrentView('menu')}
+          />
+        </div>
       </div>
     );
   }
