@@ -107,6 +107,31 @@ serve(async (req) => {
 
         const email = await emailResponse.json();
 
+        // Extract sender email
+        const senderEmail = email.from?.emailAddress?.address || null;
+        
+        // Try to find existing contact by email
+        let customerId = null;
+        let supplierId = null;
+        let leadId = null;
+        let contactId = null;
+
+        if (senderEmail) {
+          const { data: contact } = await supabaseClient
+            .from("contacts")
+            .select("id, customer_id, supplier_id, lead_id")
+            .ilike("email", senderEmail)
+            .limit(1)
+            .single();
+
+          if (contact) {
+            customerId = contact.customer_id;
+            supplierId = contact.supplier_id;
+            leadId = contact.lead_id;
+            contactId = contact.id;
+          }
+        }
+
         // Create ticket from email
         const { error: ticketError } = await supabaseClient
           .from("helpdesk_tickets")
@@ -119,6 +144,12 @@ serve(async (req) => {
             status: "open",
             priority: "medium",
             email_thread_id: email.conversationId,
+            sender_email: senderEmail,
+            sender_name: email.from?.emailAddress?.name || senderEmail,
+            customer_id: customerId,
+            supplier_id: supplierId,
+            lead_id: leadId,
+            contact_id: contactId,
             created_by: account.id,
           });
 
