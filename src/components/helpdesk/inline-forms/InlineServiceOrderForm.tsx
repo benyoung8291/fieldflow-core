@@ -251,7 +251,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
   const { subtotal, tax_amount, total_amount } = calculateTotals();
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+    <>
+      <form onSubmit={handleSubmit} className="flex flex-col h-full">
       <ScrollArea className="flex-1 px-4">
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -483,6 +484,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         </Button>
       </div>
 
+      </form>
+
       <QuickLocationDialog
         open={showLocationDialog}
         onOpenChange={setShowLocationDialog}
@@ -490,6 +493,6 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         customerName={customers.find(c => c.id === formData.customer_id)?.name}
         onLocationCreated={handleLocationCreated}
       />
-    </form>
+    </>
   );
 }
