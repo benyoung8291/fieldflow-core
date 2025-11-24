@@ -437,7 +437,7 @@ export default function HelpDesk() {
             <Button
               onClick={() => setSidebarVisible(true)}
               size="sm"
-              className="shadow-lg hover:shadow-xl transition-all hover-lift h-10 px-4"
+              className="shadow-lg hover:shadow-xl transition-all hover-lift h-10 px-4 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <Link2 className="h-4 w-4 mr-2" />
               Show Links
