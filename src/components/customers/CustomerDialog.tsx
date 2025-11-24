@@ -130,13 +130,15 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
 
       // ABN is valid - update form with returned data
       setAbnValidated(true);
-      setAvailableTradingNames(data.tradingNames || []);
+      // Filter out empty trading names
+      const validTradingNames = (data.business_details?.trading_names || []).filter((name: string) => name && name.trim() !== '');
+      setAvailableTradingNames(validTradingNames);
       
       setFormData(prev => ({
         ...prev,
-        legalName: data.legalName || prev.legalName,
+        legalName: data.business_details?.legal_name || prev.legalName,
         // Only set trading name to legal name if trading name is empty
-        tradingName: prev.tradingName || data.legalName || prev.tradingName,
+        tradingName: prev.tradingName || data.business_details?.legal_name || prev.tradingName,
       }));
 
       // If editing an existing customer, update the validation status and legal name in the database
@@ -147,7 +149,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
             abn_validation_status: 'valid',
             abn_validated_at: new Date().toISOString(),
             abn_validation_error: null,
-            legal_company_name: data.legalName || null,
+            legal_company_name: data.business_details?.legal_name || null,
           })
           .eq('id', customer.id);
 
@@ -163,7 +165,7 @@ export default function CustomerDialog({ open, onOpenChange, customer, parentCus
         <div>
           <div className="font-medium">ABN Validated Successfully</div>
           <div className="text-sm text-muted-foreground">
-            {data.entityType} • GST {data.gstRegistered ? 'Registered' : 'Not Registered'}
+            {data.business_details?.entity_type} • GST {data.business_details?.gst_registered ? 'Registered ✓' : 'Not Registered'}
           </div>
         </div>
       );
