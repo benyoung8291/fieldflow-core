@@ -36,6 +36,7 @@ export default function APInvoicesList() {
     },
   });
 
+  // No need for client-side filtering since we're filtering in the database query
   const filteredInvoices = apInvoices?.filter((invoice) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -81,7 +82,10 @@ export default function APInvoicesList() {
               <Input
                 placeholder="Search by invoice number, supplier invoice #, or supplier name..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  pagination.resetPage();
+                }}
                 className="pl-10"
               />
             </div>

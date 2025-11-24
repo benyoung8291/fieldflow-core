@@ -34,7 +34,7 @@ export default function Leads() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: leadsResponse, isLoading, refetch } = useQuery({
-    queryKey: ["leads", statusFilter, pagination.currentPage, pagination.pageSize],
+    queryKey: ["leads", searchTerm, statusFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       let query = supabase
@@ -52,12 +52,20 @@ export default function Leads() {
           converted_to_customer_id
         `, { count: 'exact' })
         .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
+
+      // Apply search filter across all records
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        query = query.or(`name.ilike.%${searchLower}%,company_name.ilike.%${searchLower}%,email.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
 
       const { data, error, count } = await query;
       if (error) throw error;
@@ -94,11 +102,7 @@ export default function Leads() {
     },
   });
 
-  const filteredLeads = leads.filter((lead) =>
-    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // No need for client-side filtering since we're filtering in the database query
 
   const statusColors: Record<string, string> = {
     new: "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -192,7 +196,10 @@ export default function Leads() {
             <Input
               placeholder="Search leads..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                pagination.resetPage();
+              }}
               className="pl-9"
             />
           </div>
@@ -206,13 +213,13 @@ export default function Leads() {
         <div className={cn(isMobile ? "space-y-3" : "rounded-lg border bg-card")}>
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading leads...</div>
-          ) : filteredLeads.length === 0 ? (
+          ) : leads.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               No leads found. Create your first lead to get started.
             </div>
           ) : isMobile ? (
             /* Mobile Card View */
-            filteredLeads.map((lead) => (
+            leads.map((lead) => (
               <MobileDocumentCard
                 key={lead.id}
                 title={lead.name}
@@ -254,7 +261,7 @@ export default function Leads() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLeads.map((lead) => (
+                {leads.map((lead) => (
                   <TableRow
                     key={lead.id}
                     className="cursor-pointer"

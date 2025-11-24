@@ -46,7 +46,7 @@ export default function Appointments() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: appointmentsResponse, isLoading, refetch } = useQuery({
-    queryKey: ["all-appointments", pagination.currentPage, pagination.pageSize],
+    queryKey: ["all-appointments", searchQuery, statusFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -62,7 +62,7 @@ export default function Appointments() {
       const { from, to } = pagination.getRange();
 
       // Fetch appointments with service orders
-      const { data: appointmentsData, error, count } = await supabase
+      let query = supabase
         .from("appointments")
         .select(`
           *,
@@ -73,9 +73,23 @@ export default function Appointments() {
           )
         `, { count: 'exact' })
         .eq("tenant_id", profile.tenant_id)
-        .order("start_time", { ascending: false })
-        .range(from, to);
+        .order("start_time", { ascending: false });
 
+      // Apply status filter
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter as any);
+      }
+
+      // Apply search filter
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        query = query.or(`title.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
+
+      const { data: appointmentsData, error, count } = await query;
       if (error) throw error;
 
       // Fetch time logs and calculate costs
@@ -138,20 +152,10 @@ export default function Appointments() {
     },
   });
 
-  // Filter appointments
-  const filteredAppointments = appointments.filter((apt: any) => {
-    const matchesSearch = 
-      apt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.service_orders?.work_order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.service_orders?.purchase_order_number?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+  // No need for client-side filtering since we're filtering in the database query
 
   // Sort appointments
-  const sortedAppointments = [...filteredAppointments].sort((a: any, b: any) => {
+  const sortedAppointments = [...appointments].sort((a: any, b: any) => {
     let aValue, bValue;
 
     switch (sortField) {
@@ -216,7 +220,10 @@ export default function Appointments() {
                 <Input
                   placeholder="Search appointments, work orders..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    pagination.resetPage();
+                  }}
                   className="w-full"
                 />
               </div>

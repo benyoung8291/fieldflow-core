@@ -46,7 +46,7 @@ export default function Suppliers() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: vendorsResponse, isLoading } = useQuery({
-    queryKey: ["vendors", pagination.currentPage, pagination.pageSize],
+    queryKey: ["vendors", searchQuery, statusFilter, gstFilter, sortField, sortOrder, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -60,13 +60,38 @@ export default function Suppliers() {
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
       const { from, to } = pagination.getRange();
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("suppliers")
         .select("*", { count: 'exact' })
-        .eq("tenant_id", profile.tenant_id)
-        .order("name")
-        .range(from, to);
+        .eq("tenant_id", profile.tenant_id);
 
+      // Apply search filter
+      if (searchQuery.trim()) {
+        const query_text = searchQuery.toLowerCase();
+        query = query.or(`name.ilike.%${query_text}%,trading_name.ilike.%${query_text}%,legal_company_name.ilike.%${query_text}%,abn.ilike.%${searchQuery}%,email.ilike.%${query_text}%`);
+      }
+
+      // Apply status filter
+      if (statusFilter === "active") {
+        query = query.eq("is_active", true);
+      } else if (statusFilter === "inactive") {
+        query = query.eq("is_active", false);
+      }
+
+      // Apply GST filter
+      if (gstFilter === "registered") {
+        query = query.eq("gst_registered", true);
+      } else if (gstFilter === "not_registered") {
+        query = query.eq("gst_registered", false);
+      }
+
+      // Apply sorting
+      query = query.order(sortField, { ascending: sortOrder === "asc" });
+
+      // Apply pagination after filters
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
       if (error) throw error;
       return { data: data || [], count: count || 0 };
     },
@@ -76,43 +101,7 @@ export default function Suppliers() {
   const totalCount = vendorsResponse?.count || 0;
   const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
-  const filteredAndSortedVendors = vendors
-    ?.filter((vendor) => {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        vendor.name?.toLowerCase().includes(query) ||
-        vendor.trading_name?.toLowerCase().includes(query) ||
-        vendor.legal_company_name?.toLowerCase().includes(query) ||
-        vendor.abn?.includes(query) ||
-        vendor.email?.toLowerCase().includes(query);
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && vendor.is_active) ||
-        (statusFilter === "inactive" && !vendor.is_active);
-
-      const matchesGst =
-        gstFilter === "all" ||
-        (gstFilter === "registered" && vendor.gst_registered) ||
-        (gstFilter === "not_registered" && !vendor.gst_registered);
-
-      return matchesSearch && matchesStatus && matchesGst;
-    })
-    .sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
-
-      // Handle null/undefined values
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      // Convert to strings for comparison
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
-
-      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+  // No need for client-side filtering and sorting since we're doing it in the database query
 
   const handleCreateVendor = () => {
     setSelectedVendor(null);
@@ -214,7 +203,10 @@ export default function Suppliers() {
                 <Input
                   placeholder="Search suppliers by name, ABN, or email..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    pagination.resetPage();
+                  }}
                   className="pl-10"
                 />
               </div>
@@ -256,7 +248,7 @@ export default function Suppliers() {
               </div>
             </CardContent>
           </Card>
-        ) : filteredAndSortedVendors && filteredAndSortedVendors.length > 0 ? (
+        ) : vendors && vendors.length > 0 ? (
           <Card>
             <CardContent className="p-0">
               <Table>
@@ -278,7 +270,7 @@ export default function Suppliers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAndSortedVendors.map((vendor) => (
+                  {vendors.map((vendor) => (
                     <TableRow
                       key={vendor.id}
                       className="cursor-pointer hover:bg-muted/50"
