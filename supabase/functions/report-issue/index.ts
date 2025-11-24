@@ -65,7 +65,9 @@ serve(async (req) => {
       console.error("Error fetching admin roles:", rolesError);
     }
 
+    console.log("Admin roles found:", adminRoles?.length || 0);
     const adminUserIds = adminRoles?.map(r => r.user_id) || [];
+    console.log("Admin user IDs:", adminUserIds);
 
     const { data: adminUsersRaw, error: adminError } = await supabase
       .from("profiles")
@@ -81,6 +83,8 @@ serve(async (req) => {
       user_id: profile.id,
       profiles: profile
     }));
+
+    console.log("Admin users found:", adminUsers.length);
 
     const reporterName = reporterProfile 
       ? `${reporterProfile.first_name || ''} ${reporterProfile.last_name || ''}`.trim() || reporterProfile.email
@@ -132,17 +136,20 @@ ${logs || 'No logs available'}
             priority: "high",
             assigned_to: admin.user_id,
             created_by: user.id,
+            linked_module: "bug_report",
           })
           .select()
           .single();
 
         if (taskError) {
           console.error("Error creating task for admin:", admin.user_id, taskError);
+        } else {
+          console.log("Task created successfully for admin:", admin.user_id, "Task ID:", task?.id);
         }
 
         // Create notification for admin
         try {
-          await supabase.rpc("create_notification", {
+          const { data: notifData, error: notifError } = await supabase.rpc("create_notification", {
             p_user_id: admin.user_id,
             p_type: "bug_report",
             p_title: "New Bug Report",
@@ -150,8 +157,14 @@ ${logs || 'No logs available'}
             p_link: `/tasks`,
             p_metadata: { taskId: task?.id, reportPath: currentPath },
           });
+          
+          if (notifError) {
+            console.error("Error creating notification:", notifError);
+          } else {
+            console.log("Notification created successfully for admin:", admin.user_id);
+          }
         } catch (notifError) {
-          console.error("Error creating notification:", notifError);
+          console.error("Error creating notification (catch):", notifError);
         }
       }
     }
