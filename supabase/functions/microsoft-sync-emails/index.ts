@@ -67,7 +67,17 @@ serve(async (req) => {
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
         console.error("Failed to refresh token:", errorText);
-        throw new Error("Failed to refresh access token");
+        
+        // Update email account with specific error
+        await supabase
+          .from("helpdesk_email_accounts")
+          .update({
+            sync_status: "error",
+            sync_error: "Microsoft authentication expired. Please reconnect your email account in Settings > Help Desk > Email Accounts.",
+          })
+          .eq("id", emailAccountId);
+        
+        throw new Error("Microsoft authentication expired. Please reconnect your email account.");
       }
 
       const tokenData = await tokenResponse.json();
