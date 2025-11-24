@@ -25,7 +25,7 @@ export default function Contacts() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: contactsResponse, isLoading } = useQuery({
-    queryKey: ["contacts", activeTab, showArchived, pagination.currentPage, pagination.pageSize],
+    queryKey: ["contacts", activeTab, showArchived, searchQuery, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       let query = supabase
@@ -36,8 +36,7 @@ export default function Contacts() {
           supplier:suppliers(name),
           assigned_user:profiles!contacts_assigned_to_fkey(id, first_name, last_name)
         `, { count: 'exact' })
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
 
       // Filter by archived status
       if (showArchived) {
@@ -50,6 +49,15 @@ export default function Contacts() {
       if (activeTab !== "all") {
         query = query.eq("contact_type", activeTab);
       }
+
+      // Apply search filter across all records
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        query = query.or(`first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%,email.ilike.%${searchLower}%,company_name.ilike.%${searchLower}%,phone.ilike.%${searchQuery}%,mobile.ilike.%${searchQuery}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
 
       const { data, error, count } = await query;
       if (error) throw error;
@@ -70,18 +78,6 @@ export default function Contacts() {
   const contacts = contactsResponse?.data || [];
   const totalCount = contactsResponse?.count || 0;
   const totalPages = Math.ceil(totalCount / pagination.pageSize);
-
-  const filteredContacts = contacts?.filter((contact) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      contact.first_name?.toLowerCase().includes(searchLower) ||
-      contact.last_name?.toLowerCase().includes(searchLower) ||
-      contact.email?.toLowerCase().includes(searchLower) ||
-      contact.company_name?.toLowerCase().includes(searchLower) ||
-      contact.phone?.includes(searchQuery) ||
-      contact.mobile?.includes(searchQuery)
-    );
-  });
 
   const handleEdit = (contact: any) => {
     setSelectedContact(contact);
@@ -157,7 +153,10 @@ export default function Contacts() {
           <Input
             placeholder="Search contacts by name, email, phone, or company..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              pagination.resetPage();
+            }}
             className="pl-10"
           />
         </div>
@@ -184,9 +183,9 @@ export default function Contacts() {
                   </Card>
                 ))}
               </div>
-            ) : filteredContacts && filteredContacts.length > 0 ? (
+            ) : contacts && contacts.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredContacts.map((contact) => (
+                {contacts.map((contact) => (
                   <Card
                     key={contact.id}
                     className="cursor-pointer hover:shadow-lg transition-shadow"
