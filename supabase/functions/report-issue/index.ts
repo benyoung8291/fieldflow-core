@@ -55,11 +55,11 @@ serve(async (req) => {
       userAgent,
     } = await req.json() as ReportIssueRequest;
 
-    // Get all admin users for this tenant
+    // Get all super_admin users for this tenant
     const { data: adminRoles, error: rolesError } = await supabase
       .from("user_roles")
       .select("user_id")
-      .eq("role", "tenant_admin");
+      .eq("role", "super_admin");
 
     if (rolesError) {
       console.error("Error fetching admin roles:", rolesError);
