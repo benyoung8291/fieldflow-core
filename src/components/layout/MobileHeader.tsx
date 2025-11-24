@@ -29,11 +29,10 @@ export const MobileHeader = () => {
         </div>
 
         {/* Right side - Controls and User Menu */}
-        <div className="flex items-center gap-2">
-          <ViewModeToggle />
-          <ThemeToggle />
+        <div className="flex items-center gap-1">
           <TeamPresence />
           <IssueReportDialog />
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
