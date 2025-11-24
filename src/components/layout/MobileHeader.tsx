@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { IssueReportDialog } from "@/components/common/IssueReportDialog";
+import { TeamPresence } from "@/components/common/TeamPresence";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ export const MobileHeader = () => {
         <div className="flex items-center gap-2">
           <ViewModeToggle />
           <ThemeToggle />
+          <TeamPresence />
           <IssueReportDialog />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
