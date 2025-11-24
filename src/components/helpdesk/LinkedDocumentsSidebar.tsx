@@ -288,26 +288,26 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
   };
 
   return (
-    <div className="flex flex-col h-full border-l bg-gradient-to-b from-background to-muted/20">
+    <div className="flex flex-col h-full border-l bg-gradient-to-b from-background to-muted/10">
       <Tabs defaultValue="documents" className="flex flex-col h-full">
-        {/* Header with Stats */}
-        <div className="px-4 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        {/* Enhanced Header */}
+        <div className="px-4 py-4 border-b bg-background/95 backdrop-blur-sm">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Links & Actions</h3>
+              <h3 className="text-sm font-bold text-foreground">Links & Actions</h3>
               {onClose && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onClose}
-                  className="h-7 w-7 p-0"
+                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
                   title="Close sidebar"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               )}
             </div>
-            <TabsList className="w-full grid grid-cols-2 bg-muted/50">
+            <TabsList className="w-full grid grid-cols-2 bg-muted/50 p-1">
               <TabsTrigger value="documents" className="text-xs relative data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Link2 className="h-3.5 w-3.5 mr-1.5" />
                 Links
@@ -688,7 +688,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
 
                     {hasLinkedDocs ? (
                       <div className="space-y-2">
-                        {docs.map((doc) => {
+                        {docs.map((doc, index) => {
                       // Extract details from the fetched data
                       const docData = doc.details;
                       
@@ -758,58 +758,61 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                         return (
                           <div
                             key={doc.id}
-                            className="group relative p-3 rounded-lg border border-border/50 bg-background/80 hover:bg-background hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer"
+                            style={{ animationDelay: `${index * 40}ms` }}
+                            className="group relative p-3 rounded-lg border border-border/50 bg-gradient-to-br from-background to-muted/10 hover:from-background hover:to-muted/20 hover:border-primary/40 hover:shadow-lg transition-all duration-200 cursor-pointer animate-fade-in-up hover-lift"
                             onClick={() => handleOpenInNewTab(docType.type, doc.document_id)}
                           >
                           <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="font-semibold text-sm text-foreground flex-1">{details.title}</div>
+                            <div className="font-bold text-sm text-foreground flex-1 group-hover:text-primary transition-colors">
+                              {details.title}
+                            </div>
                             {details.status && (
                               <span className={cn(
-                                "text-[10px] px-2 py-1 rounded-full shrink-0 font-semibold uppercase tracking-wide",
-                                details.status === 'completed' && "bg-success/15 text-success",
-                                details.status === 'pending' && "bg-warning/10 text-warning",
-                                details.status === 'in_progress' && "bg-info/10 text-info",
-                                details.status === 'cancelled' && "bg-destructive/10 text-destructive",
-                                details.status === 'draft' && "bg-muted text-muted-foreground",
-                                details.status === 'scheduled' && "bg-primary/10 text-primary",
-                                details.status === 'confirmed' && "bg-success/10 text-success",
-                                details.status === 'sent' && "bg-info/10 text-info",
-                                details.status === 'accepted' && "bg-success/10 text-success"
+                                "text-[10px] px-2 py-1 rounded-full shrink-0 font-bold uppercase tracking-wider transition-all",
+                                details.status === 'completed' && "bg-success/20 text-success border border-success/30",
+                                details.status === 'pending' && "bg-warning/15 text-warning border border-warning/30",
+                                details.status === 'in_progress' && "bg-info/15 text-info border border-info/30",
+                                details.status === 'cancelled' && "bg-destructive/15 text-destructive border border-destructive/30",
+                                details.status === 'draft' && "bg-muted text-muted-foreground border border-border",
+                                details.status === 'scheduled' && "bg-primary/15 text-primary border border-primary/30",
+                                details.status === 'confirmed' && "bg-success/15 text-success border border-success/30",
+                                details.status === 'sent' && "bg-info/15 text-info border border-info/30",
+                                details.status === 'accepted' && "bg-success/15 text-success border border-success/30"
                               )}>
                                 {details.status.replace('_', ' ')}
                               </span>
                             )}
                           </div>
                           
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             {details.customer && (
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-xs text-muted-foreground font-medium">
                                 {details.customer}
                               </div>
                             )}
                             
                             {details.description && docType.type === 'service_order' && (
-                              <div className="text-xs text-muted-foreground line-clamp-2 italic">
+                              <div className="text-xs text-muted-foreground/80 line-clamp-2 italic">
                                 {details.description}
                               </div>
                             )}
                             
                             {details.location && (
-                              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {details.location}
+                              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5 text-primary/60" />
+                                <span className="font-medium">{details.location}</span>
                               </div>
                             )}
                             
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center justify-between text-xs pt-1">
                               {details.date && (
                                 <div className="text-muted-foreground">
-                                  <span className="font-medium">{details.label}:</span> {new Date(details.date).toLocaleDateString()}
-                                  {details.time && <div className="mt-0.5">{details.time}</div>}
+                                  <span className="font-semibold">{details.label}:</span> {new Date(details.date).toLocaleDateString()}
+                                  {details.time && <div className="mt-0.5 text-[11px]">{details.time}</div>}
                                 </div>
                               )}
                               {details.amount && (
-                                <div className="font-semibold text-foreground">
+                                <div className="font-bold text-sm text-foreground">
                                   ${details.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
                               )}
@@ -817,10 +820,10 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             
                             {details.priority && (
                               <span className={cn(
-                                "inline-flex text-xs px-2 py-0.5 rounded-full font-medium",
-                                details.priority === 'high' && "bg-destructive/10 text-destructive",
-                                details.priority === 'medium' && "bg-warning/10 text-warning",
-                                details.priority === 'low' && "bg-success/10 text-success"
+                                "inline-flex text-xs px-2 py-1 rounded-full font-semibold border",
+                                details.priority === 'high' && "bg-destructive/15 text-destructive border-destructive/30",
+                                details.priority === 'medium' && "bg-warning/15 text-warning border-warning/30",
+                                details.priority === 'low' && "bg-success/15 text-success border-success/30"
                               )}>
                                 {details.priority} priority
                               </span>
@@ -830,13 +833,13 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all text-destructive hover:text-destructive hover:bg-destructive/20"
                             onClick={(e) => {
                               e.stopPropagation();
                               unlinkMutation.mutate(doc.id);
                             }}
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <X className="h-4 w-4" />
                           </Button>
                           </div>
                         );
