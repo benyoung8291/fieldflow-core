@@ -215,6 +215,8 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
     if (!newItems[parentIndex].subItems) {
       newItems[parentIndex].subItems = [];
     }
+    // Lock parent quantity to 1 when adding sub-items
+    newItems[parentIndex].quantity = "1";
     newItems[parentIndex].subItems!.push({
       description: "",
       quantity: "1",
@@ -398,14 +400,18 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
                     />
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.quantity}
-                      onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      className="border-0 focus-visible:ring-0 text-right bg-transparent"
-                    />
+                    {hasSubItems(item) ? (
+                      <div className="text-right text-sm text-muted-foreground pr-3">1</div>
+                    ) : (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.quantity}
+                        onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className="border-0 focus-visible:ring-0 text-right bg-transparent"
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
                     {hasSubItems(item) ? (
