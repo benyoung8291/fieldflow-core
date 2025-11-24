@@ -18,6 +18,7 @@ import RemoteCursors from "@/components/presence/RemoteCursors";
 import PresencePanel from "@/components/presence/PresencePanel";
 import NotificationCenter from "@/components/notifications/NotificationCenter";
 import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
+import { IssueReportDialog } from "@/components/common/IssueReportDialog";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -284,6 +285,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
               <div className="flex-1" />
               <PresencePanel />
               <NotificationCenter />
+              <IssueReportDialog />
               <ViewModeToggle />
               <ThemeToggle />
               <Button
