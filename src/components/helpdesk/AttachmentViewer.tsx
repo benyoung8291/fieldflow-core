@@ -150,22 +150,8 @@ export function AttachmentViewer({ attachments, onDownload, className }: Attachm
                   </p>
                 </div>
 
-                {/* Actions */}
+                 {/* Actions */}
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {attachment.url && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(attachment.url, '_blank');
-                      }}
-                      className="h-8 w-8 p-0"
-                      title="Open in new tab"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -182,55 +168,45 @@ export function AttachmentViewer({ attachments, onDownload, className }: Attachm
         })}
       </div>
 
-      {/* Preview Dialog */}
-      <Dialog open={!!previewAttachment} onOpenChange={() => setPreviewAttachment(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
+      {/* Preview Dialog - Only for attachments with URLs */}
+      {previewAttachment?.url && (
+        <Dialog open={!!previewAttachment} onOpenChange={() => setPreviewAttachment(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh]">
+            <DialogHeader>
               <DialogTitle className="truncate pr-8">{previewAttachment?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-center bg-muted rounded-lg overflow-auto max-h-[70vh]">
+              {isImage(previewAttachment) && (
+                <img 
+                  src={previewAttachment.url} 
+                  alt={previewAttachment.name}
+                  className="max-w-full h-auto"
+                />
+              )}
+              {isPdf(previewAttachment) && (
+                <iframe 
+                  src={previewAttachment.url} 
+                  className="w-full h-[70vh]"
+                  title={previewAttachment.name}
+                />
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPreviewAttachment(null)}
-                className="absolute right-4 top-4"
+                variant="outline"
+                onClick={() => window.open(previewAttachment.url, '_blank')}
               >
-                <X className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in New Tab
+              </Button>
+              <Button onClick={() => onDownload?.(previewAttachment)}>
+                <Download className="h-4 w-4 mr-2" />
+                Download
               </Button>
             </div>
-          </DialogHeader>
-          <div className="flex items-center justify-center bg-muted rounded-lg overflow-auto max-h-[70vh]">
-            {previewAttachment && isImage(previewAttachment) && previewAttachment.url && (
-              <img 
-                src={previewAttachment.url} 
-                alt={previewAttachment.name}
-                className="max-w-full h-auto"
-              />
-            )}
-            {previewAttachment && isPdf(previewAttachment) && previewAttachment.url && (
-              <iframe 
-                src={previewAttachment.url} 
-                className="w-full h-[70vh]"
-                title={previewAttachment.name}
-              />
-            )}
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => previewAttachment?.url && window.open(previewAttachment.url, '_blank')}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open in New Tab
-            </Button>
-            <Button
-              onClick={() => previewAttachment && onDownload?.(previewAttachment)}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
