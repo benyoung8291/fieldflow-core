@@ -4,18 +4,34 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { TicketList } from "@/components/helpdesk/TicketList";
 import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
 import { LinkedDocumentsSidebar } from "@/components/helpdesk/LinkedDocumentsSidebar";
-import { MailboxFolderNav, type MailboxFolder } from "@/components/helpdesk/MailboxFolderNav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
+
+type MailboxFolder = 
+  | "inbox" 
+  | "sent" 
+  | "drafts" 
+  | "archive" 
+  | "deleted" 
+  | "junk"
+  | "starred"
+  | "all";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Link2, MessageSquare, BarChart3, Menu } from "lucide-react";
+import { RefreshCw, Filter, Link2, MessageSquare, BarChart3, Menu, Inbox, Send, FileText, Archive, Trash2, AlertOctagon, Star, FolderOpen, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function HelpDesk() {
   const { toast } = useToast();
@@ -275,203 +291,234 @@ export default function HelpDesk() {
     };
   }, [selectedTicketId, queryClient]);
 
+  const folderConfig = [
+    { id: "all" as const, label: "All Mail", icon: FolderOpen },
+    { id: "inbox" as const, label: "Inbox", icon: Inbox },
+    { id: "starred" as const, label: "Starred", icon: Star },
+    { id: "sent" as const, label: "Sent", icon: Send },
+    { id: "drafts" as const, label: "Drafts", icon: FileText },
+    { id: "archive" as const, label: "Archive", icon: Archive },
+    { id: "junk" as const, label: "Junk", icon: AlertOctagon },
+    { id: "deleted" as const, label: "Deleted", icon: Trash2 },
+  ];
+
+  const currentFolderConfig = folderConfig.find(f => f.id === selectedFolder) || folderConfig[1];
+  const CurrentFolderIcon = currentFolderConfig.icon;
+
   return (
     <DashboardLayout disablePresence={true}>
-      <SidebarProvider>
-        <div className="flex w-full min-h-screen">
-          <MailboxFolderNav
-            selectedFolder={selectedFolder}
-            onSelectFolder={(folder) => {
-              setSelectedFolder(folder);
-              setFilterArchived(folder === "archive" || folder === "deleted" || folder === "junk");
-            }}
-          />
-          
-          <div className="flex flex-col flex-1 h-full">
-            {/* Header with Pipeline Selector, Quick Filters, and Sync */}
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger className="h-9 w-9 hover:bg-accent rounded-md transition-colors">
-                  <Menu className="h-4 w-4" />
-                </SidebarTrigger>
-                <h1 className="text-xl font-semibold text-foreground">Help Desk</h1>
-            
-            {/* Quick Filter Buttons */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant={filterAssignment === "assigned_to_me" ? "default" : "ghost"}
-                size="sm"
-                className="h-8 text-sm"
-                onClick={() => {
-                  setFilterAssignment("assigned_to_me");
-                  localStorage.setItem('helpdeskLastFilter', 'assigned_to_me');
-                }}
-              >
-                My Tickets
-              </Button>
-              <Button
-                variant={filterAssignment === "unassigned" ? "default" : "ghost"}
-                size="sm"
-                className="h-8 text-sm"
-                onClick={() => {
-                  setFilterAssignment("unassigned");
-                  localStorage.setItem('helpdeskLastFilter', 'unassigned');
-                }}
-              >
-                Unassigned
-              </Button>
-              <Button
-                variant={filterAssignment === "all" ? "default" : "ghost"}
-                size="sm"
-                className="h-8 text-sm"
-                onClick={() => {
-                  setFilterAssignment("all");
-                  localStorage.setItem('helpdeskLastFilter', 'all');
-                }}
-              >
-                All
-              </Button>
-            </div>
-            
-            <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
-              <SelectTrigger className="w-[180px] h-8 text-sm">
-                <SelectValue placeholder="All Pipelines" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Pipelines</SelectItem>
-                {pipelines?.map((pipeline) => (
-                  <SelectItem key={pipeline.id} value={pipeline.id}>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: pipeline.color }} />
-                      {pipeline.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
+      <div className="flex flex-col h-full">
+        {/* Header with Pipeline Selector, Quick Filters, and Sync */}
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 gap-2 px-3">
+                  <CurrentFolderIcon className="h-4 w-4" />
+                  <span className="font-medium">{currentFolderConfig.label}</span>
+                  <Menu className="h-3 w-3 opacity-50" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64" align="start">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Assignment</Label>
-                    <Select value={filterAssignment} onValueChange={(value: any) => setFilterAssignment(value)}>
-                      <SelectTrigger className="h-7 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Tickets</SelectItem>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        <SelectItem value="assigned_to_me">Assigned to Me</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Show Archived</Label>
-                    <Switch checked={filterArchived} onCheckedChange={setFilterArchived} />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Mailbox Folders</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {folderConfig.map((folder) => {
+                  const Icon = folder.icon;
+                  const isSelected = selectedFolder === folder.id;
+                  return (
+                    <DropdownMenuItem
+                      key={folder.id}
+                      onClick={() => {
+                        setSelectedFolder(folder.id);
+                        setFilterArchived(folder.id === "archive" || folder.id === "deleted" || folder.id === "junk");
+                      }}
+                      className="gap-2"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="flex-1">{folder.label}</span>
+                      {isSelected && <Check className="h-4 w-4 text-primary" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="h-6 w-px bg-border" />
+            <h1 className="text-xl font-semibold text-foreground">Help Desk</h1>
+            
+          {/* Quick Filter Buttons */}
           <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/helpdesk/analytics')} variant="outline" size="sm" className="h-8 text-sm">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Analytics
+            <Button
+              variant={filterAssignment === "assigned_to_me" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 text-sm"
+              onClick={() => {
+                setFilterAssignment("assigned_to_me");
+                localStorage.setItem('helpdeskLastFilter', 'assigned_to_me');
+              }}
+            >
+              My Tickets
             </Button>
-            <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-8 text-sm">
-              <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
-              {isSyncing ? "Syncing..." : "Sync"}
+            <Button
+              variant={filterAssignment === "unassigned" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 text-sm"
+              onClick={() => {
+                setFilterAssignment("unassigned");
+                localStorage.setItem('helpdeskLastFilter', 'unassigned');
+              }}
+            >
+              Unassigned
+            </Button>
+            <Button
+              variant={filterAssignment === "all" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 text-sm"
+              onClick={() => {
+                setFilterAssignment("all");
+                localStorage.setItem('helpdeskLastFilter', 'all');
+              }}
+            >
+              All
             </Button>
           </div>
-        </div>
-
-            <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
-              {/* Ticket List */}
-              <ResizablePanel defaultSize={28} minSize={20} maxSize={40} className="relative">
-                <TicketList
-                  selectedTicketId={selectedTicketId} 
-                  onSelectTicket={handleSelectTicket}
-                  pipelineId={selectedPipelineId}
-                  filterAssignment={filterAssignment}
-                  filterArchived={filterArchived}
-                  selectedFolder={selectedFolder}
-                />
-              </ResizablePanel>
-
-              <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors w-1" />
-
-              {/* Middle: Timeline View */}
-              <ResizablePanel defaultSize={47} minSize={35} className="relative bg-muted/20">
-          {selectedTicketId ? (
-            <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center space-y-4 px-8 max-w-md animate-fade-in">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto">
-                  <MessageSquare className="h-10 w-10 text-primary/40" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold text-foreground">No ticket selected</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Select a ticket from the list to view its conversation and details
-                  </p>
-                </div>
-              </div>
-            </div>
-                )}
-              </ResizablePanel>
-
-              {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors w-1" />}
-
-              {/* Right: Linked Documents */}
-              {sidebarVisible && (
-                <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative bg-background">
-            {selectedTicketId ? (
-              <LinkedDocumentsSidebar 
-                ticketId={selectedTicketId} 
-                ticket={ticket}
-                onClose={() => setSidebarVisible(false)}
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center p-6">
-                <div className="text-center space-y-3 animate-fade-in">
-                  <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
-                    <Link2 className="h-7 w-7 text-muted-foreground/50" />
+            
+          <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
+            <SelectTrigger className="w-[180px] h-8 text-sm">
+              <SelectValue placeholder="All Pipelines" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Pipelines</SelectItem>
+              {pipelines?.map((pipeline) => (
+                <SelectItem key={pipeline.id} value={pipeline.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: pipeline.color }} />
+                    {pipeline.name}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Linked documents will appear here
-                  </p>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64" align="start">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Assignment</Label>
+                  <Select value={filterAssignment} onValueChange={(value: any) => setFilterAssignment(value)}>
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tickets</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      <SelectItem value="assigned_to_me">Assigned to Me</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Show Archived</Label>
+                  <Switch checked={filterArchived} onCheckedChange={setFilterArchived} />
                 </div>
               </div>
-                )}
-              </ResizablePanel>
-              )}
-              
-              {/* Reopen sidebar button */}
-              {!sidebarVisible && selectedTicketId && (
-                <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
-                  <Button
-                    onClick={() => setSidebarVisible(true)}
-                    size="lg"
-                    className="shadow-2xl hover:shadow-2xl transition-all hover-lift h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50 font-semibold"
-                  >
-                    <Link2 className="h-5 w-5 mr-2" />
-                    Show Links
-                  </Button>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate('/helpdesk/analytics')} variant="outline" size="sm" className="h-8 text-sm">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </Button>
+          <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-8 text-sm">
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "Syncing..." : "Sync"}
+          </Button>
+        </div>
+      </div>
+
+        <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
+          {/* Ticket List */}
+          <ResizablePanel defaultSize={28} minSize={20} maxSize={40} className="relative">
+            <TicketList
+              selectedTicketId={selectedTicketId} 
+              onSelectTicket={handleSelectTicket}
+              pipelineId={selectedPipelineId}
+              filterAssignment={filterAssignment}
+              filterArchived={filterArchived}
+              selectedFolder={selectedFolder}
+            />
+          </ResizablePanel>
+
+          <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors w-1" />
+
+          {/* Middle: Timeline View */}
+          <ResizablePanel defaultSize={47} minSize={35} className="relative bg-muted/20">
+            {selectedTicketId ? (
+              <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center space-y-4 px-8 max-w-md animate-fade-in">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto">
+                    <MessageSquare className="h-10 w-10 text-primary/40" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold text-foreground">No ticket selected</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Select a ticket from the list to view its conversation and details
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </ResizablePanel>
+
+          {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors w-1" />}
+
+          {/* Right: Linked Documents */}
+          {sidebarVisible && (
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative bg-background">
+              {selectedTicketId ? (
+                <LinkedDocumentsSidebar 
+                  ticketId={selectedTicketId} 
+                  ticket={ticket}
+                  onClose={() => setSidebarVisible(false)}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center p-6">
+                  <div className="text-center space-y-3 animate-fade-in">
+                    <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+                      <Link2 className="h-7 w-7 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Linked documents will appear here
+                    </p>
+                  </div>
                 </div>
               )}
-            </ResizablePanelGroup>
-          </div>
-        </div>
-      </SidebarProvider>
+            </ResizablePanel>
+          )}
+          
+          {/* Reopen sidebar button */}
+          {!sidebarVisible && selectedTicketId && (
+            <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+              <Button
+                onClick={() => setSidebarVisible(true)}
+                size="lg"
+                className="shadow-2xl hover:shadow-2xl transition-all hover-lift h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50 font-semibold"
+              >
+                <Link2 className="h-5 w-5 mr-2" />
+                Show Links
+              </Button>
+            </div>
+          )}
+        </ResizablePanelGroup>
+      </div>
     </DashboardLayout>
   );
 }
