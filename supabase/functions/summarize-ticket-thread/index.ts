@@ -28,7 +28,7 @@ serve(async (req: Request) => {
     // Fetch ticket details
     const { data: ticket, error: ticketError } = await supabase
       .from("helpdesk_tickets")
-      .select("subject, description, status, priority")
+      .select("subject, status, priority")
       .eq("id", ticketId)
       .single();
 
