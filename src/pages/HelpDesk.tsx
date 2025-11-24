@@ -287,21 +287,21 @@ export default function HelpDesk() {
             }}
           />
           
-          <div className="flex flex-col flex-1 h-full -mx-3 sm:-mx-6 lg:-mx-8">
+          <div className="flex flex-col flex-1 h-full">
             {/* Header with Pipeline Selector, Quick Filters, and Sync */}
-            <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background shrink-0">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="h-7 w-7">
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger className="h-9 w-9 hover:bg-accent rounded-md transition-colors">
                   <Menu className="h-4 w-4" />
                 </SidebarTrigger>
-                <h1 className="text-lg font-semibold">Help Desk</h1>
+                <h1 className="text-xl font-semibold text-foreground">Help Desk</h1>
             
             {/* Quick Filter Buttons */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <Button
                 variant={filterAssignment === "assigned_to_me" ? "default" : "ghost"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-8 text-sm"
                 onClick={() => {
                   setFilterAssignment("assigned_to_me");
                   localStorage.setItem('helpdeskLastFilter', 'assigned_to_me');
@@ -312,7 +312,7 @@ export default function HelpDesk() {
               <Button
                 variant={filterAssignment === "unassigned" ? "default" : "ghost"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-8 text-sm"
                 onClick={() => {
                   setFilterAssignment("unassigned");
                   localStorage.setItem('helpdeskLastFilter', 'unassigned');
@@ -323,7 +323,7 @@ export default function HelpDesk() {
               <Button
                 variant={filterAssignment === "all" ? "default" : "ghost"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-8 text-sm"
                 onClick={() => {
                   setFilterAssignment("all");
                   localStorage.setItem('helpdeskLastFilter', 'all');
@@ -334,7 +334,7 @@ export default function HelpDesk() {
             </div>
             
             <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
-              <SelectTrigger className="w-[180px] h-7 text-xs">
+              <SelectTrigger className="w-[180px] h-8 text-sm">
                 <SelectValue placeholder="All Pipelines" />
               </SelectTrigger>
               <SelectContent>
@@ -352,8 +352,8 @@ export default function HelpDesk() {
             
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 text-xs">
-                  <Filter className="h-3 w-3 mr-1.5" />
+                <Button variant="outline" size="sm" className="h-8 text-sm">
+                  <Filter className="h-4 w-4 mr-2" />
                   Filters
                 </Button>
               </PopoverTrigger>
@@ -382,12 +382,12 @@ export default function HelpDesk() {
             </Popover>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/helpdesk/analytics')} variant="outline" size="sm" className="h-7 text-xs">
-              <BarChart3 className="h-3 w-3 mr-1.5" />
+            <Button onClick={() => navigate('/helpdesk/analytics')} variant="outline" size="sm" className="h-8 text-sm">
+              <BarChart3 className="h-4 w-4 mr-2" />
               Analytics
             </Button>
-            <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-7 text-xs">
-              <RefreshCw className={`h-3 w-3 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
+            <Button onClick={handleSyncEmails} disabled={isSyncing} size="sm" className="h-8 text-sm">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
               {isSyncing ? "Syncing..." : "Sync"}
             </Button>
           </div>
@@ -395,7 +395,7 @@ export default function HelpDesk() {
 
             <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
               {/* Ticket List */}
-              <ResizablePanel defaultSize={30} minSize={20} maxSize={40} className="relative">
+              <ResizablePanel defaultSize={28} minSize={20} maxSize={40} className="relative">
                 <TicketList
                   selectedTicketId={selectedTicketId} 
                   onSelectTicket={handleSelectTicket}
@@ -406,10 +406,10 @@ export default function HelpDesk() {
                 />
               </ResizablePanel>
 
-              <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
+              <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors w-1" />
 
               {/* Middle: Timeline View */}
-              <ResizablePanel defaultSize={45} minSize={35} className="relative bg-gradient-to-br from-background via-background to-muted/5">
+              <ResizablePanel defaultSize={47} minSize={35} className="relative bg-muted/20">
           {selectedTicketId ? (
             <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
           ) : (
@@ -429,11 +429,11 @@ export default function HelpDesk() {
                 )}
               </ResizablePanel>
 
-              {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />}
+              {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors w-1" />}
 
               {/* Right: Linked Documents */}
               {sidebarVisible && (
-                <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
+                <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative bg-background">
             {selectedTicketId ? (
               <LinkedDocumentsSidebar 
                 ticketId={selectedTicketId} 

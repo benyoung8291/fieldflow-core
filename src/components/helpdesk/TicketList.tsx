@@ -249,7 +249,32 @@ export function TicketList({
       filterAssignment === "assigned_to_me" ? ticket.assigned_to === currentUser?.id :
       true;
     
-    return matchesSearch && matchesPipeline && matchesAssignment;
+    // Folder filtering
+    const matchesFolder = (() => {
+      switch (selectedFolder) {
+        case "all":
+          return true;
+        case "inbox":
+          return !ticket.is_archived && ticket.status !== "deleted";
+        case "sent":
+          // Sent by current user - check if created by current user or sent from their account
+          return ticket.created_by === currentUser?.id;
+        case "drafts":
+          return ticket.status === "draft";
+        case "archive":
+          return ticket.is_archived;
+        case "deleted":
+          return ticket.status === "deleted";
+        case "junk":
+          return ticket.status === "junk" || ticket.is_spam;
+        case "starred":
+          return ticket.is_starred;
+        default:
+          return true;
+      }
+    })();
+    
+    return matchesSearch && matchesPipeline && matchesAssignment && matchesFolder;
   });
 
   const getStatusColor = (status: string) => {
@@ -347,9 +372,9 @@ export function TicketList({
   };
 
   return (
-    <div className="flex flex-col h-full border-r bg-gradient-to-b from-background to-muted/5">
+    <div className="flex flex-col h-full border-r bg-background">
       {/* Enhanced Header */}
-      <div className="px-4 py-3 border-b bg-background/80 backdrop-blur-sm space-y-3">
+      <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative group flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
