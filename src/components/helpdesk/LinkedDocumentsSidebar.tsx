@@ -308,7 +308,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
               )}
             </div>
             <TabsList className="w-full grid grid-cols-2 bg-muted/50 p-1">
-              <TabsTrigger value="documents" className="text-xs relative data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="documents" className="text-xs relative data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
                 <Link2 className="h-3.5 w-3.5 mr-1.5" />
                 Links
                 {totalLinkedCount > 0 && (
@@ -317,7 +317,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="actions" className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="actions" className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
                 Actions
               </TabsTrigger>
             </TabsList>

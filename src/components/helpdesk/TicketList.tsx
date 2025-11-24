@@ -214,13 +214,13 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
       {/* Enhanced Header */}
       <div className="px-4 py-3 border-b bg-background/80 backdrop-blur-sm space-y-3">
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
+          <div className="relative group flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
               placeholder="Search tickets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-sm bg-muted/50 border-muted-foreground/20 focus:bg-background transition-all"
+              className="pl-9 h-9 text-sm bg-muted/50 border-muted-foreground/20 focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
             />
           </div>
           <Button 
@@ -258,6 +258,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                     className={cn(
                       "w-full px-4 py-3 text-left rounded-lg transition-all duration-200 flex flex-col gap-2 group relative overflow-hidden animate-fade-in-up",
                       "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                       selectedTicketId === ticket.id 
                         ? "bg-primary/10 border-2 border-primary/30 shadow-sm" 
                         : "bg-background hover:bg-accent/30 border border-border/50",
@@ -267,13 +268,13 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 {/* Top Row - Subject and Time */}
                 <div className="flex items-start justify-between gap-3">
                   <h3 className={cn(
-                    "font-semibold text-sm line-clamp-2 flex-1 min-w-0 leading-snug transition-colors",
+                    "font-semibold text-sm line-clamp-2 flex-1 min-w-0 leading-snug transition-colors group-hover:text-primary",
                     !ticket.is_read && "text-foreground font-bold",
                     selectedTicketId === ticket.id && "text-primary"
                   )}>
                     {ticket.subject}
                   </h3>
-                  <span className="text-xs text-muted-foreground/80 whitespace-nowrap shrink-0 font-medium">
+                  <span className="text-xs text-muted-foreground/80 whitespace-nowrap shrink-0 font-medium transition-colors group-hover:text-foreground/70">
                     {ticket.last_message_at 
                       ? formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true }).replace('about ', '').replace(' ago', '')
                       : 'New'}
