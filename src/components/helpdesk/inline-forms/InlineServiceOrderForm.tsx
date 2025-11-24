@@ -487,6 +487,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         open={showLocationDialog}
         onOpenChange={setShowLocationDialog}
         customerId={formData.customer_id}
+        customerName={customers.find(c => c.id === formData.customer_id)?.name}
         onLocationCreated={handleLocationCreated}
       />
     </form>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ interface QuickLocationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: string;
+  customerName?: string;
   onLocationCreated: (locationId: string) => void;
 }
 
@@ -19,8 +20,16 @@ export default function QuickLocationDialog({
   open,
   onOpenChange,
   customerId,
+  customerName,
   onLocationCreated,
 }: QuickLocationDialogProps) {
+  
+  // Reset form when dialog opens or customer changes
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open, customerId]);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -111,17 +120,24 @@ export default function QuickLocationDialog({
 
   return (
     <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[500px] bg-background border-l border-border shadow-lg z-50 overflow-y-auto">
-      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Create New Location</h2>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onOpenChange(false)}
-          className="h-8 w-8 p-0"
-        >
-          ✕
-        </Button>
+      <div className="sticky top-0 bg-background border-b border-border p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Create New Location</h2>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="h-8 w-8 p-0"
+          >
+            ✕
+          </Button>
+        </div>
+        {customerName && (
+          <p className="text-sm text-muted-foreground">
+            Adding location for: <span className="font-medium text-foreground">{customerName}</span>
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 p-4">
