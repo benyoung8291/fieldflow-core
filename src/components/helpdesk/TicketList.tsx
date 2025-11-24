@@ -1,13 +1,24 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Link2 } from "lucide-react";
+import { Search, Plus, Link2, Archive, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { useToast } from "@/hooks/use-toast";
 
 interface TicketListProps {
   selectedTicketId: string | null;
@@ -20,6 +31,7 @@ interface TicketListProps {
 export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filterAssignment = "all", filterArchived = false }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Subscribe to realtime updates for ticket changes
   useEffect(() => {
@@ -100,6 +112,66 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
     },
   });
 
+  const { data: users } = useQuery({
+    queryKey: ["users-for-assignment"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const archiveTicketMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update({ is_archived: !filterArchived })
+        .eq("id", ticketId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      toast({
+        title: filterArchived ? "Ticket unarchived" : "Ticket archived",
+        description: filterArchived ? "The ticket has been moved back to inbox" : "The ticket has been archived",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to ${filterArchived ? "unarchive" : "archive"} ticket: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignTicketMutation = useMutation({
+    mutationFn: async ({ ticketId, userId }: { ticketId: string; userId: string | null }) => {
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update({ assigned_to: userId })
+        .eq("id", ticketId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      toast({
+        title: "Ticket assigned",
+        description: "The ticket assignment has been updated",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to assign ticket: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredTickets = tickets?.filter(ticket => {
     const matchesSearch = 
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -162,15 +234,16 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
         ) : filteredTickets && filteredTickets.length > 0 ? (
           <div className="divide-y">
             {filteredTickets.map((ticket) => (
-              <button
-                key={ticket.id}
-                onClick={() => onSelectTicket(ticket.id)}
-                className={cn(
-                  "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col justify-between border-b h-[100px]",
-                  selectedTicketId === ticket.id && "bg-accent",
-                  !ticket.is_read && "bg-muted/30"
-                )}
-              >
+              <ContextMenu key={ticket.id}>
+                <ContextMenuTrigger asChild>
+                  <button
+                    onClick={() => onSelectTicket(ticket.id)}
+                    className={cn(
+                      "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col justify-between border-b h-[100px]",
+                      selectedTicketId === ticket.id && "bg-accent",
+                      !ticket.is_read && "bg-muted/30"
+                    )}
+                  >
                 {/* Header Row - Pipeline and Badges */}
                 <div className="flex items-center justify-between gap-2 w-full">
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -242,7 +315,40 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                     </span>
                   )}
                 </div>
-              </button>
+                  </button>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    onClick={() => archiveTicketMutation.mutate(ticket.id)}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    {filterArchived ? "Unarchive" : "Archive"}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Assign to
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-48">
+                      <ContextMenuItem
+                        onClick={() => assignTicketMutation.mutate({ ticketId: ticket.id, userId: null })}
+                      >
+                        Unassign
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      {users?.map((user) => (
+                        <ContextMenuItem
+                          key={user.id}
+                          onClick={() => assignTicketMutation.mutate({ ticketId: ticket.id, userId: user.id })}
+                        >
+                          {user.first_name} {user.last_name}
+                        </ContextMenuItem>
+                      ))}
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         ) : (
