@@ -338,39 +338,11 @@ export default function QuoteDetails() {
     return fieldsChanged || lineItemsChanged;
   };
 
-  // Initialize line items for editing
+  // Initialize line items for editing - lineItems are already structured from the query
   useEffect(() => {
     if (lineItems && lineItems.length > 0) {
-      // Organize line items into parent-child structure
-      const parents = lineItems.filter((item: any) => !item.parent_line_item_id);
-      const organized = parents.map((parent: any) => {
-        const subItems = lineItems
-          .filter((item: any) => item.parent_line_item_id === parent.id)
-          .map((sub: any) => ({
-            id: sub.id,
-            description: sub.description,
-            quantity: sub.quantity.toString(),
-            cost_price: sub.cost_price.toString(),
-            margin_percentage: sub.margin_percentage.toString(),
-            sell_price: sub.sell_price.toString(),
-            unit_price: sub.unit_price.toString(),
-            line_total: sub.line_total,
-          }));
-
-        return {
-          id: parent.id,
-          description: parent.description,
-          quantity: parent.quantity.toString(),
-          cost_price: parent.cost_price.toString(),
-          margin_percentage: parent.margin_percentage.toString(),
-          sell_price: parent.sell_price.toString(),
-          unit_price: parent.unit_price.toString(),
-          line_total: parent.line_total,
-          subItems,
-          expanded: subItems.length > 0,
-        };
-      });
-      setEditedLineItems(organized);
+      // lineItems are already organized with subItems from the query, just use them
+      setEditedLineItems(lineItems);
     }
   }, [lineItems]);
 
