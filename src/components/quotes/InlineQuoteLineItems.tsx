@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
+import { Card } from "@/components/ui/card";
 
 interface LineItem {
   id?: string;
@@ -25,7 +26,12 @@ interface InlineQuoteLineItemsProps {
   defaultMarginPercentage?: number;
 }
 
-export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = false, defaultMarginPercentage = 30 }: InlineQuoteLineItemsProps) {
+export default function InlineQuoteLineItems({ 
+  lineItems, 
+  onChange, 
+  readOnly = false, 
+  defaultMarginPercentage = 30 
+}: InlineQuoteLineItemsProps) {
   const [updatedFields, setUpdatedFields] = useState<Record<string, boolean>>({});
 
   const clearUpdatedField = (key: string) => {
@@ -125,7 +131,6 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
       item.margin_percentage = pricing.margin_percentage;
       item.sell_price = pricing.sell_price;
       
-      // Mark auto-updated fields
       if (field === "cost_price" || field === "margin_percentage") {
         const sellKey = `${index}-sell_price`;
         setUpdatedFields(prev => ({ ...prev, [sellKey]: true }));
@@ -141,7 +146,6 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
 
     item.line_total = calculateLineTotal(item);
     
-    // Mark line total as updated
     const totalKey = `${index}-line_total`;
     setUpdatedFields(prev => ({ ...prev, [totalKey]: true }));
     clearUpdatedField(totalKey);
@@ -159,7 +163,6 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
       subItem.margin_percentage = pricing.margin_percentage;
       subItem.sell_price = pricing.sell_price;
       
-      // Mark auto-updated fields
       if (field === "cost_price" || field === "margin_percentage") {
         const sellKey = `${parentIndex}-${subIndex}-sell_price`;
         setUpdatedFields(prev => ({ ...prev, [sellKey]: true }));
@@ -175,14 +178,12 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
 
     subItem.line_total = calculateLineTotal(subItem);
     
-    // Mark sub-item line total as updated
     const subTotalKey = `${parentIndex}-${subIndex}-line_total`;
     setUpdatedFields(prev => ({ ...prev, [subTotalKey]: true }));
     clearUpdatedField(subTotalKey);
     
     newItems[parentIndex].line_total = calculateLineTotal(newItems[parentIndex]);
     
-    // Mark parent line total as updated
     const parentTotalKey = `${parentIndex}-line_total`;
     setUpdatedFields(prev => ({ ...prev, [parentTotalKey]: true }));
     clearUpdatedField(parentTotalKey);
@@ -246,352 +247,375 @@ export default function InlineQuoteLineItems({ lineItems, onChange, readOnly = f
 
   if (readOnly) {
     return (
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[40px]"></TableHead>
-              <TableHead className="min-w-[300px]">Description</TableHead>
-              <TableHead className="w-[100px] text-right">Quantity</TableHead>
-              <TableHead className="w-[120px] text-right">Cost</TableHead>
-              <TableHead className="w-[100px] text-right">Margin %</TableHead>
-              <TableHead className="w-[120px] text-right">Sell</TableHead>
-              <TableHead className="w-[120px] text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lineItems.map((item, index) => {
-              const subItems = item.subItems || [];
-              const itemHasSubItems = subItems.length > 0;
+      <Card className="border-border/50 shadow-sm">
+        <div className="overflow-hidden rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
+                <TableHead className="w-[40px] font-semibold"></TableHead>
+                <TableHead className="min-w-[300px] font-semibold">Description</TableHead>
+                <TableHead className="w-[100px] text-right font-semibold">Quantity</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Cost</TableHead>
+                <TableHead className="w-[100px] text-right font-semibold">Margin %</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Sell</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lineItems.map((item, index) => {
+                const subItems = item.subItems || [];
+                const itemHasSubItems = subItems.length > 0;
 
-              return (
-                <>
-                  <TableRow key={index} className="border-b">
-                    <TableCell>
-                      {itemHasSubItems && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => toggleExpanded(index)}
-                        >
-                          {item.expanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
+                return (
+                  <>
+                    <TableRow 
+                      key={index} 
+                      className="border-b border-border/30 hover:bg-muted/20 transition-colors"
+                    >
+                      <TableCell className="py-3">
+                        {itemHasSubItems && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-md hover:bg-muted"
+                            onClick={() => toggleExpanded(index)}
+                          >
+                            {item.expanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-2">
+                          {itemHasSubItems && (
+                            <Package className="h-4 w-4 text-primary/60 flex-shrink-0" />
                           )}
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{item.description}</span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="text-sm">{item.quantity}</span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {itemHasSubItems ? (
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(calculateAggregatedValues(item).cost)}
-                        </span>
-                      ) : (
-                        <span className="text-sm">{formatCurrency(parseFloat(item.cost_price))}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {itemHasSubItems ? (
-                        <span className="text-sm text-muted-foreground">
-                          {calculateAggregatedValues(item).margin.toFixed(2)}%
-                        </span>
-                      ) : (
-                        <span className="text-sm">{parseFloat(item.margin_percentage).toFixed(2)}%</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {itemHasSubItems ? (
-                        <span className="text-sm text-muted-foreground">
-                          {formatCurrency(calculateAggregatedValues(item).sell)}
-                        </span>
-                      ) : (
-                        <span className="text-sm">{formatCurrency(parseFloat(item.sell_price))}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.line_total)}
-                    </TableCell>
-                  </TableRow>
-
-                  {item.expanded && itemHasSubItems && subItems.map((subItem, subIndex) => (
-                    <TableRow key={`${index}-${subIndex}`} className="bg-muted/30">
-                      <TableCell></TableCell>
-                      <TableCell className="pl-12">
-                        <span className="text-sm">{subItem.description}</span>
+                          <span className="text-sm font-medium">{item.description}</span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm">{subItem.quantity}</span>
+                      <TableCell className="text-right py-3">
+                        <span className="text-sm">{item.quantity}</span>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm">{formatCurrency(parseFloat(subItem.cost_price))}</span>
+                      <TableCell className="text-right py-3">
+                        {itemHasSubItems ? (
+                          <span className="text-sm text-muted-foreground">
+                            {formatCurrency(calculateAggregatedValues(item).cost)}
+                          </span>
+                        ) : (
+                          <span className="text-sm">{formatCurrency(parseFloat(item.cost_price))}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm">{parseFloat(subItem.margin_percentage).toFixed(2)}%</span>
+                      <TableCell className="text-right py-3">
+                        {itemHasSubItems ? (
+                          <span className="text-sm text-muted-foreground">
+                            {calculateAggregatedValues(item).margin.toFixed(2)}%
+                          </span>
+                        ) : (
+                          <span className="text-sm">{parseFloat(item.margin_percentage).toFixed(2)}%</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm">{formatCurrency(parseFloat(subItem.sell_price))}</span>
+                      <TableCell className="text-right py-3">
+                        {itemHasSubItems ? (
+                          <span className="text-sm text-muted-foreground">
+                            {formatCurrency(calculateAggregatedValues(item).sell)}
+                          </span>
+                        ) : (
+                          <span className="text-sm">{formatCurrency(parseFloat(item.sell_price))}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
-                        {formatCurrency(subItem.line_total)}
+                      <TableCell className="text-right py-3 font-semibold">
+                        {formatCurrency(item.line_total)}
                       </TableCell>
                     </TableRow>
-                  ))}
-                </>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+
+                    {item.expanded && itemHasSubItems && subItems.map((subItem, subIndex) => (
+                      <TableRow 
+                        key={`${index}-${subIndex}`} 
+                        className="bg-muted/10 border-b border-border/20 hover:bg-muted/15 transition-colors"
+                      >
+                        <TableCell></TableCell>
+                        <TableCell className="pl-12 py-2.5">
+                          <span className="text-sm text-muted-foreground">{subItem.description}</span>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
+                          <span className="text-sm text-muted-foreground">{subItem.quantity}</span>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
+                          <span className="text-sm text-muted-foreground">{formatCurrency(parseFloat(subItem.cost_price))}</span>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
+                          <span className="text-sm text-muted-foreground">{parseFloat(subItem.margin_percentage).toFixed(2)}%</span>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
+                          <span className="text-sm text-muted-foreground">{formatCurrency(parseFloat(subItem.sell_price))}</span>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5 text-sm">
+                          {formatCurrency(subItem.line_total)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[40px]"></TableHead>
-              <TableHead className="min-w-[300px]">Description</TableHead>
-              <TableHead className="w-[100px] text-right">Quantity</TableHead>
-              <TableHead className="w-[120px] text-right">Cost</TableHead>
-              <TableHead className="w-[100px] text-right">Margin %</TableHead>
-              <TableHead className="w-[120px] text-right">Sell</TableHead>
-              <TableHead className="w-[120px] text-right">Total</TableHead>
-              <TableHead className="w-[120px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lineItems.map((item, index) => (
-              <>
-                <TableRow key={index} className="border-b">
-                  <TableCell>
-                    {hasSubItems(item) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => toggleExpanded(index)}
-                      >
-                        {item.expanded ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={item.description}
-                      onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                      placeholder="Item description"
-                      className="border-0 focus-visible:ring-0 bg-transparent"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {hasSubItems(item) ? (
-                      <div className="text-right text-sm text-muted-foreground pr-3">1</div>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.quantity}
-                        onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        className="border-0 focus-visible:ring-0 text-right bg-transparent"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {hasSubItems(item) ? (
-                      <div className="text-right text-sm text-muted-foreground pr-3">
-                        {formatCurrency(calculateAggregatedValues(item).cost)}
-                      </div>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.cost_price}
-                        onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        className="border-0 focus-visible:ring-0 text-right bg-transparent"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {hasSubItems(item) ? (
-                      <div className="text-right text-sm text-muted-foreground pr-3">
-                        {calculateAggregatedValues(item).margin.toFixed(2)}%
-                      </div>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.margin_percentage}
-                        onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        className={`border-0 focus-visible:ring-0 text-right bg-transparent transition-colors ${
-                          updatedFields[`${index}-margin_percentage`] ? 'bg-primary/20 animate-pulse' : ''
-                        }`}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {hasSubItems(item) ? (
-                      <div className="text-right text-sm text-muted-foreground pr-3">
-                        {formatCurrency(calculateAggregatedValues(item).sell)}
-                      </div>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.sell_price}
-                        onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        className={`border-0 focus-visible:ring-0 text-right bg-transparent transition-colors ${
-                          updatedFields[`${index}-sell_price`] ? 'bg-primary/20 animate-pulse' : ''
-                        }`}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className={`text-right font-medium transition-colors ${
-                    updatedFields[`${index}-line_total`] ? 'bg-primary/10 animate-pulse' : ''
-                  }`}>
-                    {formatCurrency(item.line_total)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => addSubItem(index)}
-                        title="Add sub-item"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => removeLineItem(index)}
-                        disabled={lineItems.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-
-                {/* Sub-items */}
-                {item.expanded && item.subItems && item.subItems.length > 0 && (
-                  item.subItems.map((subItem, subIndex) => (
-                    <TableRow key={`${index}-${subIndex}`} className="bg-muted/30">
-                      <TableCell></TableCell>
-                      <TableCell className="pl-12">
-                        <Input
-                          value={subItem.description}
-                          onChange={(e) =>
-                            updateSubItem(index, subIndex, "description", e.target.value)
-                          }
-                          placeholder="Sub-item description"
-                          className="border-0 focus-visible:ring-0 text-sm bg-transparent"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={subItem.quantity}
-                          onChange={(e) =>
-                            updateSubItem(index, subIndex, "quantity", e.target.value)
-                          }
-                          onFocus={(e) => e.target.select()}
-                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={subItem.cost_price}
-                          onChange={(e) =>
-                            updateSubItem(index, subIndex, "cost_price", e.target.value)
-                          }
-                          onFocus={(e) => e.target.select()}
-                          className="border-0 focus-visible:ring-0 text-right text-sm bg-transparent"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={subItem.margin_percentage}
-                          onChange={(e) =>
-                            updateSubItem(index, subIndex, "margin_percentage", e.target.value)
-                          }
-                          onFocus={(e) => e.target.select()}
-                          className={`border-0 focus-visible:ring-0 text-right text-sm bg-transparent transition-colors ${
-                            updatedFields[`${index}-${subIndex}-margin_percentage`] ? 'bg-primary/20 animate-pulse' : ''
-                          }`}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={subItem.sell_price}
-                          onChange={(e) =>
-                            updateSubItem(index, subIndex, "sell_price", e.target.value)
-                          }
-                          onFocus={(e) => e.target.select()}
-                          className={`border-0 focus-visible:ring-0 text-right text-sm bg-transparent transition-colors ${
-                            updatedFields[`${index}-${subIndex}-sell_price`] ? 'bg-primary/20 animate-pulse' : ''
-                          }`}
-                        />
-                      </TableCell>
-                      <TableCell className={`text-right text-sm transition-colors ${
-                        updatedFields[`${index}-${subIndex}-line_total`] ? 'bg-primary/10 animate-pulse' : ''
-                      }`}>
-                        {formatCurrency(subItem.line_total)}
-                      </TableCell>
-                      <TableCell className="text-right">
+      <Card className="border-border/50 shadow-sm">
+        <div className="overflow-hidden rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
+                <TableHead className="w-[40px] font-semibold"></TableHead>
+                <TableHead className="min-w-[300px] font-semibold">Description</TableHead>
+                <TableHead className="w-[100px] text-right font-semibold">Quantity</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Cost</TableHead>
+                <TableHead className="w-[100px] text-right font-semibold">Margin %</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Sell</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Total</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lineItems.map((item, index) => (
+                <>
+                  <TableRow 
+                    key={index} 
+                    className="border-b border-border/30 hover:bg-muted/20 transition-colors group"
+                  >
+                    <TableCell className="py-2">
+                      {hasSubItems(item) && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
-                          onClick={() => removeSubItem(index, subIndex)}
+                          className="h-7 w-7 rounded-md hover:bg-muted"
+                          onClick={() => toggleExpanded(index)}
+                        >
+                          {item.expanded ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                        placeholder="Item description"
+                        className="border-0 focus-visible:ring-0 bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md"
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {hasSubItems(item) ? (
+                        <div className="text-right text-sm text-muted-foreground pr-3">1</div>
+                      ) : (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                          className="border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {hasSubItems(item) ? (
+                        <div className="text-right text-sm text-muted-foreground pr-3">
+                          {formatCurrency(calculateAggregatedValues(item).cost)}
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.cost_price}
+                          onChange={(e) => updateLineItem(index, "cost_price", e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                          className="border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {hasSubItems(item) ? (
+                        <div className="text-right text-sm text-muted-foreground pr-3">
+                          {calculateAggregatedValues(item).margin.toFixed(2)}%
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.margin_percentage}
+                          onChange={(e) => updateLineItem(index, "margin_percentage", e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                          className={`border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-all px-3 rounded-md ${
+                            updatedFields[`${index}-margin_percentage`] ? 'bg-primary/10 ring-2 ring-primary/30' : ''
+                          }`}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {hasSubItems(item) ? (
+                        <div className="text-right text-sm text-muted-foreground pr-3">
+                          {formatCurrency(calculateAggregatedValues(item).sell)}
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.sell_price}
+                          onChange={(e) => updateLineItem(index, "sell_price", e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                          className={`border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-all px-3 rounded-md ${
+                            updatedFields[`${index}-sell_price`] ? 'bg-primary/10 ring-2 ring-primary/30' : ''
+                          }`}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className={`text-right font-semibold py-2 transition-all ${
+                      updatedFields[`${index}-line_total`] ? 'bg-primary/10 text-primary' : ''
+                    }`}>
+                      {formatCurrency(item.line_total)}
+                    </TableCell>
+                    <TableCell className="text-right py-2">
+                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                          onClick={() => addSubItem(index)}
+                          title="Add sub-item"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => removeLineItem(index)}
+                          disabled={lineItems.length === 1}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
 
-      <Button type="button" variant="outline" onClick={addLineItem}>
-        <Plus className="mr-2 h-4 w-4" />
-        Add Item
-      </Button>
+                  {/* Sub-items */}
+                  {item.expanded && item.subItems && item.subItems.length > 0 && (
+                    item.subItems.map((subItem, subIndex) => (
+                      <TableRow 
+                        key={`${index}-${subIndex}`} 
+                        className="bg-muted/10 border-b border-border/20 hover:bg-muted/15 transition-colors group"
+                      >
+                        <TableCell className="py-2"></TableCell>
+                        <TableCell className="pl-12 py-2">
+                          <Input
+                            value={subItem.description}
+                            onChange={(e) => updateSubItem(index, subIndex, "description", e.target.value)}
+                            placeholder="Sub-item description"
+                            className="border-0 focus-visible:ring-0 bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={subItem.quantity}
+                            onChange={(e) => updateSubItem(index, subIndex, "quantity", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className="border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={subItem.cost_price}
+                            onChange={(e) => updateSubItem(index, subIndex, "cost_price", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className="border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={subItem.margin_percentage}
+                            onChange={(e) => updateSubItem(index, subIndex, "margin_percentage", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className={`border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-all px-3 rounded-md text-sm ${
+                              updatedFields[`${index}-${subIndex}-margin_percentage`] ? 'bg-primary/10 ring-2 ring-primary/30' : ''
+                            }`}
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={subItem.sell_price}
+                            onChange={(e) => updateSubItem(index, subIndex, "sell_price", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className={`border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-all px-3 rounded-md text-sm ${
+                              updatedFields[`${index}-${subIndex}-sell_price`] ? 'bg-primary/10 ring-2 ring-primary/30' : ''
+                            }`}
+                          />
+                        </TableCell>
+                        <TableCell className={`text-right text-sm py-2 transition-all ${
+                          updatedFields[`${index}-${subIndex}-line_total`] ? 'bg-primary/10 text-primary font-semibold' : ''
+                        }`}>
+                          {formatCurrency(subItem.line_total)}
+                        </TableCell>
+                        <TableCell className="text-right py-2">
+                          <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => removeSubItem(index, subIndex)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
+      <div className="flex justify-between items-center">
+        <Button
+          type="button"
+          onClick={addLineItem}
+          variant="outline"
+          className="hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-all"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Line Item
+        </Button>
+        <p className="text-sm text-muted-foreground">
+          {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
+        </p>
+      </div>
     </div>
   );
 }
