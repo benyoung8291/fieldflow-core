@@ -3,7 +3,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +75,7 @@ export default function ServiceOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: ordersResponse, isLoading, refetch } = useQuery({
@@ -235,76 +237,115 @@ export default function ServiceOrders() {
         </AlertDialogContent>
       </AlertDialog>
       
-      <div className="space-y-3">
-        {/* Header */}
+      <div className="space-y-6">
+        {/* Header with clean modern design */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Service Orders</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Manage field service jobs and assignments
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Service Orders</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage and track all your field service jobs
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <PresenceIndicator users={onlineUsers} />
-            <Button size="sm" className="gap-2 h-8" onClick={handleCreate}>
-              <Plus className="h-3.5 w-3.5" />
+            <Button onClick={handleCreate} className="gap-2">
+              <Plus className="h-4 w-4" />
               New Order
             </Button>
           </div>
         </div>
 
-        {/* Stats - Compact - Hide on mobile */}
+        {/* Stats - Modern card design with better visual hierarchy */}
         {!isMobile && (
-          <div className="grid grid-cols-5 gap-2">
-          <Card className="shadow-sm">
-            <CardContent className="pt-3 pb-2 px-3">
-              <div className="text-xl font-bold text-foreground">{stats.total}</div>
-              <p className="text-[10px] text-muted-foreground">Total</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardContent className="pt-3 pb-2 px-3">
-              <div className="text-xl font-bold text-muted-foreground">{stats.draft}</div>
-              <p className="text-[10px] text-muted-foreground">Waiting</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardContent className="pt-3 pb-2 px-3">
-              <div className="text-xl font-bold text-info">{stats.scheduled}</div>
-              <p className="text-[10px] text-muted-foreground">Scheduled</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardContent className="pt-3 pb-2 px-3">
-              <div className="text-xl font-bold text-warning">{stats.inProgress}</div>
-              <p className="text-[10px] text-muted-foreground">In Progress</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardContent className="pt-3 pb-2 px-3">
-              <div className="text-xl font-bold text-success">{stats.completed}</div>
-              <p className="text-[10px] text-muted-foreground">Completed</p>
-            </CardContent>
-          </Card>
-        </div>
+          <div className="grid grid-cols-5 gap-4">
+            <Card className="border-none shadow-sm hover-scale transition-all">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                    <p className="text-3xl font-bold mt-2">{stats.total}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-none shadow-sm hover-scale transition-all">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Waiting</p>
+                    <p className="text-3xl font-bold mt-2">{stats.draft}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-none shadow-sm hover-scale transition-all">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
+                    <p className="text-3xl font-bold mt-2 text-info">{stats.scheduled}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-info/10 flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-info" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-none shadow-sm hover-scale transition-all">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                    <p className="text-3xl font-bold mt-2 text-warning">{stats.inProgress}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-warning" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-none shadow-sm hover-scale transition-all">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                    <p className="text-3xl font-bold mt-2 text-success">{stats.completed}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-success" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {/* Search and Filters - Compact */}
-        <Card className="shadow-sm">
-          <CardContent className="p-3 space-y-2">
+        {/* Search and Filters - Modern elevated design */}
+        <Card className="border-none shadow-md">
+          <CardContent className="p-6 space-y-4">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by order number, customer, or title..."
-                className="pl-8 h-8 text-xs"
+                placeholder="Search orders by number, customer, or title..."
+                className="pl-10 h-11 border-none bg-muted/50"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-10 border-none bg-muted/50">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,7 +358,7 @@ export default function ServiceOrders() {
               </Select>
 
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-10 border-none bg-muted/50">
                   <SelectValue placeholder="All Priorities" />
                 </SelectTrigger>
                 <SelectContent>
@@ -330,7 +371,7 @@ export default function ServiceOrders() {
               </Select>
 
               <Select value={customerFilter} onValueChange={setCustomerFilter}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-10 border-none bg-muted/50">
                   <SelectValue placeholder="All Customers" />
                 </SelectTrigger>
                 <SelectContent>
@@ -346,14 +387,21 @@ export default function ServiceOrders() {
           </CardContent>
         </Card>
 
-        {/* Orders List */}
+        {/* Orders Grid - Modern card-based layout */}
         {isMobile ? (
-          /* Mobile Card View */
-          <div className="space-y-3">
+          /* Mobile View */
+          <div className="space-y-4">
             {isLoading ? (
-              <div className="text-center py-6 text-muted-foreground">Loading orders...</div>
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">No orders found</div>
+              <Card className="border-none shadow-sm">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No orders found</p>
+                </CardContent>
+              </Card>
             ) : (
               filteredOrders.map((order: any) => (
                 <MobileDocumentCard
@@ -385,127 +433,77 @@ export default function ServiceOrders() {
             )}
           </div>
         ) : (
-          /* Desktop Table View */
-          <Card className="shadow-sm">
-          <CardHeader className="py-2 px-3">
-            <CardTitle className="text-sm">
-              All Orders ({filteredOrders.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+          /* Desktop Grid View - Beautiful cards */
+          <div>
             {isLoading ? (
-              <div className="text-center py-6 text-xs text-muted-foreground">Loading orders...</div>
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-6 text-xs text-muted-foreground">No orders found</div>
+              <Card className="border-none shadow-sm">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                  <p className="text-lg font-medium text-muted-foreground">No orders found</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">Try adjusting your search or filters</p>
+                </CardContent>
+              </Card>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b border-border bg-muted/30">
-                    <tr>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Order #
-                      </th>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Customer
-                      </th>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Title
-                      </th>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Location
-                      </th>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Priority
-                      </th>
-                      <th className="text-right py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
-                        Total
-                      </th>
-                      <th className="text-right py-1.5 px-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">
-                        
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/50">
-                    {filteredOrders.map((order: any) => (
-                      <tr 
-                        key={order.id} 
-                        className="hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => window.location.href = `/service-orders/${order.id}`}
-                      >
-                        <td className="py-1 px-2">
-                          <div className="font-medium text-[11px]">{order.order_number}</div>
-                          {order.work_order_number && (
-                            <div className="text-[9px] text-muted-foreground">WO: {order.work_order_number}</div>
-                          )}
-                        </td>
-                        <td className="py-1 px-2 text-[11px]">{order.customers?.name || "-"}</td>
-                        <td className="py-1 px-2">
-                          <div className="text-[11px]">{order.title}</div>
-                          {order.skill_required && (
-                            <div className="text-[9px] text-muted-foreground">Skill: {order.skill_required}</div>
-                          )}
-                        </td>
-                        <td className="py-1 px-2 text-[11px]">
-                          {order.customer_locations?.name || "-"}
-                        </td>
-                        <td className="py-1 px-2">
-                          <Badge variant="outline" className={`text-[9px] py-0 px-1 ${statusColors[order.status as keyof typeof statusColors]}`}>
-                            {statusLabels[order.status as keyof typeof statusLabels] || order.status.replace('_', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="py-1 px-2">
-                          <Badge variant="outline" className={`text-[9px] py-0 px-1 ${priorityColors[order.priority as keyof typeof priorityColors]}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredOrders.map((order: any) => (
+                  <Card 
+                    key={order.id}
+                    className="border-none shadow-md hover:shadow-lg hover-scale transition-all cursor-pointer group"
+                    onClick={() => window.location.href = `/service-orders/${order.id}`}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg font-bold">#{order.order_number}</CardTitle>
+                          <p className="text-sm text-muted-foreground line-clamp-1">{order.title}</p>
+                        </div>
+                        <Badge className={cn("shrink-0", statusColors[order.status as keyof typeof statusColors])}>
+                          {statusLabels[order.status as keyof typeof statusLabels] || order.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-foreground truncate">{order.customers?.name || '-'}</span>
+                        </div>
+                        {order.customer_locations?.name && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="text-muted-foreground truncate">{order.customer_locations.name}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn("text-xs", priorityColors[order.priority as keyof typeof priorityColors])}>
                             {order.priority}
                           </Badge>
-                        </td>
-                        <td className="py-1 px-2 text-right text-[11px] font-medium">
-                          ${order.total_amount?.toFixed(2) || "0.00"}
-                        </td>
-                        <td className="py-1 px-2 text-right" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="text-xs">
-                              <DropdownMenuItem onClick={() => handleEdit(order.id)}>
-                                <Edit className="h-3 w-3 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setSelectedOrder(order.id)}>
-                                View History
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => {
-                                  setOrderToDelete(order.id);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                         <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Total</p>
+                          <p className="text-lg font-bold">${order.total_amount?.toFixed(2) || '0.00'}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
         )}
         
         {/* Pagination Controls */}
         {!isMobile && totalPages > 1 && (
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
