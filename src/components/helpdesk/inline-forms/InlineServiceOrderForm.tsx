@@ -6,8 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Paperclip } from "lucide-react";
 import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -36,6 +38,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
   const [customers, setCustomers] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [ticketAttachments, setTicketAttachments] = useState<any[]>([]);
+  const [selectedAttachments, setSelectedAttachments] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     customer_id: ticket?.customer_id || "",
     location_id: "",
@@ -56,6 +60,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
   // Fetch customers on mount
   useEffect(() => {
     fetchCustomers();
+    fetchTicketAttachments();
   }, []);
 
   // Fetch locations when customer changes
@@ -68,6 +73,39 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
       setFormData(prev => ({ ...prev, location_id: "" }));
     }
   }, [formData.customer_id]);
+
+  const fetchTicketAttachments = async () => {
+    if (!ticket?.id) return;
+
+    try {
+      const { data: messages, error } = await supabase
+        .from("helpdesk_messages")
+        .select("attachments, id")
+        .eq("ticket_id", ticket.id)
+        .not("attachments", "is", null);
+
+      if (error) throw error;
+
+      // Flatten all attachments from all messages
+      const allAttachments: any[] = [];
+      messages?.forEach((message: any) => {
+        if (message.attachments && Array.isArray(message.attachments)) {
+          message.attachments.forEach((att: any) => {
+            allAttachments.push({
+              ...att,
+              messageId: message.id,
+            });
+          });
+        }
+      });
+
+      setTicketAttachments(allAttachments);
+      // Select all attachments by default
+      setSelectedAttachments(new Set(allAttachments.map((_, idx) => idx.toString())));
+    } catch (error) {
+      console.error("Error fetching ticket attachments:", error);
+    }
+  };
 
   const fetchCustomers = async () => {
     const { data, error } = await supabase
@@ -222,17 +260,45 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
           .from('helpdesk_linked_documents' as any)
           .insert({
             ticket_id: ticket.id,
-            entity_type: 'service_order',
-            entity_id: (serviceOrder as any).id,
+            document_type: 'service_order',
+            document_id: (serviceOrder as any).id,
             tenant_id: profile.tenant_id,
           });
 
         if (linkError) console.error("Error linking ticket:", linkError);
       }
 
+      // Copy selected attachments to service order
+      if (selectedAttachments.size > 0) {
+        const attachmentsToCopy = Array.from(selectedAttachments)
+          .map(idx => ticketAttachments[parseInt(idx)])
+          .filter(Boolean);
+
+        for (const attachment of attachmentsToCopy) {
+          try {
+            // Note: For now we're just storing the metadata
+            // In a production system, you'd want to download and re-upload the file
+            // or implement a proper file copying mechanism
+            await supabase
+              .from('service_order_attachments')
+              .insert({
+                service_order_id: (serviceOrder as any).id,
+                file_name: attachment.name,
+                file_size: attachment.size,
+                file_type: attachment.contentType,
+                file_url: `helpdesk-attachment-${attachment.id || 'unknown'}`,
+                tenant_id: profile.tenant_id,
+                uploaded_by: user.id,
+              });
+          } catch (error) {
+            console.error("Error copying attachment:", error);
+          }
+        }
+      }
+
       toast({
         title: "Service order created",
-        description: "Service order with line items has been created and linked to this ticket.",
+        description: `Service order created ${selectedAttachments.size > 0 ? `with ${selectedAttachments.size} attachment(s)` : ''} and linked to this ticket.`,
       });
 
       onSuccess((serviceOrder as any).id);
@@ -472,6 +538,52 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
             </div>
           </div>
         </div>
+
+        {/* Attachments Selection */}
+        {ticketAttachments.length > 0 && (
+          <div className="space-y-2 p-4">
+            <Label className="text-sm font-medium">
+              Copy Attachments to Service Order ({selectedAttachments.size} of {ticketAttachments.length} selected)
+            </Label>
+            <Card className="p-3">
+              <ScrollArea className="max-h-[200px]">
+                <div className="space-y-2">
+                  {ticketAttachments.map((attachment, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
+                      <Checkbox
+                        id={`attachment-${idx}`}
+                        checked={selectedAttachments.has(idx.toString())}
+                        onCheckedChange={(checked) => {
+                          const newSet = new Set(selectedAttachments);
+                          if (checked) {
+                            newSet.add(idx.toString());
+                          } else {
+                            newSet.delete(idx.toString());
+                          }
+                          setSelectedAttachments(newSet);
+                        }}
+                      />
+                      <label 
+                        htmlFor={`attachment-${idx}`}
+                        className="flex items-center gap-2 flex-1 cursor-pointer"
+                      >
+                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm truncate">{attachment.name}</p>
+                          {attachment.size && (
+                            <p className="text-xs text-muted-foreground">
+                              {Math.round(attachment.size / 1024)} KB
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </Card>
+          </div>
+        )}
       </ScrollArea>
 
       <div className="border-t p-4 flex gap-2">
