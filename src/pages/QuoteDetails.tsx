@@ -169,15 +169,33 @@ export default function QuoteDetails() {
 
       if (error) throw error;
       
-      // Organize into parent-child structure
+      // Organize into parent-child structure matching editedLineItems format
       const parentItems = data?.filter(item => !item.parent_line_item_id) || [];
       const subItems = data?.filter(item => item.parent_line_item_id) || [];
       
-      // Attach sub-items to their parents
+      // Attach sub-items to their parents with normalized structure
       const structured = parentItems.map(parent => {
-        const parentSubItems = subItems.filter(sub => sub.parent_line_item_id === parent.id);
+        const parentSubItems = subItems.filter(sub => sub.parent_line_item_id === parent.id)
+          .map(sub => ({
+            id: sub.id,
+            description: sub.description,
+            quantity: sub.quantity.toString(),
+            cost_price: sub.cost_price.toString(),
+            margin_percentage: sub.margin_percentage.toString(),
+            sell_price: sub.sell_price.toString(),
+            unit_price: sub.unit_price.toString(),
+            line_total: sub.line_total,
+          }));
+        
         return {
-          ...parent,
+          id: parent.id,
+          description: parent.description,
+          quantity: parent.quantity.toString(),
+          cost_price: parent.cost_price.toString(),
+          margin_percentage: parent.margin_percentage.toString(),
+          sell_price: parent.sell_price.toString(),
+          unit_price: parent.unit_price.toString(),
+          line_total: parent.line_total,
           subItems: parentSubItems,
           expanded: parentSubItems.length > 0 // Auto-expand items with sub-items
         };
@@ -335,6 +353,7 @@ export default function QuoteDetails() {
             cost_price: sub.cost_price.toString(),
             margin_percentage: sub.margin_percentage.toString(),
             sell_price: sub.sell_price.toString(),
+            unit_price: sub.unit_price.toString(),
             line_total: sub.line_total,
           }));
 
@@ -345,6 +364,7 @@ export default function QuoteDetails() {
           cost_price: parent.cost_price.toString(),
           margin_percentage: parent.margin_percentage.toString(),
           sell_price: parent.sell_price.toString(),
+          unit_price: parent.unit_price.toString(),
           line_total: parent.line_total,
           subItems,
           expanded: subItems.length > 0,
@@ -1646,7 +1666,16 @@ export default function QuoteDetails() {
               if (!open) setConversionType(null);
             }}
             quote={quote}
-            lineItems={lineItems || []}
+            lineItems={(lineItems || []).map(item => ({
+              ...item,
+              quantity: parseFloat(item.quantity),
+              unit_price: parseFloat(item.unit_price),
+              subItems: item.subItems?.map(sub => ({
+                ...sub,
+                quantity: parseFloat(sub.quantity),
+                unit_price: parseFloat(sub.unit_price),
+              }))
+            }))}
             initialType={conversionType}
           />
 
