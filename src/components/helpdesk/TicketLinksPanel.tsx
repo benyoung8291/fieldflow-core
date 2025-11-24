@@ -14,7 +14,9 @@ import {
   Sparkles,
   Loader2,
   X,
-  Link as LinkIcon
+  Link as LinkIcon,
+  UserPlus,
+  RefreshCw
 } from "lucide-react";
 import { SelectWithSearch } from "@/components/ui/select-with-search";
 
@@ -34,6 +36,7 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
   const { toast } = useToast();
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
@@ -170,6 +173,94 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
     }
   };
 
+  const refreshContactLinks = async () => {
+    if (!ticket?.sender_email) return;
+    
+    setRefreshing(true);
+    try {
+      // Look for matching contact
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("id, customer_id, supplier_id, lead_id")
+        .ilike("email", ticket.sender_email)
+        .limit(1)
+        .maybeSingle();
+
+      if (contact) {
+        // Update ticket with contact links
+        const { error } = await supabase
+          .from("helpdesk_tickets")
+          .update({
+            contact_id: contact.id,
+            customer_id: contact.customer_id,
+            supplier_id: contact.supplier_id,
+            lead_id: contact.lead_id,
+          })
+          .eq("id", ticket.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Contact linked",
+          description: "Ticket has been linked to the matching contact",
+        });
+        onUpdate();
+      } else {
+        toast({
+          title: "No matching contact",
+          description: "No contact found with this email address",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const createContactFromTicket = async () => {
+    if (!ticket?.sender_email) return;
+    
+    try {
+      const [firstName, ...lastNameParts] = (ticket.sender_name || ticket.sender_email).split(" ");
+      const lastName = lastNameParts.join(" ") || firstName;
+
+      const { data: newContact, error } = await supabase
+        .from("contacts")
+        .insert([{
+          tenant_id: ticket.tenant_id,
+          first_name: firstName,
+          last_name: lastName,
+          email: ticket.sender_email,
+          contact_type: "prospect",
+          status: "active",
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Now link the ticket to this new contact
+      await updateLink("contact", newContact.id);
+
+      toast({
+        title: "Contact created",
+        description: "New contact created and linked to this ticket",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error creating contact",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* AI Suggestions */}
@@ -207,9 +298,34 @@ export function TicketLinksPanel({ ticket, onUpdate }: TicketLinksPanelProps) {
 
       {/* Link Selection */}
       <Card className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <LinkIcon className="h-4 w-4" />
-          <h3 className="font-semibold">Linked Records</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" />
+            <h3 className="font-semibold">Linked Records</h3>
+          </div>
+          <div className="flex gap-2">
+            {ticket?.sender_email && !ticket?.contact_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={createContactFromTicket}
+                className="text-xs"
+              >
+                <UserPlus className="h-3 w-3 mr-1" />
+                Create Contact
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={refreshContactLinks}
+              disabled={refreshing}
+              className="text-xs"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
         
         <div className="space-y-3">
