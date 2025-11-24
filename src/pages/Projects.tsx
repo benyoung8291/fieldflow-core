@@ -26,16 +26,25 @@ export default function Projects() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: projectsResponse, isLoading, refetch } = useQuery({
-    queryKey: ["projects", pagination.currentPage, pagination.pageSize],
+    queryKey: ["projects", searchQuery, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("projects")
         .select("*", { count: 'exact' })
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
 
+      // Apply search filter across all records
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        query = query.or(`name.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
       if (error) throw error;
       
       // Fetch related data
@@ -69,10 +78,7 @@ export default function Projects() {
     },
   });
 
-  const filteredProjects = projects?.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    project.customer?.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // No need for client-side filtering since we're filtering in the database query
 
   const statusColors: Record<string, string> = {
     planning: "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -113,7 +119,10 @@ export default function Projects() {
           <Input
             placeholder="Search projects..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              pagination.resetPage();
+            }}
             className="pl-10"
           />
         </div>
@@ -122,7 +131,7 @@ export default function Projects() {
           <div className="text-center py-12">
             <p className="text-muted-foreground">Loading projects...</p>
           </div>
-        ) : filteredProjects?.length === 0 ? (
+        ) : projects?.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">No projects found</p>
@@ -134,7 +143,7 @@ export default function Projects() {
           </Card>
         ) : isMobile ? (
           <div className="space-y-3">
-            {filteredProjects?.map((project) => (
+            {projects?.map((project) => (
               <MobileDocumentCard
                 key={project.id}
                 title={project.name}
@@ -159,7 +168,7 @@ export default function Projects() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects?.map((project) => (
+            {projects?.map((project) => (
               <Card
                 key={project.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"

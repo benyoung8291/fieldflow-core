@@ -50,10 +50,10 @@ export default function Quotes() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: quotesResponse, isLoading, refetch } = useQuery({
-    queryKey: ["quotes", showArchived, pagination.currentPage, pagination.pageSize],
+    queryKey: ["quotes", searchQuery, showArchived, statusFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("quotes")
         .select(`
           id,
@@ -73,9 +73,23 @@ export default function Quotes() {
           leads(name)
         `, { count: 'exact' })
         .eq("is_archived", showArchived)
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
 
+      // Apply status filter
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      // Apply search filter across all records
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        query = query.or(`quote_number.ilike.%${searchLower}%,title.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
       if (error) throw error;
       
       // Transform to match expected format
@@ -99,16 +113,7 @@ export default function Quotes() {
     },
   });
 
-  const filteredQuotes = quotes?.filter((quote) => {
-    const matchesSearch =
-      quote.quote_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quote.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quote.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || quote.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+  // No need for client-side filtering since we're filtering in the database query
 
   const statusColors: Record<string, string> = {
     draft: "bg-gray-500/10 text-gray-500 border-gray-500/20",
@@ -371,7 +376,10 @@ export default function Quotes() {
             <Input
               placeholder="Search quotes..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                pagination.resetPage();
+              }}
               className="pl-10"
             />
           </div>
@@ -431,7 +439,7 @@ export default function Quotes() {
           <div className="text-center py-12">
             <p className="text-muted-foreground">Loading quotes...</p>
           </div>
-        ) : filteredQuotes?.length === 0 ? (
+        ) : quotes?.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">No quotes found</p>
@@ -443,7 +451,7 @@ export default function Quotes() {
           </Card>
         ) : isMobile ? (
           <div className="space-y-3">
-            {filteredQuotes?.map((quote) => (
+            {quotes?.map((quote) => (
               <MobileDocumentCard
                 key={quote.id}
                 title={quote.quote_number}
@@ -460,7 +468,7 @@ export default function Quotes() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredQuotes?.map((quote) => (
+            {quotes?.map((quote) => (
               <Card
                 key={quote.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"

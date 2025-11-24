@@ -25,7 +25,7 @@ export default function InvoicesList() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: invoicesResponse, isLoading, refetch } = useQuery({
-    queryKey: ["invoices", statusFilter, pagination.currentPage, pagination.pageSize],
+    queryKey: ["invoices", searchQuery, statusFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       
@@ -38,12 +38,20 @@ export default function InvoicesList() {
             name
           )
         `, { count: 'exact' })
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
+
+      // Apply search filter across all records
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        query = query.or(`invoice_number.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
 
       const { data, error, count } = await query;
       if (error) throw error;
@@ -61,13 +69,7 @@ export default function InvoicesList() {
     },
   });
 
-  const filteredInvoices = invoices?.filter((invoice) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      invoice.invoice_number.toLowerCase().includes(searchLower) ||
-      invoice.customers?.name?.toLowerCase().includes(searchLower)
-    );
-  });
+  // No need for client-side filtering since we're filtering in the database query
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -107,7 +109,10 @@ export default function InvoicesList() {
             <Input
               placeholder="Search by invoice number or customer..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                pagination.resetPage();
+              }}
               className="pl-10"
             />
           </div>
@@ -130,13 +135,13 @@ export default function InvoicesList() {
           <div className="text-center py-12">
             <p className="text-muted-foreground">Loading invoices...</p>
           </div>
-        ) : filteredInvoices?.length === 0 ? (
+        ) : invoices?.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No invoices found</p>
           </div>
         ) : isMobile ? (
           <div className="space-y-3">
-            {filteredInvoices?.map((invoice) => (
+            {invoices?.map((invoice) => (
               <MobileDocumentCard
                 key={invoice.id}
                 title={invoice.invoice_number}
@@ -169,7 +174,7 @@ export default function InvoicesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices?.map((invoice) => (
+                {invoices?.map((invoice) => (
                   <TableRow 
                     key={invoice.id}
                     className="cursor-pointer hover:bg-muted/50"

@@ -79,11 +79,11 @@ export default function ServiceOrders() {
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: ordersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["service_orders", pagination.currentPage, pagination.pageSize],
+    queryKey: ["service_orders", searchTerm, statusFilter, priorityFilter, customerFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("service_orders")
         .select(`
           id,
@@ -100,9 +100,29 @@ export default function ServiceOrders() {
           created_at,
           customers!service_orders_customer_id_fkey(name)
         `, { count: 'exact' })
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
 
+      // Apply filters
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter as any);
+      }
+      if (priorityFilter !== "all") {
+        query = query.eq("priority", priorityFilter);
+      }
+      if (customerFilter !== "all") {
+        query = query.eq("customer_id", customerFilter);
+      }
+
+      // Apply search filter across all records
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        query = query.or(`order_number.ilike.%${searchLower}%,title.ilike.%${searchLower}%,work_order_number.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
       if (error) {
         console.error("Error fetching service orders:", error);
         throw error;
@@ -134,20 +154,7 @@ export default function ServiceOrders() {
     },
   });
 
-  const filteredOrders = orders.filter((order: any) => {
-    const matchesSearch = 
-      searchTerm === "" ||
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.work_order_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
-    const matchesCustomer = customerFilter === "all" || order.customer_id === customerFilter;
-
-    return matchesSearch && matchesStatus && matchesPriority && matchesCustomer;
-  });
+  // No need for client-side filtering since we're filtering in the database query
 
   const handleDelete = async () => {
     if (!orderToDelete) return;
@@ -339,7 +346,10 @@ export default function ServiceOrders() {
                 placeholder="Search orders by number, customer, or title..."
                 className="pl-10 h-11 border-none bg-muted/50"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  pagination.resetPage();
+                }}
               />
             </div>
             
@@ -395,7 +405,7 @@ export default function ServiceOrders() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 ? (
               <Card className="border-none shadow-sm">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -403,7 +413,7 @@ export default function ServiceOrders() {
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order: any) => (
+              orders.map((order: any) => (
                 <MobileDocumentCard
                   key={order.id}
                   title={`#${order.order_number}`}
@@ -439,7 +449,7 @@ export default function ServiceOrders() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 ? (
               <Card className="border-none shadow-sm">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -449,7 +459,7 @@ export default function ServiceOrders() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredOrders.map((order: any) => (
+                {orders.map((order: any) => (
                   <Card 
                     key={order.id}
                     className="border-none shadow-md hover:shadow-lg hover-scale transition-all cursor-pointer group"
