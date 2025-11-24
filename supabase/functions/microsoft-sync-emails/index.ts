@@ -436,10 +436,13 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        success: false,
+        error: errorMessage 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200,
       }
     );
   }

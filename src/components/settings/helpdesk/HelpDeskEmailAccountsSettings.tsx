@@ -106,7 +106,15 @@ export function HelpDeskEmailAccountsSettings() {
         }
       );
 
-      if (error) throw error;
+      // Check for edge function errors
+      if (error) {
+        throw new Error(error.message || "Failed to sync emails");
+      }
+
+      // Check for application-level errors in the response
+      if (data && !data.success && data.error) {
+        throw new Error(data.error);
+      }
 
       toast({
         title: "Email sync complete",
@@ -118,7 +126,7 @@ export function HelpDeskEmailAccountsSettings() {
     } catch (error: any) {
       toast({
         title: "Failed to sync emails",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     }
