@@ -35,10 +35,10 @@ export default function Customers() {
 
   // Fetch customers from database
   const { data: customersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["customers", pagination.currentPage, pagination.pageSize],
+    queryKey: ["customers", searchQuery, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("customers")
         .select(`
           id,
@@ -56,8 +56,18 @@ export default function Customers() {
           trading_name,
           created_at
         `, { count: 'exact' })
-        .order("name")
-        .range(from, to);
+        .order("name");
+
+      // Apply search filter across all records
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        query = query.or(`name.ilike.%${searchLower}%,email.ilike.%${searchLower}%,phone.ilike.%${searchQuery}%,abn.ilike.%${searchLower}%,trading_name.ilike.%${searchLower}%`);
+      }
+
+      // Apply pagination after filters
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
       
       if (error) throw error;
       return { data: data || [], count: count || 0 };
@@ -112,17 +122,7 @@ export default function Customers() {
     },
   });
 
-  // Filter customers based on search query
-  const filteredCustomers = customers.filter(customer => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      customer.name?.toLowerCase().includes(searchLower) ||
-      customer.email?.toLowerCase().includes(searchLower) ||
-      customer.phone?.toLowerCase().includes(searchLower) ||
-      customer.abn?.toLowerCase().includes(searchLower) ||
-      customer.trading_name?.toLowerCase().includes(searchLower)
-    );
-  });
+  // No need for client-side filtering since we're filtering in the database query
 
   const totalServiceOrders = Object.values(serviceOrderCounts).reduce((sum: number, count) => sum + (count as number), 0);
   const totalSubAccounts = Object.values(subAccountCounts).reduce((sum: number, count) => sum + (count as number), 0);
@@ -232,7 +232,10 @@ export default function Customers() {
                 placeholder="Search by name, ABN, email, or phone..."
                 className="pl-10"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  pagination.resetPage();
+                }}
               />
             </div>
           </CardContent>
@@ -243,7 +246,7 @@ export default function Customers() {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredCustomers.length === 0 ? (
+        ) : customers.length === 0 ? (
           <Card className="shadow-md">
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
@@ -253,7 +256,7 @@ export default function Customers() {
           </Card>
         ) : isMobile ? (
           <div className="space-y-3">
-            {filteredCustomers.map((customer) => (
+            {customers.map((customer) => (
               <MobileDocumentCard
                 key={customer.id}
                 title={customer.name}
@@ -323,7 +326,7 @@ export default function Customers() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredCustomers.map((customer) => (
+                    {customers.map((customer) => (
                       <tr
                         key={customer.id}
                         className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
