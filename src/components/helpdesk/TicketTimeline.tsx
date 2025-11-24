@@ -13,6 +13,7 @@ import { ChecklistRenderer } from "./ChecklistRenderer";
 import { InlineNoteEditor } from "./InlineNoteEditor";
 import { InlineTaskEditor } from "./InlineTaskEditor";
 import { InlineCheckboxEditor } from "./InlineCheckboxEditor";
+import { AttachmentViewer } from "./AttachmentViewer";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
@@ -931,33 +932,26 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
                         {/* Attachments */}
                         {message.attachments && message.attachments.length > 0 && (
-                          <div className="mt-2 pt-2 border-t">
-                            <p className="text-xs font-medium mb-1 text-muted-foreground">Attachments:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {message.attachments.map((attachment: any, idx: number) => (
-                                <Button
-                                  key={idx}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 text-xs"
-                                  onClick={() => {
-                                    if (attachment.id) {
-                                      // Download attachment from Microsoft Graph
-                                      const downloadUrl = `https://graph.microsoft.com/v1.0/me/messages/${message.microsoft_message_id}/attachments/${attachment.id}/$value`;
-                                      window.open(downloadUrl, '_blank');
-                                    }
-                                  }}
-                                >
-                                  <Paperclip className="h-3 w-3 mr-1" />
-                                  {attachment.name}
-                                  {attachment.size && (
-                                    <span className="ml-1 text-muted-foreground">
-                                      ({Math.round(attachment.size / 1024)}KB)
-                                    </span>
-                                  )}
-                                </Button>
-                              ))}
-                            </div>
+                          <div className="mt-3 pt-3 border-t">
+                            <p className="text-xs font-medium mb-2 text-muted-foreground">
+                              {message.attachments.length} {message.attachments.length === 1 ? 'Attachment' : 'Attachments'}
+                            </p>
+                            <AttachmentViewer
+                              attachments={message.attachments.map((att: any) => ({
+                                id: att.id,
+                                name: att.name,
+                                size: att.size,
+                                contentType: att.contentType,
+                                url: att.id && message.microsoft_message_id 
+                                  ? `https://graph.microsoft.com/v1.0/me/messages/${message.microsoft_message_id}/attachments/${att.id}/$value`
+                                  : undefined,
+                              }))}
+                              onDownload={(attachment) => {
+                                if (attachment.url) {
+                                  window.open(attachment.url, '_blank');
+                                }
+                              }}
+                            />
                           </div>
                         )}
                         </div>
