@@ -77,7 +77,17 @@ serve(async (req) => {
           })
           .eq("id", emailAccountId);
         
-        throw new Error("Microsoft authentication expired. Please reconnect your email account.");
+        // Return error response instead of throwing
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: "Microsoft authentication expired. Please reconnect your email account."
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
       }
 
       const tokenData = await tokenResponse.json();
