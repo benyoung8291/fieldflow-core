@@ -2,12 +2,13 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Link2, Archive, UserPlus } from "lucide-react";
+import { Search, Plus, Link2, Archive, UserPlus, Mail, MailOpen, Trash2, Reply, Forward, Flag, FolderInput, CheckSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -30,6 +31,8 @@ interface TicketListProps {
 
 export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filterAssignment = "all", filterArchived = false }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -125,24 +128,75 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
   });
 
   const archiveTicketMutation = useMutation({
-    mutationFn: async (ticketId: string) => {
+    mutationFn: async (ticketIds: string[]) => {
       const { error } = await supabase
         .from("helpdesk_tickets")
         .update({ is_archived: !filterArchived })
-        .eq("id", ticketId);
+        .in("id", ticketIds);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, ticketIds) => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      setSelectedTicketIds(new Set());
       toast({
-        title: filterArchived ? "Ticket unarchived" : "Ticket archived",
-        description: filterArchived ? "The ticket has been moved back to inbox" : "The ticket has been archived",
+        title: filterArchived ? "Tickets unarchived" : "Tickets archived",
+        description: `${ticketIds.length} ticket(s) ${filterArchived ? "moved back to inbox" : "archived"}`,
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to ${filterArchived ? "unarchive" : "archive"} ticket: ${error.message}`,
+        description: `Failed to ${filterArchived ? "unarchive" : "archive"} tickets: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async ({ ticketIds, isRead }: { ticketIds: string[]; isRead: boolean }) => {
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update({ is_read: isRead })
+        .in("id", ticketIds);
+      if (error) throw error;
+    },
+    onSuccess: (_, { ticketIds, isRead }) => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      setSelectedTicketIds(new Set());
+      toast({
+        title: isRead ? "Marked as read" : "Marked as unread",
+        description: `${ticketIds.length} ticket(s) updated`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update tickets: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (ticketIds: string[]) => {
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .delete()
+        .in("id", ticketIds);
+      if (error) throw error;
+    },
+    onSuccess: (_, ticketIds) => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      setSelectedTicketIds(new Set());
+      toast({
+        title: "Tickets deleted",
+        description: `${ticketIds.length} ticket(s) permanently deleted`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete tickets: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -209,6 +263,80 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
     }
   };
 
+  const handleTicketClick = useCallback((ticketId: string, index: number, event: React.MouseEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      // Ctrl/Cmd+Click: Toggle selection
+      event.preventDefault();
+      setSelectedTicketIds(prev => {
+        const next = new Set(prev);
+        if (next.has(ticketId)) {
+          next.delete(ticketId);
+        } else {
+          next.add(ticketId);
+        }
+        return next;
+      });
+      setLastSelectedIndex(index);
+    } else if (event.shiftKey && lastSelectedIndex !== null && filteredTickets) {
+      // Shift+Click: Range selection
+      event.preventDefault();
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      setSelectedTicketIds(prev => {
+        const next = new Set(prev);
+        for (let i = start; i <= end; i++) {
+          next.add(filteredTickets[i].id);
+        }
+        return next;
+      });
+    } else {
+      // Normal click: Clear selection and select ticket
+      setSelectedTicketIds(new Set());
+      setLastSelectedIndex(index);
+      onSelectTicket(ticketId);
+    }
+  }, [lastSelectedIndex, filteredTickets, onSelectTicket]);
+
+  const handleSelectAll = useCallback(() => {
+    if (filteredTickets) {
+      setSelectedTicketIds(new Set(filteredTickets.map(t => t.id)));
+    }
+  }, [filteredTickets]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedTicketIds(new Set());
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      if (e.key === 'Escape') {
+        handleClearSelection();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSelectAll, handleClearSelection]);
+
+  const handleBulkArchive = () => {
+    archiveTicketMutation.mutate(Array.from(selectedTicketIds));
+  };
+
+  const handleBulkMarkRead = (isRead: boolean) => {
+    markAsReadMutation.mutate({ ticketIds: Array.from(selectedTicketIds), isRead });
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to permanently delete ${selectedTicketIds.size} ticket(s)?`)) {
+      deleteTicketMutation.mutate(Array.from(selectedTicketIds));
+    }
+  };
+
   return (
     <div className="flex flex-col h-full border-r bg-gradient-to-b from-background to-muted/5">
       {/* Enhanced Header */}
@@ -233,6 +361,64 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
         </div>
       </div>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedTicketIds.size > 0 && (
+        <div className="px-4 py-2 border-b bg-primary/5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              {selectedTicketIds.size} selected
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleClearSelection}
+              className="h-7 text-xs"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear
+            </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleBulkMarkRead(true)}
+              className="h-7 text-xs"
+            >
+              <MailOpen className="h-3 w-3 mr-1" />
+              Read
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleBulkMarkRead(false)}
+              className="h-7 text-xs"
+            >
+              <Mail className="h-3 w-3 mr-1" />
+              Unread
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleBulkArchive}
+              className="h-7 text-xs"
+            >
+              <Archive className="h-3 w-3 mr-1" />
+              {filterArchived ? "Unarchive" : "Archive"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleBulkDelete}
+              className="h-7 text-xs text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       <ScrollArea className="flex-1">
         {isLoading ? (
           <div className="p-6 space-y-3">
@@ -253,7 +439,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
               <ContextMenu key={ticket.id}>
                 <ContextMenuTrigger asChild>
                   <button
-                    onClick={() => onSelectTicket(ticket.id)}
+                    onClick={(e) => handleTicketClick(ticket.id, index, e)}
                     style={{ animationDelay: `${index * 30}ms` }}
                     className={cn(
                       "w-full px-4 py-3 text-left rounded-lg transition-all duration-200 flex flex-col gap-2 group relative overflow-hidden animate-fade-in-up",
@@ -261,10 +447,36 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                       selectedTicketId === ticket.id 
                         ? "bg-primary/10 border-2 border-primary/30 shadow-sm" 
+                        : selectedTicketIds.has(ticket.id)
+                        ? "bg-primary/5 border-2 border-primary/20 shadow-sm"
                         : "bg-background hover:bg-accent/30 border border-border/50",
                       !ticket.is_read && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary before:rounded-l-lg"
                     )}
                   >
+                    {/* Checkbox for multi-select */}
+                    <div className="absolute top-3 left-4 z-10">
+                      <Checkbox
+                        checked={selectedTicketIds.has(ticket.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedTicketIds(prev => {
+                            const next = new Set(prev);
+                            if (checked) {
+                              next.add(ticket.id);
+                            } else {
+                              next.delete(ticket.id);
+                            }
+                            return next;
+                          });
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          "transition-opacity",
+                          selectedTicketIds.size > 0 || selectedTicketIds.has(ticket.id)
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
+                        )}
+                      />
+                    </div>
                 {/* Time - Pinned to top right */}
                 <div className="absolute top-3 right-4">
                   <span className="text-xs text-muted-foreground/80 whitespace-nowrap font-medium transition-colors group-hover:text-foreground/70">
@@ -275,7 +487,7 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 </div>
 
                 {/* Top Row - Subject */}
-                <div className="pr-16">
+                <div className="pr-16 pl-6">
                   <h3 className={cn(
                     "font-semibold text-sm line-clamp-2 leading-snug transition-colors group-hover:text-primary",
                     !ticket.is_read && "text-foreground font-bold",
@@ -381,9 +593,54 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                 </div>
                   </button>
                 </ContextMenuTrigger>
-                <ContextMenuContent>
+                <ContextMenuContent className="w-56">
+                  <ContextMenuItem onClick={() => onSelectTicket(ticket.id)}>
+                    <MailOpen className="mr-2 h-4 w-4" />
+                    Open
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
                   <ContextMenuItem
-                    onClick={() => archiveTicketMutation.mutate(ticket.id)}
+                    onClick={() => markAsReadMutation.mutate({ ticketIds: [ticket.id], isRead: !ticket.is_read })}
+                  >
+                    {ticket.is_read ? (
+                      <>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Mark as unread
+                      </>
+                    ) : (
+                      <>
+                        <MailOpen className="mr-2 h-4 w-4" />
+                        Mark as read
+                      </>
+                    )}
+                  </ContextMenuItem>
+                  <ContextMenuItem>
+                    <Flag className="mr-2 h-4 w-4" />
+                    Flag
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem>
+                    <Reply className="mr-2 h-4 w-4" />
+                    Reply
+                  </ContextMenuItem>
+                  <ContextMenuItem>
+                    <Forward className="mr-2 h-4 w-4" />
+                    Forward
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger>
+                      <FolderInput className="mr-2 h-4 w-4" />
+                      Move to
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-48">
+                      <ContextMenuItem>Inbox</ContextMenuItem>
+                      <ContextMenuItem>Important</ContextMenuItem>
+                      <ContextMenuItem>Spam</ContextMenuItem>
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                  <ContextMenuItem
+                    onClick={() => archiveTicketMutation.mutate([ticket.id])}
                   >
                     <Archive className="mr-2 h-4 w-4" />
                     {filterArchived ? "Unarchive" : "Archive"}
@@ -411,6 +668,18 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                       ))}
                     </ContextMenuSubContent>
                   </ContextMenuSub>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onClick={() => {
+                      if (confirm('Are you sure you want to permanently delete this ticket?')) {
+                        deleteTicketMutation.mutate([ticket.id]);
+                      }
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
             ))}
