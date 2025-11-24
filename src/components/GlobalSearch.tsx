@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebounce } from "@/hooks/useDebounce";
+import Fuse from 'fuse.js';
 import {
   Command,
   CommandEmpty,
@@ -31,6 +32,7 @@ interface SearchResult {
   type: string;
   route: string;
   icon: any;
+  score?: number;
 }
 
 interface GlobalSearchProps {
@@ -41,7 +43,7 @@ interface GlobalSearchProps {
 export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: GlobalSearchProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearch = useDebounce(searchQuery, 300);
+  const debouncedSearch = useDebounce(searchQuery, 150);
   const navigate = useNavigate();
 
   const open = externalOpen ?? internalOpen;
@@ -59,103 +61,80 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Fetch all data - only when search query is present
-  const { data: customers } = useQuery({
-    queryKey: ["search-customers", debouncedSearch],
+  // Optimized single query approach with fuzzy search
+  const { data: allData, isLoading } = useQuery({
+    queryKey: ["global-search", debouncedSearch],
     queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("customers")
-        .select("id, name, email")
-        .or(`name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
-    },
-    enabled: debouncedSearch.length > 0,
-  });
+      if (!debouncedSearch || debouncedSearch.length < 2) return null;
+      
+      const query = debouncedSearch.toLowerCase();
+      
+      // Parallel queries for better performance
+      const [
+        customersData,
+        locationsData,
+        quotesData,
+        invoicesData,
+        projectsData,
+        serviceOrdersData,
+        contractsData,
+        helpdeskData
+      ] = await Promise.all([
+        supabase
+          .from("customers")
+          .select("id, name, email, phone")
+          .or(`name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("customer_locations")
+          .select("id, name, address, customer_id, customers(name)")
+          .or(`name.ilike.%${query}%,address.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("quotes")
+          .select("id, quote_number, title, total_amount, customer_id, customers(name)")
+          .or(`quote_number.ilike.%${query}%,title.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("invoices")
+          .select("id, invoice_number, total_amount, customer_id, customers(name)")
+          .ilike("invoice_number", `%${query}%`)
+          .limit(20),
+        supabase
+          .from("projects")
+          .select("id, name, description, customer_id, customers(name)")
+          .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("service_orders")
+          .select("id, order_number, title, customer_id, customers(name)")
+          .or(`order_number.ilike.%${query}%,title.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("service_contracts")
+          .select("id, contract_number, description, customer_id, customers(name)")
+          .or(`contract_number.ilike.%${query}%,description.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("helpdesk_tickets")
+          .select("id, ticket_number, subject, sender_name, sender_email")
+          .or(`ticket_number.ilike.%${query}%,subject.ilike.%${query}%,sender_name.ilike.%${query}%,sender_email.ilike.%${query}%`)
+          .limit(20)
+      ]);
 
-  const { data: locations } = useQuery({
-    queryKey: ["search-locations", debouncedSearch],
-    queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("customer_locations")
-        .select("id, name, customer_id, customers(name)")
-        .ilike("name", `%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
+      return {
+        customers: customersData.data || [],
+        locations: locationsData.data || [],
+        quotes: quotesData.data || [],
+        invoices: invoicesData.data || [],
+        projects: projectsData.data || [],
+        serviceOrders: serviceOrdersData.data || [],
+        contracts: contractsData.data || [],
+        helpdesk: helpdeskData.data || []
+      };
     },
-    enabled: debouncedSearch.length > 0,
-  });
-
-  const { data: quotes } = useQuery({
-    queryKey: ["search-quotes", debouncedSearch],
-    queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("quotes")
-        .select("id, quote_number, customer_id, customers(name)")
-        .ilike("quote_number", `%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
-    },
-    enabled: debouncedSearch.length > 0,
-  });
-
-  const { data: invoices } = useQuery({
-    queryKey: ["search-invoices", debouncedSearch],
-    queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("invoices")
-        .select("id, invoice_number, customer_id, customers(name)")
-        .ilike("invoice_number", `%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
-    },
-    enabled: debouncedSearch.length > 0,
-  });
-
-  const { data: projects } = useQuery({
-    queryKey: ["search-projects", debouncedSearch],
-    queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("projects")
-        .select("id, name, customer_id, customers(name)")
-        .ilike("name", `%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
-    },
-    enabled: debouncedSearch.length > 0,
-  });
-
-  const { data: serviceOrders } = useQuery({
-    queryKey: ["search-service-orders", debouncedSearch],
-    queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("service_orders")
-        .select("id, order_number, customer_id, customers(name)")
-        .ilike("order_number", `%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
-    },
-    enabled: debouncedSearch.length > 0,
-  });
-
-  const { data: contracts } = useQuery({
-    queryKey: ["search-contracts", debouncedSearch],
-    queryFn: async () => {
-      if (!debouncedSearch) return [];
-      const { data } = await supabase
-        .from("service_contracts")
-        .select("id, contract_number, customer_id, customers(name)")
-        .ilike("contract_number", `%${debouncedSearch}%`)
-        .limit(50);
-      return data || [];
-    },
-    enabled: debouncedSearch.length > 0,
+    enabled: debouncedSearch.length >= 2,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: helpdesk } = useQuery({
@@ -169,146 +148,164 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     },
   });
 
-  // Simple search function
-  const searchResults = (): SearchResult[] => {
-    if (!searchQuery.trim()) return [];
-    
-    const query = searchQuery.trim().toLowerCase();
-    const results: SearchResult[] = [];
+  // Fuzzy search with ranking
+  const results = useMemo(() => {
+    if (!searchQuery.trim() || !allData) return [];
 
-    // Search customers
-    customers?.forEach((customer) => {
-      const name = customer.name?.trim().toLowerCase() || "";
-      const email = customer.email?.trim().toLowerCase() || "";
-      if (name.includes(query) || email.includes(query)) {
-        results.push({
-          id: customer.id,
-          title: customer.name || "Unnamed Customer",
-          subtitle: customer.email,
-          type: "customer",
-          route: `/customers/${customer.id}`,
-          icon: Building2,
-        });
-      }
+    const allResults: SearchResult[] = [];
+
+    // Prepare data for fuzzy search
+    const prepareCustomers = allData.customers.map(c => ({
+      ...c,
+      searchText: `${c.name} ${c.email || ''} ${c.phone || ''}`.toLowerCase()
+    }));
+    const prepareLocations = allData.locations.map(l => ({
+      ...l,
+      searchText: `${l.name} ${l.address || ''} ${(l.customers as any)?.name || ''}`.toLowerCase()
+    }));
+    const prepareQuotes = allData.quotes.map(q => ({
+      ...q,
+      searchText: `${q.quote_number} ${q.title || ''} ${(q.customers as any)?.name || ''}`.toLowerCase()
+    }));
+    const prepareInvoices = allData.invoices.map(i => ({
+      ...i,
+      searchText: `${i.invoice_number} ${(i.customers as any)?.name || ''}`.toLowerCase()
+    }));
+    const prepareProjects = allData.projects.map(p => ({
+      ...p,
+      searchText: `${p.name} ${p.description || ''} ${(p.customers as any)?.name || ''}`.toLowerCase()
+    }));
+    const prepareServiceOrders = allData.serviceOrders.map(s => ({
+      ...s,
+      searchText: `${s.order_number} ${s.title || ''} ${(s.customers as any)?.name || ''}`.toLowerCase()
+    }));
+    const prepareContracts = allData.contracts.map(c => ({
+      ...c,
+      searchText: `${c.contract_number} ${c.description || ''} ${(c.customers as any)?.name || ''}`.toLowerCase()
+    }));
+    const prepareHelpdesk = allData.helpdesk.map(h => ({
+      ...h,
+      searchText: `${h.ticket_number} ${h.subject || ''} ${h.sender_name || ''} ${h.sender_email || ''}`.toLowerCase()
+    }));
+
+    // Fuzzy search configuration
+    const fuseOptions = {
+      keys: ['searchText'],
+      threshold: 0.4,
+      distance: 100,
+      includeScore: true
+    };
+
+    // Search each category
+    const customersFuse = new Fuse(prepareCustomers, fuseOptions);
+    const locationsFuse = new Fuse(prepareLocations, fuseOptions);
+    const quotesFuse = new Fuse(prepareQuotes, fuseOptions);
+    const invoicesFuse = new Fuse(prepareInvoices, fuseOptions);
+    const projectsFuse = new Fuse(prepareProjects, fuseOptions);
+    const serviceOrdersFuse = new Fuse(prepareServiceOrders, fuseOptions);
+    const contractsFuse = new Fuse(prepareContracts, fuseOptions);
+    const helpdeskFuse = new Fuse(prepareHelpdesk, fuseOptions);
+
+    // Get results
+    customersFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.name || "Unnamed Customer",
+        subtitle: result.item.email || result.item.phone,
+        type: "customer",
+        route: `/customers/${result.item.id}`,
+        icon: Building2,
+        score: result.score || 1
+      });
     });
 
-    // Search locations
-    locations?.forEach((location) => {
-      const name = location.name?.trim().toLowerCase() || "";
-      const customerName = (location.customers as any)?.name?.trim().toLowerCase() || "";
-      if (name.includes(query) || customerName.includes(query)) {
-        results.push({
-          id: location.id,
-          title: location.name || "Unnamed Location",
-          subtitle: (location.customers as any)?.name,
-          type: "location",
-          route: `/customer-locations/${location.id}`,
-          icon: MapPin,
-        });
-      }
+    locationsFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.name || "Unnamed Location",
+        subtitle: (result.item.customers as any)?.name,
+        type: "location",
+        route: `/customer-locations/${result.item.id}`,
+        icon: MapPin,
+        score: result.score || 1
+      });
     });
 
-    // Search quotes
-    quotes?.forEach((quote) => {
-      const number = quote.quote_number?.trim().toLowerCase() || "";
-      const customerName = (quote.customers as any)?.name?.trim().toLowerCase() || "";
-      if (number.includes(query) || customerName.includes(query)) {
-        results.push({
-          id: quote.id,
-          title: quote.quote_number || "Quote",
-          subtitle: (quote.customers as any)?.name,
-          type: "quote",
-          route: `/quotes/${quote.id}`,
-          icon: FileText,
-        });
-      }
+    quotesFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.quote_number || "Quote",
+        subtitle: `${(result.item.customers as any)?.name || ''} ${result.item.total_amount ? `· $${result.item.total_amount.toLocaleString()}` : ''}`.trim(),
+        type: "quote",
+        route: `/quotes/${result.item.id}`,
+        icon: FileText,
+        score: result.score || 1
+      });
     });
 
-    // Search invoices
-    invoices?.forEach((invoice) => {
-      const number = invoice.invoice_number?.trim().toLowerCase() || "";
-      const customerName = (invoice.customers as any)?.name?.trim().toLowerCase() || "";
-      if (number.includes(query) || customerName.includes(query)) {
-        results.push({
-          id: invoice.id,
-          title: invoice.invoice_number || "Invoice",
-          subtitle: (invoice.customers as any)?.name,
-          type: "invoice",
-          route: `/invoices/${invoice.id}`,
-          icon: DollarSign,
-        });
-      }
+    invoicesFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.invoice_number || "Invoice",
+        subtitle: `${(result.item.customers as any)?.name || ''} ${result.item.total_amount ? `· $${result.item.total_amount.toLocaleString()}` : ''}`.trim(),
+        type: "invoice",
+        route: `/invoices/${result.item.id}`,
+        icon: DollarSign,
+        score: result.score || 1
+      });
     });
 
-    // Search projects
-    projects?.forEach((project) => {
-      const name = project.name?.trim().toLowerCase() || "";
-      const customerName = (project.customers as any)?.name?.trim().toLowerCase() || "";
-      if (name.includes(query) || customerName.includes(query)) {
-        results.push({
-          id: project.id,
-          title: project.name || "Project",
-          subtitle: (project.customers as any)?.name,
-          type: "project",
-          route: `/projects/${project.id}`,
-          icon: Briefcase,
-        });
-      }
+    projectsFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.name || "Project",
+        subtitle: (result.item.customers as any)?.name,
+        type: "project",
+        route: `/projects/${result.item.id}`,
+        icon: Briefcase,
+        score: result.score || 1
+      });
     });
 
-    // Search service orders
-    serviceOrders?.forEach((order) => {
-      const number = order.order_number?.trim().toLowerCase() || "";
-      const customerName = (order.customers as any)?.name?.trim().toLowerCase() || "";
-      if (number.includes(query) || customerName.includes(query)) {
-        results.push({
-          id: order.id,
-          title: order.order_number || "Service Order",
-          subtitle: (order.customers as any)?.name,
-          type: "service-order",
-          route: `/service-orders/${order.id}`,
-          icon: Wrench,
-        });
-      }
+    serviceOrdersFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.order_number || "Service Order",
+        subtitle: `${(result.item.customers as any)?.name || ''} ${result.item.title ? `· ${result.item.title}` : ''}`.trim(),
+        type: "service-order",
+        route: `/service-orders/${result.item.id}`,
+        icon: Wrench,
+        score: result.score || 1
+      });
     });
 
-    // Search contracts
-    contracts?.forEach((contract) => {
-      const number = contract.contract_number?.trim().toLowerCase() || "";
-      const customerName = (contract.customers as any)?.name?.trim().toLowerCase() || "";
-      if (number.includes(query) || customerName.includes(query)) {
-        results.push({
-          id: contract.id,
-          title: contract.contract_number || "Contract",
-          subtitle: (contract.customers as any)?.name,
-          type: "contract",
-          route: `/service-contracts/${contract.id}`,
-          icon: FileSignature,
-        });
-      }
+    contractsFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.contract_number || "Contract",
+        subtitle: (result.item.customers as any)?.name,
+        type: "contract",
+        route: `/service-contracts/${result.item.id}`,
+        icon: FileSignature,
+        score: result.score || 1
+      });
     });
 
-    // Search helpdesk
-    helpdesk?.forEach((ticket) => {
-      const number = ticket.ticket_number?.trim().toLowerCase() || "";
-      const subject = ticket.subject?.trim().toLowerCase() || "";
-      const sender = ticket.sender_name?.trim().toLowerCase() || "";
-      if (number.includes(query) || subject.includes(query) || sender.includes(query)) {
-        results.push({
-          id: ticket.id,
-          title: ticket.ticket_number || "Ticket",
-          subtitle: ticket.subject || ticket.sender_name,
-          type: "helpdesk",
-          route: `/helpdesk?ticket=${ticket.id}`,
-          icon: Headphones,
-        });
-      }
+    helpdeskFuse.search(searchQuery).forEach(result => {
+      allResults.push({
+        id: result.item.id,
+        title: result.item.ticket_number || "Ticket",
+        subtitle: result.item.subject || result.item.sender_name,
+        type: "helpdesk",
+        route: `/helpdesk?ticket=${result.item.id}`,
+        icon: Headphones,
+        score: result.score || 1
+      });
     });
 
-    return results;
-  };
-
-  const results = searchResults();
+    // Sort by relevance score
+    return allResults.sort((a, b) => (a.score || 1) - (b.score || 1));
+  }, [searchQuery, allData]);
 
   // Group results by type
   const groupedResults: Record<string, SearchResult[]> = {};
@@ -364,13 +361,19 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
               </div>
             )}
             
-            {searchQuery.trim() && results.length === 0 && (
+            {isLoading && searchQuery.trim() && (
+              <div className="p-4 text-sm text-muted-foreground text-center">
+                Searching...
+              </div>
+            )}
+            
+            {!isLoading && searchQuery.trim() && results.length === 0 && (
               <CommandEmpty>No results found for "{searchQuery}"</CommandEmpty>
             )}
 
             {Object.entries(groupedResults).map(([type, items]) => (
               <CommandGroup key={type} heading={`${typeLabels[type] || type} (${items.length})`}>
-                {items.slice(0, 8).map((item) => {
+                {items.slice(0, 5).map((item) => {
                   const Icon = item.icon;
                   return (
                     <CommandItem
