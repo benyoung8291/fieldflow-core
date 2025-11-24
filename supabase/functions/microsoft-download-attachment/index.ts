@@ -78,14 +78,24 @@ serve(async (req) => {
     const attachmentData = await response.arrayBuffer();
     const contentType = response.headers.get("content-type") || "application/octet-stream";
 
-    // Return the attachment with appropriate headers
-    return new Response(attachmentData, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": contentType,
-        "Content-Disposition": "attachment",
-      },
-    });
+    // Convert to base64 for JSON transport
+    const base64Content = btoa(
+      String.fromCharCode(...new Uint8Array(attachmentData))
+    );
+
+    // Return as JSON with base64 content
+    return new Response(
+      JSON.stringify({
+        content: base64Content,
+        contentType: contentType,
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error downloading attachment:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";

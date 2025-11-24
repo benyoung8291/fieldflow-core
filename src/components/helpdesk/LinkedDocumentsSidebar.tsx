@@ -18,6 +18,7 @@ import { DocumentLinkSearch } from "./DocumentLinkSearch";
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
   ticket: any;
+  onClose?: () => void;
 }
 
 interface DocumentType {
@@ -36,7 +37,7 @@ const DOCUMENT_TYPES: DocumentType[] = [
   { type: "task", label: "Tasks", icon: <CheckSquare className="h-4 w-4" />, route: (id) => `/tasks` },
 ];
 
-export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSidebarProps) {
+export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocumentsSidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -292,6 +293,20 @@ export function LinkedDocumentsSidebar({ ticketId, ticket }: LinkedDocumentsSide
         {/* Header with Stats */}
         <div className="px-4 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Links & Actions</h3>
+              {onClose && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="h-7 w-7 p-0"
+                  title="Close sidebar"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <TabsList className="w-full grid grid-cols-2 bg-muted/50">
               <TabsTrigger value="documents" className="text-xs relative data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Link2 className="h-3.5 w-3.5 mr-1.5" />
