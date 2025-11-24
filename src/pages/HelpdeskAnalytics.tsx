@@ -12,6 +12,7 @@ import { ResponseTimeChart } from "@/components/helpdesk/analytics/ResponseTimeC
 import { TeamPerformance } from "@/components/helpdesk/analytics/TeamPerformance";
 import { PipelineMetrics } from "@/components/helpdesk/analytics/PipelineMetrics";
 import { CustomerMetrics } from "@/components/helpdesk/analytics/CustomerMetrics";
+import { AtRiskTickets } from "@/components/helpdesk/analytics/AtRiskTickets";
 import { DateRange } from "react-day-picker";
 
 export default function HelpdeskAnalytics() {
@@ -86,6 +87,7 @@ export default function HelpdeskAnalytics() {
 
           <TabsContent value="overview" className="space-y-6">
             <OverviewMetrics dateRange={dateRange} />
+            <AtRiskTickets />
             <ResponseTimeChart dateRange={dateRange} />
           </TabsContent>
 

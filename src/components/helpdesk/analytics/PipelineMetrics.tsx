@@ -16,6 +16,12 @@ export function PipelineMetrics({ dateRange }: PipelineMetricsProps) {
       const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
       const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null;
 
+      // Get all pipelines first to ensure we show all of them
+      const { data: allPipelines } = await supabase
+        .from("helpdesk_pipelines")
+        .select("id, name, color")
+        .eq("tenant_id", (await supabase.auth.getUser()).data.user?.user_metadata?.tenant_id);
+
       let ticketsQuery = supabase
         .from("helpdesk_tickets")
         .select("*, pipeline:helpdesk_pipelines(id, name, color)");
@@ -25,7 +31,18 @@ export function PipelineMetrics({ dateRange }: PipelineMetricsProps) {
 
       const { data: tickets } = await ticketsQuery;
 
+      // Initialize map with all pipelines to ensure they all show
       const pipelineMap = new Map();
+      
+      allPipelines?.forEach(pipeline => {
+        pipelineMap.set(pipeline.id, {
+          id: pipeline.id,
+          name: pipeline.name,
+          color: pipeline.color,
+          count: 0,
+          archived: 0,
+        });
+      });
 
       tickets?.forEach(ticket => {
         if (!ticket.pipeline) return;
