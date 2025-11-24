@@ -361,7 +361,7 @@ export default function QuoteDetails() {
     },
   });
 
-  // Fetch stages for selected pipeline
+  // Fetch CRM stages for the quote's pipeline
   const { data: stages = [] } = useQuery({
     queryKey: ["crm-stages", quote?.pipeline_id],
     queryFn: async () => {
@@ -482,6 +482,31 @@ export default function QuoteDetails() {
     } catch (error: any) {
       toast({
         title: "Error deleting attachment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateStage = async (newStageId: string) => {
+    if (!id) return;
+
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .update({ 
+          stage_id: newStageId,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["quote", id] });
+      toast({ title: "Stage updated successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error updating stage",
         description: error.message,
         variant: "destructive",
       });
@@ -953,6 +978,31 @@ export default function QuoteDetails() {
     </div>
   );
 
+  // CRM stage change dropdown component
+  const stageChangeDropdown = !isConverted && stages.length > 0 && (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">Stage:</span>
+      <Select value={quote?.stage_id || undefined} onValueChange={updateStage}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Select stage..." />
+        </SelectTrigger>
+        <SelectContent>
+          {stages.map((stage) => (
+            <SelectItem key={stage.id} value={stage.id}>
+              <div className="flex items-center gap-2">
+                <div 
+                  className="h-2 w-2 rounded-full" 
+                  style={{ backgroundColor: stage.color }}
+                />
+                <span>{stage.display_name}</span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   // Action buttons based on quote status
   const actionButtons: DocumentAction[] = [];
 
@@ -964,6 +1014,17 @@ export default function QuoteDetails() {
       onClick: () => {}, // No-op, the dropdown handles its own interactions
       variant: "outline",
       customRender: statusChangeDropdown,
+    } as any); // Type assertion needed for custom render
+  }
+
+  // Add stage dropdown as second action (if applicable)
+  if (stageChangeDropdown) {
+    actionButtons.push({
+      label: "Stage",
+      icon: null,
+      onClick: () => {}, // No-op, the dropdown handles its own interactions
+      variant: "outline",
+      customRender: stageChangeDropdown,
     } as any); // Type assertion needed for custom render
   }
 
