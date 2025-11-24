@@ -40,13 +40,13 @@ export const ViewModeToggle = () => {
   return (
     <Button 
       variant="ghost" 
-      size="icon" 
-      className="h-9 w-9" 
+      size="sm" 
+      className="gap-2" 
       onClick={cycleViewMode}
       title={getLabel()}
     >
       {getIcon()}
-      <span className="sr-only">{getLabel()}</span>
+      <span className="hidden sm:inline">{getLabel()}</span>
     </Button>
   );
 };
