@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -631,15 +631,14 @@ export default function AppointmentDetails() {
                       <div className="pt-4 border-t">
                         <span className="font-medium text-sm">Service Order:</span>
                         <div className="mt-1 text-sm space-y-1">
-                          <Button
-                            variant="link"
-                            className="h-auto p-0 font-normal text-primary hover:underline text-left"
-                            onClick={() => navigate(`/service-orders/${appointment.service_order_id || appointment.service_orders?.id}`)}
+                          <Link
+                            to={`/service-orders/${appointment.service_order_id || appointment.service_orders?.id}`}
+                            className="inline-block text-primary hover:underline"
                           >
                             {appointment.service_orders?.work_order_number 
                               ? `WO: ${appointment.service_orders.work_order_number}`
                               : 'View Service Order'}
-                          </Button>
+                          </Link>
                           {appointment.service_orders?.purchase_order_number && (
                             <p className="text-muted-foreground">PO: {appointment.service_orders.purchase_order_number}</p>
                           )}
@@ -826,10 +825,10 @@ export default function AppointmentDetails() {
                 <CardContent>
                   <div className="space-y-2">
                     {relatedAppointments.map((apt: any) => (
-                      <div
+                      <Link
                         key={apt.id}
-                        className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                        onClick={() => navigate(`/appointments/${apt.id}`)}
+                        to={`/appointments/${apt.id}`}
+                        className="block p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium">{apt.title}</span>
@@ -844,7 +843,7 @@ export default function AppointmentDetails() {
                           <Calendar className="h-3 w-3" />
                           {format(new Date(apt.start_time), "MMM d, h:mm a")}
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </CardContent>
