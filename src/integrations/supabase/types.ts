@@ -7387,6 +7387,12 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      link_existing_tickets_to_contacts: {
+        Args: never
+        Returns: {
+          tickets_updated: number
+        }[]
+      }
       link_purchase_order_to_project: {
         Args: { p_po_id: string; p_project_id: string }
         Returns: undefined
