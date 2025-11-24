@@ -433,13 +433,13 @@ export default function HelpDesk() {
         
         {/* Reopen sidebar button */}
         {!sidebarVisible && selectedTicketId && (
-          <div className="fixed bottom-6 right-6 z-10 animate-fade-in">
+          <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
             <Button
               onClick={() => setSidebarVisible(true)}
-              size="sm"
-              className="shadow-lg hover:shadow-xl transition-all hover-lift h-10 px-4 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50"
+              size="lg"
+              className="shadow-2xl hover:shadow-2xl transition-all hover-lift h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/50 font-semibold"
             >
-              <Link2 className="h-4 w-4 mr-2" />
+              <Link2 className="h-5 w-5 mr-2" />
               Show Links
             </Button>
           </div>
