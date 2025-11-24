@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,14 +107,24 @@ export default function QuickLocationDialog({
     });
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Create New Location</SheetTitle>
-        </SheetHeader>
+  if (!open) return null;
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+  return (
+    <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[500px] bg-background border-l border-border shadow-lg z-50 overflow-y-auto">
+      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Create New Location</h2>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onOpenChange(false)}
+          className="h-8 w-8 p-0"
+        >
+          ✕
+        </Button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 p-4">
           <div className="space-y-2">
             <Label>Location Name *</Label>
             <Input
@@ -231,7 +240,6 @@ export default function QuickLocationDialog({
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+    </div>
   );
 }
