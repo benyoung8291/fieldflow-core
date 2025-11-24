@@ -942,13 +942,39 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                                 name: att.name,
                                 size: att.size,
                                 contentType: att.contentType,
-                                url: att.id && message.microsoft_message_id 
-                                  ? `https://graph.microsoft.com/v1.0/me/messages/${message.microsoft_message_id}/attachments/${att.id}/$value`
-                                  : undefined,
                               }))}
-                              onDownload={(attachment) => {
-                                if (attachment.url) {
-                                  window.open(attachment.url, '_blank');
+                              onDownload={async (attachment) => {
+                                try {
+                                  const { data, error } = await supabase.functions.invoke(
+                                    "microsoft-download-attachment",
+                                    {
+                                      body: {
+                                        emailAccountId: ticket?.email_account_id,
+                                        messageId: message.microsoft_message_id,
+                                        attachmentId: attachment.id,
+                                      },
+                                    }
+                                  );
+
+                                  if (error) throw error;
+
+                                  // Create a blob from the response and download
+                                  const blob = new Blob([data], { type: attachment.contentType || 'application/octet-stream' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = attachment.name || 'attachment';
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  window.URL.revokeObjectURL(url);
+                                  document.body.removeChild(a);
+                                } catch (error) {
+                                  console.error('Failed to download attachment:', error);
+                                  toast({
+                                    title: "Download failed",
+                                    description: "Could not download the attachment",
+                                    variant: "destructive",
+                                  });
                                 }
                               }}
                             />
