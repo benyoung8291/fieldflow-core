@@ -8,6 +8,7 @@ import { Plus, Phone, Mail, Calendar, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import AddContactActivityDialog from "./AddContactActivityDialog";
+import DOMPurify from "dompurify";
 
 interface ContactActivityTimelineProps {
   contactId: string;
@@ -52,6 +53,19 @@ const activityLabels = {
 
 export default function ContactActivityTimeline({ contactId }: ContactActivityTimelineProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedActivityType, setSelectedActivityType] = useState<string | undefined>();
+
+  const handleQuickLog = (type: string) => {
+    setSelectedActivityType(type);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setSelectedActivityType(undefined);
+    }
+  };
 
   const { data: activities, isLoading } = useQuery<ActivityWithCreator[]>({
     queryKey: ["contact-activities", contactId],
@@ -98,45 +112,101 @@ export default function ContactActivityTimeline({ contactId }: ContactActivityTi
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Activity History</h3>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Log Activity
-        </Button>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Activity History</h3>
+          <Button onClick={() => setDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Log Activity
+          </Button>
+        </div>
+        
+        {/* Quick Action Buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleQuickLog('phone_call')}
+            className="gap-2"
+          >
+            <Phone className="h-4 w-4" />
+            Log Call
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleQuickLog('email')}
+            className="gap-2"
+          >
+            <Mail className="h-4 w-4" />
+            Log Email
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleQuickLog('meeting')}
+            className="gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            Log Meeting
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleQuickLog('note')}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Add Note
+          </Button>
+        </div>
       </div>
 
       {activities && activities.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {activities.map((activity) => {
             const Icon = activityIcons[activity.activity_type as keyof typeof activityIcons];
             const colorClass = activityColors[activity.activity_type as keyof typeof activityColors];
             const label = activityLabels[activity.activity_type as keyof typeof activityLabels];
 
+            // Check if description contains HTML tags
+            const isHtml = activity.description && /<[^>]+>/.test(activity.description);
+
             return (
-              <Card key={activity.id}>
-                <CardContent className="p-4">
+              <Card key={activity.id} className="transition-all hover:shadow-md">
+                <CardContent className="p-5">
                   <div className="flex gap-4">
-                    <div className={`flex-shrink-0 w-10 h-10 rounded-full ${colorClass} flex items-center justify-center`}>
+                    <div className={`flex-shrink-0 w-11 h-11 rounded-full ${colorClass} flex items-center justify-center shadow-sm`}>
                       <Icon className="h-5 w-5 text-white" />
                     </div>
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-3 min-w-0">
                       <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{label}</Badge>
-                            <span className="font-semibold">{activity.subject}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className="font-medium">{label}</Badge>
+                            <span className="font-semibold text-base">{activity.subject}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-sm text-muted-foreground mt-1.5">
                             {format(new Date(activity.activity_date), "PPp")}
                           </p>
                         </div>
                       </div>
                       {activity.description && (
-                        <p className="text-sm whitespace-pre-wrap">{activity.description}</p>
+                        isHtml ? (
+                          <div
+                            className="text-sm prose prose-sm max-w-none prose-headings:font-semibold prose-a:text-primary"
+                            dangerouslySetInnerHTML={{
+                              __html: DOMPurify.sanitize(activity.description)
+                            }}
+                          />
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap text-foreground/90">
+                            {activity.description}
+                          </p>
+                        )
                       )}
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground pt-1 border-t">
                         Logged by {activity.creator?.full_name || activity.creator?.email || "Unknown"}
                       </p>
                     </div>
@@ -159,7 +229,8 @@ export default function ContactActivityTimeline({ contactId }: ContactActivityTi
       <AddContactActivityDialog
         contactId={contactId}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogClose}
+        defaultActivityType={selectedActivityType}
       />
     </div>
   );
