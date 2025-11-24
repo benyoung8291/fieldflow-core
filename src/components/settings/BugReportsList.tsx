@@ -14,44 +14,40 @@ export function BugReportsList() {
   const { data: bugReports, isLoading } = useQuery({
     queryKey: ["bug-reports"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get the tasks
+      const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
-        .select(`
-          id,
-          title,
-          description,
-          status,
-          priority,
-          created_at,
-          created_by,
-          assigned_to,
-          profiles!tasks_created_by_fkey(first_name, last_name, email)
-        `)
+        .select("id, title, description, status, priority, created_at, created_by, assigned_to")
         .eq("linked_module", "bug_report")
         .order("created_at", { ascending: false })
         .limit(50);
 
-      if (error) throw error;
-      
-      // Transform the data to handle the profiles array
-      return data?.map(report => ({
-        ...report,
-        profiles: Array.isArray(report.profiles) ? report.profiles[0] : report.profiles
-      })) as Array<{
-        id: string;
-        title: string;
-        description: string;
-        status: string;
-        priority: string;
-        created_at: string;
-        created_by: string;
-        assigned_to: string | null;
-        profiles: {
-          first_name: string;
-          last_name: string;
-          email: string;
-        };
-      }>;
+      if (tasksError) throw tasksError;
+      if (!tasks || tasks.length === 0) return [];
+
+      // Get unique user IDs
+      const userIds = [...new Set(tasks.map(t => t.created_by))];
+
+      // Fetch profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Map profiles by ID for easy lookup
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      // Combine the data
+      return tasks.map(task => ({
+        ...task,
+        profiles: profilesMap.get(task.created_by) || {
+          first_name: "",
+          last_name: "",
+          email: "Unknown"
+        }
+      }));
     },
   });
 
