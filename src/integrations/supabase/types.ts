@@ -613,6 +613,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          appointment_number: string | null
           assigned_to: string | null
           check_in_lat: number | null
           check_in_lng: number | null
@@ -644,6 +645,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          appointment_number?: string | null
           assigned_to?: string | null
           check_in_lat?: number | null
           check_in_lng?: number | null
@@ -675,6 +677,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          appointment_number?: string | null
           assigned_to?: string | null
           check_in_lat?: number | null
           check_in_lng?: number | null

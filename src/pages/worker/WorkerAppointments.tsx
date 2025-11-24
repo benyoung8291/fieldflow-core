@@ -39,6 +39,7 @@ export default function WorkerAppointments() {
         const weekEnd = format(endOfWeek(new Date()), 'yyyy-MM-dd');
 
         // Optimized query - only fetch needed fields and join time_logs in one query
+        // Only show published and scheduled appointments (not draft)
         const { data } = await supabase
           .from('appointment_workers')
           .select(`
@@ -59,6 +60,7 @@ export default function WorkerAppointments() {
           .eq('worker_id', user.id)
           .gte('appointment.start_time', weekStart)
           .lte('appointment.start_time', weekEnd)
+          .neq('appointment.status', 'draft')
           .order('appointment(start_time)');
 
         if (data) {
