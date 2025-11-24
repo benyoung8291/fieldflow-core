@@ -228,6 +228,15 @@ export function HelpDeskEmailAccountsSettings() {
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
+                {account.provider === 'microsoft' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(account)}
+                  >
+                    Reconnect
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
