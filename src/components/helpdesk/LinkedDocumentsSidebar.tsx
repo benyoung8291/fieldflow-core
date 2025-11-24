@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { SelectWithSearch } from "@/components/ui/select-with-search";
 import { DocumentLinkSearch } from "./DocumentLinkSearch";
+import { ThreadSummaryCard } from "./ThreadSummaryCard";
 
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
@@ -351,6 +352,9 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
         <TabsContent value="documents" className="flex-1 mt-0 p-0 overflow-hidden">
           <ScrollArea className="h-[calc(100vh-15rem)]">
             <div className="p-4 space-y-4">
+              {/* AI Thread Summary */}
+              <ThreadSummaryCard ticketId={ticketId} />
+              
               {/* Entities Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
