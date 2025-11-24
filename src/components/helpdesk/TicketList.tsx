@@ -21,15 +21,25 @@ import {
 } from "@/components/ui/context-menu";
 import { useToast } from "@/hooks/use-toast";
 
+import { MailboxFolder } from "@/components/helpdesk/MailboxFolderNav";
+
 interface TicketListProps {
   selectedTicketId: string | null;
   onSelectTicket: (ticketId: string) => void;
   pipelineId?: string | null;
   filterAssignment?: "all" | "unassigned" | "assigned_to_me";
   filterArchived?: boolean;
+  selectedFolder?: MailboxFolder;
 }
 
-export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filterAssignment = "all", filterArchived = false }: TicketListProps) {
+export function TicketList({ 
+  selectedTicketId, 
+  onSelectTicket, 
+  pipelineId, 
+  filterAssignment = "all", 
+  filterArchived = false,
+  selectedFolder = "inbox"
+}: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);

@@ -4,6 +4,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { TicketList } from "@/components/helpdesk/TicketList";
 import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
 import { LinkedDocumentsSidebar } from "@/components/helpdesk/LinkedDocumentsSidebar";
+import { MailboxFolderNav, type MailboxFolder } from "@/components/helpdesk/MailboxFolderNav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -26,6 +27,7 @@ export default function HelpDesk() {
   const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("all");
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
+  const [selectedFolder, setSelectedFolder] = useState<MailboxFolder>("inbox");
 
   useEffect(() => {
     // Load last used filter from localStorage
@@ -378,7 +380,21 @@ export default function HelpDesk() {
         </div>
 
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
-        {/* Left: Ticket List */}
+        {/* Folder Navigation */}
+        <ResizablePanel defaultSize={15} minSize={12} maxSize={20} className="relative">
+          <MailboxFolderNav
+            selectedFolder={selectedFolder}
+            onSelectFolder={(folder) => {
+              setSelectedFolder(folder);
+              // Update archived filter based on folder
+              setFilterArchived(folder === "archive" || folder === "deleted" || folder === "junk");
+            }}
+          />
+        </ResizablePanel>
+
+        <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
+
+        {/* Ticket List */}
         <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
           <TicketList
             selectedTicketId={selectedTicketId} 
@@ -386,6 +402,7 @@ export default function HelpDesk() {
             pipelineId={selectedPipelineId}
             filterAssignment={filterAssignment}
             filterArchived={filterArchived}
+            selectedFolder={selectedFolder}
           />
         </ResizablePanel>
 
