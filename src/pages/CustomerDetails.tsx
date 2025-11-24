@@ -82,7 +82,7 @@ export default function CustomerDetails() {
     enabled: !!id,
   });
 
-  const { data: contacts = [] } = useQuery({
+  const { data: contacts = [], refetch: refetchContacts } = useQuery({
     queryKey: ["customer-contacts", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -591,7 +591,12 @@ export default function CustomerDetails() {
 
       <ContactDialog
         open={isContactDialogOpen}
-        onOpenChange={setIsContactDialogOpen}
+        onOpenChange={(open) => {
+          setIsContactDialogOpen(open);
+          if (!open) {
+            refetchContacts();
+          }
+        }}
         contact={selectedContact}
         customerId={id!}
       />

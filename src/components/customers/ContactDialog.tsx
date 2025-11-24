@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ContactDialogProps {
   open: boolean;
@@ -58,13 +59,63 @@ export default function ContactDialog({ open, onOpenChange, contact, customerId 
     }
   }, [contact, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log("Saving contact:", { ...formData, customerId });
-    
-    toast.success(contact ? "Contact updated successfully" : "Contact added successfully");
-    onOpenChange(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (contact) {
+        // Update existing contact
+        const { error } = await supabase
+          .from("contacts")
+          .update({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            position: formData.position || null,
+            email: formData.email || null,
+            phone: formData.phone || null,
+            mobile: formData.mobile || null,
+            notes: formData.notes || null,
+            is_primary: formData.isPrimary,
+          })
+          .eq("id", contact.id);
+
+        if (error) throw error;
+      } else {
+        // Create new contact
+        const { error } = await supabase
+          .from("contacts")
+          .insert({
+            tenant_id: profile?.tenant_id,
+            customer_id: customerId,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            position: formData.position || null,
+            email: formData.email || null,
+            phone: formData.phone || null,
+            mobile: formData.mobile || null,
+            notes: formData.notes || null,
+            is_primary: formData.isPrimary,
+            contact_type: "customer_contact",
+            status: "active",
+          });
+
+        if (error) throw error;
+      }
+
+      toast.success(contact ? "Contact updated successfully" : "Contact added successfully");
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error("Error saving contact: " + error.message);
+    }
   };
 
   return (
