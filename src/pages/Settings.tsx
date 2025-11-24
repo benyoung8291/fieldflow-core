@@ -32,7 +32,8 @@ import {
   CreditCard,
   Database,
   Radio,
-  Bell
+  Bell,
+  Bug
 } from "lucide-react";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
@@ -57,6 +58,7 @@ import { ExpensePolicyTab } from "@/components/settings/ExpensePolicyTab";
 import { SchemaValidatorTab } from "@/components/settings/SchemaValidatorTab";
 import { PerformanceMonitorTab } from "@/components/settings/PerformanceMonitorTab";
 import APInvoiceSettingsTab from "@/components/settings/APInvoiceSettingsTab";
+import { BugReportsList } from "@/components/settings/BugReportsList";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck, FileCheck } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -130,6 +132,7 @@ const settingsNavigation: SettingsNavGroup[] = [
   {
     group: "System",
     items: [
+      { title: "Bug Reports", value: "bug-reports", icon: Bug },
       { title: "Activity Log", value: "activity-log", icon: Activity },
       { title: "Change Log", value: "changelog", icon: ScrollText },
       { title: "Schema Validator", value: "schema-validator", icon: Database, adminOnly: true },
@@ -572,6 +575,14 @@ export default function Settings() {
               <Card>
                 <CardContent className="pt-6">
                   <ActivityLogTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "bug-reports" && (
+              <Card>
+                <CardContent className="pt-6">
+                  <BugReportsList />
                 </CardContent>
               </Card>
             )}
