@@ -184,19 +184,23 @@ serve(async (req: Request) => {
       // Create new ticket
       console.log("Creating new ticket for:", emailData.from);
 
-      // Try to find existing customer by email (use actual sender)
+      // Try to find existing contact by email (use actual sender)
       let customerId = null;
+      let supplierId = null;
+      let leadId = null;
       let contactId = null;
 
       const { data: contact } = await supabase
         .from("contacts")
-        .select("id, customer_id")
+        .select("id, customer_id, supplier_id, lead_id")
         .ilike("email", actualSenderEmail)
         .limit(1)
         .single();
 
       if (contact) {
         customerId = contact.customer_id;
+        supplierId = contact.supplier_id;
+        leadId = contact.lead_id;
         contactId = contact.id;
       }
 
@@ -221,6 +225,8 @@ serve(async (req: Request) => {
           status: "open",
           priority: "normal",
           customer_id: customerId,
+          supplier_id: supplierId,
+          lead_id: leadId,
           contact_id: contactId,
           sender_email: actualSenderEmail,
           sender_name: actualSenderName,
