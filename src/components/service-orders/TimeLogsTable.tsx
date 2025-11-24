@@ -6,9 +6,10 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, X, Edit2, AlertTriangle } from "lucide-react";
+import { Save, X, Edit2, AlertTriangle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
+import DeleteTimeLogDialog from "@/components/time-logs/DeleteTimeLogDialog";
 
 interface TimeLogsTableProps {
   appointmentId: string;
@@ -22,14 +23,14 @@ const statusColors = {
 };
 
 export default function TimeLogsTable({ appointmentId, hideFinancials = false }: TimeLogsTableProps) {
-  // Version 2.0 - Delete functionality permanently removed
-  console.log('[TimeLogsTable v2.0] Component loaded - NO DELETE ALLOWED');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, userRoles } = usePermissions();
-  const canEdit = isAdmin || userRoles?.some((r) => r.role === "supervisor");
+  const isSupervisorOrAbove = isAdmin || userRoles?.some((r) => r.role === "supervisor");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingLog, setDeletingLog] = useState<any>(null);
 
   const { data: timeLogs = [], isLoading } = useQuery({
     queryKey: ["time-logs", appointmentId],
@@ -85,6 +86,29 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("time_logs")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["time-logs", appointmentId] });
+      toast({ title: "Time log deleted successfully" });
+      setDeletingLog(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEdit = (log: any) => {
     setEditingId(log.id);
     setEditData({
@@ -116,6 +140,17 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
     setEditData({});
   };
 
+  const handleDeleteClick = (log: any) => {
+    setDeletingLog(log);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingLog) {
+      deleteMutation.mutate(deletingLog.id);
+    }
+  };
+
   if (isLoading) {
     return <div className="text-sm text-muted-foreground py-4">Loading time logs...</div>;
   }
@@ -125,25 +160,26 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b border-border bg-muted/30">
-          <tr>
-            <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Worker</th>
-            <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Clock In</th>
-            <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Clock Out</th>
-            <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Hours</th>
-            {!hideFinancials && (
-              <>
-                <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Rate</th>
-                <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Overhead</th>
-                <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Total Cost</th>
-              </>
-            )}
-            <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Status</th>
-            {canEdit && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-20">Actions</th>}
-          </tr>
-        </thead>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border bg-muted/30">
+            <tr>
+              <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Worker</th>
+              <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Clock In</th>
+              <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Clock Out</th>
+              <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Hours</th>
+              {!hideFinancials && (
+                <>
+                  <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Rate</th>
+                  <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Overhead</th>
+                  <th className="text-right py-2 px-2 font-medium text-[10px] uppercase">Total Cost</th>
+                </>
+              )}
+              <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Status</th>
+              {isSupervisorOrAbove && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-24">Actions</th>}
+            </tr>
+          </thead>
         <tbody className="divide-y divide-border/50">
           {timeLogs.map((log: any) => {
             const isEditing = editingId === log.id;
@@ -251,7 +287,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                       </Badge>
                     )}
                   </td>
-                  {canEdit && (
+                  {isSupervisorOrAbove && (
                     <td className="py-2 px-2 text-right">
                       {isEditing ? (
                         <div className="flex gap-1 justify-end">
@@ -276,22 +312,33 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                           </Button>
                         </div>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(log)}
-                          className="h-6 w-6 p-0"
-                          title="Edit time log"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(log)}
+                            className="h-6 w-6 p-0"
+                            title="Edit time log"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(log)}
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            title="Delete time log"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
                     </td>
                   )}
                 </tr>
                 {(hasLocationDenied || hasLocationUnavailable) && (
                   <tr key={`${log.id}-location-warning`} className="bg-muted/20">
-                    <td colSpan={canEdit ? (hideFinancials ? 5 : 8) : (hideFinancials ? 4 : 7)} className="py-2 px-2">
+                    <td colSpan={isSupervisorOrAbove ? (hideFinancials ? 5 : 8) : (hideFinancials ? 4 : 7)} className="py-2 px-2">
                       {hasLocationDenied && (
                         <Badge variant="destructive" className="text-[9px] flex items-center gap-1 w-fit">
                           <AlertTriangle className="h-3 w-3" />
@@ -313,5 +360,14 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
         </tbody>
       </table>
     </div>
+
+    <DeleteTimeLogDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      onConfirm={handleDeleteConfirm}
+      workerName={deletingLog?.worker ? `${deletingLog.worker.first_name} ${deletingLog.worker.last_name}` : "Unknown"}
+      clockIn={deletingLog ? format(new Date(deletingLog.clock_in), "MMM d, h:mm a") : ""}
+    />
+  </>
   );
 }
