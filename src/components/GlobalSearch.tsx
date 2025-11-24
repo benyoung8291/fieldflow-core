@@ -303,8 +303,16 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       });
     });
 
-    // Sort by relevance score
-    return allResults.sort((a, b) => (a.score || 1) - (b.score || 1));
+    // Deduplicate by id and type, then sort by relevance score
+    const seen = new Set<string>();
+    const deduplicatedResults = allResults.filter(result => {
+      const key = `${result.type}-${result.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    
+    return deduplicatedResults.sort((a, b) => (a.score || 1) - (b.score || 1));
   }, [searchQuery, allData]);
 
   // Group results by type
