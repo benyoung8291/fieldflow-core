@@ -5,6 +5,7 @@ import { Clock, MessageSquare, CheckCircle, TrendingUp, TrendingDown, Users } fr
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { calculateBusinessHours } from "@/lib/businessDays";
 
 interface OverviewMetricsProps {
   dateRange?: DateRange;
@@ -37,9 +38,9 @@ export function OverviewMetrics({ dateRange }: OverviewMetricsProps) {
       const assignmentTimes = tickets
         ?.filter(t => t.assigned_to && t.created_at)
         .map(t => {
-          const created = new Date(t.created_at).getTime();
-          const lastMessage = new Date(t.last_message_at || t.created_at).getTime();
-          return (lastMessage - created) / (1000 * 60 * 60); // hours
+          const created = new Date(t.created_at);
+          const lastMessage = new Date(t.last_message_at || t.created_at);
+          return calculateBusinessHours(created, lastMessage);
         }) || [];
 
       const avgTimeToAssign = assignmentTimes.length > 0
@@ -58,7 +59,10 @@ export function OverviewMetrics({ dateRange }: OverviewMetricsProps) {
         const firstReply = ticketMessages.find(m => !m.is_from_customer && m.created_at > (firstCustomerMsg?.created_at || ticket.created_at));
         
         if (firstReply && firstCustomerMsg) {
-          return (new Date(firstReply.created_at).getTime() - new Date(firstCustomerMsg.created_at).getTime()) / (1000 * 60 * 60);
+          return calculateBusinessHours(
+            new Date(firstCustomerMsg.created_at),
+            new Date(firstReply.created_at)
+          );
         }
         return null;
       }).filter(Boolean) as number[];
@@ -71,9 +75,9 @@ export function OverviewMetrics({ dateRange }: OverviewMetricsProps) {
       const archiveTimes = tickets
         ?.filter(t => t.is_archived && t.created_at)
         .map(t => {
-          const created = new Date(t.created_at).getTime();
-          const archived = new Date(t.updated_at).getTime();
-          return (archived - created) / (1000 * 60 * 60); // hours
+          const created = new Date(t.created_at);
+          const archived = new Date(t.updated_at);
+          return calculateBusinessHours(created, archived);
         }) || [];
 
       const avgTimeToArchive = archiveTimes.length > 0

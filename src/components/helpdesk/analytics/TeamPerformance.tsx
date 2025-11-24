@@ -6,6 +6,7 @@ import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { calculateBusinessHours } from "@/lib/businessDays";
 
 interface TeamPerformanceProps {
   dateRange?: DateRange;
@@ -60,7 +61,10 @@ export function TeamPerformance({ dateRange }: TeamPerformanceProps) {
         )[0];
 
         if (firstReply) {
-          const responseTime = (new Date(firstReply.created_at).getTime() - new Date(ticket.created_at).getTime()) / (1000 * 60 * 60);
+          const responseTime = calculateBusinessHours(
+            new Date(ticket.created_at),
+            new Date(firstReply.created_at)
+          );
           userData.responseTimes.push(responseTime);
         }
       });
