@@ -32,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useHelpdeskPresence } from "@/hooks/useHelpdeskPresence";
 
 export default function HelpDesk() {
   const { toast } = useToast();
@@ -45,6 +46,9 @@ export default function HelpDesk() {
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [selectedFolder, setSelectedFolder] = useState<MailboxFolder>("inbox");
+
+  // Track presence for this user showing what ticket they're viewing
+  useHelpdeskPresence(selectedTicketId);
 
   useEffect(() => {
     // Load last used filter from localStorage
@@ -306,7 +310,7 @@ export default function HelpDesk() {
   const CurrentFolderIcon = currentFolderConfig.icon;
 
   return (
-    <DashboardLayout disablePresence={true}>
+    <DashboardLayout disablePresence={false}>
       <div className="flex flex-col h-full">
         {/* Header with Pipeline Selector, Quick Filters, and Sync */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">

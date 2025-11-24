@@ -48,6 +48,7 @@ const getModuleIcon = (tableName: string) => {
     projects: "💼",
     service_orders: "📋",
     invoices: "💵",
+    helpdesk_tickets: "✉️",
   };
   return icons[tableName] || "📝";
 };
@@ -95,7 +96,7 @@ export function ActivityAndUsers() {
       const { data, error } = await supabase
         .from("audit_logs")
         .select("*")
-        .in("table_name", ["quotes", "projects", "service_orders", "invoices"])
+        .in("table_name", ["quotes", "projects", "service_orders", "invoices", "helpdesk_tickets"])
         .order("created_at", { ascending: false })
         .limit(15);
 
@@ -160,7 +161,7 @@ export function ActivityAndUsers() {
         (payload) => {
           const newLog = payload.new as AuditLog;
           if (
-            ["quotes", "projects", "service_orders", "invoices"].includes(
+            ["quotes", "projects", "service_orders", "invoices", "helpdesk_tickets"].includes(
               newLog.table_name
             )
           ) {
@@ -179,6 +180,7 @@ export function ActivityAndUsers() {
   const getPageName = (path: string): string => {
     const routes: { [key: string]: string } = {
       "/dashboard": "Dashboard",
+      "/helpdesk": "Help Desk",
       "/service-orders": "Service Orders",
       "/quotes": "Quotes",
       "/projects": "Projects",
@@ -214,6 +216,7 @@ export function ActivityAndUsers() {
       projects: "/projects",
       service_orders: "/service-orders",
       invoices: "/invoices",
+      helpdesk_tickets: "/helpdesk",
     };
 
     const basePath = routes[tableName];
