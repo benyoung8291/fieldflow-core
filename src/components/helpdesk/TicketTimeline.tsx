@@ -8,7 +8,7 @@ import { TicketActionsMenu } from "./TicketActionsMenu";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { EmailComposer, EmailComposerRef } from "./EmailComposer";
+import { EmailComposerEnhanced, EmailComposerRef } from "./EmailComposerEnhanced";
 import { ChecklistRenderer } from "./ChecklistRenderer";
 import { InlineNoteEditor } from "./InlineNoteEditor";
 import { InlineTaskEditor } from "./InlineTaskEditor";
@@ -875,13 +875,12 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
       {/* Email Composer */}
       <div data-composer>
-        <EmailComposer
+        <EmailComposerEnhanced
           ref={composerRef}
-          onSend={(emailData) => sendReplyMutation.mutate(emailData)}
+          onSend={(emailData) => sendReplyMutation.mutateAsync(emailData)}
           defaultTo={ticket?.sender_email || ticket?.external_email || ""}
           defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
           isSending={sendReplyMutation.isPending}
-          ticketId={ticketId}
           emailThread={emailThread}
         />
       </div>
