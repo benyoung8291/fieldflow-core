@@ -46,8 +46,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
     title: parsedData?.title || ticket?.subject || "",
     description: parsedData?.description || ticket?.description || "",
     preferred_date: parsedData?.preferred_date || "",
-    preferred_start_date: parsedData?.preferred_start_date || "",
-    preferred_end_date: parsedData?.preferred_end_date || "",
+    preferred_date_start: parsedData?.preferred_date_start || "",
+    preferred_date_end: parsedData?.preferred_date_end || "",
     priority: parsedData?.priority || "medium",
     tax_rate: 10,
   });
@@ -216,8 +216,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
           title: formData.title,
           description: formData.description,
           preferred_date: formData.preferred_date || null,
-          preferred_start_date: formData.preferred_start_date || null,
-          preferred_end_date: formData.preferred_end_date || null,
+          preferred_date_start: formData.preferred_date_start || null,
+          preferred_date_end: formData.preferred_date_end || null,
           priority: formData.priority,
           status: 'draft',
           subtotal,
@@ -408,22 +408,22 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="preferred_start_date">Preferred Start Date</Label>
+              <Label htmlFor="preferred_date_start">Preferred Start Date</Label>
               <Input
-                id="preferred_start_date"
+                id="preferred_date_start"
                 type="date"
-                value={formData.preferred_start_date}
-                onChange={(e) => setFormData({ ...formData, preferred_start_date: e.target.value })}
+                value={formData.preferred_date_start}
+                onChange={(e) => setFormData({ ...formData, preferred_date_start: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="preferred_end_date">Preferred End Date</Label>
+              <Label htmlFor="preferred_date_end">Preferred End Date</Label>
               <Input
-                id="preferred_end_date"
+                id="preferred_date_end"
                 type="date"
-                value={formData.preferred_end_date}
-                onChange={(e) => setFormData({ ...formData, preferred_end_date: e.target.value })}
+                value={formData.preferred_date_end}
+                onChange={(e) => setFormData({ ...formData, preferred_date_end: e.target.value })}
               />
             </div>
           </div>
