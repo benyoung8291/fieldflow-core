@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, Download, Trash2, Calendar, Clock, MapPin, Users, FileText } from "lucide-react";
+import { ArrowLeft, Upload, Download, Trash2, Calendar, Clock, MapPin, Users, FileText, Send } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import TimeLogsTable from "@/components/service-orders/TimeLogsTable";
@@ -383,6 +383,15 @@ export default function AppointmentDetails() {
               >
                 {appointment.status}
               </Badge>
+              {appointment.status === 'draft' && (
+                <Button
+                  size="sm"
+                  onClick={() => updateAppointmentMutation.mutate({ status: 'published' })}
+                  disabled={updateAppointmentMutation.isPending}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -527,8 +536,17 @@ export default function AppointmentDetails() {
             >
               {appointment.status}
             </Badge>
+            {appointment.status === 'draft' && (
+              <Button
+                onClick={() => updateAppointmentMutation.mutate({ status: 'published' })}
+                disabled={updateAppointmentMutation.isPending}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Publish
+              </Button>
+            )}
             {!editMode ? (
-              <Button onClick={() => setEditMode(true)}>Edit Details</Button>
+              <Button variant="outline" onClick={() => setEditMode(true)}>Edit Details</Button>
             ) : (
               <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
             )}
