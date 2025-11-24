@@ -20,7 +20,15 @@ import {
 } from "@/components/ui/context-menu";
 import { useToast } from "@/hooks/use-toast";
 
-import { MailboxFolder } from "@/components/helpdesk/MailboxFolderNav";
+type MailboxFolder = 
+  | "inbox" 
+  | "sent" 
+  | "drafts" 
+  | "archive" 
+  | "deleted" 
+  | "junk"
+  | "starred"
+  | "all";
 
 interface TicketListProps {
   selectedTicketId: string | null;
