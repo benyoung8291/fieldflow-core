@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { DateRange } from "react-day-picker";
 import { format, eachDayOfInterval, startOfDay } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { calculateBusinessHours } from "@/lib/businessDays";
 
 interface ResponseTimeChartProps {
   dateRange?: DateRange;
@@ -43,7 +44,10 @@ export function ResponseTimeChart({ dateRange }: ResponseTimeChartProps) {
           const firstReply = ticketMessages.find(m => !m.is_from_customer);
           
           if (firstReply && firstCustomerMsg) {
-            return (new Date(firstReply.created_at).getTime() - new Date(firstCustomerMsg.created_at).getTime()) / (1000 * 60 * 60);
+            return calculateBusinessHours(
+              new Date(firstCustomerMsg.created_at),
+              new Date(firstReply.created_at)
+            );
           }
           return null;
         }).filter(Boolean) as number[];
