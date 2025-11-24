@@ -210,46 +210,70 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
   };
 
   return (
-    <div className="flex flex-col h-full border-r bg-background">
-      <div className="px-3 py-2 border-b space-y-2">
+    <div className="flex flex-col h-full border-r bg-gradient-to-b from-background to-muted/5">
+      {/* Enhanced Header */}
+      <div className="px-4 py-3 border-b bg-background/80 backdrop-blur-sm space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
             <Input
               placeholder="Search tickets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 h-7 text-xs"
+              className="pl-9 h-9 text-sm bg-muted/50 border-muted-foreground/20 focus:bg-background transition-all"
             />
           </div>
-          <Button size="icon" variant="outline" className="h-7 w-7">
-            <Plus className="h-3 w-3" />
+          <Button 
+            size="icon" 
+            variant="outline" 
+            className="h-9 w-9 hover-lift transition-all hover:bg-primary hover:text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       <ScrollArea className="flex-1">
         {isLoading ? (
-          <div className="p-3 text-center text-muted-foreground text-sm">Loading tickets...</div>
+          <div className="p-6 space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="animate-pulse space-y-3 p-4 bg-muted/30 rounded-lg">
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
+                <div className="flex gap-2">
+                  <div className="h-5 bg-muted rounded w-16"></div>
+                  <div className="h-5 bg-muted rounded w-16"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filteredTickets && filteredTickets.length > 0 ? (
-          <div className="divide-y">
-            {filteredTickets.map((ticket) => (
+          <div className="p-2 space-y-1">
+            {filteredTickets.map((ticket, index) => (
               <ContextMenu key={ticket.id}>
                 <ContextMenuTrigger asChild>
                   <button
                     onClick={() => onSelectTicket(ticket.id)}
+                    style={{ animationDelay: `${index * 30}ms` }}
                     className={cn(
-                      "w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors flex flex-col gap-1.5 border-b min-h-[90px]",
-                      selectedTicketId === ticket.id && "bg-accent",
-                      !ticket.is_read && "bg-muted/30"
+                      "w-full px-4 py-3 text-left rounded-lg transition-all duration-200 flex flex-col gap-2 group relative overflow-hidden animate-fade-in-up",
+                      "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
+                      selectedTicketId === ticket.id 
+                        ? "bg-primary/10 border-2 border-primary/30 shadow-sm" 
+                        : "bg-background hover:bg-accent/30 border border-border/50",
+                      !ticket.is_read && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary before:rounded-l-lg"
                     )}
                   >
-                {/* Top Row - Subject and Time (always visible) */}
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-sm line-clamp-1 flex-1 min-w-0">
+                {/* Top Row - Subject and Time */}
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className={cn(
+                    "font-semibold text-sm line-clamp-2 flex-1 min-w-0 leading-snug transition-colors",
+                    !ticket.is_read && "text-foreground font-bold",
+                    selectedTicketId === ticket.id && "text-primary"
+                  )}>
                     {ticket.subject}
                   </h3>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0 ml-2">
+                  <span className="text-xs text-muted-foreground/80 whitespace-nowrap shrink-0 font-medium">
                     {ticket.last_message_at 
                       ? formatDistanceToNow(new Date(ticket.last_message_at), { addSuffix: true }).replace('about ', '').replace(' ago', '')
                       : 'New'}
@@ -258,47 +282,68 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
 
                 {/* Second Row - Sender/Customer and Status */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">
+                  <span className="text-xs text-muted-foreground truncate flex-1 min-w-0 font-medium">
                     {ticket.customer?.name || 
                      (ticket.contact ? `${ticket.contact.first_name} ${ticket.contact.last_name}` : 
                      ticket.external_email || "Unknown")}
                   </span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5", getStatusColor(ticket.status))}>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-[10px] h-5 px-2 font-semibold transition-all",
+                        getStatusColor(ticket.status)
+                      )}
+                    >
                       {ticket.status}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Third Row - Metadata (responsive) */}
-                <div className="flex items-center justify-between gap-2 text-[10px]">
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
-                    {/* Pipeline indicator - hidden on very narrow */}
+                {/* Third Row - Metadata */}
+                <div className="flex items-center justify-between gap-2 text-[10px] pt-1">
+                  <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                    {/* Pipeline indicator */}
                     {ticket.pipeline && (
-                      <div className="hidden sm:flex items-center gap-1 shrink-0">
+                      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                         <div 
-                          className="h-1.5 w-1.5 rounded-full" 
+                          className="h-2 w-2 rounded-full transition-all" 
                           style={{ backgroundColor: ticket.pipeline.color }}
                         />
-                        <span className="text-muted-foreground truncate max-w-[80px]">{ticket.pipeline.name}</span>
+                        <span className="text-muted-foreground/80 truncate max-w-[90px] font-medium">
+                          {ticket.pipeline.name}
+                        </span>
                       </div>
                     )}
                     
                     {/* Priority badge */}
-                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5 shrink-0", getPriorityColor(ticket.priority))}>
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-[10px] h-5 px-2 shrink-0 font-semibold transition-all",
+                        getPriorityColor(ticket.priority)
+                      )}
+                    >
                       {ticket.priority}
                     </Badge>
 
-                    {/* Tags - hidden on narrow, shown on wider */}
+                    {/* Tags */}
                     {ticket.tags && ticket.tags.length > 0 && (
-                      <div className="hidden md:flex gap-1">
+                      <div className="hidden md:flex gap-1.5">
                         {ticket.tags.slice(0, 1).map((tag: string) => (
-                          <Badge key={tag} variant="secondary" className="text-[10px] h-4 px-1.5">
+                          <Badge 
+                            key={tag} 
+                            variant="secondary" 
+                            className="text-[10px] h-5 px-2 font-medium"
+                          >
                             {tag}
                           </Badge>
                         ))}
                         {ticket.tags.length > 1 && (
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                          <Badge 
+                            variant="secondary" 
+                            className="text-[10px] h-5 px-2 font-medium"
+                          >
                             +{ticket.tags.length - 1}
                           </Badge>
                         )}
@@ -306,17 +351,19 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
                     )}
                   </div>
 
-                  {/* Right side indicators - always visible */}
-                  <div className="flex items-center gap-1 shrink-0">
+                  {/* Right side indicators */}
+                  <div className="flex items-center gap-2 shrink-0">
                     {ticket.assigned_user && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span className="font-medium">{ticket.assigned_user.first_name}</span>
+                      <div className="flex items-center gap-1 text-muted-foreground/80">
+                        <span className="font-semibold text-[11px]">
+                          {ticket.assigned_user.first_name}
+                        </span>
                       </div>
                     )}
                     {ticket.linked_docs_count > 0 && (
-                      <div className="flex items-center gap-0.5 bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
-                        <Link2 className="h-2.5 w-2.5" />
-                        <span>{ticket.linked_docs_count}</span>
+                      <div className="flex items-center gap-1 bg-primary/15 text-primary px-2 py-1 rounded-md font-semibold transition-all group-hover:bg-primary/20">
+                        <Link2 className="h-3 w-3" />
+                        <span className="text-[11px]">{ticket.linked_docs_count}</span>
                       </div>
                     )}
                   </div>
@@ -358,8 +405,16 @@ export function TicketList({ selectedTicketId, onSelectTicket, pipelineId, filte
             ))}
           </div>
         ) : (
-          <div className="p-3 text-center text-muted-foreground text-sm">
-            {searchQuery ? "No tickets found" : "No tickets yet"}
+          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Search className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">
+              {searchQuery ? "No tickets found" : "No tickets yet"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {searchQuery ? "Try adjusting your search" : "Tickets will appear here when received"}
+            </p>
           </div>
         )}
       </ScrollArea>

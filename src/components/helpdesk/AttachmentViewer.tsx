@@ -107,16 +107,17 @@ export function AttachmentViewer({ attachments, onDownload, className }: Attachm
             <Card 
               key={attachment.id || idx} 
               className={cn(
-                "overflow-hidden transition-all hover:shadow-md",
-                canPrev && "cursor-pointer"
+                "overflow-hidden transition-all duration-200 hover-lift animate-fade-in group border-border/60",
+                canPrev && "cursor-pointer hover:border-primary/30"
               )}
+              style={{ animationDelay: `${idx * 50}ms` }}
               onClick={() => canPrev && handlePreview(attachment)}
             >
               <div className="flex items-center gap-3 p-3">
                 {/* Icon or Thumbnail */}
                 <div className="flex-shrink-0">
                   {isImg && attachment.url ? (
-                    <div className="h-12 w-12 rounded overflow-hidden bg-muted border">
+                    <div className="h-14 w-14 rounded-md overflow-hidden bg-muted border border-border/50 shadow-sm transition-all group-hover:scale-105 group-hover:shadow-md">
                       <img 
                         src={attachment.url} 
                         alt={attachment.name}
@@ -124,7 +125,7 @@ export function AttachmentViewer({ attachments, onDownload, className }: Attachm
                       />
                     </div>
                   ) : (
-                    <div className="h-12 w-12 rounded bg-muted border flex items-center justify-center">
+                    <div className="h-14 w-14 rounded-md bg-muted/80 border border-border/50 flex items-center justify-center transition-all group-hover:bg-muted group-hover:scale-105">
                       {getFileIcon(attachment)}
                     </div>
                   )}
@@ -133,30 +134,30 @@ export function AttachmentViewer({ attachments, onDownload, className }: Attachm
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium truncate">
+                    <p className="text-sm font-semibold truncate text-foreground group-hover:text-primary transition-colors">
                       {attachment.name}
                     </p>
                     {canPrev && (
-                      <ZoomIn className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <ZoomIn className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0 transition-all group-hover:text-primary group-hover:scale-110" />
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground font-medium mt-0.5">
                     {formatFileSize(attachment.size)}
                     {attachment.contentType && (
-                      <span className="ml-2 capitalize">
+                      <span className="ml-2 capitalize opacity-60">
                         {attachment.contentType.split('/')[0]}
                       </span>
                     )}
                   </p>
                 </div>
 
-                 {/* Actions */}
+                {/* Actions */}
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => handleDownload(attachment, e)}
-                    className="h-8 w-8 p-0"
+                    className="h-9 w-9 p-0 opacity-60 group-hover:opacity-100 transition-all hover:bg-primary/10 hover:text-primary"
                     title="Download"
                   >
                     <Download className="h-4 w-4" />

@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Link2 } from "lucide-react";
+import { RefreshCw, Filter, Link2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -372,8 +372,8 @@ export default function HelpDesk() {
 
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
         {/* Left: Ticket List */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
-          <TicketList 
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
+          <TicketList
             selectedTicketId={selectedTicketId} 
             onSelectTicket={handleSelectTicket}
             pipelineId={selectedPipelineId}
@@ -382,27 +382,34 @@ export default function HelpDesk() {
           />
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
 
         {/* Middle: Timeline View */}
-        <ResizablePanel defaultSize={50} minSize={35}>
+        <ResizablePanel defaultSize={50} minSize={35} className="relative bg-gradient-to-br from-background via-background to-muted/5">
           {selectedTicketId ? (
             <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
           ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <p className="text-lg mb-2">No ticket selected</p>
-                <p className="text-sm">Select a ticket from the list to view details</p>
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center space-y-4 px-8 max-w-md animate-fade-in">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto">
+                  <MessageSquare className="h-10 w-10 text-primary/40" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-foreground">No ticket selected</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Select a ticket from the list to view its conversation and details
+                  </p>
+                </div>
               </div>
             </div>
           )}
         </ResizablePanel>
 
-        {sidebarVisible && <ResizableHandle withHandle />}
+        {sidebarVisible && <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />}
 
         {/* Right: Linked Documents */}
         {sidebarVisible && (
-          <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
+          <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="relative">
             {selectedTicketId ? (
               <LinkedDocumentsSidebar 
                 ticketId={selectedTicketId} 
@@ -410,8 +417,15 @@ export default function HelpDesk() {
                 onClose={() => setSidebarVisible(false)}
               />
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground p-4">
-                <p className="text-sm text-center">Linked documents will appear here</p>
+              <div className="h-full flex items-center justify-center p-6">
+                <div className="text-center space-y-3 animate-fade-in">
+                  <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+                    <Link2 className="h-7 w-7 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Linked documents will appear here
+                  </p>
+                </div>
               </div>
             )}
           </ResizablePanel>
@@ -419,11 +433,11 @@ export default function HelpDesk() {
         
         {/* Reopen sidebar button */}
         {!sidebarVisible && selectedTicketId && (
-          <div className="fixed bottom-4 right-4 z-10">
+          <div className="fixed bottom-6 right-6 z-10 animate-fade-in">
             <Button
               onClick={() => setSidebarVisible(true)}
               size="sm"
-              className="shadow-lg"
+              className="shadow-lg hover:shadow-xl transition-all hover-lift h-10 px-4"
             >
               <Link2 className="h-4 w-4 mr-2" />
               Show Links

@@ -726,83 +726,85 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                     )}
                     
                     <div className={cn("flex gap-2", shouldIndent && "ml-4")}>
-                      <div className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border-2 bg-background relative z-10 shadow-sm",
-                        message.message_type === "email" && message.direction === "inbound" 
-                          ? "border-primary/50 bg-primary/5" 
-                          : message.message_type === "email" && message.direction === "outbound" 
-                          ? "border-accent/50 bg-accent/5"
-                          : message.message_type === "internal_note"
-                          ? "border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20"
-                          : message.message_type === "task"
-                          ? "border-blue-500/50 bg-blue-50 dark:bg-blue-950/20"
-                          : message.message_type === "checklist"
-                          ? "border-green-500/50 bg-green-50 dark:bg-green-950/20"
-                          : "border-border"
-                      )}>
-                        <div className={getMessageTypeColor(message.message_type)}>
-                          {getMessageIcon(message.message_type)}
-                        </div>
-                      </div>
+                       <div className={cn(
+                         "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border-2 bg-background relative z-10 shadow-sm transition-all hover:scale-110",
+                         message.message_type === "email" && message.direction === "inbound" 
+                           ? "border-primary/50 bg-primary/5 hover:border-primary" 
+                           : message.message_type === "email" && message.direction === "outbound" 
+                           ? "border-accent/50 bg-accent/5 hover:border-accent"
+                           : message.message_type === "internal_note"
+                           ? "border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 hover:border-yellow-500"
+                           : message.message_type === "task"
+                           ? "border-blue-500/50 bg-blue-50 dark:bg-blue-950/20 hover:border-blue-500"
+                           : message.message_type === "checklist"
+                           ? "border-green-500/50 bg-green-50 dark:bg-green-950/20 hover:border-green-500"
+                           : "border-border"
+                       )}>
+                         <div className={getMessageTypeColor(message.message_type)}>
+                           {getMessageIcon(message.message_type)}
+                         </div>
+                       </div>
 
-                      <div className="flex-1 min-w-0">
-                         <div className={cn(
-                          "bg-card border rounded-md p-2.5 shadow-sm hover:shadow-md transition-shadow",
-                          message.direction === "inbound" && "border-l-4 border-l-primary/40",
-                          message.direction === "outbound" && "border-l-4 border-l-accent/40",
-                          message.message_type === "internal_note" && "bg-yellow-50/50 dark:bg-yellow-950/10 border-yellow-200 dark:border-yellow-900",
-                          message.message_type === "task" && "bg-blue-50/50 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900",
-                          message.message_type === "checklist" && "bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-900"
-                        )}>
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {getThreadingIcon(message) && (
-                                  <span className={cn(
-                                    "flex items-center",
-                                    messageIsForward ? "text-orange-500" : "text-blue-500"
-                                  )}>
-                                    {getThreadingIcon(message)}
-                                  </span>
-                                )}
-                                <span className="font-medium text-xs">
-                                  {message.sender_name || 
-                                   message.from_name || 
-                                   (message.created_user?.first_name && message.created_user?.last_name 
-                                     ? `${message.created_user.first_name} ${message.created_user.last_name}` 
-                                     : message.created_user?.first_name || message.created_user?.last_name || "System")}
-                                </span>
-                                {(message.sender_email || message.from_email) && (
-                                  <span className="text-xs text-muted-foreground">&lt;{message.sender_email || message.from_email}&gt;</span>
-                                )}
-                                <Badge variant="outline" className="text-xs h-4 px-1">
-                                  {message.message_type.replace("_", " ")}
-                                </Badge>
-                                {message.direction && (
-                                  <Badge 
-                                    variant="outline" 
-                                    className={cn(
-                                      "text-xs h-4 px-1",
-                                      message.direction === "inbound" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                                      message.direction === "outbound" && "bg-green-500/10 text-green-600 dark:text-green-400"
-                                    )}
-                                  >
-                                    {message.direction === "inbound" ? "↓" : "↑"}
-                                  </Badge>
-                                )}
-                              </div>
-                            {message.to_email && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                To: {message.to_email}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
-                            </span>
-                            {isEmail && (
-                              <div className="flex items-center gap-0.5">
+                       <div className="flex-1 min-w-0">
+                          <div className={cn(
+                           "bg-card border rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200 group animate-fade-in",
+                           message.direction === "inbound" && "border-l-4 border-l-primary/40 hover:border-l-primary/60",
+                           message.direction === "outbound" && "border-l-4 border-l-accent/40 hover:border-l-accent/60",
+                           message.message_type === "internal_note" && "bg-yellow-50/50 dark:bg-yellow-950/10 border-yellow-200 dark:border-yellow-900 hover:bg-yellow-50/80 dark:hover:bg-yellow-950/20",
+                           message.message_type === "task" && "bg-blue-50/50 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900 hover:bg-blue-50/80 dark:hover:bg-blue-950/20",
+                           message.message_type === "checklist" && "bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-900 hover:bg-green-50/80 dark:hover:bg-green-950/20"
+                         )}>
+                           <div className="flex items-start justify-between gap-2 mb-2">
+                             <div className="flex-1 min-w-0">
+                               <div className="flex items-center gap-2 flex-wrap">
+                                 {getThreadingIcon(message) && (
+                                   <span className={cn(
+                                     "flex items-center transition-transform group-hover:scale-110",
+                                     messageIsForward ? "text-orange-500" : "text-blue-500"
+                                   )}>
+                                     {getThreadingIcon(message)}
+                                   </span>
+                                 )}
+                                 <span className="font-semibold text-sm">
+                                   {message.sender_name || 
+                                    message.from_name || 
+                                    (message.created_user?.first_name && message.created_user?.last_name 
+                                      ? `${message.created_user.first_name} ${message.created_user.last_name}` 
+                                      : message.created_user?.first_name || message.created_user?.last_name || "System")}
+                                 </span>
+                                 {(message.sender_email || message.from_email) && (
+                                   <span className="text-xs text-muted-foreground">
+                                     &lt;{message.sender_email || message.from_email}&gt;
+                                   </span>
+                                 )}
+                                 <Badge variant="outline" className="text-xs h-5 px-2 capitalize font-medium">
+                                   {message.message_type.replace("_", " ")}
+                                 </Badge>
+                                 {message.direction && (
+                                   <Badge 
+                                     variant="outline" 
+                                     className={cn(
+                                       "text-xs h-5 px-2 font-semibold",
+                                       message.direction === "inbound" && "bg-primary/15 text-primary border-primary/30",
+                                       message.direction === "outbound" && "bg-accent/15 text-accent-foreground border-accent/30"
+                                     )}
+                                   >
+                                     {message.direction === "inbound" ? "↓ In" : "↑ Out"}
+                                   </Badge>
+                                 )}
+                               </div>
+                             {message.to_email && (
+                               <p className="text-xs text-muted-foreground mt-1">
+                                 <span className="font-medium">To:</span> {message.to_email}
+                               </p>
+                             )}
+                           </div>
+                           <div className="flex items-center gap-1">
+                             <span className="text-xs text-muted-foreground whitespace-nowrap">
+                               {formatDistanceToNow(new Date(message.sent_at || message.created_at), { addSuffix: true })}
+                             </span>
+                             {isEmail && (
+                               <div className="flex items-center gap-0.5">
                                 <Button
                                   variant="ghost"
                                   size="sm"
