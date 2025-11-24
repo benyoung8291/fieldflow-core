@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 
 interface ThreadSummaryCardProps {
   ticketId: string;
@@ -14,9 +15,22 @@ interface ThreadSummaryCardProps {
 
 export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [creatingTaskIndex, setCreatingTaskIndex] = useState<number | null>(null);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<{ action: string; priority: string } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: workers = [] } = useQuery({
+    queryKey: ["workers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: summary, isLoading, refetch } = useQuery({
     queryKey: ["ticket-thread-summary", ticketId],
@@ -38,7 +52,7 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
   };
 
   const createTaskMutation = useMutation({
-    mutationFn: async ({ action, priority }: { action: string; priority: string }) => {
+    mutationFn: async (taskData: TaskFormData) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -53,14 +67,16 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
       const { data: task, error: taskError } = await (supabase as any)
         .from("tasks")
         .insert({
-          title: action,
-          description: `Task created from AI suggestion for ticket`,
-          priority: priority,
+          title: taskData.title,
+          description: taskData.description,
+          priority: taskData.priority,
+          assigned_to: taskData.assigned_to,
+          due_date: taskData.due_date,
           tenant_id: profile.tenant_id,
           created_by: user.id,
           linked_module: "helpdesk",
           linked_record_id: ticketId,
-          status: "pending",
+          status: taskData.status || "pending",
         })
         .select()
         .single();
@@ -72,7 +88,7 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
         .insert({
           ticket_id: ticketId,
           message_type: "task",
-          body: `Task created: ${action}`,
+          body: `Task created: ${taskData.title}`,
           tenant_id: profile.tenant_id,
         });
       
@@ -83,7 +99,8 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
     onSuccess: () => {
       toast({ title: "Task created successfully" });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-messages", ticketId] });
-      setCreatingTaskIndex(null);
+      setTaskDialogOpen(false);
+      setSelectedAction(null);
     },
     onError: (error: any) => {
       toast({
@@ -91,11 +108,10 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
         description: error.message,
         variant: "destructive",
       });
-      setCreatingTaskIndex(null);
     },
   });
 
-  const handleCreateTask = async (action: any, index: number) => {
+  const handleCreateTask = (action: any) => {
     if (action.type !== "task") {
       toast({
         title: "Only task actions can be converted to tasks",
@@ -103,8 +119,8 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
       });
       return;
     }
-    setCreatingTaskIndex(index);
-    await createTaskMutation.mutateAsync({ action: action.action, priority: action.priority });
+    setSelectedAction({ action: action.action, priority: action.priority });
+    setTaskDialogOpen(true);
   };
 
   const getPriorityIcon = (priority: string) => {
@@ -207,16 +223,12 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
                 {summary.suggestedActions.map((action: any, idx: number) => (
                   <div
                     key={idx}
-                    onClick={() => handleCreateTask(action, idx)}
+                    onClick={() => handleCreateTask(action)}
                     className="group p-3 rounded-lg bg-background/60 border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex items-start gap-2.5">
                       <div className="flex items-center justify-center h-6 w-6 rounded-md bg-background shrink-0 mt-0.5">
-                        {creatingTaskIndex === idx ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          getTypeIcon(action.type)
-                        )}
+                        {getTypeIcon(action.type)}
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-start justify-between gap-2">
@@ -252,6 +264,24 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
           </div>
         )}
       </div>
+
+      {/* Task Dialog */}
+      {selectedAction && (
+        <TaskDialog
+          open={taskDialogOpen}
+          onOpenChange={setTaskDialogOpen}
+          onSubmit={createTaskMutation.mutate}
+          defaultValues={{
+            title: selectedAction.action,
+            description: "Task created from AI suggestion",
+            priority: selectedAction.priority,
+            status: "pending",
+          }}
+          linkedModule="helpdesk"
+          linkedRecordId={ticketId}
+          workers={workers}
+        />
+      )}
     </Card>
   );
 }

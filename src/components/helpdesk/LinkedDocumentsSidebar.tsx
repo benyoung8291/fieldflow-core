@@ -324,26 +324,14 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
             </TabsList>
             
             {totalLinkedCount > 0 && (
-              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 shadow-sm">
-                <div className="flex items-center gap-3 p-3">
-                  <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/10 shrink-0">
-                    <Link2 className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">
-                      {totalLinkedCount} {totalLinkedCount === 1 ? 'Connection' : 'Connections'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {[
-                        ticket?.customer && 'Customer',
-                        ticket?.contact && 'Contact', 
-                        ticket?.supplier && 'Supplier',
-                        ticket?.lead && 'Lead',
-                        linkedDocs && linkedDocs.length > 0 && `${linkedDocs.length} doc${linkedDocs.length === 1 ? '' : 's'}`
-                      ].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                </div>
+              <div className="text-xs text-muted-foreground px-1">
+                {[
+                  ticket?.customer && 'Customer',
+                  ticket?.contact && 'Contact', 
+                  ticket?.supplier && 'Supplier',
+                  ticket?.lead && 'Lead',
+                  linkedDocs && linkedDocs.length > 0 && `${linkedDocs.length} doc${linkedDocs.length === 1 ? '' : 's'}`
+                ].filter(Boolean).join(' · ')}
               </div>
             )}
           </div>
