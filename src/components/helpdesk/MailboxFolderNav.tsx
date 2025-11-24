@@ -66,10 +66,12 @@ export function MailboxFolderNav({
   counts = {}
 }: MailboxFolderNavProps) {
   return (
-    <Sidebar>
+    <Sidebar className="border-r" collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Mailbox Folders</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-4 py-2 text-xs font-semibold text-muted-foreground">
+            Mailbox
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {folderConfig.map((folder) => {
@@ -83,17 +85,19 @@ export function MailboxFolderNav({
                       onClick={() => onSelectFolder(folder.id)}
                       isActive={isSelected}
                       className={cn(
-                        "w-full justify-start",
-                        isSelected && "bg-primary/10 text-primary font-medium"
+                        "w-full justify-start gap-3 px-4 py-2.5 rounded-md transition-colors",
+                        isSelected 
+                          ? "bg-accent text-accent-foreground font-medium" 
+                          : "hover:bg-accent/50"
                       )}
                     >
-                      <Icon className="h-4 w-4" />
-                      <span className="flex-1">{folder.label}</span>
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-sm">{folder.label}</span>
                       {count !== undefined && count > 0 && (
                         <span className={cn(
-                          "text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center",
+                          "text-xs px-2 py-0.5 rounded-full font-medium",
                           isSelected 
-                            ? "bg-primary/20 text-primary font-semibold" 
+                            ? "bg-primary text-primary-foreground" 
                             : "bg-muted text-muted-foreground"
                         )}>
                           {count}
