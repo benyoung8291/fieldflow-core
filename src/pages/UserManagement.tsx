@@ -8,11 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Shield } from "lucide-react";
+import { UserPlus, Shield, AlertCircle } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const UserManagement = () => {
   const queryClient = useQueryClient();
+  const { isAdmin } = usePermissions();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,30 +43,30 @@ const UserManagement = () => {
     queryFn: async () => {
       if (!profile?.tenant_id) return [];
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("tenant_id", profile.tenant_id);
+      // Call edge function to get users with emails
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
 
-      if (profilesError) throw profilesError;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-tenant-users`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      // Fetch roles separately
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .eq("tenant_id", profile.tenant_id);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch users');
+      }
 
-      if (rolesError) throw rolesError;
-
-      // Combine data
-      const data = profilesData?.map((profile) => ({
-        ...profile,
-        user_roles: rolesData?.filter((role) => role.user_id === profile.id) || [],
-      }));
-
-      return data || [];
+      const { users } = await response.json();
+      return users || [];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: !!profile?.tenant_id && isAdmin,
   });
 
   const assignRoleMutation = useMutation({
@@ -114,6 +118,42 @@ const UserManagement = () => {
     },
   });
 
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/toggle-user-status`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, isActive }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to toggle user status');
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success(
+        variables.isActive 
+          ? "User activated successfully" 
+          : "User deactivated and all sessions terminated"
+      );
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to toggle user status");
+    },
+  });
+
   const handleAssignRole = () => {
     if (!selectedUserId || !selectedRole) {
       toast.error("Please select a user and role");
@@ -136,6 +176,22 @@ const UserManagement = () => {
     }
   };
 
+  if (!isAdmin) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+          <AlertCircle className="h-16 w-16 text-muted-foreground" />
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold mb-2">Access Restricted</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to access user management.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -143,7 +199,7 @@ const UserManagement = () => {
           <div>
             <h1 className="text-3xl font-bold">User Management</h1>
             <p className="text-muted-foreground">
-              Manage users and assign roles
+              Manage users, roles, and access control
             </p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -210,31 +266,39 @@ const UserManagement = () => {
               <div>Loading...</div>
             ) : (
               <Table>
-                <TableHeader>
+                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Roles</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Account Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users?.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
-                        {user.first_name} {user.last_name}
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{user.first_name} {user.last_name}</div>
+                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                          </div>
+                        </div>
                       </TableCell>
-                      <TableCell>{user.id}</TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{user.email}</span>
+                      </TableCell>
                       <TableCell>{user.phone || "-"}</TableCell>
                       <TableCell>
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex gap-1 flex-wrap">
                           {user.user_roles && user.user_roles.length > 0 ? (
                             user.user_roles.map((ur: any, idx: number) => (
                               <Badge
                                 key={idx}
                                 variant={getRoleBadgeVariant(ur.role)}
-                                className="cursor-pointer"
+                                className="cursor-pointer hover:opacity-80"
                                 onClick={() =>
                                   removeRoleMutation.mutate({
                                     userId: user.id,
@@ -252,9 +316,31 @@ const UserManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={user.is_active ? "default" : "secondary"}>
-                          {user.is_active ? "Active" : "Inactive"}
-                        </Badge>
+                        <div className="flex items-center gap-3">
+                          <Badge 
+                            variant={user.is_active ? "default" : "secondary"}
+                            className="min-w-[80px] justify-center"
+                          >
+                            {user.is_active ? "Active" : "Deactivated"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Label htmlFor={`status-${user.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                            {user.is_active ? "Deactivate" : "Activate"}
+                          </Label>
+                          <Switch
+                            id={`status-${user.id}`}
+                            checked={user.is_active}
+                            onCheckedChange={(checked) => {
+                              toggleUserStatusMutation.mutate({
+                                userId: user.id,
+                                isActive: checked,
+                              });
+                            }}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

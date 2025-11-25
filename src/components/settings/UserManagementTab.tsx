@@ -165,6 +165,42 @@ export const UserManagementTab = () => {
     },
   });
 
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/toggle-user-status`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, isActive }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to toggle user status');
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success(
+        variables.isActive 
+          ? "User activated successfully" 
+          : "User deactivated and all sessions terminated"
+      );
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to toggle user status");
+    },
+  });
+
   const createUserMutation = useMutation({
     mutationFn: async ({ email, firstName, lastName, password, role }: { 
       email: string; 
@@ -478,7 +514,7 @@ export const UserManagementTab = () => {
               <TableHead>Phone</TableHead>
               <TableHead>Roles</TableHead>
               <TableHead>Is Worker</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Account Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -537,21 +573,44 @@ export const UserManagementTab = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={user.is_active ? "default" : "secondary"}>
-                    {user.is_active ? "Active" : "Inactive"}
-                  </Badge>
+                  <div className="flex items-center gap-3">
+                    <Badge 
+                      variant={user.is_active ? "default" : "secondary"}
+                      className="min-w-[90px] justify-center"
+                    >
+                      {user.is_active ? "Active" : "Deactivated"}
+                    </Badge>
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setResetPasswordUserId(user.id);
-                      setIsResetPasswordDialogOpen(true);
-                    }}
-                  >
-                    <KeyRound className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`status-${user.id}`} className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                        {user.is_active ? "Deactivate" : "Activate"}
+                      </Label>
+                      <Switch
+                        id={`status-${user.id}`}
+                        checked={user.is_active}
+                        onCheckedChange={(checked) => {
+                          toggleUserStatusMutation.mutate({
+                            userId: user.id,
+                            isActive: checked,
+                          });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setResetPasswordUserId(user.id);
+                        setIsResetPasswordDialogOpen(true);
+                      }}
+                      title="Reset Password"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

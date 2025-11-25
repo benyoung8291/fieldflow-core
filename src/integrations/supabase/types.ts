@@ -7208,6 +7208,10 @@ export type Database = {
         Args: { p_current_date: string; p_frequency: string }
         Returns: string
       }
+      can_manage_user: {
+        Args: { target_tenant_id: string; target_user_id: string }
+        Returns: boolean
+      }
       can_view_profile: {
         Args: { profile_tenant_id: string }
         Returns: boolean
@@ -7416,6 +7420,10 @@ export type Database = {
       }
       store_acumatica_credentials: {
         Args: { integration_id: string; password: string; username: string }
+        Returns: undefined
+      }
+      terminate_user_sessions: {
+        Args: { target_user_id: string }
         Returns: undefined
       }
       update_microsoft_tokens: {
