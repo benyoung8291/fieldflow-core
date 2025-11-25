@@ -163,6 +163,14 @@ export function TeamsTab() {
     setCreateDialogOpen(true);
   };
 
+  const handleDialogChange = (open: boolean) => {
+    setCreateDialogOpen(open);
+    if (!open) {
+      setEditingTeam(null);
+      resetForm();
+    }
+  };
+
   const handleCloseDialog = () => {
     setCreateDialogOpen(false);
     setEditingTeam(null);
@@ -182,7 +190,7 @@ export function TeamsTab() {
             Organize users into teams with specific module access and workflows
           </p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={handleCloseDialog}>
+        <Dialog open={createDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
