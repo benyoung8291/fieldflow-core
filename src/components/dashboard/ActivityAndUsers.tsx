@@ -9,18 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface UserPresence {
-  user_id: string;
-  user_name: string;
-  current_page: string;
-  current_path: string;
-  online_at: string;
-}
-
-interface PresenceState {
-  [key: string]: UserPresence[];
-}
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 interface GroupedUser {
   user_id: string;
@@ -61,33 +50,11 @@ const getActionColor = (action: string) => {
 };
 
 export function ActivityAndUsers() {
-  const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [activities, setActivities] = useState<AuditLog[]>([]);
   const navigate = useNavigate();
-
-  // Get current user info
-  const { data: currentUser } = useQuery({
-    queryKey: ["current-user"],
-    queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", user.id)
-        .single();
-
-      return {
-        id: user.id,
-        name: profile
-          ? `${profile.first_name} ${profile.last_name}`
-          : user.email || "Unknown User",
-      };
-    },
-  });
+  
+  // Use centralized presence system
+  const { onlineUsers } = usePresenceSystem();
 
   // Fetch initial activity logs
   const { data: initialLogs } = useQuery({
@@ -112,56 +79,8 @@ export function ActivityAndUsers() {
     }
   }, [initialLogs]);
 
-  // Subscribe to presence and activity updates
+  // Subscribe to activity updates
   useEffect(() => {
-    if (!currentUser) return;
-
-    // Presence channel - use global channel to match other components
-    const presenceChannel = supabase.channel("team-presence-global", {
-      config: {
-        presence: {
-          key: currentUser.id,
-        },
-      },
-    });
-
-    presenceChannel
-      .on("presence", { event: "sync" }, () => {
-        const state: PresenceState = presenceChannel.presenceState();
-        const users: UserPresence[] = [];
-
-        Object.keys(state).forEach((key) => {
-          const presences = state[key];
-          if (presences && presences.length > 0) {
-            presences.forEach((presence) => {
-              users.push(presence);
-            });
-          }
-        });
-
-        console.log("[Activity Panel] Synced users:", users);
-        setActiveUsers(users);
-      })
-      .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        console.log("[Activity Panel] User joined:", key, newPresences);
-      })
-      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        console.log("[Activity Panel] User left:", key, leftPresences);
-      })
-      .subscribe(async (status) => {
-        console.log("[Activity Panel] Subscription status:", status);
-        if (status === "SUBSCRIBED") {
-          const currentPath = window.location.pathname;
-          await presenceChannel.track({
-            user_id: currentUser.id,
-            user_name: currentUser.name,
-            current_page: getPageName(currentPath),
-            current_path: currentPath,
-            online_at: new Date().toISOString(),
-          });
-        }
-      });
-
     // Activity channel
     const activityChannel = supabase
       .channel("audit-logs-changes")
@@ -186,10 +105,9 @@ export function ActivityAndUsers() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(presenceChannel);
       supabase.removeChannel(activityChannel);
     };
-  }, [currentUser]);
+  }, []);
 
   const getPageName = (path: string): string => {
     const routes: { [key: string]: string } = {
@@ -238,8 +156,13 @@ export function ActivityAndUsers() {
     return basePath ? `${basePath}/${recordId}` : null;
   };
 
-  // Group users by user_id
-  const groupedUsers: GroupedUser[] = activeUsers.reduce((acc, user) => {
+  // Group users by user_id - onlineUsers already excludes current user
+  const groupedUsers: GroupedUser[] = onlineUsers.reduce((acc, user) => {
+    // Skip if user_name is missing or invalid
+    if (!user.user_name || user.user_name === "Unknown User") {
+      return acc;
+    }
+
     const existingUser = acc.find((u) => u.user_id === user.user_id);
 
     if (existingUser) {
