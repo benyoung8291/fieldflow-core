@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
-type Module = 
+export type Module = 
   | "customers"
   | "leads"
   | "quotes"
@@ -12,12 +13,30 @@ type Module =
   | "service_contracts"
   | "analytics"
   | "settings"
-  | "price_book";
+  | "price_book"
+  | "expenses"
+  | "invoices"
+  | "reports"
+  | "integrations"
+  | "user_management";
 
-type Permission = "view" | "create" | "edit" | "delete";
+export type Permission = "view" | "create" | "edit" | "delete" | "approve" | "export" | "import";
+
+export type PermissionConditions = {
+  ownOnly?: boolean;
+  maxAmount?: number;
+  departments?: string[];
+  [key: string]: any;
+};
+
+export type UserPermission = {
+  module: string;
+  permission: string;
+  conditions?: PermissionConditions;
+};
 
 export const usePermissions = () => {
-  const { data: userRoles } = useQuery({
+  const { data: userRoles, isLoading: rolesLoading } = useQuery({
     queryKey: ["user-roles"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -25,7 +44,7 @@ export const usePermissions = () => {
 
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, tenant_id")
         .eq("user_id", user.id);
 
       if (error) throw error;
@@ -33,41 +52,96 @@ export const usePermissions = () => {
     },
   });
 
-  const { data: permissions } = useQuery({
+  const { data: permissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ["user-permissions", userRoles],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
       if (!userRoles || userRoles.length === 0) return [];
 
       const roles = userRoles.map((r) => r.role);
       const { data, error } = await supabase
         .from("role_permissions")
-        .select("module, permission")
-        .in("role", roles);
+        .select("module, permission, conditions")
+        .in("role", roles)
+        .eq("is_active", true);
 
       if (error) throw error;
-      return data || [];
+      return data as UserPermission[] || [];
     },
     enabled: !!userRoles && userRoles.length > 0,
   });
 
-  const hasPermission = (module: Module, permission: Permission): boolean => {
+  const isAdmin = useMemo(() => 
+    userRoles?.some((r) => r.role === "tenant_admin") || false,
+    [userRoles]
+  );
+
+  const isSupervisor = useMemo(() =>
+    isAdmin || userRoles?.some((r) => r.role === "supervisor") || false,
+    [userRoles, isAdmin]
+  );
+
+  const hasPermission = (module: Module, permission: Permission, conditions?: PermissionConditions): boolean => {
     // Tenant admins have all permissions
-    if (userRoles?.some((r) => r.role === "tenant_admin")) {
+    if (isAdmin) {
       return true;
     }
 
-    return (
-      permissions?.some(
-        (p) => p.module === module && p.permission === permission
-      ) || false
+    const userPerm = permissions?.find(
+      (p) => p.module === module && p.permission === permission
     );
+
+    if (!userPerm) return false;
+
+    // Check additional conditions if provided
+    if (conditions && userPerm.conditions) {
+      // Check ownOnly condition
+      if (userPerm.conditions.ownOnly && !conditions.ownOnly) {
+        return false;
+      }
+      
+      // Check maxAmount condition
+      if (userPerm.conditions.maxAmount && conditions.maxAmount) {
+        if (conditions.maxAmount > userPerm.conditions.maxAmount) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   };
 
-  const isAdmin = userRoles?.some((r) => r.role === "tenant_admin") || false;
+  const hasAnyPermission = (module: Module, perms: Permission[]): boolean => {
+    return perms.some(p => hasPermission(module, p));
+  };
+
+  const hasAllPermissions = (module: Module, perms: Permission[]): boolean => {
+    return perms.every(p => hasPermission(module, p));
+  };
+
+  const canView = (module: Module) => hasPermission(module, "view");
+  const canCreate = (module: Module) => hasPermission(module, "create");
+  const canEdit = (module: Module) => hasPermission(module, "edit");
+  const canDelete = (module: Module) => hasPermission(module, "delete");
+  const canApprove = (module: Module) => hasPermission(module, "approve");
+  const canExport = (module: Module) => hasPermission(module, "export");
 
   return {
     hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
+    canView,
+    canCreate,
+    canEdit,
+    canDelete,
+    canApprove,
+    canExport,
     isAdmin,
+    isSupervisor,
     userRoles: userRoles || [],
+    permissions: permissions || [],
+    isLoading: rolesLoading || permissionsLoading,
   };
 };

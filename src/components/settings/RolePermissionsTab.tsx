@@ -5,29 +5,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { ShieldCheck } from "lucide-react";
 
 const modules = [
-  { key: "customers", label: "Customers" },
-  { key: "leads", label: "Leads" },
-  { key: "quotes", label: "Quotes" },
-  { key: "projects", label: "Projects" },
-  { key: "service_orders", label: "Service Orders" },
-  { key: "appointments", label: "Appointments" },
-  { key: "workers", label: "Workers" },
-  { key: "service_contracts", label: "Service Contracts" },
-  { key: "analytics", label: "Analytics" },
-  { key: "settings", label: "Settings" },
-  { key: "price_book", label: "Price Book" },
+  { key: "customers", label: "Customers", description: "Customer records and information" },
+  { key: "leads", label: "Leads", description: "Lead management and conversion" },
+  { key: "quotes", label: "Quotes", description: "Quote creation and management" },
+  { key: "projects", label: "Projects", description: "Project planning and execution" },
+  { key: "service_orders", label: "Service Orders", description: "Service order management" },
+  { key: "appointments", label: "Appointments", description: "Schedule and manage appointments" },
+  { key: "workers", label: "Workers", description: "Worker profiles and assignments" },
+  { key: "service_contracts", label: "Service Contracts", description: "Contract management" },
+  { key: "analytics", label: "Analytics", description: "Reports and business intelligence" },
+  { key: "settings", label: "Settings", description: "System configuration and preferences" },
+  { key: "price_book", label: "Price Book", description: "Pricing and catalog management" },
+  { key: "expenses", label: "Expenses", description: "Expense tracking and approval" },
+  { key: "invoices", label: "Invoices", description: "Invoice creation and management" },
+  { key: "user_management", label: "User Management", description: "User accounts and roles" },
+  { key: "integrations", label: "Integrations", description: "Third-party integrations" },
 ];
 
 const roles = [
-  { key: "tenant_admin", label: "Tenant Admin", description: "Full access to all modules" },
-  { key: "supervisor", label: "Supervisor", description: "Manage teams and operations" },
-  { key: "worker", label: "Worker", description: "Execute tasks and appointments" },
-  { key: "viewer", label: "Viewer", description: "Read-only access" },
+  { key: "tenant_admin", label: "Tenant Admin", description: "Full access to all modules and settings", color: "destructive" },
+  { key: "supervisor", label: "Supervisor", description: "Manage teams, approve requests, and oversee operations", color: "default" },
+  { key: "worker", label: "Worker", description: "Execute assigned tasks and update records", color: "secondary" },
+  { key: "viewer", label: "Viewer", description: "Read-only access to assigned modules", color: "outline" },
 ];
 
-const permissions = ["view", "create", "edit", "delete"];
+const permissions = ["view", "create", "edit", "delete", "approve", "export"];
 
 export const RolePermissionsTab = () => {
   const queryClient = useQueryClient();
@@ -125,62 +130,98 @@ export const RolePermissionsTab = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-start gap-3">
+          <Badge variant="outline" className="mt-0.5">
+            <ShieldCheck className="h-3 w-3 mr-1" />
+            Info
+          </Badge>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Granular Permission Control</p>
+            <p className="text-sm text-muted-foreground">
+              Configure precise access rights for each role. Tenant admins always have full access.
+              Changes take effect immediately for all users with the role.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {roles.map((role) => (
         <Card key={role.key}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {role.label}
-              {role.key === "tenant_admin" && (
-                <Badge variant="destructive">All Permissions</Badge>
-              )}
-            </CardTitle>
-            <CardDescription>{role.description}</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {role.label}
+                  {role.key === "tenant_admin" && (
+                    <Badge variant="destructive">All Permissions</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="mt-1">{role.description}</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {role.key === "tenant_admin" ? (
-              <p className="text-sm text-muted-foreground">
-                Tenant admins have full access to all modules and cannot be restricted.
-              </p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <p className="text-sm text-muted-foreground">
+                  Tenant administrators have unrestricted access to all modules and features.
+                  Their permissions cannot be modified to ensure system security and integrity.
+                </p>
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Module</TableHead>
-                    {permissions.map((perm) => (
-                      <TableHead key={perm} className="text-center">
-                        {perm.charAt(0).toUpperCase() + perm.slice(1)}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">
+                        <div>
+                          <div className="font-semibold">Module</div>
+                          <div className="text-xs text-muted-foreground font-normal">Resource type</div>
+                        </div>
                       </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {modules.map((module) => (
-                    <TableRow key={module.key}>
-                      <TableCell className="font-medium">{module.label}</TableCell>
-                      {permissions.map((perm) => {
-                        const checked = hasPermission(role.key, module.key, perm);
-                        return (
-                          <TableCell key={perm} className="text-center">
-                            <div className="flex justify-center">
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={() =>
-                                  togglePermissionMutation.mutate({
-                                    role: role.key,
-                                    module: module.key,
-                                    permission: perm,
-                                    hasPermission: checked || false,
-                                  })
-                                }
-                              />
-                            </div>
-                          </TableCell>
-                        );
-                      })}
+                      {permissions.map((perm) => (
+                        <TableHead key={perm} className="text-center min-w-[80px]">
+                          <div className="font-semibold capitalize">{perm}</div>
+                        </TableHead>
+                      ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {modules.map((module) => (
+                      <TableRow key={module.key} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{module.label}</div>
+                            <div className="text-xs text-muted-foreground">{module.description}</div>
+                          </div>
+                        </TableCell>
+                        {permissions.map((perm) => {
+                          const checked = hasPermission(role.key, module.key, perm);
+                          return (
+                            <TableCell key={perm} className="text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() =>
+                                    togglePermissionMutation.mutate({
+                                      role: role.key,
+                                      module: module.key,
+                                      permission: perm,
+                                      hasPermission: checked || false,
+                                    })
+                                  }
+                                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                />
+                              </div>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
