@@ -34,7 +34,7 @@ export function useGenericPresence({
       return {
         id: user.id,
         name: profile
-          ? `${profile.first_name} ${profile.last_name}`
+          ? `${profile.first_name} ${profile.last_name}`.trim() || user.email || "Unknown User"
           : user.email || "Unknown User",
       };
     },

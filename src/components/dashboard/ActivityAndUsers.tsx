@@ -201,7 +201,8 @@ export function ActivityAndUsers() {
     return "Viewing...";
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined) => {
+    if (!name) return "??";
     return name
       .split(" ")
       .map((n) => n[0])

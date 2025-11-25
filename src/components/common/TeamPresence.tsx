@@ -12,7 +12,8 @@ import { useTeamPresence } from "@/hooks/useTeamPresence";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const getInitials = (name: string) => {
+const getInitials = (name: string | undefined) => {
+  if (!name) return "??";
   return name
     .split(" ")
     .map((n) => n[0])
