@@ -73,6 +73,7 @@ const defaultNavigation = [
     ]
   },
   { name: "Help Desk", href: "/helpdesk", icon: "Headphones", color: "#ec4899", isFolder: false },
+  { name: "Knowledge Base", href: "/knowledge-base", icon: "BookOpen", color: "#ec4899", isFolder: false },
   { 
     name: "Compliance", 
     href: null, 

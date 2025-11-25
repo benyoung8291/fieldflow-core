@@ -406,5 +406,60 @@ export const TUTORIAL_CONTENT = {
         ]
       }
     ]
+  },
+  knowledgeBase: {
+    title: "Knowledge Base Module",
+    description: "Learn how to create, share, and discover knowledge articles",
+    steps: [
+      {
+        title: "Welcome to Knowledge Base",
+        description: "The Knowledge Base is your team's central hub for documenting processes, sharing best practices, and finding answers quickly. Built with a Notion-inspired design for intuitive organization.",
+        tips: [
+          "Create articles for frequently asked questions",
+          "Document standard operating procedures",
+          "Share troubleshooting guides and solutions"
+        ]
+      },
+      {
+        title: "Creating Articles",
+        description: "Write comprehensive articles using the rich text editor. Add summaries, choose categories, and tag articles to make them discoverable. Include document examples and attachments for reference.",
+        tips: [
+          "Write clear, concise titles for easy scanning",
+          "Add a summary to help users quickly understand content",
+          "Use the rich editor for formatting and structure",
+          "Attach relevant files like templates or examples"
+        ]
+      },
+      {
+        title: "Organizing with Categories & Tags",
+        description: "Structure your knowledge base with categories and tags. Categories provide high-level organization while tags help with cross-referencing related articles.",
+        tips: [
+          "Create categories by topic area or department",
+          "Use consistent tagging conventions",
+          "Tag articles with multiple keywords for discoverability",
+          "Feature important articles to highlight them"
+        ]
+      },
+      {
+        title: "Search & Discovery",
+        description: "Find information quickly using the powerful search that looks through titles, content, and tags. Browse by category or featured articles for curated content.",
+        tips: [
+          "Search uses keywords from title, content, and tags",
+          "Filter by category to narrow results",
+          "Check featured articles for critical information",
+          "View counts show popular articles"
+        ]
+      },
+      {
+        title: "Collaboration & Feedback",
+        description: "Rate articles as helpful or not helpful to improve quality. Submit suggestions for edits or new content. Attach example documents to enrich articles.",
+        tips: [
+          "Provide feedback to help improve articles",
+          "Suggest improvements when you spot gaps",
+          "Upload examples like templates or forms",
+          "Version history tracks all changes automatically"
+        ]
+      }
+    ]
   }
 };

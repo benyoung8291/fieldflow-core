@@ -8,6 +8,8 @@ import { KnowledgeArticleList } from "@/components/knowledge/KnowledgeArticleLis
 import { KnowledgeArticleView } from "@/components/knowledge/KnowledgeArticleView";
 import { KnowledgeArticleEditor } from "@/components/knowledge/KnowledgeArticleEditor";
 import { KnowledgeCategoryNav } from "@/components/knowledge/KnowledgeCategoryNav";
+import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
+import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { useToast } from "@/hooks/use-toast";
 
 export default function KnowledgeBase() {
@@ -84,6 +86,13 @@ export default function KnowledgeBase() {
 
   return (
     <div className="h-full flex flex-col">
+      <ModuleTutorial
+        moduleName="Knowledge Base"
+        title={TUTORIAL_CONTENT.knowledgeBase.title}
+        description={TUTORIAL_CONTENT.knowledgeBase.description}
+        defaultSteps={TUTORIAL_CONTENT.knowledgeBase.steps}
+      />
+      
       {/* Header */}
       <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container py-6">
