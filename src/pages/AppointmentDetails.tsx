@@ -31,7 +31,8 @@ import {
   Mail,
   ExternalLink,
   Paperclip,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -44,6 +45,8 @@ import { cn } from "@/lib/utils";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 import FieldReportsList from "@/components/field-reports/FieldReportsList";
 import { DocumentNotes } from "@/components/notes/DocumentNotes";
+import { AppointmentAttachments } from "@/components/appointments/AppointmentAttachments";
+import { CreateTimeLogDialog } from "@/components/appointments/CreateTimeLogDialog";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground border-muted",
@@ -68,13 +71,13 @@ export default function AppointmentDetails() {
   const { isAdmin, userRoles } = usePermissions();
   const { isMobile } = useViewMode();
   const isSupervisorOrAdmin = isAdmin || userRoles?.some((r) => r.role === "supervisor");
-  const [isDragging, setIsDragging] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     location_address: "",
   });
   const [showAddWorker, setShowAddWorker] = useState(false);
   const [selectedWorkerToAdd, setSelectedWorkerToAdd] = useState("");
+  const [createTimeLogOpen, setCreateTimeLogOpen] = useState(false);
 
   // Fetch current user
   const { data: currentUser } = useQuery({
@@ -122,27 +125,6 @@ export default function AppointmentDetails() {
         `)
         .eq("id", id)
         .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch appointment attachments
-  const { data: attachments = [], refetch: refetchAttachments } = useQuery({
-    queryKey: ["appointment-attachments", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointment_attachments")
-        .select(`
-          *,
-          profiles (
-            first_name,
-            last_name
-          )
-        `)
-        .eq("appointment_id", id)
-        .order("uploaded_at", { ascending: false });
 
       if (error) throw error;
       return data;
@@ -262,82 +244,6 @@ export default function AppointmentDetails() {
       toast.error("Failed to update appointment");
     },
   });
-
-  // File upload mutation
-  const uploadFileMutation = useMutation({
-    mutationFn: async ({ file, category }: { file: File; category: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.tenant_id) throw new Error("No tenant found");
-
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${profile.tenant_id}/${id}/${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("appointment-files")
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("appointment-files")
-        .getPublicUrl(fileName);
-
-      const { error: dbError } = await supabase
-        .from("appointment_attachments")
-        .insert({
-          tenant_id: profile.tenant_id,
-          appointment_id: id,
-          file_name: file.name,
-          file_url: publicUrl,
-          file_size: file.size,
-          file_type: file.type,
-          category,
-          uploaded_by: user.id,
-        });
-
-      if (dbError) throw dbError;
-    },
-    onSuccess: () => {
-      refetchAttachments();
-      toast.success("File uploaded");
-    },
-    onError: () => {
-      toast.error("Failed to upload file");
-    },
-  });
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    files.forEach((file) => {
-      uploadFileMutation.mutate({ file, category: "general" });
-    });
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    files.forEach((file) => {
-      uploadFileMutation.mutate({ file, category: "general" });
-    });
-  };
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -659,94 +565,50 @@ export default function AppointmentDetails() {
               </CardContent>
             </Card>
 
-            {/* Files & Attachments */}
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Paperclip className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold">Attachments</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {attachments.length}
-                    </Badge>
-                  </div>
-                  <label>
-                    <input
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
-                    <Button size="sm" variant="ghost" asChild>
-                      <span className="cursor-pointer">
-                        <Upload className="h-4 w-4" />
-                      </span>
-                    </Button>
-                  </label>
-                </div>
+            {/* Before Photos */}
+            <AppointmentAttachments 
+              appointmentId={id!}
+              category="before_photo"
+              title="Before Photos"
+              description="Upload photos that will be used as 'before' images in field reports"
+            />
 
-                {attachments.length === 0 ? (
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={cn(
-                      "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                      isDragging ? "border-primary bg-primary/5" : "border-border"
-                    )}
-                  >
-                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-xs text-muted-foreground">
-                      Drag files here or tap to upload
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {attachments.map((file: any) => {
-                      const isImage = file.file_type?.startsWith('image/');
-                      return (
-                        <div key={file.id} className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
-                          <div className="h-9 w-9 rounded-lg bg-background flex items-center justify-center shrink-0">
-                            {isImage ? (
-                              <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{file.file_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {file.file_size ? `${(file.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
-                            </p>
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 shrink-0"
-                            asChild
-                          >
-                            <a href={file.file_url} download>
-                              <Download className="h-3.5 w-3.5" />
-                            </a>
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Documents */}
+            <AppointmentAttachments 
+              appointmentId={id!}
+              category="document"
+              title="Documents"
+              description="Upload relevant documents for technicians completing this appointment"
+            />
 
             {/* Time Logs */}
             <Card>
               <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">Time Logs</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Time Logs</span>
+                  </div>
+                  {isSupervisorOrAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCreateTimeLogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Create
+                    </Button>
+                  )}
                 </div>
                 <TimeLogsTable appointmentId={id!} />
               </CardContent>
             </Card>
+
+            <CreateTimeLogDialog
+              appointmentId={id!}
+              open={createTimeLogOpen}
+              onOpenChange={setCreateTimeLogOpen}
+            />
 
             {/* Field Reports */}
             <Card>
@@ -1066,107 +928,50 @@ export default function AppointmentDetails() {
               </Link>
             )}
 
-            {/* Files & Attachments */}
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Paperclip className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold">Attachments</h3>
-                    <Badge variant="secondary">{attachments.length}</Badge>
-                  </div>
-                  <label>
-                    <input
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
-                    <Button size="sm" variant="outline" asChild>
-                      <span className="cursor-pointer">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Files
-                      </span>
-                    </Button>
-                  </label>
-                </div>
+            {/* Before Photos */}
+            <AppointmentAttachments 
+              appointmentId={id!}
+              category="before_photo"
+              title="Before Photos"
+              description="Upload photos that will be used as 'before' images in field reports"
+            />
 
-                {attachments.length === 0 ? (
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={cn(
-                      "border-2 border-dashed rounded-xl p-12 text-center transition-all",
-                      isDragging ? "border-primary bg-primary/5 scale-[0.99]" : "border-border hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-sm font-medium mb-1">Drop files here to upload</p>
-                    <p className="text-xs text-muted-foreground">or click the button above</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {attachments.map((file: any) => {
-                      const isImage = file.file_type?.startsWith('image/');
-                      return (
-                        <div
-                          key={file.id}
-                          className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
-                        >
-                          <div className="h-12 w-12 rounded-lg bg-background flex items-center justify-center shrink-0 border">
-                            {isImage ? (
-                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <FileText className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                              {file.file_name}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <p className="text-xs text-muted-foreground">
-                                {file.file_size ? `${(file.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
-                              </p>
-                              {file.uploaded_at && (
-                                <>
-                                  <span className="text-muted-foreground">•</span>
-                                  <p className="text-xs text-muted-foreground">
-                                    {format(new Date(file.uploaded_at), "MMM d, yyyy")}
-                                  </p>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="shrink-0"
-                            asChild
-                          >
-                            <a href={file.file_url} download>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Documents */}
+            <AppointmentAttachments 
+              appointmentId={id!}
+              category="document"
+              title="Documents"
+              description="Upload relevant documents for technicians completing this appointment"
+            />
 
             {/* Time Logs */}
             <Card>
               <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">Time Logs</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Time Logs</h3>
+                  </div>
+                  {isSupervisorOrAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCreateTimeLogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Time Log
+                    </Button>
+                  )}
                 </div>
                 <TimeLogsTable appointmentId={id!} />
               </CardContent>
             </Card>
+
+            <CreateTimeLogDialog
+              appointmentId={id!}
+              open={createTimeLogOpen}
+              onOpenChange={setCreateTimeLogOpen}
+            />
 
             {/* Notes */}
             <Card>
