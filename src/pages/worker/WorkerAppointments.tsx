@@ -146,27 +146,27 @@ export default function WorkerAppointments() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
-      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground p-4 sticky top-14 z-10 shadow-md">{/* Added top-14 offset */}
-        <div className="flex items-center gap-3 max-w-screen-lg mx-auto">
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/worker/dashboard')}
-            className="text-primary-foreground hover:bg-primary-foreground/10 h-10 w-10 rounded-xl"
+            className="h-9 w-9 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-xl font-bold">My Appointments</h1>
+          <h1 className="text-base font-semibold">My Appointments</h1>
         </div>
       </header>
 
-      <div className="max-w-screen-lg mx-auto p-4 space-y-4">
+      <div className="px-4 pt-4 space-y-3">
         {appointments.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No appointments this week</p>
+            <CardContent className="py-10 text-center">
+              <Calendar className="h-10 w-10 mx-auto text-muted-foreground/20 mb-2" />
+              <p className="text-sm text-muted-foreground">No appointments this week</p>
             </CardContent>
           </Card>
         ) : (
@@ -176,62 +176,39 @@ export default function WorkerAppointments() {
             return (
               <Card
                 key={apt.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
+                className="card-interactive"
                 onClick={() => navigate(`/worker/appointments/${apt.id}`)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-lg">{apt.title}</h3>
-                        {isClockedIn && (
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <div className="relative flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                              </div>
-                              <span className="text-xs font-medium text-green-600">Clocked In</span>
-                            </div>
-                            <Badge variant="outline" className="text-xs font-mono border-green-200 text-green-700">
-                              {formatElapsedTime(isClockedIn.clock_in)}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
+                <CardContent className="p-3.5">
+                  <div className="flex items-start justify-between gap-3 mb-2.5">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate leading-tight mb-0.5">{apt.title}</h3>
+                      <p className="text-xs text-muted-foreground truncate">
                         {apt.service_orders?.customers?.name}
                       </p>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                        <Calendar className="h-4 w-4" />
-                        {format(parseISO(apt.start_time), 'EEEE, MMM d')}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                        <Clock className="h-4 w-4" />
-                        {format(parseISO(apt.start_time), 'h:mm a')} • {apt.estimated_hours}h
-                      </div>
-                      {apt.location && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          {apt.location}
-                        </div>
+                      {isClockedIn && (
+                        <Badge variant="outline" className="shrink-0 text-[10px] h-5 border-green-200 text-green-700 mt-2">
+                          Active • {formatElapsedTime(isClockedIn.clock_in)}
+                        </Badge>
                       )}
                     </div>
-                    {isClockedIn ? (
-                      <Badge className="bg-blue-500 text-white">
-                        Clocked In
-                      </Badge>
-                    ) : (
-                      <Badge className={getStatusColor(apt.status)}>
-                        {apt.status?.replace('_', ' ')}
-                      </Badge>
-                    )}
+                    <Badge 
+                      variant={apt.status === 'completed' ? 'default' : 'secondary'}
+                      className="shrink-0 text-[10px] h-5"
+                    >
+                      {apt.status?.replace('_', ' ')}
+                    </Badge>
                   </div>
-                {apt.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {apt.description}
-                  </p>
-                )}
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{format(parseISO(apt.start_time), 'MMM d')}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{format(parseISO(apt.start_time), 'h:mm a')}</span>
+                    </div>
+                  </div>
               </CardContent>
             </Card>
             );
