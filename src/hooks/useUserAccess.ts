@@ -33,9 +33,7 @@ export function useUserAccess() {
       const hasRole = !!roleData;
       const isWorker = !!workerData;
 
-      console.log('useUserAccess - hasRole:', hasRole, 'isWorker:', isWorker, 'showToggle:', hasRole && isWorker);
-
-      return {
+      const result = {
         userId: user.id,
         hasRole,
         isWorker,
@@ -44,9 +42,14 @@ export function useUserAccess() {
         showToggle: hasRole && isWorker,
         defaultRoute: hasRole ? "/dashboard" : isWorker ? "/worker/dashboard" : "/dashboard"
       };
+
+      console.log('useUserAccess - FINAL RESULT:', result);
+      alert('Access check result: hasRole=' + hasRole + ' isWorker=' + isWorker + ' canAccessOffice=' + result.canAccessOffice);
+
+      return result;
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 0, // Force fresh query every time
+    gcTime: 0,
   });
 }
