@@ -3,85 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ViewModeProvider } from "@/contexts/ViewModeContext";
 import { BrandColorsProvider } from "@/components/BrandColorsProvider";
 import Auth from "./pages/Auth";
 import { useUserAccess } from "./hooks/useUserAccess";
-import UserManagement from "./pages/UserManagement";
-import Dashboard from "./pages/Dashboard";
-import SuperAdmin from "./pages/SuperAdmin";
-import Quotes from "./pages/Quotes";
-import QuoteDetails from "./pages/QuoteDetails";
-import Projects from "./pages/Projects";
-import ProjectDetails from "./pages/ProjectDetails";
-import ServiceOrders from "./pages/ServiceOrders";
-import ServiceOrderDetails from "./pages/ServiceOrderDetails";
-import ServiceContracts from "./pages/ServiceContracts";
-import ServiceContractDetails from "./pages/ServiceContractDetails";
-import Timesheets from "./pages/Timesheets";
-import TimesheetDetails from "./pages/TimesheetDetails";
-import Scheduler from "./pages/Scheduler";
-import Appointments from "./pages/Appointments";
-import AppointmentDetails from "./pages/AppointmentDetails";
-import Customers from "./pages/Customers";
-import CustomerDetails from "./pages/CustomerDetails";
-import CustomerLocationDetails from "./pages/CustomerLocationDetails";
-import Leads from "./pages/Leads";
-import LeadDetails from "./pages/LeadDetails";
-import Workers from "./pages/Workers";
-import WorkerDetails from "./pages/WorkerDetails";
-import Settings from "./pages/Settings";
-import Analytics from "./pages/Analytics";
-import QuotePipeline from "./pages/QuotePipeline";
-import Tasks from "./pages/Tasks";
-import NotFound from "./pages/NotFound";
-import Skills from "./pages/Skills";
-import TrainingMatrix from "./pages/TrainingMatrix";
-import Invoices from "./pages/Invoices";
-import InvoicesList from "./pages/InvoicesList";
-import InvoiceDetails from "./pages/InvoiceDetails";
-import RecurringInvoices from "./pages/RecurringInvoices";
-import RecurringInvoiceDetails from "./pages/RecurringInvoiceDetails";
-import HelpDesk from "./pages/HelpDesk";
-import HelpdeskAnalytics from "./pages/HelpdeskAnalytics";
-import CRMHub from "./pages/CRMHub";
-import Suppliers from "@/pages/Suppliers";
-import PurchaseOrders from "@/pages/PurchaseOrders";
-import PurchaseOrderDetails from "@/pages/PurchaseOrderDetails";
-import Expenses from "@/pages/Expenses";
-import ExpenseDetails from "@/pages/ExpenseDetails";
-import CreditCardReconciliation from "@/pages/CreditCardReconciliation";
-import UnassignedTransactions from "@/pages/UnassignedTransactions";
-import Contacts from "@/pages/Contacts";
-import ContactDetails from "@/pages/ContactDetails";
-import Workflows from "@/pages/Workflows";
-import WorkflowBuilder from "@/pages/WorkflowBuilder";
-import WorkflowTemplateSelector from "@/pages/WorkflowTemplateSelector";
-import WorkflowExecutionsList from "@/components/workflows/WorkflowExecutionsList";
-import FieldReports from "@/pages/FieldReports";
-import APInvoicesList from "./pages/APInvoicesList";
-import APInvoiceDetails from "./pages/APInvoiceDetails";
-import APInvoiceApprovalQueue from "./pages/APInvoiceApprovalQueue";
-import WorkerDashboard from "./pages/worker/WorkerDashboard";
-import WorkerAppointments from "./pages/worker/WorkerAppointments";
-import WorkerAppointmentDetails from "./pages/worker/WorkerAppointmentDetails";
-import WorkerTimeLogs from "./pages/worker/WorkerTimeLogs";
-import WorkerTasks from "./pages/worker/WorkerTasks";
-import WorkerCalendar from "./pages/worker/WorkerCalendar";
-import WorkerSchedule from "./pages/worker/WorkerSchedule";
-import WorkerFieldReport from "./pages/worker/WorkerFieldReport";
-import WorkerFieldReportStandalone from "./pages/worker/WorkerFieldReportStandalone";
-import EditFieldReport from "./pages/worker/EditFieldReport";
-import ViewFieldReport from "./pages/worker/ViewFieldReport";
-import SupervisorDashboard from "./pages/worker/supervisor/SupervisorDashboard";
-import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashboard";
-import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
-import SupervisorServiceOrders from "./pages/worker/supervisor/SupervisorServiceOrders";
-import FinancialReconciliation from "./pages/FinancialReconciliation";
-import KnowledgeBase from "./pages/KnowledgeBase";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
@@ -89,13 +17,97 @@ import { useRealtimeNotifications } from "./hooks/useNotifications";
 import { MobileBottomNav } from "./components/layout/MobileBottomNav";
 import { WorkerMobileBottomNav } from "./components/layout/WorkerMobileBottomNav";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { Loader2 } from "lucide-react";
+
+// Lazy load all pages for code splitting and faster initial load
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
+const Quotes = lazy(() => import("./pages/Quotes"));
+const QuoteDetails = lazy(() => import("./pages/QuoteDetails"));
+const Projects = lazy(() => import("./pages/Projects"));
+const ProjectDetails = lazy(() => import("./pages/ProjectDetails"));
+const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
+const ServiceOrderDetails = lazy(() => import("./pages/ServiceOrderDetails"));
+const ServiceContracts = lazy(() => import("./pages/ServiceContracts"));
+const ServiceContractDetails = lazy(() => import("./pages/ServiceContractDetails"));
+const Timesheets = lazy(() => import("./pages/Timesheets"));
+const TimesheetDetails = lazy(() => import("./pages/TimesheetDetails"));
+const Scheduler = lazy(() => import("./pages/Scheduler"));
+const Appointments = lazy(() => import("./pages/Appointments"));
+const AppointmentDetails = lazy(() => import("./pages/AppointmentDetails"));
+const Customers = lazy(() => import("./pages/Customers"));
+const CustomerDetails = lazy(() => import("./pages/CustomerDetails"));
+const CustomerLocationDetails = lazy(() => import("./pages/CustomerLocationDetails"));
+const Leads = lazy(() => import("./pages/Leads"));
+const LeadDetails = lazy(() => import("./pages/LeadDetails"));
+const Workers = lazy(() => import("./pages/Workers"));
+const WorkerDetails = lazy(() => import("./pages/WorkerDetails"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const QuotePipeline = lazy(() => import("./pages/QuotePipeline"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Skills = lazy(() => import("./pages/Skills"));
+const TrainingMatrix = lazy(() => import("./pages/TrainingMatrix"));
+const Invoices = lazy(() => import("./pages/Invoices"));
+const InvoicesList = lazy(() => import("./pages/InvoicesList"));
+const InvoiceDetails = lazy(() => import("./pages/InvoiceDetails"));
+const RecurringInvoices = lazy(() => import("./pages/RecurringInvoices"));
+const RecurringInvoiceDetails = lazy(() => import("./pages/RecurringInvoiceDetails"));
+const HelpDesk = lazy(() => import("./pages/HelpDesk"));
+const HelpdeskAnalytics = lazy(() => import("./pages/HelpdeskAnalytics"));
+const CRMHub = lazy(() => import("./pages/CRMHub"));
+const Suppliers = lazy(() => import("@/pages/Suppliers"));
+const PurchaseOrders = lazy(() => import("@/pages/PurchaseOrders"));
+const PurchaseOrderDetails = lazy(() => import("@/pages/PurchaseOrderDetails"));
+const Expenses = lazy(() => import("@/pages/Expenses"));
+const ExpenseDetails = lazy(() => import("@/pages/ExpenseDetails"));
+const CreditCardReconciliation = lazy(() => import("@/pages/CreditCardReconciliation"));
+const UnassignedTransactions = lazy(() => import("@/pages/UnassignedTransactions"));
+const Contacts = lazy(() => import("@/pages/Contacts"));
+const ContactDetails = lazy(() => import("@/pages/ContactDetails"));
+const Workflows = lazy(() => import("@/pages/Workflows"));
+const WorkflowBuilder = lazy(() => import("@/pages/WorkflowBuilder"));
+const WorkflowTemplateSelector = lazy(() => import("@/pages/WorkflowTemplateSelector"));
+const WorkflowExecutionsList = lazy(() => import("@/components/workflows/WorkflowExecutionsList"));
+const FieldReports = lazy(() => import("@/pages/FieldReports"));
+const APInvoicesList = lazy(() => import("./pages/APInvoicesList"));
+const APInvoiceDetails = lazy(() => import("./pages/APInvoiceDetails"));
+const APInvoiceApprovalQueue = lazy(() => import("./pages/APInvoiceApprovalQueue"));
+const WorkerDashboard = lazy(() => import("./pages/worker/WorkerDashboard"));
+const WorkerAppointments = lazy(() => import("./pages/worker/WorkerAppointments"));
+const WorkerAppointmentDetails = lazy(() => import("./pages/worker/WorkerAppointmentDetails"));
+const WorkerTimeLogs = lazy(() => import("./pages/worker/WorkerTimeLogs"));
+const WorkerTasks = lazy(() => import("./pages/worker/WorkerTasks"));
+const WorkerCalendar = lazy(() => import("./pages/worker/WorkerCalendar"));
+const WorkerSchedule = lazy(() => import("./pages/worker/WorkerSchedule"));
+const WorkerFieldReport = lazy(() => import("./pages/worker/WorkerFieldReport"));
+const WorkerFieldReportStandalone = lazy(() => import("./pages/worker/WorkerFieldReportStandalone"));
+const EditFieldReport = lazy(() => import("./pages/worker/EditFieldReport"));
+const ViewFieldReport = lazy(() => import("./pages/worker/ViewFieldReport"));
+const SupervisorDashboard = lazy(() => import("./pages/worker/supervisor/SupervisorDashboard"));
+const SupervisorMapDashboard = lazy(() => import("./pages/worker/supervisor/SupervisorMapDashboard"));
+const SupervisorAppointments = lazy(() => import("./pages/worker/supervisor/SupervisorAppointments"));
+const SupervisorServiceOrders = lazy(() => import("./pages/worker/supervisor/SupervisorServiceOrders"));
+const FinancialReconciliation = lazy(() => import("./pages/FinancialReconciliation"));
+const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
+
+// Loading component for lazy-loaded routes
+const RouteLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     },
   },
 });
@@ -228,11 +240,12 @@ const App = () => {
               {isAuthenticated && <OnboardingWizard />}
               <MobileBottomNav />
               <WorkerMobileBottomNav />
-              <Routes>
-                <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />
-                <Route path="/dashboard" element={isAuthenticated ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+              <Suspense fallback={<RouteLoader />}>
+                <Routes>
+                  <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />
+                  <Route path="/dashboard" element={isAuthenticated ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/super-admin" element={isAuthenticated ? <ProtectedRoute><SuperAdmin /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/users" element={isAuthenticated ? <ProtectedRoute><UserManagement /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/quotes" element={isAuthenticated ? <ProtectedRoute><Quotes /></ProtectedRoute> : <Navigate to="/auth" replace />} />
@@ -306,6 +319,7 @@ const App = () => {
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
