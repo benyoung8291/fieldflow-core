@@ -5673,6 +5673,74 @@ export type Database = {
           },
         ]
       }
+      service_contract_generation_history: {
+        Row: {
+          contract_id: string
+          contract_line_item_id: string
+          created_at: string
+          generated_at: string
+          generated_by: string | null
+          generation_date: string
+          id: string
+          service_order_id: string
+          tenant_id: string
+          was_automated: boolean
+        }
+        Insert: {
+          contract_id: string
+          contract_line_item_id: string
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          generation_date: string
+          id?: string
+          service_order_id: string
+          tenant_id: string
+          was_automated?: boolean
+        }
+        Update: {
+          contract_id?: string
+          contract_line_item_id?: string
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          generation_date?: string
+          id?: string
+          service_order_id?: string
+          tenant_id?: string
+          was_automated?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contract_generation_history_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_generation_history_contract_line_item_id_fkey"
+            columns: ["contract_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "service_contract_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_generation_history_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_generation_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_contract_line_items: {
         Row: {
           contract_id: string
