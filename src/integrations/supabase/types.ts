@@ -7377,6 +7377,7 @@ export type Database = {
         }[]
       }
       get_user_tenant_id: { Args: never; Returns: string }
+      get_user_tenant_id_safe: { Args: never; Returns: string }
       get_xero_credentials: {
         Args: { integration_id: string }
         Returns: {
@@ -7467,12 +7468,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      user_has_any_role_safe: {
+        Args: { check_roles: Database["public"]["Enums"]["user_role"][] }
+        Returns: boolean
+      }
       user_has_permission: {
         Args: {
           module_input: string
           permission_input: string
           user_id_input: string
         }
+        Returns: boolean
+      }
+      user_has_role_safe: {
+        Args: { check_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
     }
