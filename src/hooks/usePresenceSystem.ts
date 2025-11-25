@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 interface PresenceData {
   user_id: string;
@@ -31,6 +32,10 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
   const { trackPresence = true, pageName, documentId, documentType } = options;
   const [onlineUsers, setOnlineUsers] = useState<PresenceData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
 
   // Fetch current user with profile data
   const { data: currentUser } = useQuery({
@@ -84,25 +89,87 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     return "App";
   }, [pageName]);
 
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    console.log("[Presence] Cleaning up...");
+    
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = null;
+    }
+    
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+    
+    isInitializedRef.current = false;
+    setIsConnected(false);
+  }, []);
+
+  // Update presence when page/document changes (separate effect to avoid re-subscription)
+  useEffect(() => {
+    if (!currentUser || !isConnected || !channelRef.current) return;
+
+    const updatePresence = async () => {
+      const currentPath = window.location.pathname + window.location.search;
+      const presenceData: PresenceData = {
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        current_page: getCurrentPage(),
+        current_path: currentPath,
+        document_id: documentId || null,
+        document_type: documentType || null,
+        online_at: new Date().toISOString(),
+      };
+
+      try {
+        await channelRef.current?.track(presenceData);
+        console.log("[Presence] Updated presence data for page/document change");
+      } catch (error) {
+        console.error("[Presence] Failed to update presence:", error);
+      }
+    };
+
+    updatePresence();
+  }, [currentUser, isConnected, pageName, documentId, documentType, getCurrentPage]);
+
   // Main presence effect
   useEffect(() => {
     if (!currentUser || !trackPresence) {
       console.log("[Presence] Not tracking - currentUser:", !!currentUser, "trackPresence:", trackPresence);
+      cleanup();
+      return;
+    }
+
+    // Prevent multiple initializations
+    if (isInitializedRef.current && channelRef.current) {
+      console.log("[Presence] Already initialized, skipping...");
       return;
     }
 
     console.log("[Presence] Initializing for user:", currentUser.name, currentUser.id);
-    const channelName = "team-presence-global";
-    let heartbeatInterval: NodeJS.Timeout;
-    let reconnectTimeout: NodeJS.Timeout;
+    const channelName = `team-presence-global-${currentUser.id}`;
+    
+    // Cleanup any existing channel first
+    cleanup();
 
-    const presenceChannel = supabase.channel(channelName, {
+    // Create channel with unique name per user
+    const presenceChannel = supabase.channel("team-presence-global", {
       config: {
         presence: {
           key: currentUser.id,
         },
       },
     });
+    
+    channelRef.current = presenceChannel;
+    isInitializedRef.current = true;
 
     // Handle presence sync - this is the source of truth for who's online
     presenceChannel.on("presence", { event: "sync" }, () => {
@@ -173,50 +240,67 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
         console.log("[Presence] Successfully subscribed, tracking presence...");
         await trackUserPresence();
 
+        // Clear any existing heartbeat
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+        }
+
         // Send heartbeat every 30 seconds to keep presence alive
-        heartbeatInterval = setInterval(async () => {
+        heartbeatRef.current = setInterval(async () => {
           try {
             console.log("[Presence] Sending heartbeat...");
             await trackUserPresence();
           } catch (error) {
             console.error("[Presence] Heartbeat failed:", error);
+            // If heartbeat fails, try to resubscribe
+            setIsConnected(false);
+            if (reconnectRef.current) clearTimeout(reconnectRef.current);
+            reconnectRef.current = setTimeout(() => {
+              console.log("[Presence] Heartbeat failed, resubscribing...");
+              presenceChannel.subscribe();
+            }, 3000);
           }
         }, 30000);
-      } else if (status === "CHANNEL_ERROR") {
-        console.error("[Presence] Channel error, will retry in 5s");
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        console.error("[Presence] Channel error/timeout/closed, will retry in 5s");
         setIsConnected(false);
+        
+        // Clear heartbeat on error
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
+        
         // Attempt to reconnect after 5 seconds
-        reconnectTimeout = setTimeout(() => {
+        if (reconnectRef.current) clearTimeout(reconnectRef.current);
+        reconnectRef.current = setTimeout(() => {
           console.log("[Presence] Attempting to reconnect...");
-          presenceChannel.subscribe();
+          if (channelRef.current) {
+            channelRef.current.subscribe();
+          }
         }, 5000);
       }
     });
 
-    // Update presence when page/document changes
-    const updatePresence = async () => {
-      if (isConnected) {
-        await trackUserPresence();
+    // Listen for visibility changes to reactivate presence
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !isConnected) {
+        console.log("[Presence] Page became visible, resubscribing...");
+        if (channelRef.current) {
+          channelRef.current.subscribe();
+        }
       }
     };
 
-    // Listen for route changes
-    const handleRouteChange = () => {
-      updatePresence();
-    };
-
-    window.addEventListener("popstate", handleRouteChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Cleanup
     return () => {
-      console.log("[Presence] Cleaning up presence channel");
-      window.removeEventListener("popstate", handleRouteChange);
-      clearInterval(heartbeatInterval);
-      clearTimeout(reconnectTimeout);
-      supabase.removeChannel(presenceChannel);
-      setIsConnected(false);
+      console.log("[Presence] Effect cleanup");
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      cleanup();
     };
-  }, [currentUser, trackPresence, getCurrentPage, documentId, documentType]); // Removed isConnected from deps to prevent re-subscription loops
+  }, [currentUser, trackPresence, cleanup]); // Minimal deps - page/document updates handled in separate effect
 
   return {
     onlineUsers,
