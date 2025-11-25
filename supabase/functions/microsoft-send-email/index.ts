@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
+import { sendEmail, graphAPIRequest } from "../_shared/microsoft-graph.ts";
 
 async function getTicketIdFromAccount(supabaseClient: any, emailAccountId: string, recipientEmail: string) {
   // Try to find the most recent ticket for this recipient on this email account
@@ -16,39 +17,7 @@ async function getTicketIdFromAccount(supabaseClient: any, emailAccountId: strin
   return ticket?.id || null;
 }
 
-async function getValidAccessToken(supabaseClient: any, emailAccountId: string) {
-  const { data: account } = await supabaseClient
-    .from("helpdesk_email_accounts")
-    .select("*")
-    .eq("id", emailAccountId)
-    .single();
-
-  if (!account) {
-    throw new Error("Email account not found");
-  }
-
-  // Check if token is expired or about to expire (within 5 minutes)
-  const expiresAt = new Date(account.microsoft_token_expires_at);
-  const now = new Date();
-  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-
-  if (expiresAt <= fiveMinutesFromNow) {
-    console.log("Token expired or expiring soon, refreshing...");
-    
-    // Refresh the token
-    const refreshResponse = await supabaseClient.functions.invoke("microsoft-refresh-token", {
-      body: { emailAccountId },
-    });
-
-    if (refreshResponse.error) {
-      throw new Error("Failed to refresh token");
-    }
-
-    return refreshResponse.data.accessToken;
-  }
-
-  return account.microsoft_access_token;
-}
+// Removed - now using shared microsoft-graph.ts module
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -80,23 +49,25 @@ serve(async (req) => {
 
     const { emailAccountId, ticketId, to, cc, bcc, subject, body, replyTo, conversationId } = await req.json();
 
+    // Validate required fields
+    if (!emailAccountId || !to || !subject) {
+      throw new Error("Missing required fields: emailAccountId, to, subject");
+    }
+
     // Use service role client for database operations
     const supabaseServiceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get valid access token
-    const accessToken = await getValidAccessToken(supabaseServiceClient, emailAccountId);
-
     // Get account details and verify user has access
-    const { data: account } = await supabaseServiceClient
+    const { data: account, error: accountError } = await supabaseServiceClient
       .from("helpdesk_email_accounts")
       .select("*, tenant_id")
       .eq("id", emailAccountId)
       .single();
 
-    if (!account) {
+    if (accountError || !account) {
       throw new Error("Email account not found");
     }
 
@@ -111,95 +82,43 @@ serve(async (req) => {
       throw new Error("Unauthorized: User does not have access to this email account");
     }
 
-    // Convert line breaks to HTML
+    // Convert line breaks to HTML and sanitize
     const htmlBody = body.replace(/\n/g, '<br>');
 
-    // Prepare email message
-    const message = {
-      message: {
-        subject: subject,
-        body: {
-          contentType: "HTML",
-          content: htmlBody,
-        },
-        toRecipients: Array.isArray(to) ? to.map((email: string) => ({
-          emailAddress: { address: email }
-        })) : [{
-          emailAddress: { address: to }
-        }],
-        ...(cc && cc.length > 0 && {
-          ccRecipients: Array.isArray(cc) ? cc.map((email: string) => ({
-            emailAddress: { address: email }
-          })) : [{
-            emailAddress: { address: cc }
-          }]
-        }),
-        ...(bcc && bcc.length > 0 && {
-          bccRecipients: Array.isArray(bcc) ? bcc.map((email: string) => ({
-            emailAddress: { address: email }
-          })) : [{
-            emailAddress: { address: bcc }
-          }]
-        }),
-        ...(replyTo && {
-          internetMessageId: replyTo
-        }),
-        ...(conversationId && {
-          conversationId: conversationId
-        }),
-      },
-      saveToSentItems: true,
+    // Send email using shared Graph API module
+    const config = {
+      emailAccountId,
+      supabaseClient: supabaseServiceClient,
     };
 
-    // Send via Microsoft Graph API using the mailbox email address
-    // This ensures the email is sent from the shared mailbox, not the authenticated user
-    const sendEndpoint = `https://graph.microsoft.com/v1.0/users/${account.email_address}/sendMail`;
-    
-    console.log(`Sending email from mailbox: ${account.email_address} to: ${to}`);
-    
-    const response = await fetch(
-      sendEndpoint,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(message),
-      }
-    );
+    await sendEmail(config, account.email_address, {
+      subject,
+      body: htmlBody,
+      to: Array.isArray(to) ? to : [to],
+      cc: cc && cc.length > 0 ? (Array.isArray(cc) ? cc : [cc]) : undefined,
+      bcc: bcc && bcc.length > 0 ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
+      replyTo,
+      conversationId,
+    });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("Microsoft Graph API error:", errorData);
-      throw new Error(`Failed to send email: ${response.status} ${response.statusText}`);
-    }
-
-    console.log("Email sent successfully via Microsoft Graph API");
+    console.log(`✅ Email sent from mailbox: ${account.email_address} to: ${to}`);
     
-    // Fetch the sent message to get its actual Message-ID for proper threading
-    // Wait briefly for the message to appear in sent items
+    // Fetch the sent message ID for threading
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     let sentMessageId = null;
     let sentInternetMessageId = null;
+    
     try {
-      const sentItemsResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/users/${account.email_address}/mailFolders/sentitems/messages?$top=1&$orderby=sentDateTime desc&$select=id,internetMessageId`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+      const sentMessage = await graphAPIRequest<{ value: any[] }>(
+        config,
+        `/users/${account.email_address}/mailFolders/sentitems/messages?$top=1&$orderby=sentDateTime desc&$select=id,internetMessageId`
       );
       
-      if (sentItemsResponse.ok) {
-        const sentData = await sentItemsResponse.json();
-        if (sentData.value && sentData.value.length > 0) {
-          sentMessageId = sentData.value[0].id;
-          sentInternetMessageId = sentData.value[0].internetMessageId;
-          console.log("Retrieved sent message ID:", sentMessageId, "Internet Message ID:", sentInternetMessageId);
-        }
+      if (sentMessage.value && sentMessage.value.length > 0) {
+        sentMessageId = sentMessage.value[0].id;
+        sentInternetMessageId = sentMessage.value[0].internetMessageId;
+        console.log("Retrieved sent message ID:", sentMessageId);
       }
     } catch (error) {
       console.error("Could not retrieve sent message ID:", error);
