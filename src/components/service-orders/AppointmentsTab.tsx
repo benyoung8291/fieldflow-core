@@ -102,24 +102,39 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
         .eq("id", serviceOrderId)
         .single();
 
-      if (!serviceOrder || serviceOrder.status === "scheduled" || !serviceOrder.estimated_hours) return;
+      if (!serviceOrder || serviceOrder.status === "scheduled") return;
 
-      // Calculate total assigned hours
-      const totalAssignedHours = appointments.reduce((sum, apt) => {
-        const start = new Date(apt.start_time);
-        const end = new Date(apt.end_time);
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        return sum + hours;
-      }, 0);
+      // Check if any appointments are published
+      const hasPublishedAppointments = appointments.some(apt => apt.status === "published");
 
-      // If all estimated hours are assigned, update to scheduled
-      if (totalAssignedHours >= serviceOrder.estimated_hours) {
-        await supabase
-          .from("service_orders")
-          .update({ status: "scheduled" })
-          .eq("id", serviceOrderId);
-        
-        queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+      if (hasPublishedAppointments) {
+        // If there are estimated hours, check if they're all assigned
+        if (serviceOrder.estimated_hours && serviceOrder.estimated_hours > 0) {
+          const totalAssignedHours = appointments.reduce((sum, apt) => {
+            const start = new Date(apt.start_time);
+            const end = new Date(apt.end_time);
+            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            return sum + hours;
+          }, 0);
+
+          // Update to scheduled if hours are fully assigned
+          if (totalAssignedHours >= serviceOrder.estimated_hours) {
+            await supabase
+              .from("service_orders")
+              .update({ status: "scheduled" })
+              .eq("id", serviceOrderId);
+            
+            queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+          }
+        } else {
+          // No estimated hours set, update to scheduled if any appointment is published
+          await supabase
+            .from("service_orders")
+            .update({ status: "scheduled" })
+            .eq("id", serviceOrderId);
+          
+          queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+        }
       }
     };
 
