@@ -39,6 +39,31 @@ serve(async (req) => {
 
     if (error) throw error
 
+    // Convert markdown-style content to HTML
+    const formatContent = (content: string) => {
+      return content
+        // Headers
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Paragraphs
+        .split('\n\n')
+        .map(para => {
+          if (para.trim().startsWith('<h')) return para;
+          if (para.trim().startsWith('-')) {
+            const items = para.split('\n').filter(line => line.trim().startsWith('-'));
+            return '<ul>' + items.map(item => `<li>${item.substring(1).trim()}</li>`).join('') + '</ul>';
+          }
+          if (para.trim()) return `<p>${para.replace(/\n/g, '<br>')}</p>`;
+          return '';
+        })
+        .join('\n');
+    };
+
+    const formattedContent = formatContent(article.content);
+
     // Beautiful PDF design
     const html = `
       <!DOCTYPE html>
@@ -241,7 +266,7 @@ serve(async (req) => {
           </div>
           
           <div class="content-wrapper">
-            <div class="content">${article.content}</div>
+            <div class="content">${formattedContent}</div>
           </div>
           
           <div class="footer">
