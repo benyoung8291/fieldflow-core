@@ -65,6 +65,7 @@ serve(async (req) => {
             .from('user_roles')
             .select('user_id')
             .eq('role', 'tenant_admin')
+            .eq('tenant_id', tenant.id)
             .limit(1)
             .single();
 
