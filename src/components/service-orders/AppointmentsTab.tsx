@@ -171,6 +171,14 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                         <DropdownMenuItem 
                           onClick={() => updateAppointmentStatusMutation.mutate({
                             appointmentId: appointment.id,
+                            status: "published",
+                          })}
+                        >
+                          Publish Appointment
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => updateAppointmentStatusMutation.mutate({
+                            appointmentId: appointment.id,
                             status: "completed",
                           })}
                         >
