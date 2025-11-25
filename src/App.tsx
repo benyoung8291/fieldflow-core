@@ -117,12 +117,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Worker-only routes - require worker access
   if (location.startsWith("/worker")) {
     if (!access.canAccessWorker) {
+      // User is authenticated but doesn't have worker access
+      // Redirect to office dashboard if they have office access, otherwise to auth
+      if (access.canAccessOffice) {
+        return <Navigate to="/dashboard" replace />;
+      }
       return <Navigate to="/auth" replace />;
     }
   } 
   // Office routes - require role
   else {
     if (!access.canAccessOffice) {
+      // User is authenticated but doesn't have office access
+      // Redirect to worker dashboard if they have worker access, otherwise to auth
+      if (access.canAccessWorker) {
+        return <Navigate to="/worker/dashboard" replace />;
+      }
       return <Navigate to="/auth" replace />;
     }
   }
@@ -219,10 +229,10 @@ const App = () => {
               <MobileBottomNav />
               <WorkerMobileBottomNav />
               <Routes>
-              <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
-            <Route path="/auth" element={!isAuthenticated ? <Auth /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />
-            <Route path="/dashboard" element={isAuthenticated ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+                <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />
+                <Route path="/dashboard" element={isAuthenticated ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/super-admin" element={isAuthenticated ? <ProtectedRoute><SuperAdmin /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/users" element={isAuthenticated ? <ProtectedRoute><UserManagement /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/quotes" element={isAuthenticated ? <ProtectedRoute><Quotes /></ProtectedRoute> : <Navigate to="/auth" replace />} />

@@ -22,44 +22,61 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Check if user is already authenticated and redirect appropriately
+  // Check if user is already authenticated on mount
   useEffect(() => {
+    let mounted = true;
+    
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsCheckingAuth(false);
-        return;
-      }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (mounted) {
+          if (user) {
+            // Check access to determine proper redirect
+            const { data: roleData } = await (supabase as any)
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", user.id)
+              .maybeSingle();
 
-      // Check access
-      const { data: roleData } = await (supabase as any)
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+            const { data: workerData } = await (supabase as any)
+              .from("workers")
+              .select("id")
+              .eq("user_id", user.id)
+              .maybeSingle();
 
-      const { data: workerData } = await (supabase as any)
-        .from("workers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+            const hasRole = !!roleData;
+            const isWorker = !!workerData;
 
-      const hasRole = !!roleData;
-      const isWorker = !!workerData;
-
-      if (hasRole) {
-        navigate("/dashboard", { replace: true });
-      } else if (isWorker) {
-        navigate("/worker/dashboard", { replace: true });
-      } else {
-        // User is authenticated but has no access
-        await supabase.auth.signOut();
-        setIsCheckingAuth(false);
+            // Redirect based on access
+            if (hasRole) {
+              navigate("/dashboard", { replace: true });
+            } else if (isWorker) {
+              navigate("/worker/dashboard", { replace: true });
+            } else {
+              // User has no access - sign them out
+              await supabase.auth.signOut();
+              setIsCheckingAuth(false);
+              toast.error("Access denied. Please contact your administrator.");
+            }
+          } else {
+            setIsCheckingAuth(false);
+          }
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        if (mounted) {
+          setIsCheckingAuth(false);
+        }
       }
     };
 
     checkAuth();
-  }, [navigate]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
