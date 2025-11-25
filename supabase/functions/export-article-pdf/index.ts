@@ -39,31 +39,229 @@ serve(async (req) => {
 
     if (error) throw error
 
-    // Simple HTML to PDF conversion
-    // In production, you would use a proper PDF generation library
+    // Beautiful PDF design
     const html = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="UTF-8">
           <title>${article.title}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
           <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            h1 { color: #333; }
-            .category { display: inline-block; padding: 4px 12px; background: #f0f0f0; border-radius: 4px; margin-bottom: 20px; }
-            .content { line-height: 1.6; }
-            .metadata { color: #666; font-size: 14px; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            @page {
+              margin: 0;
+              size: A4;
+            }
+            
+            body {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              line-height: 1.7;
+              color: #1a1a1a;
+              background: white;
+            }
+            
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 60px 80px 40px;
+              position: relative;
+              overflow: hidden;
+            }
+            
+            .header::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              right: 0;
+              width: 400px;
+              height: 400px;
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 50%;
+              transform: translate(30%, -30%);
+            }
+            
+            .category-badge {
+              display: inline-block;
+              padding: 8px 20px;
+              background: rgba(255, 255, 255, 0.2);
+              backdrop-filter: blur(10px);
+              border-radius: 50px;
+              font-size: 13px;
+              font-weight: 600;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              margin-bottom: 24px;
+              border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            
+            h1 {
+              font-size: 42px;
+              font-weight: 700;
+              margin-bottom: 16px;
+              line-height: 1.2;
+              position: relative;
+            }
+            
+            .summary {
+              font-size: 18px;
+              opacity: 0.95;
+              line-height: 1.6;
+              margin-top: 16px;
+              font-weight: 400;
+            }
+            
+            .content-wrapper {
+              padding: 60px 80px;
+              max-width: 100%;
+            }
+            
+            .content {
+              font-size: 16px;
+              line-height: 1.8;
+              color: #2d3748;
+            }
+            
+            .content h1, .content h2, .content h3 {
+              color: #1a202c;
+              margin-top: 40px;
+              margin-bottom: 16px;
+              font-weight: 600;
+            }
+            
+            .content h1 { font-size: 32px; }
+            .content h2 { font-size: 24px; }
+            .content h3 { font-size: 20px; }
+            
+            .content p {
+              margin-bottom: 16px;
+            }
+            
+            .content ul, .content ol {
+              margin: 16px 0 16px 24px;
+            }
+            
+            .content li {
+              margin-bottom: 8px;
+              padding-left: 8px;
+            }
+            
+            .content strong {
+              font-weight: 600;
+              color: #1a202c;
+            }
+            
+            .content blockquote {
+              border-left: 4px solid #667eea;
+              padding-left: 20px;
+              margin: 24px 0;
+              font-style: italic;
+              color: #4a5568;
+            }
+            
+            .content code {
+              background: #f7fafc;
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-family: 'Monaco', 'Courier New', monospace;
+              font-size: 14px;
+              color: #e53e3e;
+            }
+            
+            .footer {
+              background: #f7fafc;
+              padding: 40px 80px;
+              margin-top: 60px;
+              border-top: 1px solid #e2e8f0;
+            }
+            
+            .metadata {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 24px;
+              margin-bottom: 24px;
+            }
+            
+            .metadata-item {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+            }
+            
+            .metadata-label {
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              color: #718096;
+              font-weight: 600;
+            }
+            
+            .metadata-value {
+              font-size: 16px;
+              color: #2d3748;
+              font-weight: 500;
+            }
+            
+            .footer-note {
+              text-align: center;
+              color: #a0aec0;
+              font-size: 13px;
+              margin-top: 24px;
+              padding-top: 24px;
+              border-top: 1px solid #e2e8f0;
+            }
+            
+            @media print {
+              .header {
+                break-inside: avoid;
+              }
+              
+              .content h1, .content h2, .content h3 {
+                break-after: avoid;
+              }
+              
+              .content p, .content ul, .content ol {
+                break-inside: avoid;
+              }
+            }
           </style>
         </head>
         <body>
-          ${article.knowledge_categories ? `<div class="category">${article.knowledge_categories.name}</div>` : ''}
-          <h1>${article.title}</h1>
-          ${article.summary ? `<p><strong>${article.summary}</strong></p>` : ''}
-          <div class="content">${article.content}</div>
-          <div class="metadata">
-            <p>Created: ${new Date(article.created_at).toLocaleDateString()}</p>
-            <p>Last Updated: ${new Date(article.updated_at).toLocaleDateString()}</p>
-            <p>Views: ${article.view_count}</p>
+          <div class="header">
+            ${article.knowledge_categories ? `<div class="category-badge">${article.knowledge_categories.name}</div>` : ''}
+            <h1>${article.title}</h1>
+            ${article.summary ? `<div class="summary">${article.summary}</div>` : ''}
+          </div>
+          
+          <div class="content-wrapper">
+            <div class="content">${article.content}</div>
+          </div>
+          
+          <div class="footer">
+            <div class="metadata">
+              <div class="metadata-item">
+                <div class="metadata-label">Created</div>
+                <div class="metadata-value">${new Date(article.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              </div>
+              <div class="metadata-item">
+                <div class="metadata-label">Last Updated</div>
+                <div class="metadata-value">${new Date(article.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              </div>
+              <div class="metadata-item">
+                <div class="metadata-label">Views</div>
+                <div class="metadata-value">${article.view_count.toLocaleString()}</div>
+              </div>
+            </div>
+            <div class="footer-note">
+              Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
           </div>
         </body>
       </html>
