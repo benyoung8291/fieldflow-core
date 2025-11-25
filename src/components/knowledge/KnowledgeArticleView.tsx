@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,20 +23,25 @@ import { KnowledgeArticleSuggestions } from "./KnowledgeArticleSuggestions";
 import { KnowledgeArticleAttachments } from "./KnowledgeArticleAttachments";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PolicyDocumentRenderer } from "./PolicyDocumentRenderer";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { KnowledgeBaseSidebar } from "./KnowledgeBaseSidebar";
 
 interface KnowledgeArticleViewProps {
   articleId: string;
   onBack: () => void;
   onEdit: (articleId: string) => void;
+  onSelectArticle?: (articleId: string) => void;
 }
 
 export function KnowledgeArticleView({
   articleId,
   onBack,
   onEdit,
+  onSelectArticle,
 }: KnowledgeArticleViewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const { data: article } = useQuery({
     queryKey: ["knowledge-article", articleId],
@@ -102,28 +108,47 @@ export function KnowledgeArticleView({
 
   const canEdit = profile?.id === article.created_by;
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={onBack} className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            {canEdit && (
-              <Button onClick={() => onEdit(articleId)} className="gap-2">
-                <Edit className="h-4 w-4" />
-                Edit Article
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+  const handleSelectArticle = (id: string) => {
+    if (onSelectArticle) {
+      onSelectArticle(id);
+    }
+  };
 
-      {/* Content */}
-      <ScrollArea className="flex-1">
+  const handleSelectCategory = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  };
+
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <KnowledgeBaseSidebar
+          selectedCategoryId={selectedCategoryId}
+          onSelectCategory={handleSelectCategory}
+          onSelectArticle={handleSelectArticle}
+        />
+
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger />
+                <Button variant="ghost" onClick={onBack} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+              </div>
+              {canEdit && (
+                <Button onClick={() => onEdit(articleId)} className="gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Article
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <ScrollArea className="flex-1">
         <div className="container max-w-4xl py-8">
           {/* Article Content */}
           {article.knowledge_categories?.name === "Company Policies" || 
@@ -227,8 +252,10 @@ export function KnowledgeArticleView({
 
           {/* Suggestions */}
           <KnowledgeArticleSuggestions articleId={articleId} />
+          </div>
+          </ScrollArea>
         </div>
-      </ScrollArea>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
