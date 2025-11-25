@@ -187,16 +187,7 @@ export function OnboardingWizard() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{currentStep.title}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>{currentStep.title}</DialogTitle>
           <DialogDescription>
             Step {completedSteps.length + 1} of {onboardingSteps.length}
           </DialogDescription>

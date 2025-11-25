@@ -166,40 +166,40 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout showRightSidebar={true}>
-      <div className="space-y-3">
-        {/* Quick Actions - Compact */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="space-y-6">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
               <Button
                 key={action.name}
                 variant="outline"
-                className="h-auto flex flex-col items-center gap-1.5 p-2 hover:shadow-sm transition-all"
+                className="h-auto flex flex-col items-center gap-2 p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-border/50 bg-card"
                 onClick={action.onClick}
               >
-                <div className={`p-1.5 rounded ${action.bgColor}`}>
-                  <Icon className={`h-4 w-4 ${action.color}`} />
+                <div className={`p-2.5 rounded-xl ${action.bgColor}`}>
+                  <Icon className={`h-5 w-5 ${action.color}`} />
                 </div>
-                <p className="text-xs font-medium">{action.name}</p>
+                <p className="text-xs font-medium text-foreground">{action.name}</p>
               </Button>
             );
           })}
         </div>
 
-        {/* Stats Grid - Compact */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {/* Stats Grid */}
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           {statsLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-3">
+              <Card key={i} className="border-border/50">
+                <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
-                      <div className="h-6 w-12 bg-muted animate-pulse rounded" />
-                      <div className="h-2 w-16 bg-muted animate-pulse rounded" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                      <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                      <div className="h-2 w-20 bg-muted animate-pulse rounded" />
                     </div>
-                    <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+                    <div className="h-10 w-10 bg-muted animate-pulse rounded-lg" />
                   </div>
                 </CardContent>
               </Card>
@@ -208,15 +208,17 @@ export default function Dashboard() {
             stats.map((stat) => {
               const Icon = stat.icon;
               return (
-                <Card key={stat.name} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-3">
+                <Card key={stat.name} className="hover:shadow-lg transition-all duration-200 border-border/50 bg-gradient-to-br from-card to-card/50">
+                  <CardContent className="p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-0.5 flex-1">
-                        <p className="text-xs text-muted-foreground">{stat.name}</p>
-                        <p className="text-xl font-bold">{stat.value}</p>
-                        <p className="text-[10px] text-muted-foreground">{stat.change}</p>
+                      <div className="space-y-1 flex-1">
+                        <p className="text-sm font-medium text-muted-foreground">{stat.name}</p>
+                        <p className="text-3xl font-bold tracking-tight">{stat.value}</p>
+                        <p className="text-xs text-muted-foreground font-medium">{stat.change}</p>
                       </div>
-                      <Icon className={`h-8 w-8 ${stat.color} opacity-80`} />
+                      <div className={`p-3 rounded-xl bg-gradient-to-br from-background/50 to-background`}>
+                        <Icon className={`h-6 w-6 ${stat.color}`} />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -225,20 +227,20 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Content Grid - Optimized */}
-        <div className="grid gap-3 lg:grid-cols-2">
+        {/* Content Grid */}
+        <div className="grid gap-4 lg:grid-cols-2">
           {/* Recent Orders */}
-          <Card>
-            <CardContent className="p-3">
-              <h3 className="text-sm font-semibold mb-2">Recent Orders</h3>
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Recent Orders</h3>
               {ordersLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : recentOrders.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground text-sm">
+                <div className="text-center py-12 text-muted-foreground">
                   No service orders yet
                 </div>
               ) : (
@@ -247,19 +249,19 @@ export default function Dashboard() {
                     <div 
                       key={order.id} 
                       onClick={() => navigate(`/service-orders/${order.id}`)}
-                      className="flex items-center justify-between p-2 bg-muted/40 border rounded hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-4 bg-muted/30 border border-border/50 rounded-lg hover:bg-muted/50 hover:shadow-md cursor-pointer transition-all duration-200"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{order.order_number}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="font-semibold text-sm">{order.order_number}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
                           {order.customers?.name || "Unknown"}
                         </p>
                       </div>
-                      <div className="ml-2 flex-shrink-0">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium capitalize
-                          ${order.status === 'completed' ? 'bg-success/10 text-success' : 
-                            order.status === 'in_progress' ? 'bg-warning/10 text-warning' : 
-                            'bg-muted text-muted-foreground'}`}>
+                      <div className="ml-3 flex-shrink-0">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize
+                          ${order.status === 'completed' ? 'bg-success/10 text-success border border-success/20' : 
+                            order.status === 'in_progress' ? 'bg-warning/10 text-warning border border-warning/20' : 
+                            'bg-muted text-muted-foreground border border-border'}`}>
                           {order.status.replace('_', ' ')}
                         </span>
                       </div>
@@ -271,17 +273,17 @@ export default function Dashboard() {
           </Card>
 
           {/* Today's Schedule */}
-          <Card>
-            <CardContent className="p-3">
-              <h3 className="text-sm font-semibold mb-2">Today's Schedule</h3>
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Today's Schedule</h3>
               {scheduleLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : todaySchedule.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground text-sm">
+                <div className="text-center py-12 text-muted-foreground">
                   No appointments today
                 </div>
               ) : (
@@ -290,14 +292,14 @@ export default function Dashboard() {
                     <div 
                       key={appointment.id} 
                       onClick={() => navigate(`/scheduler?appointment=${appointment.id}`)}
-                      className="flex items-center gap-2 p-2 bg-muted/40 border rounded hover:bg-muted cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-4 bg-muted/30 border border-border/50 rounded-lg hover:bg-muted/50 hover:shadow-md cursor-pointer transition-all duration-200"
                     >
-                      <div className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded flex-shrink-0">
+                      <div className="text-xs font-bold text-primary bg-primary/10 px-3 py-2 rounded-lg flex-shrink-0 border border-primary/20">
                         {format(new Date(appointment.start_time), "hh:mm a")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{appointment.title}</p>
-                        <p className="text-[10px] text-muted-foreground capitalize">{appointment.status}</p>
+                        <p className="text-sm font-semibold truncate">{appointment.title}</p>
+                        <p className="text-xs text-muted-foreground capitalize mt-0.5">{appointment.status}</p>
                       </div>
                     </div>
                   ))}
@@ -307,10 +309,10 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Today's Tasks - Full Width */}
-        <Card>
-          <CardContent className="p-3">
-            <h3 className="text-sm font-semibold mb-2">Today's Tasks</h3>
+        {/* Today's Tasks */}
+        <Card className="border-border/50">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Today's Tasks</h3>
             <TodaysTasks />
           </CardContent>
         </Card>

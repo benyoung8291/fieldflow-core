@@ -145,15 +145,8 @@ export function ModuleTutorial({ moduleName, defaultSteps, title, description }:
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>{tutorialTitle}</DialogTitle>
-              <DialogDescription>{tutorialDescription}</DialogDescription>
-            </div>
-            <Button variant="ghost" size="icon" onClick={handleSkip}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>{tutorialTitle}</DialogTitle>
+          <DialogDescription>{tutorialDescription}</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6">
