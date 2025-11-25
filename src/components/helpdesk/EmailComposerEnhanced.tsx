@@ -2,14 +2,15 @@ import { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "re
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, X, Minus, Maximize2, Bold, Italic, List, Link as LinkIcon, Image as ImageIcon, Smile } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { Paperclip, Send, X, Minus, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { SnippetInserter } from "./SnippetInserter";
 
 export interface EmailComposerRef {
   reset: () => void;
+  insertContent: (html: string) => void;
 }
 
 interface EmailComposerEnhancedProps {
@@ -23,10 +24,11 @@ interface EmailComposerEnhancedProps {
     date: string;
     body: string;
   }>;
+  ticketId?: string;
 }
 
 export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerEnhancedProps>(
-  ({ defaultTo = "", defaultSubject = "", onSend, isSending = false, emailThread = [] }, ref) => {
+  ({ defaultTo = "", defaultSubject = "", onSend, isSending = false, emailThread = [], ticketId }, ref) => {
     const { toast } = useToast();
     const [to, setTo] = useState(defaultTo);
     const [cc, setCc] = useState("");
@@ -60,6 +62,9 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
         setShowCc(false);
         setShowBcc(false);
         setAttachments([]);
+      },
+      insertContent: (html: string) => {
+        setBody(prev => prev + html);
       },
     }));
 
@@ -296,6 +301,12 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
               <Paperclip className="h-4 w-4 mr-2" />
               Attach
             </Button>
+            {ticketId && (
+              <SnippetInserter 
+                ticketId={ticketId} 
+                onInsertSnippet={(html) => setBody(prev => prev + html)} 
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button
