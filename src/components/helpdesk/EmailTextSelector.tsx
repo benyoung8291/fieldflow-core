@@ -45,38 +45,66 @@ export function EmailTextSelector({ ticketId, children }: EmailTextSelectorProps
 
   const saveToDocumentMutation = useMutation({
     mutationFn: async ({ docType, docId, field, text }: { docType: string; docId: string; field: string; text: string }) => {
-      if (docType === "service_order") {
-        const { data: current } = await supabase
-          .from("service_orders")
-          .select(field)
-          .eq("id", docId)
+      // If saving to notes, create a document note instead
+      if (field === "notes") {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tenant_id")
+          .eq("id", user.id)
           .single();
 
-        const currentValue = current?.[field] || "";
-        const newValue = currentValue ? `${currentValue}\n\n${text}` : text;
+        if (!profile) throw new Error("Profile not found");
 
         const { error } = await supabase
-          .from("service_orders")
-          .update({ [field]: newValue })
-          .eq("id", docId);
+          .from("document_notes")
+          .insert({
+            tenant_id: profile.tenant_id,
+            document_type: docType,
+            document_id: docId,
+            content: text,
+            is_sticky: false,
+            created_by: user.id,
+          });
 
         if (error) throw error;
-      } else if (docType === "appointment") {
-        const { data: current } = await supabase
-          .from("appointments")
-          .select(field)
-          .eq("id", docId)
-          .single();
+      } else {
+        // For other fields, append to existing content
+        if (docType === "service_order") {
+          const { data: current } = await supabase
+            .from("service_orders")
+            .select(field)
+            .eq("id", docId)
+            .single();
 
-        const currentValue = current?.[field] || "";
-        const newValue = currentValue ? `${currentValue}\n\n${text}` : text;
+          const currentValue = current?.[field] || "";
+          const newValue = currentValue ? `${currentValue}\n\n${text}` : text;
 
-        const { error } = await supabase
-          .from("appointments")
-          .update({ [field]: newValue })
-          .eq("id", docId);
+          const { error } = await supabase
+            .from("service_orders")
+            .update({ [field]: newValue })
+            .eq("id", docId);
 
-        if (error) throw error;
+          if (error) throw error;
+        } else if (docType === "appointment") {
+          const { data: current } = await supabase
+            .from("appointments")
+            .select(field)
+            .eq("id", docId)
+            .single();
+
+          const currentValue = current?.[field] || "";
+          const newValue = currentValue ? `${currentValue}\n\n${text}` : text;
+
+          const { error } = await supabase
+            .from("appointments")
+            .update({ [field]: newValue })
+            .eq("id", docId);
+
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {
