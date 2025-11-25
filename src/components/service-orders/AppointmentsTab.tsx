@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 interface AppointmentsTabProps {
   serviceOrderId: string;
@@ -21,9 +22,12 @@ interface AppointmentsTabProps {
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
+  published: "bg-info/10 text-info",
   scheduled: "bg-info/10 text-info",
   in_progress: "bg-warning/10 text-warning",
   completed: "bg-success/10 text-success",
+  checked_in: "bg-warning/10 text-warning",
+  cancelled: "bg-destructive/10 text-destructive",
 };
 
 export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps) {
@@ -63,16 +67,76 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     },
   });
 
+  // Real-time subscription for appointments
+  useEffect(() => {
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `service_order_id=eq.${serviceOrderId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
+          queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [serviceOrderId, queryClient]);
+
   const updateAppointmentStatusMutation = useMutation({
     mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: "draft" | "published" | "checked_in" | "completed" | "cancelled" }) => {
-      const { error } = await supabase
+      // Update appointment status
+      const { error: aptError } = await supabase
         .from("appointments")
         .update({ status })
         .eq("id", appointmentId);
-      if (error) throw error;
+      
+      if (aptError) throw aptError;
+
+      // If publishing, check if we should update service order status
+      if (status === "published") {
+        // Get service order details with appointments
+        const { data: serviceOrder, error: soError } = await supabase
+          .from("service_orders")
+          .select(`
+            id,
+            estimated_hours,
+            appointments(id, status)
+          `)
+          .eq("id", serviceOrderId)
+          .single();
+
+        if (soError) throw soError;
+
+        if (serviceOrder) {
+          // Check if all appointments are published
+          const allPublished = serviceOrder.appointments.every(
+            (apt: any) => apt.status === "published" || apt.id === appointmentId
+          );
+
+          // If all appointments are published, update service order to scheduled
+          if (allPublished) {
+            const { error: updateError } = await supabase
+              .from("service_orders")
+              .update({ status: "scheduled" })
+              .eq("id", serviceOrderId);
+
+            if (updateError) throw updateError;
+          }
+        }
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["service-order-appointments", serviceOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
       toast({ title: "Appointment status updated" });
     },
     onError: (error: any) => {
