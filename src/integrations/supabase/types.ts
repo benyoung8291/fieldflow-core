@@ -8201,16 +8201,22 @@ export type Database = {
         }
         Returns: boolean
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["user_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | { Args: { _role: string; _user_id: string }; Returns: boolean }
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["user_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
       initialize_brand_colors: {
         Args: { p_tenant_id: string }
         Returns: undefined
+      }
+      is_assigned_to_helpdesk_pipeline: {
+        Args: { _pipeline_id: string; _user_id: string }
+        Returns: boolean
       }
       is_super_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_worker_with_time_logs: {
