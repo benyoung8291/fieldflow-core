@@ -6,7 +6,9 @@ export function useUserAccess() {
     queryKey: ["user-access"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
 
       // Check if user has any role
       const { data: roleData } = await (supabase as any)
