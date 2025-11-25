@@ -13,6 +13,7 @@ import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAttachments";
 import ServiceOrderPurchaseOrdersTab from "@/components/service-orders/ServiceOrderPurchaseOrdersTab";
 import ServiceOrderProfitLossCard from "@/components/service-orders/ServiceOrderProfitLossCard";
+import { DocumentNotes } from "@/components/notes/DocumentNotes";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import AppointmentsTab from "@/components/service-orders/AppointmentsTab";
@@ -1208,6 +1209,12 @@ export default function ServiceOrderDetails() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Notes Section */}
+              <div className="mt-8 pt-6 border-t">
+                <h3 className="font-semibold text-sm mb-4">Quick Notes</h3>
+                <DocumentNotes documentType="service_order" documentId={id!} />
               </div>
             </div>
       ),
