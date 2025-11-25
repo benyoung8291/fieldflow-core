@@ -119,21 +119,6 @@ export function PolicyDocumentRenderer({
 
   return (
     <div className="space-y-8">
-      {/* Simplified Header */}
-      <div className="mb-8">
-        {category && (
-          <Badge className="mb-3 bg-primary/20 text-primary hover:bg-primary/30">
-            {category}
-          </Badge>
-        )}
-        <h1 className="text-3xl md:text-4xl font-bold mb-3">
-          {title}
-        </h1>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CheckCircle className="h-4 w-4 text-green-500" />
-          Official Policy Document
-        </div>
-      </div>
 
       {/* Table of Contents */}
       {sections.length > 0 && (
@@ -147,10 +132,9 @@ export function PolicyDocumentRenderer({
               <a
                 key={index}
                 href={`#section-${index}`}
-                className="text-sm hover:text-primary transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-background"
+                className="text-sm hover:text-primary transition-colors p-2 rounded-lg hover:bg-background block"
               >
-                <span className="text-muted-foreground">{index + 1}.</span>
-                <span>{section.title}</span>
+                {section.title}
               </a>
             ))}
           </div>
@@ -168,7 +152,7 @@ export function PolicyDocumentRenderer({
             >
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                {index + 1}. {section.title}
+                {section.title}
               </h2>
               <div 
                 className="prose prose-slate dark:prose-invert max-w-none prose-strong:text-foreground prose-strong:font-semibold"

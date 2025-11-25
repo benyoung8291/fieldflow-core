@@ -13,6 +13,7 @@ import {
   FileText,
   MessageSquare,
   Download,
+  CheckCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -124,65 +125,98 @@ export function KnowledgeArticleView({
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="container max-w-4xl py-8">
-          {/* Article Header */}
-          <div className="mb-8">
-            <div className="flex flex-wrap gap-2 mb-4">
-              {article.knowledge_categories && (
-                <Badge
-                  style={{
-                    backgroundColor: `${article.knowledge_categories.color}20`,
-                    color: article.knowledge_categories.color,
-                    borderColor: article.knowledge_categories.color,
-                  }}
-                  variant="outline"
-                >
-                  {article.knowledge_categories.name}
-                </Badge>
-              )}
-              {article.knowledge_article_tags?.map((tagRelation: any) => (
-                <Badge key={tagRelation.knowledge_tags.id} variant="secondary">
-                  {tagRelation.knowledge_tags.name}
-                </Badge>
-              ))}
-            </div>
-
-            <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-
-            {article.summary && (
-              <p className="text-lg text-muted-foreground mb-6">{article.summary}</p>
-            )}
-
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Eye className="h-4 w-4" />
-                {article.view_count} views
-              </div>
-              <div className="flex items-center gap-1.5">
-                <ThumbsUp className="h-4 w-4" />
-                {article.helpful_count} helpful
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
-                Updated {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
-              </div>
-            </div>
-          </div>
-
           {/* Article Content */}
           {article.knowledge_categories?.name === "Company Policies" || 
            article.knowledge_categories?.name === "Compliance & Safety" ? (
-            <PolicyDocumentRenderer
-              content={article.content}
-              title={article.title}
-              category={article.knowledge_categories?.name}
-            />
-          ) : (
-            <Card className="p-8 mb-8">
-              <div
-                className="prose prose-slate dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: article.content }}
+            <>
+              {/* Policy Header */}
+              <div className="mb-8">
+                {article.knowledge_categories && (
+                  <Badge className="mb-3 bg-primary/20 text-primary hover:bg-primary/30">
+                    {article.knowledge_categories.name}
+                  </Badge>
+                )}
+                <h1 className="text-3xl md:text-4xl font-bold mb-3">{article.title}</h1>
+                {article.summary && (
+                  <p className="text-lg text-muted-foreground mb-4">{article.summary}</p>
+                )}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  Official Policy Document
+                </div>
+                <div className="flex items-center gap-6 text-sm text-muted-foreground mt-4">
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="h-4 w-4" />
+                    {article.view_count} views
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ThumbsUp className="h-4 w-4" />
+                    {article.helpful_count} helpful
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" />
+                    Updated {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                  </div>
+                </div>
+              </div>
+              <PolicyDocumentRenderer
+                content={article.content}
+                title={article.title}
+                category={article.knowledge_categories?.name}
               />
-            </Card>
+            </>
+          ) : (
+            <>
+              {/* Standard Article Header */}
+              <div className="mb-8">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {article.knowledge_categories && (
+                    <Badge
+                      style={{
+                        backgroundColor: `${article.knowledge_categories.color}20`,
+                        color: article.knowledge_categories.color,
+                        borderColor: article.knowledge_categories.color,
+                      }}
+                      variant="outline"
+                    >
+                      {article.knowledge_categories.name}
+                    </Badge>
+                  )}
+                  {article.knowledge_article_tags?.map((tagRelation: any) => (
+                    <Badge key={tagRelation.knowledge_tags.id} variant="secondary">
+                      {tagRelation.knowledge_tags.name}
+                    </Badge>
+                  ))}
+                </div>
+
+                <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
+
+                {article.summary && (
+                  <p className="text-lg text-muted-foreground mb-6">{article.summary}</p>
+                )}
+
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="h-4 w-4" />
+                    {article.view_count} views
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ThumbsUp className="h-4 w-4" />
+                    {article.helpful_count} helpful
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" />
+                    Updated {formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                  </div>
+                </div>
+              </div>
+              <Card className="p-8 mb-8">
+                <div
+                  className="prose prose-slate dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: article.content }}
+                />
+              </Card>
+            </>
           )}
 
           {/* Attachments */}
