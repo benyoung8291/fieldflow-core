@@ -244,6 +244,9 @@ serve(async (req) => {
     console.error("Error in microsoft-sync-emails:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     
+    // Check if this is an authentication error that requires user action
+    const isAuthError = error && (error as any).name === "TokenRefreshError";
+    
     // Update account sync error
     try {
       const supabase = createClient(
@@ -256,7 +259,7 @@ serve(async (req) => {
         await supabase
           .from("helpdesk_email_accounts")
           .update({
-            sync_status: "error",
+            sync_status: isAuthError ? "auth_required" : "error",
             sync_error: errorMessage,
           })
           .eq("id", emailAccountId);
