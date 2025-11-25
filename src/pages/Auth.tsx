@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Building2 } from "lucide-react";
 import premrestLogo from "@/assets/premrest-logo.svg";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -46,17 +45,41 @@ export default function Auth() {
       });
 
       if (error) {
-        // Use generic error message to prevent user enumeration
         toast.error("Invalid email or password.");
         console.error("Sign in error:", error);
         return;
       }
 
-      // Store login type preference
-      localStorage.setItem("loginType", "admin");
-      
+      // Get user access to determine redirect
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roleData } = await (supabase as any)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const { data: workerData } = await (supabase as any)
+        .from("workers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const hasRole = !!roleData;
+      const isWorker = !!workerData;
+
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      
+      // Redirect based on access
+      if (hasRole) {
+        navigate("/dashboard");
+      } else if (isWorker) {
+        navigate("/worker/dashboard");
+      } else {
+        toast.error("Access denied. Please contact your administrator.");
+        await supabase.auth.signOut();
+      }
     } catch (error: any) {
       // Generic error message for unexpected errors
       toast.error("An unexpected error occurred. Please try again.");
@@ -80,10 +103,10 @@ export default function Auth() {
               className="h-8 w-auto object-contain"
             />
           </div>
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">Office Login</span>
-          </div>
+          <h1 className="text-2xl font-semibold text-center">Sign In</h1>
+          <p className="text-sm text-muted-foreground text-center">
+            Enter your credentials to continue
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -111,27 +134,6 @@ export default function Auth() {
               {isLoading ? "Loading..." : "Sign In"}
             </Button>
           </form>
-          <div className="mt-6 text-center space-y-3">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Field Worker?
-                </span>
-              </div>
-            </div>
-            
-            <Link
-              to="/worker/auth"
-              className="block"
-            >
-              <Button variant="outline" className="w-full" type="button">
-                Login as Field Worker
-              </Button>
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>
