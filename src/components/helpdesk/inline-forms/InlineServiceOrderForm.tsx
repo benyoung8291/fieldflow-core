@@ -48,7 +48,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
     preferred_date: parsedData?.preferred_date || "",
     preferred_date_start: parsedData?.preferred_date_start || "",
     preferred_date_end: parsedData?.preferred_date_end || "",
-    priority: parsedData?.priority || "medium",
+    priority: parsedData?.priority || "normal",
     tax_rate: 10,
   });
   const [lineItems, setLineItems] = useState<LineItem[]>(
@@ -455,7 +455,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="low">Low</option>
-              <option value="medium">Medium</option>
+              <option value="normal">Normal</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
