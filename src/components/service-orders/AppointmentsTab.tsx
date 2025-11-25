@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Clock, MoreVertical, Edit } from "lucide-react";
+import { Calendar, User, Clock, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import TimeLogsTable from "./TimeLogsTable";
 import { useToast } from "@/hooks/use-toast";
@@ -13,8 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import AppointmentDialog from "@/components/scheduler/AppointmentDialog";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface AppointmentsTabProps {
   serviceOrderId: string;
@@ -30,8 +29,7 @@ const statusColors = {
 export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const navigate = useNavigate();
   
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["service-order-appointments-v2", serviceOrderId],
@@ -98,7 +96,11 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     <>
       <div className="space-y-4">
         {appointments.map((appointment: any) => (
-          <Card key={appointment.id}>
+          <Card 
+            key={appointment.id} 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate(`/appointments/${appointment.id}`)}
+          >
             <CardContent className="p-4">
               <div className="space-y-4">
                 {/* Appointment Header */}
@@ -150,18 +152,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                   )}
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        setEditingAppointmentId(appointment.id);
-                        setIsDialogOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="ghost">
@@ -208,19 +199,6 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
           </Card>
         ))}
       </div>
-
-      <AppointmentDialog
-        open={isDialogOpen}
-        onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) {
-            setEditingAppointmentId(null);
-            queryClient.invalidateQueries({ queryKey: ["service-order-appointments", serviceOrderId] });
-          }
-        }}
-        appointmentId={editingAppointmentId || undefined}
-        defaultServiceOrderId={serviceOrderId}
-      />
     </>
   );
 }
