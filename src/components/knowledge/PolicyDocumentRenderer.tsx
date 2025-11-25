@@ -109,38 +109,42 @@ export function PolicyDocumentRenderer({
         </Card>
       )}
 
-      {/* Policy Sections */}
-      <div className="space-y-6">
-        {sections.map((section, index) => (
-          <Card
-            key={index}
-            id={`section-${index}`}
-            className="p-6 md:p-8 scroll-mt-4 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
-                {getSectionIcon(index)}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {(index + 1).toString().padStart(2, '0')}
-                  </Badge>
-                  <h2 className="text-xl md:text-2xl font-bold">
-                    {section.title}
-                  </h2>
+      {/* Policy Sections - Single Card */}
+      <Card className="p-8 md:p-12">
+        <div className="space-y-12">
+          {sections.map((section, index) => (
+            <div
+              key={index}
+              id={`section-${index}`}
+              className="scroll-mt-4"
+            >
+              <div className="flex items-start gap-4 mb-6">
+                <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
+                  {getSectionIcon(index)}
                 </div>
-                <Separator className="mb-4" />
-                <div className="prose prose-slate dark:prose-invert max-w-none">
-                  <p className="text-base leading-relaxed whitespace-pre-wrap">
-                    {section.content.trim()}
-                  </p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {(index + 1).toString().padStart(2, '0')}
+                    </Badge>
+                    <h2 className="text-2xl md:text-3xl font-bold">
+                      {section.title}
+                    </h2>
+                  </div>
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground/90">
+                      {section.content.trim()}
+                    </p>
+                  </div>
                 </div>
               </div>
+              {index < sections.length - 1 && (
+                <Separator className="mt-8" />
+              )}
             </div>
-          </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Footer Card */}
       <Card className="p-6 bg-muted/30 border-l-4 border-l-primary">
