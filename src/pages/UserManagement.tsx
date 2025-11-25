@@ -20,6 +20,8 @@ const UserManagement = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [showTeamDialog, setShowTeamDialog] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -36,6 +38,20 @@ const UserManagement = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: teams } = useQuery({
+    queryKey: ["teams", profile?.tenant_id],
+    queryFn: async () => {
+      if (!profile?.tenant_id) return [];
+      const { data, error } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
   });
 
   const { data: users, isLoading } = useQuery({
@@ -63,8 +79,23 @@ const UserManagement = () => {
         throw new Error(error.error || 'Failed to fetch users');
       }
 
-      const { users } = await response.json();
-      return users || [];
+      const { users: usersData } = await response.json();
+      
+      // Fetch user teams
+      const { data: userTeams } = await supabase
+        .from("user_teams")
+        .select("user_id, team_id, teams(name)")
+        .eq("tenant_id", profile!.tenant_id);
+
+      // Combine users with their teams
+      const usersWithTeams = (usersData || []).map((user: any) => ({
+        ...user,
+        teams: userTeams
+          ?.filter((ut) => ut.user_id === user.id)
+          .map((ut) => ({ id: ut.team_id, name: ut.teams?.name })) || [],
+      }));
+
+      return usersWithTeams;
     },
     enabled: !!profile?.tenant_id && isAdmin,
   });
@@ -118,6 +149,47 @@ const UserManagement = () => {
     },
   });
 
+  const assignTeamMutation = useMutation({
+    mutationFn: async ({ userId, teamId }: { userId: string; teamId: string }) => {
+      const { error } = await supabase
+        .from("user_teams")
+        .insert({
+          user_id: userId,
+          team_id: teamId,
+          tenant_id: profile!.tenant_id,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Team assigned successfully");
+      setShowTeamDialog(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to assign team");
+    },
+  });
+
+  const removeTeamMutation = useMutation({
+    mutationFn: async ({ userId, teamId }: { userId: string; teamId: string }) => {
+      const { error } = await supabase
+        .from("user_teams")
+        .delete()
+        .eq("user_id", userId)
+        .eq("team_id", teamId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Team removed successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove team");
+    },
+  });
+
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -161,6 +233,16 @@ const UserManagement = () => {
     }
 
     assignRoleMutation.mutate({ userId: selectedUserId, role: selectedRole });
+  };
+
+  const handleAssignTeam = () => {
+    if (selectedUserId && selectedTeamId) {
+      assignTeamMutation.mutate({
+        userId: selectedUserId,
+        teamId: selectedTeamId,
+      });
+      setSelectedTeamId("");
+    }
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -275,6 +357,7 @@ const UserManagement = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Roles</TableHead>
+                    <TableHead>Teams</TableHead>
                     <TableHead>Account Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -319,6 +402,40 @@ const UserManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <div className="flex gap-1 flex-wrap items-center">
+                          {user.teams && user.teams.length > 0 ? (
+                            user.teams.map((team: any) => (
+                              <Badge
+                                key={team.id}
+                                variant="secondary"
+                                className="cursor-pointer hover:opacity-80"
+                                onClick={() =>
+                                  removeTeamMutation.mutate({
+                                    userId: user.id,
+                                    teamId: team.id,
+                                  })
+                                }
+                              >
+                                {team.name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No teams</span>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6"
+                            onClick={() => {
+                              setSelectedUserId(user.id);
+                              setShowTeamDialog(true);
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-3">
                           <Badge 
                             variant={user.is_active ? "default" : "secondary"}
@@ -353,6 +470,37 @@ const UserManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showTeamDialog} onOpenChange={setShowTeamDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Team</DialogTitle>
+            <DialogDescription>
+              Assign a team to this user to define their workflow and module access
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="team">Select Team</Label>
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams?.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleAssignTeam} className="w-full">
+              Assign Team
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

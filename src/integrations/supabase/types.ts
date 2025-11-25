@@ -6264,6 +6264,107 @@ export type Database = {
           },
         ]
       }
+      team_onboarding_steps: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          module: string
+          route: string | null
+          step_order: number
+          team_id: string
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          module: string
+          route?: string | null
+          step_order: number
+          team_id: string
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          module?: string
+          route?: string | null
+          step_order?: number
+          team_id?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_onboarding_steps_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_onboarding_steps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          enabled_modules: string[] | null
+          id: string
+          is_active: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          enabled_modules?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          enabled_modules?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings: {
         Row: {
           abn: string | null
@@ -6642,6 +6743,48 @@ export type Database = {
           },
         ]
       }
+      user_onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          skipped: boolean | null
+          step_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          skipped?: boolean | null
+          step_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          skipped?: boolean | null
+          step_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_onboarding_progress_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "team_onboarding_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_onboarding_progress_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -6667,6 +6810,45 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_teams: {
+        Row: {
+          assigned_at: string | null
+          id: string
+          team_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          id?: string
+          team_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          id?: string
+          team_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_teams_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7474,6 +7656,14 @@ export type Database = {
           conditions: Json
           module: string
           permission: string
+        }[]
+      }
+      get_user_teams: {
+        Args: { user_id_param: string }
+        Returns: {
+          enabled_modules: string[]
+          team_id: string
+          team_name: string
         }[]
       }
       get_user_tenant_id: { Args: never; Returns: string }
