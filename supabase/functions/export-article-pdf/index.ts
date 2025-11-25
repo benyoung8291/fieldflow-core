@@ -82,7 +82,7 @@ serve(async (req) => {
             }
             
             @page {
-              margin: 0;
+              margin: 20mm 15mm;
               size: A4;
             }
             
@@ -96,9 +96,10 @@ serve(async (req) => {
             .header {
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
-              padding: 60px 80px 40px;
+              padding: 40px 50px 30px;
               position: relative;
               overflow: hidden;
+              margin: -20mm -15mm 0;
             }
             
             .header::before {
@@ -128,23 +129,23 @@ serve(async (req) => {
             }
             
             h1 {
-              font-size: 42px;
+              font-size: 36px;
               font-weight: 700;
-              margin-bottom: 16px;
+              margin-bottom: 12px;
               line-height: 1.2;
               position: relative;
             }
             
             .summary {
-              font-size: 18px;
+              font-size: 16px;
               opacity: 0.95;
               line-height: 1.6;
-              margin-top: 16px;
+              margin-top: 12px;
               font-weight: 400;
             }
             
             .content-wrapper {
-              padding: 60px 80px;
+              padding: 40px 0;
               max-width: 100%;
             }
             
@@ -156,25 +157,25 @@ serve(async (req) => {
             
             .content h1, .content h2, .content h3 {
               color: #1a202c;
-              margin-top: 40px;
-              margin-bottom: 16px;
+              margin-top: 32px;
+              margin-bottom: 12px;
               font-weight: 600;
             }
             
-            .content h1 { font-size: 32px; }
-            .content h2 { font-size: 24px; }
-            .content h3 { font-size: 20px; }
+            .content h1 { font-size: 28px; }
+            .content h2 { font-size: 22px; }
+            .content h3 { font-size: 18px; }
             
             .content p {
-              margin-bottom: 16px;
+              margin-bottom: 12px;
             }
             
             .content ul, .content ol {
-              margin: 16px 0 16px 24px;
+              margin: 12px 0 12px 24px;
             }
             
             .content li {
-              margin-bottom: 8px;
+              margin-bottom: 6px;
               padding-left: 8px;
             }
             
@@ -186,7 +187,7 @@ serve(async (req) => {
             .content blockquote {
               border-left: 4px solid #667eea;
               padding-left: 20px;
-              margin: 24px 0;
+              margin: 20px 0;
               font-style: italic;
               color: #4a5568;
             }
@@ -202,16 +203,16 @@ serve(async (req) => {
             
             .footer {
               background: #f7fafc;
-              padding: 40px 80px;
-              margin-top: 60px;
+              padding: 30px 50px;
+              margin: 40px -15mm -20mm;
               border-top: 1px solid #e2e8f0;
             }
             
             .metadata {
               display: grid;
               grid-template-columns: repeat(3, 1fr);
-              gap: 24px;
-              margin-bottom: 24px;
+              gap: 20px;
+              margin-bottom: 20px;
             }
             
             .metadata-item {
@@ -237,9 +238,9 @@ serve(async (req) => {
             .footer-note {
               text-align: center;
               color: #a0aec0;
-              font-size: 13px;
-              margin-top: 24px;
-              padding-top: 24px;
+              font-size: 12px;
+              margin-top: 20px;
+              padding-top: 20px;
               border-top: 1px solid #e2e8f0;
             }
             
