@@ -305,6 +305,22 @@ export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterPr
     }
   };
 
+  // Regenerate HTML when format changes
+  const regeneratePreview = async () => {
+    if (!previewDialog) return;
+    
+    let html: string | null = null;
+    if (previewDialog.docType === "service_order") {
+      html = await generateServiceOrderSnippet(previewDialog.docId, snippetFormat);
+    } else if (previewDialog.docType === "appointment") {
+      html = await generateAppointmentSnippet(previewDialog.docId, snippetFormat);
+    }
+
+    if (html) {
+      setPreviewDialog({ ...previewDialog, html });
+    }
+  };
+
   const handleSaveAsNote = () => {
     if (previewDialog) {
       // Strip HTML for plain text note
@@ -431,7 +447,24 @@ export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterPr
           </DialogHeader>
 
           <div className="space-y-4">
-            <RadioGroup value={snippetFormat} onValueChange={(v: any) => setSnippetFormat(v)}>
+            <RadioGroup 
+              value={snippetFormat} 
+              onValueChange={async (v: any) => {
+                setSnippetFormat(v);
+                // Regenerate preview with new format
+                if (previewDialog) {
+                  let html: string | null = null;
+                  if (previewDialog.docType === "service_order") {
+                    html = await generateServiceOrderSnippet(previewDialog.docId, v);
+                  } else if (previewDialog.docType === "appointment") {
+                    html = await generateAppointmentSnippet(previewDialog.docId, v);
+                  }
+                  if (html) {
+                    setPreviewDialog({ ...previewDialog, html });
+                  }
+                }
+              }}
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="card" id="card" />
                 <Label htmlFor="card" className="cursor-pointer">

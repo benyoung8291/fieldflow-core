@@ -40,7 +40,10 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
     const [isExpanded, setIsExpanded] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
+    const [composerHeight, setComposerHeight] = useState(400);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const composerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       setTo(defaultTo);
@@ -102,6 +105,35 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
       await onSend({ to, cc, bcc, subject, body });
     };
 
+    const handleMouseDown = (e: React.MouseEvent) => {
+      setIsDragging(true);
+      e.preventDefault();
+    };
+
+    useEffect(() => {
+      const handleMouseMove = (e: MouseEvent) => {
+        if (isDragging && composerRef.current) {
+          const rect = composerRef.current.getBoundingClientRect();
+          const newHeight = rect.bottom - e.clientY;
+          setComposerHeight(Math.max(300, Math.min(800, newHeight)));
+        }
+      };
+
+      const handleMouseUp = () => {
+        setIsDragging(false);
+      };
+
+      if (isDragging) {
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      }
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }, [isDragging]);
+
     if (!isExpanded) {
       return (
         <div className="border-t bg-background">
@@ -120,10 +152,27 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
     }
 
     return (
-      <div className={cn(
-        "border-t bg-background flex flex-col transition-all duration-200",
-        isFullscreen && "fixed inset-0 z-50 border-none"
-      )}>
+      <div 
+        ref={composerRef}
+        className={cn(
+          "border-t bg-background flex flex-col transition-all duration-200 relative",
+          isFullscreen && "fixed inset-0 z-50 border-none"
+        )}
+        style={{ height: isFullscreen ? '100vh' : isExpanded ? `${composerHeight}px` : 'auto' }}
+      >
+        {/* Resize Handle */}
+        {isExpanded && !isFullscreen && (
+          <div
+            onMouseDown={handleMouseDown}
+            className={cn(
+              "absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-primary/20 transition-colors group",
+              isDragging && "bg-primary/40"
+            )}
+          >
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-border group-hover:bg-primary rounded-full transition-colors" />
+          </div>
+        )}
+
         {/* Header */}
         <div className="px-6 py-3 border-b flex items-center justify-between bg-muted/30 backdrop-blur-sm">
           <div className="flex items-center gap-2">
@@ -150,8 +199,8 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="p-6 space-y-4 flex-1 flex flex-col">
             {/* Recipients */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -245,12 +294,15 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
             </div>
 
             {/* Rich Text Editor */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1 flex flex-col min-h-0">
               <RichTextEditor
                 value={body}
                 onChange={setBody}
                 placeholder="Write your message..."
-                className="min-h-[300px]"
+                className={cn(
+                  "flex-1",
+                  isFullscreen ? "min-h-[500px]" : "min-h-[200px]"
+                )}
               />
             </div>
 
