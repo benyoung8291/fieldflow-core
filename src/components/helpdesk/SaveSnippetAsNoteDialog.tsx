@@ -66,6 +66,9 @@ export function SaveSnippetAsNoteDialog({
       queryClient.invalidateQueries({ 
         queryKey: ["document-notes", documentType, documentId] 
       });
+      queryClient.invalidateQueries({ 
+        queryKey: ["document-related", documentType, documentId] 
+      });
       toast({ title: "Note saved successfully" });
       onOpenChange(false);
       setContent("");
