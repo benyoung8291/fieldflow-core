@@ -86,8 +86,12 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
 
   // Main presence effect
   useEffect(() => {
-    if (!currentUser || !trackPresence) return;
+    if (!currentUser || !trackPresence) {
+      console.log("[Presence] Not tracking - currentUser:", !!currentUser, "trackPresence:", trackPresence);
+      return;
+    }
 
+    console.log("[Presence] Initializing for user:", currentUser.name, currentUser.id);
     const channelName = "team-presence-global";
     let heartbeatInterval: NodeJS.Timeout;
     let reconnectTimeout: NodeJS.Timeout;
@@ -103,6 +107,7 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     // Handle presence sync - this is the source of truth for who's online
     presenceChannel.on("presence", { event: "sync" }, () => {
       const state: PresenceState = presenceChannel.presenceState();
+      console.log("[Presence] Sync event - raw state:", state);
       const users: PresenceData[] = [];
 
       Object.keys(state).forEach((key) => {
@@ -114,9 +119,13 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
           // Ensure user_name is always set
           if (latestPresence.user_name) {
             users.push(latestPresence);
+          } else {
+            console.warn("[Presence] Skipping presence without user_name:", latestPresence);
           }
         }
       });
+
+      console.log("[Presence] Total users found:", users.length);
 
       // Filter out current user and sort by online_at
       const otherUsers = users
@@ -125,7 +134,18 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
           new Date(b.online_at).getTime() - new Date(a.online_at).getTime()
         );
 
+      console.log("[Presence] Online users (excluding self):", otherUsers.length, otherUsers);
       setOnlineUsers(otherUsers);
+    });
+
+    // Log join events
+    presenceChannel.on("presence", { event: "join" }, ({ key, newPresences }) => {
+      console.log("[Presence] User joined:", key, newPresences);
+    });
+
+    // Log leave events
+    presenceChannel.on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+      console.log("[Presence] User left:", key, leftPresences);
     });
 
     // Track initial presence
@@ -146,22 +166,28 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
 
     // Subscribe and track presence
     presenceChannel.subscribe(async (status) => {
+      console.log("[Presence] Channel status:", status);
+      
       if (status === "SUBSCRIBED") {
         setIsConnected(true);
+        console.log("[Presence] Successfully subscribed, tracking presence...");
         await trackUserPresence();
 
         // Send heartbeat every 30 seconds to keep presence alive
         heartbeatInterval = setInterval(async () => {
           try {
+            console.log("[Presence] Sending heartbeat...");
             await trackUserPresence();
           } catch (error) {
             console.error("[Presence] Heartbeat failed:", error);
           }
         }, 30000);
       } else if (status === "CHANNEL_ERROR") {
+        console.error("[Presence] Channel error, will retry in 5s");
         setIsConnected(false);
         // Attempt to reconnect after 5 seconds
         reconnectTimeout = setTimeout(() => {
+          console.log("[Presence] Attempting to reconnect...");
           presenceChannel.subscribe();
         }, 5000);
       }
@@ -183,13 +209,14 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
 
     // Cleanup
     return () => {
+      console.log("[Presence] Cleaning up presence channel");
       window.removeEventListener("popstate", handleRouteChange);
       clearInterval(heartbeatInterval);
       clearTimeout(reconnectTimeout);
       supabase.removeChannel(presenceChannel);
       setIsConnected(false);
     };
-  }, [currentUser, trackPresence, getCurrentPage, documentId, documentType, isConnected]);
+  }, [currentUser, trackPresence, getCurrentPage, documentId, documentType]); // Removed isConnected from deps to prevent re-subscription loops
 
   return {
     onlineUsers,
