@@ -38,6 +38,8 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
 import { useGenericPresence } from "@/hooks/useGenericPresence";
+import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
+import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -215,6 +217,13 @@ export default function ServiceOrders() {
 
   return (
     <DashboardLayout>
+      <ModuleTutorial 
+        moduleName="service_orders"
+        defaultSteps={TUTORIAL_CONTENT.service_orders.steps}
+        title={TUTORIAL_CONTENT.service_orders.title}
+        description={TUTORIAL_CONTENT.service_orders.description}
+      />
+      
       <div ref={containerRef} className="relative h-full overflow-y-auto">
         <PullToRefreshIndicator
           isPulling={isPulling}

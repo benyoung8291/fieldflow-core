@@ -24,6 +24,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
+import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -197,6 +199,13 @@ export default function Appointments() {
 
   return (
     <DashboardLayout>
+      <ModuleTutorial 
+        moduleName="appointments"
+        defaultSteps={TUTORIAL_CONTENT.appointments.steps}
+        title={TUTORIAL_CONTENT.appointments.title}
+        description={TUTORIAL_CONTENT.appointments.description}
+      />
+      
       <div ref={containerRef} className="relative h-full overflow-y-auto">
         <PullToRefreshIndicator
           isPulling={isPulling}

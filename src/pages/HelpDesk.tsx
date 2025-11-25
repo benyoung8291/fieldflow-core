@@ -33,6 +33,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useHelpdeskPresence } from "@/hooks/useHelpdeskPresence";
+import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
+import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 
 export default function HelpDesk() {
   const { toast } = useToast();
@@ -403,6 +405,13 @@ export default function HelpDesk() {
 
   return (
     <DashboardLayout disablePresence={false} noPadding={true}>
+      <ModuleTutorial 
+        moduleName="helpdesk"
+        defaultSteps={TUTORIAL_CONTENT.helpdesk.steps}
+        title={TUTORIAL_CONTENT.helpdesk.title}
+        description={TUTORIAL_CONTENT.helpdesk.description}
+      />
+      
       <div className="flex flex-col h-full">
         {/* Header with Pipeline Selector, Quick Filters, and Sync */}
         <div className="flex items-center justify-between px-2 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
