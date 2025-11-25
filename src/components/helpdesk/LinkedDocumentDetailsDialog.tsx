@@ -34,7 +34,7 @@ export function LinkedDocumentDetailsDialog({
       };
 
       const selectMap: Record<string, string> = {
-        service_order: "*, customer:customers(name)",
+        service_order: "*, customer:customers(name), location:customer_locations(name, formatted_address), assigned_to:profiles(first_name, last_name)",
         quote: "*, customer:customers(name)",
         invoice: "*, customer:customers(name)",
         project: "*, customer:customers(name)",
@@ -87,11 +87,11 @@ export function LinkedDocumentDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>{getDocumentTitle()}</DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <DialogTitle className="text-xl">{getDocumentTitle()}</DialogTitle>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={handleOpenInNewTab}
             className="gap-2"
@@ -107,24 +107,94 @@ export function LinkedDocumentDetailsDialog({
           </div>
         ) : document ? (
           <div className="space-y-4">
-            {document.customer && (
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Customer</div>
-                <div className="text-base">{document.customer.name}</div>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              {document.customer && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Customer</div>
+                  <div className="text-base">{document.customer.name}</div>
+                </div>
+              )}
+
+              {document.status && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Status</div>
+                  <div className="text-base capitalize">{document.status.replace('_', ' ')}</div>
+                </div>
+              )}
+            </div>
+
+            {documentType === "service_order" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  {document.service_date && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Service Date</div>
+                      <div className="text-base">
+                        {new Date(document.service_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  )}
+
+                  {document.billing_type && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Billing Type</div>
+                      <div className="text-base capitalize">{document.billing_type}</div>
+                    </div>
+                  )}
+                </div>
+
+                {document.assigned_to && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Assigned To</div>
+                    <div className="text-base">
+                      {document.assigned_to.first_name} {document.assigned_to.last_name}
+                    </div>
+                  </div>
+                )}
+
+                {document.location && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Location</div>
+                    <div className="text-base">
+                      {document.location.name}
+                      {document.location.formatted_address && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {document.location.formatted_address}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  {document.estimated_hours && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Estimated Hours</div>
+                      <div className="text-base">{document.estimated_hours}h</div>
+                    </div>
+                  )}
+
+                  {document.total_amount && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Total Amount</div>
+                      <div className="text-base font-semibold">{formatCurrency(document.total_amount)}</div>
+                    </div>
+                  )}
+                </div>
+
+                {document.key_number && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Key Number</div>
+                    <div className="text-base">{document.key_number}</div>
+                  </div>
+                )}
+              </>
             )}
             
             {document.description && (
               <div>
                 <div className="text-sm font-medium text-muted-foreground">Description</div>
                 <div className="text-base whitespace-pre-wrap">{document.description}</div>
-              </div>
-            )}
-
-            {document.status && (
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Status</div>
-                <div className="text-base capitalize">{document.status}</div>
               </div>
             )}
 
@@ -140,7 +210,7 @@ export function LinkedDocumentDetailsDialog({
             {(documentType === "quote" || documentType === "invoice") && document.total && (
               <div>
                 <div className="text-sm font-medium text-muted-foreground">Total</div>
-                <div className="text-base">{formatCurrency(document.total)}</div>
+                <div className="text-base font-semibold">{formatCurrency(document.total)}</div>
               </div>
             )}
           </div>
