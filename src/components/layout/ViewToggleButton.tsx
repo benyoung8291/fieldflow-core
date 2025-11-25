@@ -8,8 +8,11 @@ export function ViewToggleButton() {
   const location = useLocation();
   const { data: access } = useUserAccess();
 
+  console.log('ViewToggleButton - access data:', access);
+
   // Only show toggle if user has both role and worker access
   if (!access?.showToggle) {
+    console.log('ViewToggleButton - Not showing toggle. hasRole:', access?.hasRole, 'isWorker:', access?.isWorker);
     return null;
   }
 
