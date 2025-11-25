@@ -55,6 +55,11 @@ serve(async (req: Request) => {
 
     const testEmail = profile?.email || user.email;
 
+    // Validate Resend API key exists
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      throw new Error("RESEND_API_KEY is not configured. Please add your Resend API key in Settings.");
+    }
+
     // Send test email
     const emailResponse = await resend.emails.send({
       from: `${emailAccount.display_name || "Help Desk"} <${emailAccount.email_address}>`,
@@ -82,9 +87,25 @@ serve(async (req: Request) => {
       `,
     });
 
-    console.log("Test email sent:", emailResponse);
+    // Critical: Check if Resend returned an error
+    if (emailResponse.error) {
+      console.error("Resend API error:", emailResponse.error);
+      
+      // Update email account with error
+      await supabase
+        .from("helpdesk_email_accounts")
+        .update({
+          sync_error: `Email sending failed: ${emailResponse.error.message}`,
+        })
+        .eq("id", email_account_id);
 
-    // Update email account status
+      // Return error response
+      throw new Error(emailResponse.error.message || "Failed to send test email via Resend");
+    }
+
+    console.log("Test email sent successfully. Resend ID:", emailResponse.data?.id);
+
+    // Update email account status on success
     await supabase
       .from("helpdesk_email_accounts")
       .update({
