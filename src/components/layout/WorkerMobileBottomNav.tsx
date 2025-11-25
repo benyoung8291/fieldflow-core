@@ -83,8 +83,8 @@ export const WorkerMobileBottomNav = () => {
   // Don't show when not authenticated
   if (!isAuthenticated) return null;
 
-  // Only show on worker app routes
-  if (!location.pathname.startsWith('/worker')) return null;
+  // Only show on worker app routes (not on auth page)
+  if (!location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
 
   const isActivePath = (path: string) => location.pathname === path;
 

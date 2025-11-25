@@ -58,7 +58,7 @@ export const MobileBottomNav = () => {
   }, []);
 
   if (!isMobile || !isAuthenticated) return null;
-  if (location.pathname.startsWith('/worker')) return null;
+  if (location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
   if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/helpdesk')) {
     return null;
   }
