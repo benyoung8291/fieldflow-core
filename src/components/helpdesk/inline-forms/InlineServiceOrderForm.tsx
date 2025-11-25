@@ -207,6 +207,22 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         return;
       }
 
+      // Generate order number
+      const { data: seqNumber, error: seqError } = await supabase.rpc(
+        'get_next_sequential_number',
+        { p_tenant_id: profile.tenant_id, p_entity_type: 'service_order' }
+      );
+      
+      if (seqError) {
+        console.error('Error generating order number:', seqError);
+        toast({
+          title: "Error",
+          description: "Failed to generate order number. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Create service order
       const { data: serviceOrder, error: orderError } = await supabase
         .from('service_orders' as any)
@@ -220,6 +236,8 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
           preferred_date_end: formData.preferred_date_end || null,
           priority: formData.priority,
           status: 'draft',
+          order_number: seqNumber,
+          work_order_number: seqNumber,
           subtotal,
           tax_amount,
           total_amount,
