@@ -126,11 +126,11 @@ export function LinkedDocumentDetailsDialog({
             {documentType === "service_order" && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  {document.service_date && (
+                  {document.scheduled_date && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Service Date</div>
+                      <div className="text-sm font-medium text-muted-foreground">Scheduled Date</div>
                       <div className="text-base">
-                        {new Date(document.service_date).toLocaleDateString()}
+                        {new Date(document.scheduled_date).toLocaleDateString()}
                       </div>
                     </div>
                   )}
