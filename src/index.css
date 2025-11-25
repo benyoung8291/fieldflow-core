@@ -88,10 +88,11 @@ All colors MUST be HSL.
     --active-scale: scale(0.96);
     --tap-scale: scale(0.98);
     
-    /* Mobile-specific */
-    --mobile-header-height: 56px;
-    --mobile-nav-height: 64px;
-    --mobile-touch-target: 44px;
+  /* Mobile-specific */
+  --mobile-header-height: 56px;
+  --mobile-nav-height: 64px;
+  --mobile-touch-target: 44px;
+  --mobile-content-top: 64px;
   }
 
   .dark {
@@ -242,6 +243,11 @@ All colors MUST be HSL.
   .space-mobile-md { margin: 1rem; }
   .space-mobile-lg { margin: 1.5rem; }
   .space-mobile-xl { margin: 2rem; }
+  
+  /* Mobile page layout */
+  .mobile-page-content {
+    padding-top: var(--mobile-content-top);
+  }
   
   /* Touch targets */
   .touch-target {

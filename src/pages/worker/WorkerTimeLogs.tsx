@@ -65,7 +65,7 @@ export default function WorkerTimeLogs() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
+    <div className="container mx-auto px-4 pt-16 pb-20 space-y-4">{/* Added pt-16 for mobile header */}
       <div className="flex items-center gap-2 mb-6">
         <Clock className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">My Time Logs</h1>

@@ -209,9 +209,9 @@ export default function SupervisorMapDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 pt-14">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
+      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground p-4 sticky top-14 z-10 shadow-md">
         <div className="flex items-center justify-between max-w-screen-lg mx-auto">
           <div className="flex items-center gap-3">
             <Button

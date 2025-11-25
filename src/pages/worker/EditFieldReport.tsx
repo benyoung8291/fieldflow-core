@@ -35,7 +35,7 @@ export default function EditFieldReport() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 pt-14">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Loading field report...</div>
         </div>
@@ -45,7 +45,7 @@ export default function EditFieldReport() {
 
   if (!report) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 pt-14">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Field report not found</div>
         </div>
@@ -59,7 +59,7 @@ export default function EditFieldReport() {
 
   if (!isCreator) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 pt-14">
         <div className="max-w-2xl mx-auto p-6">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -100,13 +100,13 @@ export default function EditFieldReport() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-10 bg-background border-b p-4">
+    <div className="min-h-screen bg-background pb-20 pt-14">
+      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-md border-b border-border/50 p-4 shadow-sm">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
-          className="mb-2"
+          className="mb-2 h-10 w-10 rounded-xl"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back

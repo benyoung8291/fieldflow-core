@@ -141,14 +141,14 @@ export default function WorkerSchedule() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
+    <div className="min-h-screen bg-background pb-20 pt-14">
+      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground p-4 sticky top-14 z-10 shadow-md">{/* Added top-14 offset */}
         <div className="flex items-center gap-3 max-w-screen-lg mx-auto">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => navigate('/worker/dashboard')}
-            className="text-primary-foreground hover:bg-primary-foreground/20"
+            className="text-primary-foreground hover:bg-primary-foreground/10 h-10 w-10 rounded-xl"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

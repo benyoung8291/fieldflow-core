@@ -182,7 +182,7 @@ export default function WorkerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 pt-14">
       {/* Modern Mobile Header */}
       <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground sticky top-0 z-20 shadow-lg">
         <div className="px-4 pt-4 pb-6">
@@ -220,7 +220,7 @@ export default function WorkerDashboard() {
         </div>
       </header>
 
-      <div className="px-4 -mt-4 pb-4 space-y-4">
+      <div className="px-4 space-y-4">{/* Removed -mt-4 */}
         {/* Status Cards */}
         {!isOnline && (
           <Card className="bg-warning/5 border-warning/20 animate-fade-in">
