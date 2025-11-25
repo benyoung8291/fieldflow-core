@@ -5,6 +5,7 @@ import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { IssueReportDialog } from "@/components/common/IssueReportDialog";
 import { TeamPresence } from "@/components/common/TeamPresence";
+import { ViewToggleButton } from "./ViewToggleButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,7 @@ export const MobileHeader = () => {
         <div className="flex items-center gap-1">
           <TeamPresence />
           <IssueReportDialog />
+          <ViewToggleButton />
           <ViewModeToggle />
           <ThemeToggle />
           <DropdownMenu>
