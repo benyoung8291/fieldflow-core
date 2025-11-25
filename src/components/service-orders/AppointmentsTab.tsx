@@ -125,19 +125,21 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                         {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
                       </span>
                     </div>
+                    {appointment.assigned_workers?.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-wrap gap-1.5">
+                          {appointment.assigned_workers.map((aw: any) => (
+                            aw.profiles && (
+                              <Badge key={aw.worker_id} className="bg-primary text-primary-foreground font-medium">
+                                {aw.profiles.first_name} {aw.profiles.last_name}
+                              </Badge>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  {appointment.assigned_workers?.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {appointment.assigned_workers.map((aw: any) => (
-                        aw.profiles && (
-                          <Badge key={aw.worker_id} variant="secondary" className="text-xs">
-                            {aw.profiles.first_name} {aw.profiles.last_name}
-                          </Badge>
-                        )
-                      ))}
-                    </div>
-                  )}
                   
                   {appointment.description && (
                     <p className="text-sm text-muted-foreground">{appointment.description}</p>
