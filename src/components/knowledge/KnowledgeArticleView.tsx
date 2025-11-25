@@ -20,6 +20,7 @@ import { KnowledgeArticleFeedback } from "./KnowledgeArticleFeedback";
 import { KnowledgeArticleSuggestions } from "./KnowledgeArticleSuggestions";
 import { KnowledgeArticleAttachments } from "./KnowledgeArticleAttachments";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PolicyDocumentRenderer } from "./PolicyDocumentRenderer";
 
 interface KnowledgeArticleViewProps {
   articleId: string;
@@ -168,12 +169,21 @@ export function KnowledgeArticleView({
           </div>
 
           {/* Article Content */}
-          <Card className="p-8 mb-8">
-            <div
-              className="prose prose-slate dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+          {article.knowledge_categories?.name === "Company Policies" || 
+           article.knowledge_categories?.name === "Compliance & Safety" ? (
+            <PolicyDocumentRenderer
+              content={article.content}
+              title={article.title}
+              category={article.knowledge_categories?.name}
             />
-          </Card>
+          ) : (
+            <Card className="p-8 mb-8">
+              <div
+                className="prose prose-slate dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: article.content }}
+              />
+            </Card>
+          )}
 
           {/* Attachments */}
           <KnowledgeArticleAttachments articleId={articleId} />
