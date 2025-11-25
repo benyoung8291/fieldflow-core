@@ -90,6 +90,29 @@ export default function ServiceOrders() {
     numberField: "order_number",
   });
 
+  // Set up realtime updates for appointments to refresh counts
+  useEffect(() => {
+    const channel = supabase
+      .channel('service-orders-appointments-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        () => {
+          console.log('[ServiceOrders] Appointment changed, refreshing service orders');
+          queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const { data: ordersResponse, isLoading, refetch } = useQuery({
     queryKey: ["service_orders", searchTerm, statusFilter, priorityFilter, customerFilter, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
