@@ -124,60 +124,60 @@ export default function SupervisorDashboard() {
         </div>
       </header>
 
-      <div className="max-w-screen-lg mx-auto p-4 space-y-4">
+      <div className="max-w-screen-lg mx-auto p-4 space-y-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card>
-            <CardContent className="p-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="border-border/50 hover:shadow-lg transition-all duration-200">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Users className="h-5 w-5 text-green-600" />
+                <div className="p-3 bg-success/10 rounded-xl border border-success/20">
+                  <Users className="h-6 w-6 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.activeWorkers}</p>
-                  <p className="text-xs text-muted-foreground">Active Workers</p>
+                  <p className="text-3xl font-bold">{stats.activeWorkers}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Active Workers</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
+          <Card className="border-border/50 hover:shadow-lg transition-all duration-200">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Calendar className="h-5 w-5 text-blue-600" />
+                <div className="p-3 bg-info/10 rounded-xl border border-info/20">
+                  <Calendar className="h-6 w-6 text-info" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.todayAppointments}</p>
-                  <p className="text-xs text-muted-foreground">Today's Jobs</p>
+                  <p className="text-3xl font-bold">{stats.todayAppointments}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Today's Jobs</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
+          <Card className="border-border/50 hover:shadow-lg transition-all duration-200">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <div className="p-3 bg-warning/10 rounded-xl border border-warning/20">
+                  <AlertCircle className="h-6 w-6 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.pendingServiceOrders}</p>
-                  <p className="text-xs text-muted-foreground">Pending Orders</p>
+                  <p className="text-3xl font-bold">{stats.pendingServiceOrders}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Pending Orders</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
+          <Card className="border-border/50 hover:shadow-lg transition-all duration-200">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="p-3 bg-success/10 rounded-xl border border-success/20">
+                  <CheckCircle className="h-6 w-6 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.completedToday}</p>
-                  <p className="text-xs text-muted-foreground">Completed Today</p>
+                  <p className="text-3xl font-bold">{stats.completedToday}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Completed Today</p>
                 </div>
               </div>
             </CardContent>
@@ -185,7 +185,7 @@ export default function SupervisorDashboard() {
         </div>
 
         {/* Main Actions */}
-        <Card>
+        <Card className="border-border/50">
           <CardHeader>
             <CardTitle>Management Tools</CardTitle>
             <CardDescription>Monitor and manage field operations</CardDescription>
@@ -194,15 +194,17 @@ export default function SupervisorDashboard() {
             <Button
               size="lg"
               onClick={() => navigate('/worker/supervisor/map')}
-              className="w-full h-20 flex items-center justify-start gap-4"
+              className="w-full h-auto py-5 flex items-center justify-start gap-4 hover:shadow-lg transition-all duration-200"
             >
-              <Map className="h-8 w-8" />
-              <div className="text-left">
-                <p className="font-semibold">Worker Locations</p>
-                <p className="text-xs opacity-90">Real-time GPS tracking</p>
+              <div className="p-2 bg-primary-foreground/20 rounded-lg">
+                <Map className="h-7 w-7" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-semibold text-base">Worker Locations</p>
+                <p className="text-xs opacity-90 font-normal">Real-time GPS tracking</p>
               </div>
               {stats.activeWorkers > 0 && (
-                <Badge variant="secondary" className="ml-auto">
+                <Badge variant="secondary" className="ml-auto px-3 py-1">
                   {stats.activeWorkers} active
                 </Badge>
               )}
@@ -212,15 +214,17 @@ export default function SupervisorDashboard() {
               size="lg"
               variant="outline"
               onClick={() => navigate('/worker/supervisor/appointments')}
-              className="w-full h-20 flex items-center justify-start gap-4"
+              className="w-full h-auto py-5 flex items-center justify-start gap-4 hover:shadow-md hover:bg-muted/50 transition-all duration-200 border-border/50"
             >
-              <Calendar className="h-8 w-8" />
-              <div className="text-left">
-                <p className="font-semibold">Appointments</p>
+              <div className="p-2 bg-info/10 rounded-lg">
+                <Calendar className="h-7 w-7 text-info" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-semibold text-base">Appointments</p>
                 <p className="text-xs text-muted-foreground">Manage schedules</p>
               </div>
               {stats.todayAppointments > 0 && (
-                <Badge variant="secondary" className="ml-auto">
+                <Badge variant="secondary" className="ml-auto px-3 py-1">
                   {stats.todayAppointments} today
                 </Badge>
               )}
@@ -230,15 +234,17 @@ export default function SupervisorDashboard() {
               size="lg"
               variant="outline"
               onClick={() => navigate('/worker/supervisor/service-orders')}
-              className="w-full h-20 flex items-center justify-start gap-4"
+              className="w-full h-auto py-5 flex items-center justify-start gap-4 hover:shadow-md hover:bg-muted/50 transition-all duration-200 border-border/50"
             >
-              <ListTodo className="h-8 w-8" />
-              <div className="text-left">
-                <p className="font-semibold">Service Orders</p>
+              <div className="p-2 bg-warning/10 rounded-lg">
+                <ListTodo className="h-7 w-7 text-warning" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-semibold text-base">Service Orders</p>
                 <p className="text-xs text-muted-foreground">Track work orders</p>
               </div>
               {stats.pendingServiceOrders > 0 && (
-                <Badge variant="secondary" className="ml-auto">
+                <Badge variant="secondary" className="ml-auto px-3 py-1">
                   {stats.pendingServiceOrders} pending
                 </Badge>
               )}
@@ -248,11 +254,13 @@ export default function SupervisorDashboard() {
               size="lg"
               variant="outline"
               onClick={() => navigate('/worker/supervisor/workers')}
-              className="w-full h-20 flex items-center justify-start gap-4"
+              className="w-full h-auto py-5 flex items-center justify-start gap-4 hover:shadow-md hover:bg-muted/50 transition-all duration-200 border-border/50"
             >
-              <Users className="h-8 w-8" />
-              <div className="text-left">
-                <p className="font-semibold">Worker Management</p>
+              <div className="p-2 bg-success/10 rounded-lg">
+                <Users className="h-7 w-7 text-success" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-semibold text-base">Worker Management</p>
                 <p className="text-xs text-muted-foreground">Team overview</p>
               </div>
             </Button>
@@ -261,11 +269,13 @@ export default function SupervisorDashboard() {
               size="lg"
               variant="outline"
               onClick={() => navigate('/worker/supervisor/timesheets')}
-              className="w-full h-20 flex items-center justify-start gap-4"
+              className="w-full h-auto py-5 flex items-center justify-start gap-4 hover:shadow-md hover:bg-muted/50 transition-all duration-200 border-border/50"
             >
-              <Clock className="h-8 w-8" />
-              <div className="text-left">
-                <p className="font-semibold">Timesheets</p>
+              <div className="p-2 bg-info/10 rounded-lg">
+                <Clock className="h-7 w-7 text-info" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-semibold text-base">Timesheets</p>
                 <p className="text-xs text-muted-foreground">Review time logs</p>
               </div>
             </Button>
@@ -273,7 +283,7 @@ export default function SupervisorDashboard() {
         </Card>
 
         {/* Quick Access */}
-        <Card>
+        <Card className="border-border/50">
           <CardHeader>
             <CardTitle>Quick Access</CardTitle>
           </CardHeader>
@@ -281,7 +291,7 @@ export default function SupervisorDashboard() {
             <Button
               variant="outline"
               onClick={() => navigate('/worker/dashboard')}
-              className="w-full"
+              className="w-full hover:shadow-md transition-all duration-200"
             >
               Switch to Worker View
             </Button>
