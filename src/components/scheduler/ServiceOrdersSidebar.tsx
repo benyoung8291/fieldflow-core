@@ -73,9 +73,11 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
     },
   });
 
-  // Filter to only show service orders that need more appointments
+  // Filter to show service orders that need appointments:
+  // - Orders with remaining hours to schedule, OR
+  // - Orders with no appointments scheduled yet
   const ordersNeedingAppointments = (serviceOrdersWithAppointments || []).filter(
-    (order: any) => order.remainingHours > 0
+    (order: any) => order.remainingHours > 0 || order.appointments.length === 0
   );
 
   const handleAISuggest = (order: any) => {
