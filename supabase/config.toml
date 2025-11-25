@@ -30,6 +30,9 @@ verify_jwt = false
 [functions.microsoft-test-connection]
 verify_jwt = true
 
+[functions.microsoft-test-email]
+verify_jwt = true
+
 [functions.microsoft-list-mailboxes]
 verify_jwt = true
 

@@ -75,7 +75,7 @@ export function HelpDeskEmailAccountsSettings() {
     setTestingAccount(accountId);
     try {
       const { data, error } = await supabase.functions.invoke(
-        "helpdesk-test-email-connection",
+        "microsoft-test-email",
         {
           body: { email_account_id: accountId },
         }
@@ -100,17 +100,9 @@ export function HelpDeskEmailAccountsSettings() {
     } catch (error: any) {
       console.error("Test email error:", error);
       
-      // Provide user-friendly error messages
-      let errorMessage = error.message;
-      if (errorMessage.includes("API key is invalid")) {
-        errorMessage = "Invalid Resend API key. Please check your API key configuration in Settings.";
-      } else if (errorMessage.includes("RESEND_API_KEY is not configured")) {
-        errorMessage = "Resend API key not configured. Please add your API key in Settings.";
-      }
-
       toast({
         title: "Failed to send test email",
-        description: errorMessage,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
