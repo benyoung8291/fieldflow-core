@@ -116,8 +116,8 @@ export function ActivityAndUsers() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Presence channel
-    const presenceChannel = supabase.channel("dashboard-presence");
+    // Presence channel - use global channel to match other components
+    const presenceChannel = supabase.channel("team-presence-global");
 
     presenceChannel
       .on("presence", { event: "sync" }, () => {
