@@ -70,7 +70,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
               case 'service_order':
                 const { data: so } = await supabase
                   .from("service_orders")
-                  .select("work_order_number, status, scheduled_date, total_amount, description, customer:customers(name)")
+                  .select("work_order_number, status, preferred_date, total_amount, description, customer:customers(name)")
                   .eq("id", doc.document_id)
                   .single();
                 details = so;
@@ -682,11 +682,11 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             return {
                               title: docData?.work_order_number || doc.document_number || 'Untitled',
                               status: docData?.status,
-                              date: docData?.scheduled_date,
+                              date: docData?.preferred_date,
                               amount: docData?.total_amount,
                               customer: docData?.customer?.name,
                               description: docData?.description,
-                              label: 'Service Date'
+                              label: 'Preferred Date'
                             };
                           case 'appointment':
                             return {
