@@ -167,6 +167,8 @@ const UserManagement = () => {
     switch (role) {
       case "tenant_admin":
         return "destructive";
+      case "management":
+        return "destructive";
       case "supervisor":
         return "default";
       case "worker":
@@ -240,6 +242,7 @@ const UserManagement = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                      <SelectItem value="management">Management</SelectItem>
                       <SelectItem value="supervisor">Supervisor</SelectItem>
                       <SelectItem value="worker">Worker</SelectItem>
                       <SelectItem value="viewer">Viewer</SelectItem>

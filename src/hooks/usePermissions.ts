@@ -78,14 +78,19 @@ export const usePermissions = () => {
     [userRoles]
   );
 
-  const isSupervisor = useMemo(() =>
-    isAdmin || userRoles?.some((r) => r.role === "supervisor") || false,
+  const isManagement = useMemo(() =>
+    isAdmin || userRoles?.some((r) => r.role === "management" as any) || false,
     [userRoles, isAdmin]
   );
 
+  const isSupervisor = useMemo(() =>
+    isManagement || userRoles?.some((r) => r.role === "supervisor") || false,
+    [userRoles, isManagement]
+  );
+
   const hasPermission = (module: Module, permission: Permission, conditions?: PermissionConditions): boolean => {
-    // Tenant admins have all permissions
-    if (isAdmin) {
+    // Tenant admins and management have all permissions
+    if (isAdmin || isManagement) {
       return true;
     }
 
@@ -139,6 +144,7 @@ export const usePermissions = () => {
     canApprove,
     canExport,
     isAdmin,
+    isManagement,
     isSupervisor,
     userRoles: userRoles || [],
     permissions: permissions || [],

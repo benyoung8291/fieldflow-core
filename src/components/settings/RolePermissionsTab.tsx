@@ -27,6 +27,7 @@ const modules = [
 
 const roles = [
   { key: "tenant_admin", label: "Tenant Admin", description: "Full access to all modules and settings", color: "destructive" },
+  { key: "management", label: "Management", description: "Strategic oversight and high-level approvals across the organization", color: "destructive" },
   { key: "supervisor", label: "Supervisor", description: "Manage teams, approve requests, and oversee operations", color: "default" },
   { key: "worker", label: "Worker", description: "Execute assigned tasks and update records", color: "secondary" },
   { key: "viewer", label: "Viewer", description: "Read-only access to assigned modules", color: "outline" },
@@ -162,11 +163,13 @@ export const RolePermissionsTab = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {role.key === "tenant_admin" ? (
+            {role.key === "tenant_admin" || role.key === "management" ? (
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                 <p className="text-sm text-muted-foreground">
-                  Tenant administrators have unrestricted access to all modules and features.
-                  Their permissions cannot be modified to ensure system security and integrity.
+                  {role.key === "tenant_admin" 
+                    ? "Tenant administrators have unrestricted access to all modules and features. Their permissions cannot be modified to ensure system security and integrity."
+                    : "Management users have unrestricted access to all modules and features for strategic oversight and decision-making."
+                  }
                 </p>
               </div>
             ) : (
