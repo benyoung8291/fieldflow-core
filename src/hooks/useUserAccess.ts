@@ -10,46 +10,32 @@ export function useUserAccess() {
         throw new Error("Not authenticated");
       }
 
-      console.log('useUserAccess - user.id:', user.id);
+      // Call the secure database function to get user access info
+      const { data, error } = await supabase
+        .rpc('get_user_access_info')
+        .single();
 
-      // Check if user has any role
-      const { data: roleData, error: roleError } = await (supabase as any)
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      if (error) {
+        console.error('Error fetching user access:', error);
+        throw error;
+      }
 
-      console.log('useUserAccess - roleData:', roleData, 'roleError:', roleError);
+      if (!data) {
+        throw new Error("No access data returned");
+      }
 
-      // Check if user is a worker (workers.id is the link to auth.users, not user_id)
-      const { data: workerData, error: workerError } = await (supabase as any)
-        .from("workers")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      console.log('useUserAccess - workerData:', workerData, 'workerError:', workerError);
-
-      const hasRole = !!roleData;
-      const isWorker = !!workerData;
-
-      const result = {
-        userId: user.id,
-        hasRole,
-        isWorker,
-        canAccessOffice: hasRole,
-        canAccessWorker: isWorker,
-        showToggle: hasRole && isWorker,
-        defaultRoute: hasRole ? "/dashboard" : isWorker ? "/worker/dashboard" : "/dashboard"
+      return {
+        userId: data.user_id,
+        hasRole: data.has_role,
+        isWorker: data.is_worker,
+        canAccessOffice: data.can_access_office,
+        canAccessWorker: data.can_access_worker,
+        showToggle: data.show_toggle,
+        defaultRoute: data.default_route
       };
-
-      console.log('useUserAccess - FINAL RESULT:', result);
-      alert('Access check result: hasRole=' + hasRole + ' isWorker=' + isWorker + ' canAccessOffice=' + result.canAccessOffice);
-
-      return result;
     },
     retry: false,
-    staleTime: 0, // Force fresh query every time
-    gcTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
