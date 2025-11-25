@@ -1574,6 +1574,50 @@ export type Database = {
           },
         ]
       }
+      document_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          document_id: string
+          document_type: string
+          id: string
+          is_sticky: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          document_id: string
+          document_type: string
+          id?: string
+          is_sticky?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          document_type?: string
+          id?: string
+          is_sticky?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_attachments: {
         Row: {
           expense_id: string

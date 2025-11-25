@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Edit2, Check, X } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { DocumentNotes } from "@/components/notes/DocumentNotes";
 
 interface InlineProjectDetailsProps {
   project: any;
@@ -162,83 +163,95 @@ export default function InlineProjectDetails({ project }: InlineProjectDetailsPr
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Project Details</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <EditableField
-          field="name"
-          label="Project Name"
-          value={project.name}
-        />
-
-        <EditableField
-          field="description"
-          label="Description"
-          value={project.description}
-          type="textarea"
-        />
-
-        <EditableField
-          field="status"
-          label="Status"
-          value={project.status}
-          type="select"
-          options={statusOptions}
-          format={(val) => val ? val.replace("_", " ").charAt(0).toUpperCase() + val.slice(1).replace("_", " ") : ""}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <EditableField
-            field="start_date"
-            label="Start Date"
-            value={project.start_date}
-            type="date"
-            format={(val) => val ? format(new Date(val), "MMM d, yyyy") : ""}
+            field="name"
+            label="Project Name"
+            value={project.name}
           />
 
           <EditableField
-            field="end_date"
-            label="End Date"
-            value={project.end_date}
-            type="date"
-            format={(val) => val ? format(new Date(val), "MMM d, yyyy") : ""}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <EditableField
-            field="budget"
-            label="Budget"
-            value={project.budget}
-            type="number"
-            format={(val) => val ? formatCurrency(val) : ""}
+            field="description"
+            label="Description"
+            value={project.description}
+            type="textarea"
           />
 
           <EditableField
-            field="progress"
-            label="Progress (%)"
-            value={project.progress}
-            type="number"
+            field="status"
+            label="Status"
+            value={project.status}
+            type="select"
+            options={statusOptions}
+            format={(val) => val ? val.replace("_", " ").charAt(0).toUpperCase() + val.slice(1).replace("_", " ") : ""}
           />
-        </div>
 
-        <EditableField
-          field="notes"
-          label="Notes"
-          value={project.notes}
-          type="textarea"
-        />
+          <div className="grid grid-cols-2 gap-4">
+            <EditableField
+              field="start_date"
+              label="Start Date"
+              value={project.start_date}
+              type="date"
+              format={(val) => val ? format(new Date(val), "MMM d, yyyy") : ""}
+            />
 
-        <div>
-          <Label className="text-sm font-medium">Created By</Label>
-          <p className="text-sm text-muted-foreground mt-1">
-            {project.creator?.first_name} {project.creator?.last_name} on{" "}
-            {format(new Date(project.created_at), "MMM d, yyyy")}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+            <EditableField
+              field="end_date"
+              label="End Date"
+              value={project.end_date}
+              type="date"
+              format={(val) => val ? format(new Date(val), "MMM d, yyyy") : ""}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <EditableField
+              field="budget"
+              label="Budget"
+              value={project.budget}
+              type="number"
+              format={(val) => val ? formatCurrency(val) : ""}
+            />
+
+            <EditableField
+              field="progress"
+              label="Progress (%)"
+              value={project.progress}
+              type="number"
+            />
+          </div>
+
+          <EditableField
+            field="notes"
+            label="Notes"
+            value={project.notes}
+            type="textarea"
+          />
+
+          <div>
+            <Label className="text-sm font-medium">Created By</Label>
+            <p className="text-sm text-muted-foreground mt-1">
+              {project.creator?.first_name} {project.creator?.last_name} on{" "}
+              {format(new Date(project.created_at), "MMM d, yyyy")}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notes Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Quick Notes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DocumentNotes documentType="project" documentId={project.id} />
+        </CardContent>
+      </Card>
+    </>
   );
 }

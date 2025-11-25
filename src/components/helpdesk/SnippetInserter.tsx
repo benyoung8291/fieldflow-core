@@ -2,13 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { SaveSnippetAsNoteDialog } from "./SaveSnippetAsNoteDialog";
 import { 
   ClipboardList, 
   Calendar, 
   FileText, 
   Package, 
   ChevronDown,
-  CheckSquare
+  CheckSquare,
+  FolderKanban,
+  Pin
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,8 +41,9 @@ interface SnippetInserterProps {
 }
 
 export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterProps) {
-  const [previewDialog, setPreviewDialog] = useState<{ open: boolean; html: string; type: string } | null>(null);
+  const [previewDialog, setPreviewDialog] = useState<{ open: boolean; html: string; type: string; docId: string; docType: string } | null>(null);
   const [snippetFormat, setSnippetFormat] = useState<"card" | "text">("card");
+  const [saveAsNoteDialog, setSaveAsNoteDialog] = useState<{ open: boolean; docType: string; docId: string; content: string } | null>(null);
 
   const { data: linkedDocs } = useQuery({
     queryKey: ["helpdesk-linked-docs-snippets", ticketId],
@@ -297,7 +301,24 @@ export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterPr
     }
 
     if (html) {
-      setPreviewDialog({ open: true, html, type: snippetType });
+      setPreviewDialog({ open: true, html, type: snippetType, docId, docType });
+    }
+  };
+
+  const handleSaveAsNote = () => {
+    if (previewDialog) {
+      // Strip HTML for plain text note
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = previewDialog.html;
+      const plainText = tempDiv.textContent || tempDiv.innerText || '';
+      
+      setSaveAsNoteDialog({
+        open: true,
+        docType: previewDialog.docType,
+        docId: previewDialog.docId,
+        content: plainText,
+      });
+      setPreviewDialog(null);
     }
   };
 
@@ -310,6 +331,7 @@ export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterPr
 
   const serviceOrders = linkedDocs?.filter(d => d.document_type === "service_order") || [];
   const appointments = linkedDocs?.filter(d => d.document_type === "appointment") || [];
+  const projects = linkedDocs?.filter(d => d.document_type === "project") || [];
 
   return (
     <>
@@ -325,51 +347,73 @@ export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterPr
           <DropdownMenuLabel>Linked Documents</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {serviceOrders.length > 0 && (
-            <>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Service Orders ({serviceOrders.length})
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-56">
-                  {serviceOrders.map((doc: any) => (
-                    <DropdownMenuItem
-                      key={doc.id}
-                      onClick={() => handleInsertSnippet("service_order", doc.document_id, "service_order")}
-                    >
-                      Insert Service Order
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-            </>
-          )}
+      {serviceOrders.length > 0 && (
+        <>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Service Orders ({serviceOrders.length})
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {serviceOrders.map((doc: any) => (
+                <DropdownMenuItem
+                  key={doc.id}
+                  onClick={() => handleInsertSnippet("service_order", doc.document_id, "service_order")}
+                >
+                  Insert Service Order
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+        </>
+      )}
 
-          {appointments.length > 0 && (
-            <>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Appointments ({appointments.length})
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-56">
-                  {appointments.map((doc: any) => (
-                    <DropdownMenuItem
-                      key={doc.id}
-                      onClick={() => handleInsertSnippet("appointment", doc.document_id, "appointment")}
-                    >
-                      Insert Appointment
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-            </>
-          )}
+      {appointments.length > 0 && (
+        <>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Calendar className="h-4 w-4 mr-2" />
+              Appointments ({appointments.length})
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {appointments.map((doc: any) => (
+                <DropdownMenuItem
+                  key={doc.id}
+                  onClick={() => handleInsertSnippet("appointment", doc.document_id, "appointment")}
+                >
+                  Insert Appointment
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+        </>
+      )}
 
-          {serviceOrders.length === 0 && appointments.length === 0 && (
+      {projects.length > 0 && (
+        <>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FolderKanban className="h-4 w-4 mr-2" />
+              Projects ({projects.length})
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {projects.map((doc: any) => (
+                <DropdownMenuItem
+                  key={doc.id}
+                  onClick={() => handleInsertSnippet("project", doc.document_id, "project")}
+                >
+                  Insert Project
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+        </>
+      )}
+
+      {serviceOrders.length === 0 && appointments.length === 0 && projects.length === 0 && (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
               No linked documents available
             </div>
@@ -411,16 +455,32 @@ export function SnippetInserter({ ticketId, onInsertSnippet }: SnippetInserterPr
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setPreviewDialog(null)}>
-              Cancel
+          <div className="flex justify-between gap-2 mt-4">
+            <Button variant="outline" onClick={handleSaveAsNote}>
+              <Pin className="h-4 w-4 mr-2" />
+              Save as Note
             </Button>
-            <Button onClick={confirmInsert}>
-              Insert Snippet
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPreviewDialog(null)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmInsert}>
+                Insert Snippet
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {saveAsNoteDialog && (
+        <SaveSnippetAsNoteDialog
+          open={saveAsNoteDialog.open}
+          onOpenChange={(open) => !open && setSaveAsNoteDialog(null)}
+          documentType={saveAsNoteDialog.docType as "service_order" | "appointment" | "project"}
+          documentId={saveAsNoteDialog.docId}
+          initialContent={saveAsNoteDialog.content}
+        />
+      )}
     </>
   );
 }

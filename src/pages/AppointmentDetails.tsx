@@ -24,6 +24,7 @@ import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import { cn } from "@/lib/utils";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 import FieldReportsList from "@/components/field-reports/FieldReportsList";
+import { DocumentNotes } from "@/components/notes/DocumentNotes";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -788,14 +789,24 @@ export default function AppointmentDetails() {
                           )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                     )}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
 
-            {/* Tabs */}
-            <Tabs defaultValue="files" className="w-full">
+             {/* Notes Section */}
+             <Card>
+               <CardHeader>
+                 <CardTitle>Quick Notes</CardTitle>
+               </CardHeader>
+               <CardContent>
+                 <DocumentNotes documentType="appointment" documentId={id!} />
+               </CardContent>
+             </Card>
+
+             {/* Tabs */}
+             <Tabs defaultValue="files" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="files">Files & Documents</TabsTrigger>
                 <TabsTrigger value="time-logs">Time Logs</TabsTrigger>
