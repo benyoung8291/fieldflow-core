@@ -35,7 +35,6 @@ import {
 import { useHelpdeskPresence } from "@/hooks/useHelpdeskPresence";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
-import { PresenceDebug } from "@/components/debug/PresenceDebug";
 
 export default function HelpDesk() {
   const { toast } = useToast();
@@ -406,8 +405,7 @@ export default function HelpDesk() {
 
   return (
     <DashboardLayout disablePresence={false} noPadding={true}>
-      <PresenceDebug />
-      <ModuleTutorial 
+      <ModuleTutorial
         moduleName="helpdesk"
         defaultSteps={TUTORIAL_CONTENT.helpdesk.steps}
         title={TUTORIAL_CONTENT.helpdesk.title}

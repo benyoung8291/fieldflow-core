@@ -266,7 +266,7 @@ export default function ServiceOrders() {
         </AlertDialogContent>
       </AlertDialog>
       
-      <div className="space-y-6">
+      <div className="space-y-6 pt-6">
         {/* Header with clean modern design */}
         <div className="flex items-center justify-between">
           <div>
