@@ -117,7 +117,13 @@ export function ActivityAndUsers() {
     if (!currentUser) return;
 
     // Presence channel - use global channel to match other components
-    const presenceChannel = supabase.channel("team-presence-global");
+    const presenceChannel = supabase.channel("team-presence-global", {
+      config: {
+        presence: {
+          key: currentUser.id,
+        },
+      },
+    });
 
     presenceChannel
       .on("presence", { event: "sync" }, () => {
@@ -133,9 +139,17 @@ export function ActivityAndUsers() {
           }
         });
 
+        console.log("[Activity Panel] Synced users:", users);
         setActiveUsers(users);
       })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        console.log("[Activity Panel] User joined:", key, newPresences);
+      })
+      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        console.log("[Activity Panel] User left:", key, leftPresences);
+      })
       .subscribe(async (status) => {
+        console.log("[Activity Panel] Subscription status:", status);
         if (status === "SUBSCRIBED") {
           const currentPath = window.location.pathname;
           await presenceChannel.track({
