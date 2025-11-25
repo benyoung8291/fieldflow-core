@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { UserPlus, Shield, AlertCircle } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -22,6 +23,8 @@ const UserManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [showTeamDialog, setShowTeamDialog] = useState(false);
+  const [roleToRemove, setRoleToRemove] = useState<{ userId: string; role: string; userName: string } | null>(null);
+  const [removeRoleConfirmation, setRemoveRoleConfirmation] = useState("");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -132,6 +135,22 @@ const UserManagement = () => {
 
   const removeRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      // Check if this is a critical admin role
+      if (role === 'tenant_admin' || role === 'super_admin') {
+        // Count how many users have this role
+        const { data: roleCount, error: countError } = await supabase
+          .from("user_roles")
+          .select("id", { count: 'exact' })
+          .eq("role", role as any)
+          .eq("tenant_id", profile!.tenant_id);
+
+        if (countError) throw countError;
+
+        if ((roleCount?.length || 0) <= 1) {
+          throw new Error(`Cannot remove the last ${role} role. Assign this role to another user first.`);
+        }
+      }
+
       const { error } = await supabase
         .from("user_roles")
         .delete()
@@ -143,9 +162,13 @@ const UserManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast.success("Role removed successfully");
+      setRoleToRemove(null);
+      setRemoveRoleConfirmation("");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to remove role");
+      setRoleToRemove(null);
+      setRemoveRoleConfirmation("");
     },
   });
 
@@ -243,6 +266,25 @@ const UserManagement = () => {
       });
       setSelectedTeamId("");
     }
+  };
+
+  const handleRemoveRoleClick = (userId: string, role: string, userName: string) => {
+    setRoleToRemove({ userId, role, userName });
+  };
+
+  const handleConfirmRemoveRole = () => {
+    if (!roleToRemove) return;
+
+    const expectedConfirmation = roleToRemove.role.toUpperCase();
+    if (removeRoleConfirmation.trim() !== expectedConfirmation) {
+      toast.error(`Please type "${expectedConfirmation}" to confirm`);
+      return;
+    }
+
+    removeRoleMutation.mutate({
+      userId: roleToRemove.userId,
+      role: roleToRemove.role,
+    });
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -386,10 +428,11 @@ const UserManagement = () => {
                                 variant={getRoleBadgeVariant(ur.role)}
                                 className="cursor-pointer hover:opacity-80"
                                 onClick={() =>
-                                  removeRoleMutation.mutate({
-                                    userId: user.id,
-                                    role: ur.role,
-                                  })
+                                  handleRemoveRoleClick(
+                                    user.id,
+                                    ur.role,
+                                    `${user.first_name} ${user.last_name}`
+                                  )
                                 }
                               >
                                 <Shield className="h-3 w-3 mr-1" />
@@ -498,6 +541,65 @@ const UserManagement = () => {
             <Button onClick={handleAssignTeam} className="w-full">
               Assign Team
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog 
+        open={!!roleToRemove} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setRoleToRemove(null);
+            setRemoveRoleConfirmation("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Role</DialogTitle>
+            <DialogDescription>
+              This action will remove the <strong className="text-foreground">{roleToRemove?.role}</strong> role from{" "}
+              <strong className="text-foreground">{roleToRemove?.userName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(roleToRemove?.role === 'tenant_admin' || roleToRemove?.role === 'super_admin') && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                <p className="text-sm text-destructive font-medium">
+                  ⚠️ Warning: This is a critical admin role. Make sure another user has this role before removing.
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="confirmRole">
+                Type <strong className="text-foreground">{roleToRemove?.role.toUpperCase()}</strong> to confirm
+              </Label>
+              <Input
+                id="confirmRole"
+                value={removeRoleConfirmation}
+                onChange={(e) => setRemoveRoleConfirmation(e.target.value)}
+                placeholder={`Type ${roleToRemove?.role.toUpperCase()} here`}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRoleToRemove(null);
+                  setRemoveRoleConfirmation("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmRemoveRole}
+                disabled={removeRoleConfirmation.trim() !== roleToRemove?.role.toUpperCase()}
+              >
+                Remove Role
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
