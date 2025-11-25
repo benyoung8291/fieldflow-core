@@ -153,6 +153,16 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                   </div>
                   
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={() => updateAppointmentStatusMutation.mutate({
+                        appointmentId: appointment.id,
+                        status: "published",
+                      })}
+                    >
+                      Publish
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="ghost">
@@ -167,14 +177,6 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                           })}
                         >
                           Set to Draft
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => updateAppointmentStatusMutation.mutate({
-                            appointmentId: appointment.id,
-                            status: "published",
-                          })}
-                        >
-                          Publish Appointment
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => updateAppointmentStatusMutation.mutate({
