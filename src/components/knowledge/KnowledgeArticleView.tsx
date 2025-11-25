@@ -21,10 +21,11 @@ import { useToast } from "@/hooks/use-toast";
 import { KnowledgeArticleFeedback } from "./KnowledgeArticleFeedback";
 import { KnowledgeArticleSuggestions } from "./KnowledgeArticleSuggestions";
 import { KnowledgeArticleAttachments } from "./KnowledgeArticleAttachments";
+import { KnowledgeArticleChangelog } from "./KnowledgeArticleChangelog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PolicyDocumentRenderer } from "./PolicyDocumentRenderer";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { KnowledgeBaseSidebar } from "./KnowledgeBaseSidebar";
+import DashboardLayout from "@/components/DashboardLayout";
+import { exportArticleToPDF } from "@/utils/pdfExport";
 
 interface KnowledgeArticleViewProps {
   articleId: string;
@@ -114,30 +115,43 @@ export function KnowledgeArticleView({
     }
   };
 
-  const handleSelectCategory = (categoryId: string | null) => {
-    setSelectedCategoryId(categoryId);
+  const handleExportPDF = async () => {
+    toast({
+      title: "Exporting...",
+      description: "Generating PDF export",
+    });
+
+    const result = await exportArticleToPDF(article.id, article.title);
+    
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Article exported to PDF",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to export article",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <KnowledgeBaseSidebar
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={handleSelectCategory}
-          onSelectArticle={handleSelectArticle}
-        />
-
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger />
-                <Button variant="ghost" onClick={onBack} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-              </div>
+    <DashboardLayout>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center justify-between px-6 py-4">
+            <Button variant="ghost" onClick={onBack} className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleExportPDF} className="gap-2">
+                <Download className="h-4 w-4" />
+                Export PDF
+              </Button>
               {canEdit && (
                 <Button onClick={() => onEdit(articleId)} className="gap-2">
                   <Edit className="h-4 w-4" />
@@ -146,9 +160,10 @@ export function KnowledgeArticleView({
               )}
             </div>
           </div>
+        </div>
 
-          {/* Content */}
-          <ScrollArea className="flex-1">
+        {/* Content */}
+        <ScrollArea className="flex-1">
         <div className="container max-w-4xl py-8">
           {/* Article Content */}
           {article.knowledge_categories?.name === "Company Policies" || 
@@ -247,15 +262,17 @@ export function KnowledgeArticleView({
           {/* Attachments */}
           <KnowledgeArticleAttachments articleId={articleId} />
 
+          {/* Changelog */}
+          <KnowledgeArticleChangelog articleId={articleId} />
+
           {/* Feedback */}
           <KnowledgeArticleFeedback articleId={articleId} />
 
           {/* Suggestions */}
           <KnowledgeArticleSuggestions articleId={articleId} />
-          </div>
-          </ScrollArea>
         </div>
+      </ScrollArea>
       </div>
-    </SidebarProvider>
+    </DashboardLayout>
   );
 }
