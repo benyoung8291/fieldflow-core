@@ -183,46 +183,48 @@ export default function WorkerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
-      {/* Modern Mobile Header */}
-      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground sticky top-0 z-20 shadow-lg">
-        <div className="px-4 pt-4 pb-6">
-          <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-background pb-20">
+      {/* Clean Modern Header */}
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 pt-safe">
+          <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-primary-foreground/10 backdrop-blur-sm flex items-center justify-center">
-                <User className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-xl bg-primary-foreground/15 backdrop-blur-sm flex items-center justify-center">
+                <User className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium opacity-80">Welcome back</p>
-                <h1 className="text-lg font-bold">{user?.first_name} {user?.last_name}</h1>
+                <p className="text-[11px] font-medium opacity-70 leading-tight">Welcome back</p>
+                <h1 className="text-base font-semibold leading-tight">{user?.first_name} {user?.last_name}</h1>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {isOnline ? (
-                <div className="h-8 w-8 rounded-full bg-success/20 flex items-center justify-center">
-                  <Wifi className="h-4 w-4 text-success" />
+                <div className="h-7 w-7 rounded-lg bg-primary-foreground/15 flex items-center justify-center">
+                  <Wifi className="h-3.5 w-3.5" />
                 </div>
               ) : (
-                <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
-                  <WifiOff className="h-4 w-4 text-warning" />
+                <div className="h-7 w-7 rounded-lg bg-warning/30 flex items-center justify-center">
+                  <WifiOff className="h-3.5 w-3.5 text-warning-foreground" />
                 </div>
               )}
-              <ViewToggleButton />
-              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="h-10 w-10 text-primary-foreground hover:bg-primary-foreground/10"
+                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
               </Button>
+              <div className="ml-1">
+                <ViewToggleButton />
+              </div>
+              <ThemeToggle />
             </div>
           </div>
         </div>
       </header>
 
-      <div className="px-4 space-y-4">{/* Removed -mt-4 */}
+      <div className="px-4 pt-4 space-y-3">
         {/* Status Cards */}
         {!isOnline && (
           <Card className="bg-warning/5 border-warning/20 animate-fade-in">
@@ -260,65 +262,63 @@ export default function WorkerDashboard() {
 
         {/* Supervisor Access */}
         {isSupervisorOrAbove && (
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 card-interactive">
+          <Card className="border-primary/20 card-interactive overflow-hidden">
             <CardContent className="p-0">
               <button
                 onClick={() => navigate('/worker/supervisor/dashboard')}
-                className="w-full p-4 flex items-center gap-3 text-left"
+                className="w-full p-3.5 flex items-center gap-3 text-left bg-gradient-to-br from-primary/5 to-transparent"
               >
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Briefcase className="h-6 w-6 text-primary" />
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Briefcase className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-base">Supervisor Dashboard</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Supervisor Dashboard</p>
                   <p className="text-xs text-muted-foreground">Manage team & operations</p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             </CardContent>
           </Card>
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           <button
             onClick={() => navigate('/worker/appointments')}
-            className="bg-primary text-primary-foreground rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap"
+            className="bg-primary text-primary-foreground rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap min-h-[90px]"
           >
-            <CalendarDays className="h-6 w-6" />
-            <span className="text-xs font-medium text-center leading-tight">All Appointments</span>
+            <CalendarDays className="h-5 w-5" />
+            <span className="text-[11px] font-medium text-center leading-tight">All<br/>Appointments</span>
           </button>
           <button
             onClick={() => navigate('/worker/schedule')}
-            className="bg-card border-2 border-border/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap"
+            className="bg-card border border-border/50 rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap min-h-[90px]"
           >
-            <Clock className="h-6 w-6 text-foreground" />
-            <span className="text-xs font-medium text-center leading-tight">My Schedule</span>
+            <Clock className="h-5 w-5 text-foreground" />
+            <span className="text-[11px] font-medium text-center leading-tight">My<br/>Schedule</span>
           </button>
           <button
             onClick={() => navigate('/worker/field-report-new')}
-            className="bg-card border-2 border-border/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap"
+            className="bg-card border border-border/50 rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap min-h-[90px]"
           >
-            <FileText className="h-6 w-6 text-foreground" />
-            <span className="text-xs font-medium text-center leading-tight">Field Report</span>
+            <FileText className="h-5 w-5 text-foreground" />
+            <span className="text-[11px] font-medium text-center leading-tight">Field<br/>Report</span>
           </button>
         </div>
 
         {/* View Filter */}
         <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-semibold">View</span>
-              </div>
+          <CardContent className="p-3 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold">View</span>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2">
               <Button
                 size="sm"
                 variant={viewFilter === 'today' ? 'default' : 'outline'}
                 onClick={() => setViewFilter('today')}
-                className="flex-1"
+                className="flex-1 h-8 text-xs rounded-lg"
               >
                 Today
               </Button>
@@ -326,7 +326,7 @@ export default function WorkerDashboard() {
                 size="sm"
                 variant={viewFilter === 'week' ? 'default' : 'outline'}
                 onClick={() => setViewFilter('week')}
-                className="flex-1"
+                className="flex-1 h-8 text-xs rounded-lg"
               >
                 Next 7 Days
               </Button>
@@ -334,7 +334,7 @@ export default function WorkerDashboard() {
                 size="sm"
                 variant={viewFilter === 'all' ? 'default' : 'outline'}
                 onClick={() => setViewFilter('all')}
-                className="flex-1"
+                className="flex-1 h-8 text-xs rounded-lg"
               >
                 All
               </Button>
@@ -344,12 +344,13 @@ export default function WorkerDashboard() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
+                  size="sm"
                   className={cn(
-                    "w-full justify-start",
+                    "w-full justify-start h-8 text-xs rounded-lg",
                     viewFilter === 'custom' && "border-primary text-primary"
                   )}
                 >
-                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  <CalendarIcon className="h-3.5 w-3.5 mr-2" />
                   {customDate && viewFilter === 'custom'
                     ? format(customDate, "PPP")
                     : "Pick custom date"}
@@ -371,16 +372,16 @@ export default function WorkerDashboard() {
         </Card>
 
         {/* Appointments Section */}
-        <div className="space-y-3">
+        <div className="space-y-2.5 pb-2">
           <div className="flex items-center justify-between px-1">
             <div>
-              <h2 className="text-lg font-bold">
+              <h2 className="text-base font-bold">
                 {viewFilter === 'today' && 'Today'}
                 {viewFilter === 'week' && 'Next 7 Days'}
                 {viewFilter === 'all' && 'All Upcoming'}
                 {viewFilter === 'custom' && customDate && format(customDate, 'MMM d, yyyy')}
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground">
                 {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -388,41 +389,41 @@ export default function WorkerDashboard() {
 
           {appointments.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center">
-                <CalendarDays className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">No appointments scheduled</p>
+              <CardContent className="py-10 text-center">
+                <CalendarDays className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No appointments scheduled</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {appointments.map((apt) => (
                 <Card
                   key={apt.id}
                   className="card-interactive"
                   onClick={() => navigate(`/worker/appointments/${apt.id}`)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3 mb-3">
+                  <CardContent className="p-3.5">
+                    <div className="flex items-start justify-between gap-3 mb-2.5">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base truncate">{apt.title}</h3>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <h3 className="font-semibold text-sm truncate leading-tight">{apt.title}</h3>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
                           {apt.service_order?.customer?.name}
                         </p>
                       </div>
                       <Badge 
                         variant={apt.status === 'completed' ? 'default' : 'secondary'}
-                        className="shrink-0"
+                        className="shrink-0 text-[10px] h-5"
                       >
                         {apt.status?.replace('_', ' ')}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <CalendarDays className="h-4 w-4" />
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <CalendarDays className="h-3.5 w-3.5" />
                         <span>{format(parseISO(apt.start_time), 'MMM d')}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4" />
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
                         <span>{format(parseISO(apt.start_time), 'h:mm a')}</span>
                       </div>
                     </div>
