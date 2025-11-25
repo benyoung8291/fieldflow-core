@@ -20,6 +20,7 @@ import PresencePanel from "@/components/presence/PresencePanel";
 import NotificationCenter from "@/components/notifications/NotificationCenter";
 import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 import { IssueReportDialog } from "@/components/common/IssueReportDialog";
+import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -290,6 +291,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
                 <PresencePanel />
                 <NotificationCenter />
                 <IssueReportDialog />
+                <ViewToggleButton />
                 <ViewModeToggle />
                 <ThemeToggle />
                 <Button
