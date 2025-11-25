@@ -85,64 +85,70 @@ interface SettingsNavGroup {
 
 const settingsNavigation: SettingsNavGroup[] = [
   {
-    group: "Personal",
+    group: "Account",
     items: [
-      { title: "My Profile", value: "user-profile", icon: User },
-      { title: "Presence", value: "presence", icon: Radio },
+      { title: "Profile", value: "user-profile", icon: User },
       { title: "Notifications", value: "notifications", icon: Bell },
+      { title: "Presence & Status", value: "presence", icon: Radio },
     ]
   },
   {
-    group: "Company Settings",
+    group: "Organization",
     items: [
       { title: "General", value: "general", icon: SettingsIcon },
-      { title: "Brand Colors", value: "brand-colors", icon: Palette },
+      { title: "Branding", value: "brand-colors", icon: Palette },
+      { title: "Navigation", value: "menu", icon: MenuIcon },
+    ]
+  },
+  {
+    group: "Team",
+    items: [
+      { title: "Members", value: "users", icon: Users },
+      { title: "Roles & Permissions", value: "permissions", icon: Shield },
+      { title: "Pay Rates", value: "pay-rates", icon: DollarSign },
+    ]
+  },
+  {
+    group: "Finance",
+    items: [
+      { title: "AP Invoices", value: "ap-invoice-settings", icon: FileCheck },
+      { title: "Expenses", value: "expense-categories", icon: Receipt },
+      { title: "Expense Policy", value: "expense-policy", icon: ShieldCheck },
+      { title: "Credit Cards", value: "credit-cards", icon: CreditCard },
+      { title: "Accounting", value: "accounting", icon: Calculator },
+    ]
+  },
+  {
+    group: "Workflows",
+    items: [
+      { title: "CRM Pipeline", value: "crm-statuses", icon: PieChart },
+      { title: "Templates", value: "templates", icon: FileText },
       { title: "Numbering", value: "numbering", icon: Hash },
-      { title: "Menu", value: "menu", icon: MenuIcon },
     ]
   },
   {
     group: "Integrations",
     items: [
-      { title: "Integrations", value: "integrations", icon: Plug },
+      { title: "Connected Apps", value: "integrations", icon: Plug },
       { title: "Account Sync", value: "account-sync", icon: RefreshCw },
-      { title: "Accounting", value: "accounting", icon: Calculator },
-    ]
-  },
-  {
-    group: "Team & Access",
-    items: [
-      { title: "Users", value: "users", icon: Users },
-      { title: "Permissions", value: "permissions", icon: Shield },
-      { title: "Pay Rates", value: "pay-rates", icon: DollarSign },
-    ]
-  },
-  {
-    group: "Configuration",
-    items: [
-      { title: "Templates", value: "templates", icon: FileText },
-      { title: "CRM Pipeline", value: "crm-statuses", icon: PieChart },
       { title: "Help Desk", value: "helpdesk", icon: Headphones },
-      { title: "AP Invoice Settings", value: "ap-invoice-settings", icon: FileCheck },
-      { title: "Expense Categories", value: "expense-categories", icon: Receipt },
-      { title: "Expense Policy", value: "expense-policy", icon: ShieldCheck },
-      { title: "Credit Cards", value: "credit-cards", icon: CreditCard },
     ]
   },
   {
-    group: "System",
+    group: "Advanced",
     items: [
       { title: "Bug Reports", value: "bug-reports", icon: Bug },
       { title: "Activity Log", value: "activity-log", icon: Activity },
-      { title: "Change Log", value: "changelog", icon: ScrollText },
+      { title: "Change History", value: "changelog", icon: ScrollText },
       { title: "Schema Validator", value: "schema-validator", icon: Database, adminOnly: true },
-      { title: "Performance Monitor", value: "performance-monitor", icon: Activity, adminOnly: true },
+      { title: "Performance", value: "performance-monitor", icon: Activity, adminOnly: true },
     ]
   }
 ];
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("user-profile");
+  const [searchQuery, setSearchQuery] = useState("");
   const { isAdmin } = usePermissions();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PayRateCategory | null>(null);
@@ -268,66 +274,93 @@ export default function Settings() {
     }
   };
 
+  // Filter settings based on search
+  const filteredNavigation = settingsNavigation.map(group => ({
+    ...group,
+    items: group.items.filter(item => 
+      (!item.adminOnly || isAdmin) &&
+      (item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       group.group.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+  })).filter(group => group.items.length > 0);
+
+  // Get current setting info
+  const currentSetting = settingsNavigation
+    .flatMap(g => g.items)
+    .find(item => item.value === activeTab);
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col lg:flex-row h-full">
+      <div className="flex flex-col lg:flex-row h-full bg-muted/30">
         {/* Settings Navigation Sidebar - Desktop */}
-        <aside className="w-full lg:w-64 border-r lg:border-b-0 border-b bg-background hidden lg:block">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold text-lg">Settings</h2>
-            <p className="text-sm text-muted-foreground">Manage your business</p>
+        <aside className="w-full lg:w-72 border-r bg-background hidden lg:flex flex-col">
+          <div className="p-6 border-b space-y-4">
+            <div>
+              <h1 className="font-semibold text-2xl">Settings</h1>
+              <p className="text-sm text-muted-foreground mt-1">Manage your workspace preferences</p>
+            </div>
+            <div className="relative">
+              <SettingsIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search settings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10"
+              />
+            </div>
           </div>
-          <ScrollArea className="h-[calc(100vh-8rem)]">
-            <div className="p-2">
-              {settingsNavigation.map((group) => {
-                // Filter out admin-only items if user is not admin
-                const filteredItems = group.items.filter(item => 
-                  !item.adminOnly || isAdmin
-                );
-                
-                if (filteredItems.length === 0) return null;
-                
-                return (
-                  <div key={group.group} className="mb-4">
-                    <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {group.group}
-                    </h3>
-                    <div className="space-y-1">
-                      {filteredItems.map((item) => (
-                        <button
-                          key={item.value}
-                          onClick={() => setActiveTab(item.value)}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                            activeTab === item.value
-                              ? "bg-primary text-primary-foreground"
-                              : "hover:bg-muted"
-                          )}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span className="flex-1 text-left">{item.title}</span>
-                          {activeTab === item.value && <ChevronRight className="h-4 w-4" />}
-                        </button>
-                      ))}
-                    </div>
+          
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-6">
+              {filteredNavigation.map((group) => (
+                <div key={group.group}>
+                  <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {group.group}
+                  </h3>
+                  <div className="space-y-1">
+                    {group.items.map((item) => (
+                      <button
+                        key={item.value}
+                        onClick={() => setActiveTab(item.value)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-200",
+                          activeTab === item.value
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "hover:bg-muted/60 text-foreground/80 hover:text-foreground"
+                        )}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1 text-left font-medium">{item.title}</span>
+                        {activeTab === item.value && (
+                          <ChevronRight className="h-4 w-4 shrink-0" />
+                        )}
+                      </button>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </ScrollArea>
         </aside>
 
-        {/* Mobile Settings Dropdown */}
-        <div className="lg:hidden w-full border-b p-4 bg-background sticky top-0 z-10">
-          <Label className="text-sm font-semibold mb-2 block">Settings</Label>
+        {/* Mobile Settings Navigation */}
+        <div className="lg:hidden w-full border-b p-4 bg-background sticky top-0 z-10 space-y-3">
+          <div className="flex items-center gap-3">
+            {currentSetting && (
+              <>
+                <currentSetting.icon className="h-5 w-5 text-muted-foreground" />
+                <h2 className="font-semibold text-lg">{currentSetting.title}</h2>
+              </>
+            )}
+          </div>
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-            className="w-full p-2 border rounded-md bg-background"
+            className="w-full p-2.5 border rounded-lg bg-background text-sm font-medium"
           >
             {settingsNavigation.map((group) => (
               <optgroup key={group.group} label={group.group}>
-                {group.items.map((item) => (
+                {group.items.filter(item => !item.adminOnly || isAdmin).map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.title}
                   </option>
@@ -340,13 +373,24 @@ export default function Settings() {
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto w-full">
           <div className={cn(
-            "w-full",
+            "w-full transition-all duration-200",
             activeTab === "schema-validator" || activeTab === "performance-monitor" 
               ? "h-full" 
-              : "p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto"
+              : "p-4 sm:p-6 lg:p-10 max-w-6xl mx-auto"
           )}>
+            {/* Page Header - Desktop Only */}
+            {currentSetting && (
+              <div className="hidden lg:block mb-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <currentSetting.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h2 className="text-3xl font-semibold">{currentSetting.title}</h2>
+                </div>
+              </div>
+            )}
             {activeTab === "general" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <GeneralSettingsTab />
                 </CardContent>
@@ -354,7 +398,7 @@ export default function Settings() {
             )}
 
             {activeTab === "user-profile" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <UserProfileTab />
                 </CardContent>
@@ -362,7 +406,7 @@ export default function Settings() {
             )}
 
             {activeTab === "presence" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <PresenceSettingsTab />
                 </CardContent>
@@ -370,7 +414,7 @@ export default function Settings() {
             )}
 
             {activeTab === "notifications" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <NotificationSettingsTab />
                 </CardContent>
@@ -378,7 +422,7 @@ export default function Settings() {
             )}
 
             {activeTab === "brand-colors" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <BrandColorsTab />
                 </CardContent>
@@ -386,7 +430,7 @@ export default function Settings() {
             )}
 
             {activeTab === "numbering" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <NumberingTab />
                 </CardContent>
@@ -394,7 +438,7 @@ export default function Settings() {
             )}
 
             {activeTab === "integrations" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <IntegrationsTab />
                 </CardContent>
@@ -402,7 +446,7 @@ export default function Settings() {
             )}
 
             {activeTab === "account-sync" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <AccountSyncTab />
                 </CardContent>
@@ -410,7 +454,7 @@ export default function Settings() {
             )}
 
             {activeTab === "accounting" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <ProjectIntegrationTab />
                 </CardContent>
@@ -418,7 +462,7 @@ export default function Settings() {
             )}
 
             {activeTab === "menu" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <MenuCustomizationTab />
                 </CardContent>
@@ -426,7 +470,7 @@ export default function Settings() {
             )}
 
             {activeTab === "users" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <UserManagementTab />
                 </CardContent>
@@ -434,7 +478,7 @@ export default function Settings() {
             )}
 
             {activeTab === "permissions" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <RolePermissionsTab />
                 </CardContent>
@@ -442,7 +486,7 @@ export default function Settings() {
             )}
 
             {activeTab === "pay-rates" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Pay Rate Categories</CardTitle>
@@ -520,7 +564,7 @@ export default function Settings() {
             )}
 
             {activeTab === "templates" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <TemplatesTab />
                 </CardContent>
@@ -528,7 +572,7 @@ export default function Settings() {
             )}
 
             {activeTab === "crm-statuses" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <CRMStatusesTab />
                 </CardContent>
@@ -536,7 +580,7 @@ export default function Settings() {
             )}
 
             {activeTab === "helpdesk" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <HelpDeskSettingsTab />
                 </CardContent>
@@ -544,11 +588,15 @@ export default function Settings() {
             )}
 
             {activeTab === "ap-invoice-settings" && (
-              <APInvoiceSettingsTab />
+              <Card className="border-none shadow-sm">
+                <CardContent className="pt-6">
+                  <APInvoiceSettingsTab />
+                </CardContent>
+              </Card>
             )}
 
             {activeTab === "expense-categories" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <ExpenseCategoriesTab />
                 </CardContent>
@@ -556,7 +604,7 @@ export default function Settings() {
             )}
 
             {activeTab === "expense-policy" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <ExpensePolicyTab />
                 </CardContent>
@@ -564,7 +612,7 @@ export default function Settings() {
             )}
 
             {activeTab === "credit-cards" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <CreditCardsTab />
                 </CardContent>
@@ -572,7 +620,7 @@ export default function Settings() {
             )}
 
             {activeTab === "activity-log" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <ActivityLogTab />
                 </CardContent>
@@ -580,7 +628,7 @@ export default function Settings() {
             )}
 
             {activeTab === "bug-reports" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <BugReportsList />
                 </CardContent>
@@ -588,7 +636,7 @@ export default function Settings() {
             )}
 
             {activeTab === "changelog" && (
-              <Card>
+              <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <ChangeLogTab />
                 </CardContent>
