@@ -82,13 +82,13 @@ serve(async (req) => {
             }
             
             @page {
-              margin: 20mm 15mm;
+              margin: 25mm 15mm;
               size: A4;
             }
             
             body {
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              line-height: 1.7;
+              line-height: 1.5;
               color: #1a1a1a;
               background: white;
             }
@@ -96,10 +96,10 @@ serve(async (req) => {
             .header {
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
-              padding: 40px 50px 30px;
+              padding: 35px 50px 25px;
               position: relative;
               overflow: hidden;
-              margin: -20mm -15mm 0;
+              margin: -25mm -15mm 0;
             }
             
             .header::before {
@@ -129,54 +129,55 @@ serve(async (req) => {
             }
             
             h1 {
-              font-size: 36px;
+              font-size: 32px;
               font-weight: 700;
-              margin-bottom: 12px;
+              margin-bottom: 10px;
               line-height: 1.2;
               position: relative;
             }
             
             .summary {
-              font-size: 16px;
+              font-size: 14px;
               opacity: 0.95;
-              line-height: 1.6;
-              margin-top: 12px;
+              line-height: 1.4;
+              margin-top: 10px;
               font-weight: 400;
             }
             
             .content-wrapper {
-              padding: 40px 0;
+              padding: 30px 0;
               max-width: 100%;
             }
             
             .content {
-              font-size: 16px;
-              line-height: 1.8;
+              font-size: 13px;
+              line-height: 1.5;
               color: #2d3748;
             }
             
             .content h1, .content h2, .content h3 {
               color: #1a202c;
-              margin-top: 32px;
-              margin-bottom: 12px;
+              margin-top: 24px;
+              margin-bottom: 10px;
               font-weight: 600;
+              line-height: 1.3;
             }
             
-            .content h1 { font-size: 28px; }
-            .content h2 { font-size: 22px; }
-            .content h3 { font-size: 18px; }
+            .content h1 { font-size: 24px; }
+            .content h2 { font-size: 18px; }
+            .content h3 { font-size: 16px; }
             
             .content p {
-              margin-bottom: 12px;
+              margin-bottom: 10px;
             }
             
             .content ul, .content ol {
-              margin: 12px 0 12px 24px;
+              margin: 10px 0 10px 20px;
             }
             
             .content li {
-              margin-bottom: 6px;
-              padding-left: 8px;
+              margin-bottom: 5px;
+              padding-left: 6px;
             }
             
             .content strong {
@@ -185,52 +186,53 @@ serve(async (req) => {
             }
             
             .content blockquote {
-              border-left: 4px solid #667eea;
-              padding-left: 20px;
-              margin: 20px 0;
+              border-left: 3px solid #667eea;
+              padding-left: 16px;
+              margin: 16px 0;
               font-style: italic;
               color: #4a5568;
+              font-size: 12px;
             }
             
             .content code {
               background: #f7fafc;
-              padding: 2px 6px;
-              border-radius: 4px;
+              padding: 2px 5px;
+              border-radius: 3px;
               font-family: 'Monaco', 'Courier New', monospace;
-              font-size: 14px;
+              font-size: 11px;
               color: #e53e3e;
             }
             
             .footer {
               background: #f7fafc;
-              padding: 30px 50px;
-              margin: 40px -15mm -20mm;
+              padding: 25px 50px;
+              margin: 30px -15mm -25mm;
               border-top: 1px solid #e2e8f0;
             }
             
             .metadata {
               display: grid;
               grid-template-columns: repeat(3, 1fr);
-              gap: 20px;
-              margin-bottom: 20px;
+              gap: 16px;
+              margin-bottom: 16px;
             }
             
             .metadata-item {
               display: flex;
               flex-direction: column;
-              gap: 4px;
+              gap: 3px;
             }
             
             .metadata-label {
-              font-size: 12px;
+              font-size: 10px;
               text-transform: uppercase;
-              letter-spacing: 1px;
+              letter-spacing: 0.8px;
               color: #718096;
               font-weight: 600;
             }
             
             .metadata-value {
-              font-size: 16px;
+              font-size: 13px;
               color: #2d3748;
               font-weight: 500;
             }
@@ -238,9 +240,9 @@ serve(async (req) => {
             .footer-note {
               text-align: center;
               color: #a0aec0;
-              font-size: 12px;
-              margin-top: 20px;
-              padding-top: 20px;
+              font-size: 11px;
+              margin-top: 16px;
+              padding-top: 16px;
               border-top: 1px solid #e2e8f0;
             }
             
