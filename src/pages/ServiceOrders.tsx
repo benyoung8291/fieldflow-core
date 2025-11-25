@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2, XCircle } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2, XCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,6 +79,8 @@ export default function ServiceOrders() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortField, setSortField] = useState<'order_number' | 'created_at' | 'preferred_date' | 'customer'>('order_number');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const pagination = usePagination({ initialPageSize: 50 });
 
   // Track presence for currently viewed service order
@@ -114,7 +116,7 @@ export default function ServiceOrders() {
   }, [queryClient]);
 
   const { data: ordersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["service_orders", searchTerm, statusFilter, priorityFilter, customerFilter, pagination.currentPage, pagination.pageSize],
+    queryKey: ["service_orders", searchTerm, statusFilter, priorityFilter, customerFilter, sortField, sortDirection, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       
@@ -132,13 +134,20 @@ export default function ServiceOrders() {
           subtotal,
           completed_date,
           created_at,
+          preferred_date,
           customers!service_orders_customer_id_fkey(name),
           customer_locations!service_orders_location_id_fkey(name),
           appointments(count),
           purchase_orders(count),
           invoices(count)
-        `, { count: 'exact' })
-        .order("created_at", { ascending: false });
+        `, { count: 'exact' });
+
+      // Apply sorting - special handling for customer name
+      if (sortField === 'customer') {
+        query = query.order("customers(name)", { ascending: sortDirection === 'asc' });
+      } else {
+        query = query.order(sortField, { ascending: sortDirection === 'asc' });
+      }
 
       // Apply filters
       if (statusFilter !== "all") {
@@ -438,6 +447,85 @@ export default function ServiceOrders() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Quick Sort Options */}
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={sortField === 'order_number' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortField === 'order_number') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('order_number');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  Order #
+                  {sortField === 'order_number' && (
+                    sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortField === 'created_at' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortField === 'created_at') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('created_at');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  Created
+                  {sortField === 'created_at' && (
+                    sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortField === 'preferred_date' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortField === 'preferred_date') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('preferred_date');
+                      setSortDirection('asc');
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  Preferred Date
+                  {sortField === 'preferred_date' && (
+                    sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortField === 'customer' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortField === 'customer') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('customer');
+                      setSortDirection('asc');
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  Customer
+                  {sortField === 'customer' && (
+                    sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
