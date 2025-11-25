@@ -73,35 +73,21 @@ export function PolicyDocumentRenderer({
 
   return (
     <div className="space-y-8">
-      {/* Hero Section */}
-      <Card className="relative overflow-hidden border-2">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full -ml-24 -mb-24" />
-        
-        <div className="relative p-8 md:p-12">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-primary/10">
-              <FileText className="h-8 w-8 text-primary" />
-            </div>
-            <div className="flex-1">
-              {category && (
-                <Badge className="mb-3 bg-primary/20 text-primary hover:bg-primary/30">
-                  {category}
-                </Badge>
-              )}
-              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-3">
-                {title}
-              </h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Official Policy Document
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Simplified Header */}
+      <div className="mb-8">
+        {category && (
+          <Badge className="mb-3 bg-primary/20 text-primary hover:bg-primary/30">
+            {category}
+          </Badge>
+        )}
+        <h1 className="text-3xl md:text-4xl font-bold mb-3">
+          {title}
+        </h1>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          Official Policy Document
         </div>
-      </Card>
+      </div>
 
       {/* Table of Contents */}
       {sections.length > 0 && (
@@ -134,27 +120,17 @@ export function PolicyDocumentRenderer({
               id={`section-${index}`}
               className="scroll-mt-4"
             >
-              <div className="flex items-start gap-4 mb-6">
-                <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
-                  {getSectionIcon(index)}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {(index + 1).toString().padStart(2, '0')}
-                    </Badge>
-                    <h2 className="text-2xl md:text-3xl font-bold">
-                      {section.title}
-                    </h2>
-                  </div>
-                  <div 
-                    className="prose prose-slate dark:prose-invert max-w-none prose-strong:text-foreground prose-strong:font-semibold"
-                    dangerouslySetInnerHTML={{ 
-                      __html: parseMarkdown(section.content.trim())
-                    }}
-                  />
-                </div>
-              </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">
+                {index + 1}. {section.title}
+              </h2>
+              <div 
+                className="prose prose-slate dark:prose-invert max-w-none prose-strong:text-foreground prose-strong:font-semibold"
+                dangerouslySetInnerHTML={{ 
+                  __html: parseMarkdown(section.content.trim())
+                }}
+              />
+            </div>
               {index < sections.length - 1 && (
                 <Separator className="mt-8" />
               )}
