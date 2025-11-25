@@ -12,6 +12,7 @@ import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useCanManageKnowledge } from "@/hooks/useUserRole";
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,6 +21,7 @@ export default function KnowledgeBase() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { hasRole: canManageKnowledge } = useCanManageKnowledge();
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -111,10 +113,12 @@ export default function KnowledgeBase() {
                 </p>
               </div>
             </div>
-            <Button onClick={handleCreateArticle} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Article
-            </Button>
+            {canManageKnowledge && (
+              <Button onClick={handleCreateArticle} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Article
+              </Button>
+            )}
           </div>
 
           {/* Search Bar */}
