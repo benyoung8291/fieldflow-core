@@ -1,41 +1,31 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Users } from "lucide-react";
 import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+import { Badge } from "@/components/ui/badge";
 
 export default function PresencePanel() {
-  const [activeUserCount, setActiveUserCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    const presenceChannel = supabase.channel('team-presence-global');
-
-    presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState();
-        const userCount = Object.keys(state).length;
-        console.log("[Presence Panel] Active users:", userCount, state);
-        setActiveUserCount(userCount > 0 ? userCount - 1 : 0);
-      })
-      .subscribe();
-
-    return () => {
-      presenceChannel.unsubscribe();
-    };
-  }, []);
+  const { onlineCount, isConnected } = usePresenceSystem();
 
   return (
     <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button variant="ghost" size="sm" className="gap-2 relative">
           <Users className="h-4 w-4" />
           <span className="hidden sm:inline">Team</span>
-          {activeUserCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-semibold text-white">
-              {activeUserCount}
-            </span>
+          {onlineCount > 0 && (
+            <Badge 
+              variant="default" 
+              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center rounded-full bg-success px-1 text-[10px] font-semibold"
+            >
+              {onlineCount}
+            </Badge>
+          )}
+          {!isConnected && (
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-muted-foreground/50" />
           )}
         </Button>
       </SheetTrigger>
