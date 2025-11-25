@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PolicyDocumentRenderer } from "./PolicyDocumentRenderer";
 import DashboardLayout from "@/components/DashboardLayout";
 import { exportArticleToPDF } from "@/utils/pdfExport";
+import { parseMarkdown } from "@/utils/markdownParser";
 
 interface KnowledgeArticleViewProps {
   articleId: string;
@@ -247,8 +248,8 @@ export function KnowledgeArticleView({
               </div>
               <Card className="p-8 mb-8">
                 <div
-                  className="prose prose-slate dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: article.content }}
+                  className="prose prose-slate dark:prose-invert max-w-none prose-strong:text-foreground prose-strong:font-semibold"
+                  dangerouslySetInnerHTML={{ __html: parseMarkdown(article.content) }}
                 />
               </Card>
             </>
