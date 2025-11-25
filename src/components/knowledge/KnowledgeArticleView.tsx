@@ -27,6 +27,7 @@ import { PolicyDocumentRenderer } from "./PolicyDocumentRenderer";
 import DashboardLayout from "@/components/DashboardLayout";
 import { exportArticleToPDF } from "@/utils/pdfExport";
 import { parseMarkdown } from "@/utils/markdownParser";
+import { useCanManageKnowledge } from "@/hooks/useUserRole";
 
 interface KnowledgeArticleViewProps {
   articleId: string;
@@ -44,6 +45,7 @@ export function KnowledgeArticleView({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const { hasRole: canManageKnowledge } = useCanManageKnowledge();
 
   const { data: article } = useQuery({
     queryKey: ["knowledge-article", articleId],
@@ -108,7 +110,7 @@ export function KnowledgeArticleView({
     return null;
   }
 
-  const canEdit = profile?.id === article.created_by;
+  const canEdit = canManageKnowledge;
 
   const handleSelectArticle = (id: string) => {
     if (onSelectArticle) {
