@@ -96,9 +96,8 @@ serve(async (req) => {
             .header {
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
-              padding: 35px 50px 25px;
+              padding: 25px 40px 20px;
               position: relative;
-              overflow: hidden;
               margin: -25mm -15mm 0;
             }
             
@@ -129,19 +128,23 @@ serve(async (req) => {
             }
             
             h1 {
-              font-size: 32px;
+              font-size: 26px;
               font-weight: 700;
-              margin-bottom: 10px;
-              line-height: 1.2;
+              margin-bottom: 8px;
+              line-height: 1.3;
               position: relative;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
             }
             
             .summary {
-              font-size: 14px;
+              font-size: 13px;
               opacity: 0.95;
-              line-height: 1.4;
-              margin-top: 10px;
+              line-height: 1.35;
+              margin-top: 8px;
               font-weight: 400;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
             }
             
             .content-wrapper {
