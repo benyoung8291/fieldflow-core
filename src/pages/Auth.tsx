@@ -82,47 +82,36 @@ export default function Auth() {
         return;
       }
 
-      // Get user access to determine redirect
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Get user access using the RPC function
+      const { data: accessData, error: accessError } = await supabase.rpc('get_user_access_info');
+
+      if (accessError) {
+        console.error("Access check error:", accessError);
+        toast.error("Failed to verify access. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      const { data: roleData, error: roleError } = await (supabase as any)
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const { data: workerData, error: workerError } = await (supabase as any)
-        .from("workers")
-        .select("id")
-        .eq("id", user.id)  // workers.id is the link, not user_id
-        .maybeSingle();
-
-      if (roleError) console.error("Role check error:", roleError);
-      if (workerError) console.error("Worker check error:", workerError);
-
-      const hasRole = !!roleData;
-      const isWorker = !!workerData;
-
-      // Check if user has any access
-      if (!hasRole && !isWorker) {
+      if (!accessData || (Array.isArray(accessData) && accessData.length === 0)) {
         toast.error("Access denied. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
       }
 
-      // Show success and redirect
-      toast.success("Welcome back!");
-      
-      if (hasRole) {
-        navigate("/dashboard", { replace: true });
-      } else if (isWorker) {
-        navigate("/worker/dashboard", { replace: true });
+      const access = Array.isArray(accessData) ? accessData[0] : accessData;
+
+      // Check if user has any access
+      if (!access.can_access_office && !access.can_access_worker) {
+        toast.error("Access denied. Please contact your administrator.");
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        return;
       }
+
+      // Show success and redirect to appropriate dashboard
+      toast.success("Welcome back!");
+      navigate(access.default_route, { replace: true });
     } catch (error: any) {
       toast.error("An unexpected error occurred. Please try again.");
       console.error("Auth error:", error);
