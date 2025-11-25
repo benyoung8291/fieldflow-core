@@ -814,7 +814,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             )}
                           </div>
                           
-                          <div className="flex items-center gap-1 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <div className="flex items-center gap-1 absolute top-10 right-2 opacity-0 group-hover:opacity-100 transition-all">
                             <Button
                               variant="ghost"
                               size="sm"
