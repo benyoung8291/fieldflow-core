@@ -68,7 +68,7 @@ export function LinkedDocumentDetailsDialog({
       const [notesRes, appointmentsRes, invoicesRes, expensesRes] = await Promise.all([
         supabase
           .from("document_notes")
-          .select("*, created_by:profiles!document_notes_created_by_fkey(first_name, last_name)")
+          .select("*, profiles:created_by(first_name, last_name)")
           .eq("document_type", "service_order")
           .eq("document_id", documentId)
           .order("created_at", { ascending: false }),
@@ -345,7 +345,7 @@ export function LinkedDocumentDetailsDialog({
                       <div key={note.id} className="border rounded-lg p-4 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-muted-foreground">
-                            {note.created_by?.first_name} {note.created_by?.last_name}
+                            {note.profiles?.first_name} {note.profiles?.last_name}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {format(new Date(note.created_at), "PPP p")}

@@ -107,9 +107,11 @@ export function EmailTextSelector({ ticketId, children }: EmailTextSelectorProps
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({ title: "Text saved to document" });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs-save", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["document-related", variables.docType, variables.docId] });
+      queryClient.invalidateQueries({ queryKey: ["document-notes", variables.docType, variables.docId] });
     },
     onError: (error: any) => {
       toast({
