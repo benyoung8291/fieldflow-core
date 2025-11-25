@@ -166,7 +166,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout showRightSidebar={true}>
-      <div className="space-y-6">
+      <div className="space-y-6 pt-6">
         {/* Quick Actions */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {quickActions.map((action) => {
