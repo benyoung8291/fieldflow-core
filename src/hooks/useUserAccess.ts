@@ -17,11 +17,11 @@ export function useUserAccess() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // Check if user is a worker
+      // Check if user is a worker (workers.id is the link to auth.users, not user_id)
       const { data: workerData } = await (supabase as any)
         .from("workers")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .maybeSingle();
 
       const hasRole = !!roleData;

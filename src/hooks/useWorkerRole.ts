@@ -19,11 +19,11 @@ export const useWorkerRole = () => {
       ) || false;
 
       // Check if user is also a worker (exists in workers table)
-      // Using any cast to avoid TypeScript deep instantiation error with complex Supabase types
+      // workers.id is the link to auth.users, not user_id
       const workerQuery = await (supabase as any)
         .from("workers")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .limit(1);
 
       const isWorker = workerQuery?.data && workerQuery.data.length > 0;
