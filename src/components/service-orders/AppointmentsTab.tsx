@@ -114,32 +114,36 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div className="space-y-3 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
                       </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
-                      </span>
-                    </div>
-                    {appointment.assigned_workers?.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <div className="flex flex-wrap gap-1.5">
-                          {appointment.assigned_workers.map((aw: any) => (
-                            aw.profiles && (
-                              <Badge key={aw.worker_id} className="bg-primary text-primary-foreground font-medium">
-                                {aw.profiles.first_name} {aw.profiles.last_name}
-                              </Badge>
-                            )
-                          ))}
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          {appointment.assigned_workers?.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {appointment.assigned_workers.map((aw: any) => (
+                                aw.profiles && (
+                                  <Badge key={aw.worker_id} className="bg-primary text-primary-foreground font-medium">
+                                    {aw.profiles.first_name} {aw.profiles.last_name}
+                                  </Badge>
+                                )
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">No workers assigned</span>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
                   
                   {appointment.description && (
                     <p className="text-sm text-muted-foreground">{appointment.description}</p>
