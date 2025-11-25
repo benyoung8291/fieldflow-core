@@ -26,7 +26,7 @@ export function ModuleTutorial({ moduleName, defaultSteps, title, description }:
   const [currentStep, setCurrentStep] = useState(0);
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -44,7 +44,7 @@ export function ModuleTutorial({ moduleName, defaultSteps, title, description }:
   });
 
   // Check if user has completed this tutorial
-  const { data: tutorialProgress } = useQuery({
+  const { data: tutorialProgress, isLoading: progressLoading } = useQuery({
     queryKey: ["tutorial-progress", moduleName, profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
@@ -106,11 +106,14 @@ export function ModuleTutorial({ moduleName, defaultSteps, title, description }:
 
   // Show tutorial on first access
   useEffect(() => {
-    if (tutorialProgress === undefined) return;
+    // Wait for both queries to finish loading
+    if (profileLoading || progressLoading) return;
+    
+    // Show tutorial if user hasn't seen it yet
     if (tutorialProgress === null && profile?.id) {
       setIsOpen(true);
     }
-  }, [tutorialProgress, profile]);
+  }, [tutorialProgress, profile, profileLoading, progressLoading]);
 
   const steps = (Array.isArray(customContent?.steps) ? customContent.steps : defaultSteps) as TutorialStep[];
   const tutorialTitle = customContent?.title || title || `${moduleName} Tutorial`;
