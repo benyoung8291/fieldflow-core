@@ -13,7 +13,7 @@ export function useUserAccess() {
       // Call the secure database function to get user access info
       const { data, error } = await supabase
         .rpc('get_user_access_info')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user access:', error);
