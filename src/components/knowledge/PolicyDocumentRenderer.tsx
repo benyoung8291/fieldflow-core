@@ -19,6 +19,22 @@ export function PolicyDocumentRenderer({
   title,
   category,
 }: PolicyDocumentRendererProps) {
+  // Simple markdown parser for bold text, lists, etc.
+  const parseMarkdown = (text: string): string => {
+    let html = text;
+    
+    // Bold text: **text** -> <strong>text</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Italic text: *text* -> <em>text</em>
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    
+    // Line breaks
+    html = html.replace(/\n/g, '<br />');
+    
+    return html;
+  };
+
   // Parse the markdown content into sections
   const parseSections = (text: string): PolicySection[] => {
     const sections: PolicySection[] = [];
@@ -131,11 +147,12 @@ export function PolicyDocumentRenderer({
                       {section.title}
                     </h2>
                   </div>
-                  <div className="prose prose-slate dark:prose-invert max-w-none">
-                    <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground/90">
-                      {section.content.trim()}
-                    </p>
-                  </div>
+                  <div 
+                    className="prose prose-slate dark:prose-invert max-w-none prose-strong:text-foreground prose-strong:font-semibold"
+                    dangerouslySetInnerHTML={{ 
+                      __html: parseMarkdown(section.content.trim())
+                    }}
+                  />
                 </div>
               </div>
               {index < sections.length - 1 && (
