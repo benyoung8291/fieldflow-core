@@ -4,6 +4,7 @@ import { LogOut, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as Chevron
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -31,6 +32,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
+  useAuthGuard(); // Enforce active user status
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved === 'true';
