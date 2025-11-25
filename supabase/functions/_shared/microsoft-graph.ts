@@ -54,10 +54,10 @@ export async function getValidAccessToken(
 ): Promise<string> {
   const { supabaseClient, emailAccountId } = config;
 
-  // Get account with token info
+  // Get account with token expiry info
   const { data: account, error: accountError } = await supabaseClient
     .from("helpdesk_email_accounts")
-    .select("microsoft_access_token, microsoft_refresh_token, microsoft_token_expires_at, microsoft_client_secret, tenant_id")
+    .select("microsoft_token_expires_at, tenant_id")
     .eq("id", emailAccountId)
     .single();
 
@@ -70,33 +70,54 @@ export async function getValidAccessToken(
   const now = new Date();
   const needsRefresh = expiresAt.getTime() - now.getTime() < TOKEN_REFRESH_BUFFER_MS;
 
+  // Get credentials from vault
+  const { data: credentials, error: credError } = await supabaseClient
+    .rpc("get_microsoft_credentials", { email_account_id: emailAccountId })
+    .single();
+
+  const msCredentials = credentials as { client_secret: string | null; refresh_token: string | null; access_token: string | null } | null;
+
+  if (credError || !msCredentials || !msCredentials.access_token) {
+    throw new GraphAPIError("Microsoft credentials not found", 404, false);
+  }
+
   if (!needsRefresh) {
-    return account.microsoft_access_token;
+    return msCredentials.access_token;
   }
 
   // Refresh token with atomic update
   console.log("🔄 Refreshing access token for account:", emailAccountId);
   
+  if (!msCredentials.refresh_token) {
+    throw new TokenRefreshError("Refresh token not found");
+  }
+
   const tokenData = await refreshAccessToken({
-    refreshToken: account.microsoft_refresh_token,
-    clientSecret: account.microsoft_client_secret || Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
+    refreshToken: msCredentials.refresh_token,
+    clientSecret: msCredentials.client_secret || Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
   });
 
-  // Update tokens atomically
+  // Update tokens in vault using RPC
   const { error: updateError } = await supabaseClient
-    .from("helpdesk_email_accounts")
-    .update({
-      microsoft_access_token: tokenData.accessToken,
-      microsoft_refresh_token: tokenData.refreshToken,
-      microsoft_token_expires_at: tokenData.expiresAt.toISOString(),
-      sync_error: null, // Clear any previous errors
-    })
-    .eq("id", emailAccountId);
+    .rpc("update_microsoft_tokens", {
+      email_account_id: emailAccountId,
+      new_access_token: tokenData.accessToken,
+      new_refresh_token: tokenData.refreshToken,
+    });
 
   if (updateError) {
     console.error("Failed to update tokens:", updateError);
     throw new GraphAPIError("Failed to persist refreshed token", 500, true);
   }
+
+  // Update expiry time on the table
+  await supabaseClient
+    .from("helpdesk_email_accounts")
+    .update({
+      microsoft_token_expires_at: tokenData.expiresAt.toISOString(),
+      sync_error: null,
+    })
+    .eq("id", emailAccountId);
 
   console.log("✅ Token refreshed successfully");
   return tokenData.accessToken;
