@@ -81,6 +81,7 @@ export default function KnowledgeBase() {
         articleId={selectedArticleId}
         onBack={() => setSelectedArticleId(null)}
         onEdit={handleEditArticle}
+        onSelectArticle={setSelectedArticleId}
       />
     );
   }
