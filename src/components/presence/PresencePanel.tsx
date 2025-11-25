@@ -19,13 +19,10 @@ export default function PresencePanel() {
           {onlineCount > 0 && (
             <Badge 
               variant="default" 
-              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center rounded-full bg-success px-1 text-[10px] font-semibold"
+              className="absolute -top-1 -right-1 h-5 min-w-[20px] flex items-center justify-center rounded-full bg-green-500 hover:bg-green-600 px-1.5 text-[10px] font-bold text-white shadow-sm"
             >
               {onlineCount}
             </Badge>
-          )}
-          {!isConnected && (
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-muted-foreground/50" />
           )}
         </Button>
       </SheetTrigger>
