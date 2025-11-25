@@ -60,6 +60,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
 
       if (error) throw error;
       
+      // Fetch related document details for each linked doc
       const docsWithDetails = await Promise.all(
         (data || []).map(async (doc: any) => {
           let details = null;
@@ -146,6 +147,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     mutationFn: async ({ field, value }: { field: string; value: string | null }) => {
       const updates: any = { [field]: value };
       
+      // If linking a contact, automatically link their customer
       if (field === "contact_id" && value) {
         const { data: contact } = await supabase
           .from("contacts")
@@ -177,6 +179,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     onError: (error: any) => {
       console.error("Update link error:", error);
       
+      // Check if it's a foreign key constraint error for contact
       if (error.message?.includes("contact_id") || error.message?.includes("foreign key constraint")) {
         toast({
           title: "Cannot link contact",
@@ -253,6 +256,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     return acc;
   }, {} as Record<string, any[]>) || {};
 
+  // Calculate total linked items count
   const totalLinkedCount = useMemo(() => {
     let count = 0;
     if (ticket?.customer) count++;
@@ -285,348 +289,567 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
   };
 
   return (
-    <div className="flex flex-col h-full border-l bg-background">
+    <div className="flex flex-col h-full border-l bg-gradient-to-b from-background to-muted/10">
       <Tabs defaultValue="documents" className="flex flex-col h-full">
-        {/* Minimal Header */}
-        <div className="px-4 py-3 border-b">
-          <div className="flex items-center justify-between">
-            <TabsList className="h-8 p-0.5 bg-muted/50">
-              <TabsTrigger value="documents" className="text-xs h-7 px-3">
-                Details
+        {/* Enhanced Header */}
+        <div className="px-4 py-4 border-b bg-background/95 backdrop-blur-sm">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-foreground">Links & Actions</h3>
+              {onClose && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="Close sidebar"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <TabsList className="w-full grid grid-cols-2 bg-muted/50 p-1">
+              <TabsTrigger value="documents" className="text-xs relative data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+                <Link2 className="h-3.5 w-3.5 mr-1.5" />
+                Links
+                {totalLinkedCount > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-[10px] font-semibold rounded-full bg-primary text-primary-foreground shadow-sm">
+                    {totalLinkedCount}
+                  </span>
+                )}
               </TabsTrigger>
-              <TabsTrigger value="actions" className="text-xs h-7 px-3">
+              <TabsTrigger value="actions" className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
                 Actions
               </TabsTrigger>
             </TabsList>
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="h-7 w-7 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            
+            {totalLinkedCount > 0 && (
+              <div className="text-xs text-muted-foreground px-1">
+                {[
+                  ticket?.customer && 'Customer',
+                  ticket?.contact && 'Contact', 
+                  ticket?.supplier && 'Supplier',
+                  ticket?.lead && 'Lead',
+                  linkedDocs && linkedDocs.length > 0 && `${linkedDocs.length} doc${linkedDocs.length === 1 ? '' : 's'}`
+                ].filter(Boolean).join(' · ')}
+              </div>
             )}
           </div>
         </div>
 
         <TabsContent value="documents" className="flex-1 mt-0 p-0 overflow-hidden">
           <ScrollArea className="h-[calc(100vh-15rem)]">
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-4">
               {/* AI Thread Summary */}
               <ThreadSummaryCard ticketId={ticketId} />
               
-              {/* Entities Section - HubSpot clean style */}
-              <div className="space-y-1.5">
-                {/* Customer */}
-                <div className="border-b py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Customer</span>
+              {/* Entities Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">People & Companies</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                {/* Customer Card */}
+                <div className={cn(
+              "group relative overflow-hidden rounded-xl border transition-all duration-200",
+              ticket?.customer 
+                ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
+                : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+            )}>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+                      ticket?.customer ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      <Users className="h-4 w-4" />
                     </div>
-                    <Button 
+                    <span className="text-sm font-semibold">Customer</span>
+                  </div>
+                  <Button 
+                    variant={showCustomerLink ? "secondary" : "ghost"}
+                    size="sm" 
+                    className="h-7 px-2.5 text-xs font-medium"
+                    onClick={() => setShowCustomerLink(!showCustomerLink)}
+                  >
+                    {showCustomerLink ? "Cancel" : ticket?.customer ? "Change" : "+ Link"}
+                  </Button>
+                </div>
+                
+                {showCustomerLink ? (
+                  <SelectWithSearch
+                    value={ticket?.customer_id || ""}
+                    onValueChange={(value) => {
+                      updateTicketLinkMutation.mutate({ field: "customer_id", value: value || null });
+                    }}
+                    options={[
+                      { value: "", label: "None" },
+                      ...(customers?.map((customer) => ({
+                        value: customer.id,
+                        label: customer.name,
+                      })) || [])
+                    ]}
+                    placeholder="Select customer..."
+                    searchPlaceholder="Search customers..."
+                  />
+                ) : ticket?.customer ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                    <p className="text-sm font-medium text-foreground">{ticket.customer.name}</p>
+                    <Button
                       variant="ghost"
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setShowCustomerLink(!showCustomerLink)}
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => updateTicketLinkMutation.mutate({ field: "customer_id", value: null })}
                     >
-                      {ticket?.customer ? "Change" : "+ Add"}
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  
-                  {showCustomerLink ? (
-                    <SelectWithSearch
-                      value={ticket?.customer_id || ""}
-                      onValueChange={(value) => {
-                        updateTicketLinkMutation.mutate({ field: "customer_id", value: value || null });
-                      }}
-                      options={[
-                        { value: "", label: "None" },
-                        ...(customers?.map((customer) => ({
-                          value: customer.id,
-                          label: customer.name,
-                        })) || [])
-                      ]}
-                      placeholder="Select customer..."
-                      searchPlaceholder="Search customers..."
-                    />
-                  ) : ticket?.customer ? (
-                    <div className="flex items-center justify-between pl-6">
-                      <p className="text-sm text-foreground">{ticket.customer.name}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => updateTicketLinkMutation.mutate({ field: "customer_id", value: null })}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground pl-6">No customer linked</p>
-                  )}
-                </div>
+                ) : null}
+              </div>
+            </div>
 
-                {/* Contact */}
-                <div className="border-b py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Contact</span>
+            {/* Contact Card */}
+            <div className={cn(
+              "group relative overflow-hidden rounded-xl border transition-all duration-200",
+              ticket?.contact 
+                ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
+                : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+            )}>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+                      ticket?.contact ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      <User className="h-4 w-4" />
                     </div>
-                    <Button 
+                    <span className="text-sm font-semibold">Contact</span>
+                  </div>
+                  <Button 
+                    variant={showContactLink ? "secondary" : "ghost"}
+                    size="sm" 
+                    className="h-7 px-2.5 text-xs font-medium"
+                    onClick={() => setShowContactLink(!showContactLink)}
+                  >
+                    {showContactLink ? "Cancel" : ticket?.contact ? "Change" : "+ Link"}
+                  </Button>
+                </div>
+                
+                {showContactLink ? (
+                  <SelectWithSearch
+                    value={ticket?.contact_id || ""}
+                    onValueChange={(value) => {
+                      updateTicketLinkMutation.mutate({ field: "contact_id", value: value || null });
+                    }}
+                    options={[
+                      { value: "", label: "None" },
+                      ...(contacts?.map((contact) => ({
+                        value: contact.id,
+                        label: `${contact.first_name} ${contact.last_name}${contact.email ? ` (${contact.email})` : ''}`,
+                      })) || [])
+                    ]}
+                    placeholder="Select contact..."
+                    searchPlaceholder="Search contacts..."
+                  />
+                ) : ticket?.contact ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                    <p className="text-sm font-medium text-foreground">
+                      {ticket.contact.first_name} {ticket.contact.last_name}
+                    </p>
+                    <Button
                       variant="ghost"
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setShowContactLink(!showContactLink)}
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => updateTicketLinkMutation.mutate({ field: "contact_id", value: null })}
                     >
-                      {ticket?.contact ? "Change" : "+ Add"}
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  
-                  {showContactLink ? (
-                    <SelectWithSearch
-                      value={ticket?.contact_id || ""}
-                      onValueChange={(value) => {
-                        updateTicketLinkMutation.mutate({ field: "contact_id", value: value || null });
-                      }}
-                      options={[
-                        { value: "", label: "None" },
-                        ...(contacts?.map((contact) => ({
-                          value: contact.id,
-                          label: `${contact.first_name} ${contact.last_name}`.trim() + (contact.email ? ` (${contact.email})` : ''),
-                        })) || [])
-                      ]}
-                      placeholder="Select contact..."
-                      searchPlaceholder="Search contacts..."
-                    />
-                  ) : ticket?.contact ? (
-                    <div className="flex items-center justify-between pl-6">
-                      <div>
-                        <p className="text-sm text-foreground">
-                          {ticket.contact.first_name} {ticket.contact.last_name}
-                        </p>
-                        {ticket.contact.email && (
-                          <p className="text-xs text-muted-foreground">{ticket.contact.email}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => updateTicketLinkMutation.mutate({ field: "contact_id", value: null })}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground pl-6">No contact linked</p>
-                  )}
-                </div>
+                ) : null}
+              </div>
+            </div>
 
-                {/* Supplier */}
-                <div className="border-b py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Supplier</span>
+            {/* Supplier Card */}
+            <div className={cn(
+              "group relative overflow-hidden rounded-xl border transition-all duration-200",
+              ticket?.supplier 
+                ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
+                : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+            )}>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+                      ticket?.supplier ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      <Package className="h-4 w-4" />
                     </div>
-                    <Button 
+                    <span className="text-sm font-semibold">Supplier</span>
+                  </div>
+                  <Button 
+                    variant={showSupplierLink ? "secondary" : "ghost"}
+                    size="sm" 
+                    className="h-7 px-2.5 text-xs font-medium"
+                    onClick={() => setShowSupplierLink(!showSupplierLink)}
+                  >
+                    {showSupplierLink ? "Cancel" : ticket?.supplier ? "Change" : "+ Link"}
+                  </Button>
+                </div>
+                
+                {showSupplierLink ? (
+                  <SelectWithSearch
+                    value={ticket?.supplier_id || ""}
+                    onValueChange={(value) => {
+                      updateTicketLinkMutation.mutate({ field: "supplier_id", value: value || null });
+                    }}
+                    options={[
+                      { value: "", label: "None" },
+                      ...(suppliers?.map((supplier) => ({
+                        value: supplier.id,
+                        label: supplier.name,
+                      })) || [])
+                    ]}
+                    placeholder="Select supplier..."
+                    searchPlaceholder="Search suppliers..."
+                  />
+                ) : ticket?.supplier ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                    <p className="text-sm font-medium text-foreground">{ticket.supplier.name}</p>
+                    <Button
                       variant="ghost"
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setShowSupplierLink(!showSupplierLink)}
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => updateTicketLinkMutation.mutate({ field: "supplier_id", value: null })}
                     >
-                      {ticket?.supplier ? "Change" : "+ Add"}
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  
-                  {showSupplierLink ? (
-                    <SelectWithSearch
-                      value={ticket?.supplier_id || ""}
-                      onValueChange={(value) => {
-                        updateTicketLinkMutation.mutate({ field: "supplier_id", value: value || null });
-                      }}
-                      options={[
-                        { value: "", label: "None" },
-                        ...(suppliers?.map((supplier) => ({
-                          value: supplier.id,
-                          label: supplier.name,
-                        })) || [])
-                      ]}
-                      placeholder="Select supplier..."
-                      searchPlaceholder="Search suppliers..."
-                    />
-                  ) : ticket?.supplier ? (
-                    <div className="flex items-center justify-between pl-6">
-                      <p className="text-sm text-foreground">{ticket.supplier.name}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => updateTicketLinkMutation.mutate({ field: "supplier_id", value: null })}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground pl-6">No supplier linked</p>
-                  )}
-                </div>
+                ) : null}
+              </div>
+            </div>
 
-                {/* Lead */}
-                <div className="border-b py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Lead</span>
+            {/* Lead Card */}
+            <div className={cn(
+              "group relative overflow-hidden rounded-xl border transition-all duration-200",
+              ticket?.lead 
+                ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
+                : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+            )}>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+                      ticket?.lead ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      <Briefcase className="h-4 w-4" />
                     </div>
-                    <Button 
+                    <span className="text-sm font-semibold">Lead</span>
+                  </div>
+                  <Button 
+                    variant={showLeadLink ? "secondary" : "ghost"}
+                    size="sm" 
+                    className="h-7 px-2.5 text-xs font-medium"
+                    onClick={() => setShowLeadLink(!showLeadLink)}
+                  >
+                    {showLeadLink ? "Cancel" : ticket?.lead ? "Change" : "+ Link"}
+                  </Button>
+                </div>
+                
+                {showLeadLink ? (
+                  <SelectWithSearch
+                    value={ticket?.lead_id || ""}
+                    onValueChange={(value) => {
+                      updateTicketLinkMutation.mutate({ field: "lead_id", value: value || null });
+                    }}
+                    options={[
+                      { value: "", label: "None" },
+                      ...(leads?.map((lead) => ({
+                        value: lead.id,
+                        label: `${lead.company_name}${lead.name ? ` - ${lead.name}` : ''}`,
+                      })) || [])
+                    ]}
+                    placeholder="Select lead..."
+                    searchPlaceholder="Search leads..."
+                  />
+                ) : ticket?.lead ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                    <p className="text-sm font-medium text-foreground">
+                      {ticket.lead.company_name} {ticket.lead.name && `· ${ticket.lead.name}`}
+                    </p>
+                    <Button
                       variant="ghost"
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setShowLeadLink(!showLeadLink)}
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => updateTicketLinkMutation.mutate({ field: "lead_id", value: null })}
                     >
-                      {ticket?.lead ? "Change" : "+ Add"}
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  
-                  {showLeadLink ? (
-                    <SelectWithSearch
-                      value={ticket?.lead_id || ""}
-                      onValueChange={(value) => {
-                        updateTicketLinkMutation.mutate({ field: "lead_id", value: value || null });
-                      }}
-                      options={[
-                        { value: "", label: "None" },
-                        ...(leads?.map((lead) => ({
-                          value: lead.id,
-                          label: `${lead.company_name}${lead.name ? ` - ${lead.name}` : ''}`,
-                        })) || [])
-                      ]}
-                      placeholder="Select lead..."
-                      searchPlaceholder="Search leads..."
-                    />
-                  ) : ticket?.lead ? (
-                    <div className="flex items-center justify-between pl-6">
-                      <p className="text-sm text-foreground">
-                        {ticket.lead.company_name} {ticket.lead.name && `· ${ticket.lead.name}`}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => updateTicketLinkMutation.mutate({ field: "lead_id", value: null })}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground pl-6">No lead linked</p>
-                  )}
-                </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* Documents Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Documents & Records</span>
+                <div className="h-px flex-1 bg-border" />
               </div>
 
-              {/* Documents Section - Simplified HubSpot style */}
-              <div className="space-y-1.5 mt-4">
-                {DOCUMENT_TYPES.map((docType) => {
-                  const docs = groupedDocs[docType.type] || [];
-                  const hasLinkedDocs = docs.length > 0;
+              {/* Document Type Cards */}
+              {DOCUMENT_TYPES.map((docType) => {
+              const docs = groupedDocs[docType.type] || [];
+              const hasLinkedDocs = docs.length > 0;
 
-                  return (
-                    <div key={docType.type} className="border-b py-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+              return (
+                <div
+                  key={docType.type}
+                  className={cn(
+                    "group relative overflow-hidden rounded-xl border transition-all duration-200",
+                    hasLinkedDocs 
+                      ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
+                      : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+                  )}
+                >
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn(
+                          "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+                          hasLinkedDocs ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                        )}>
                           {docType.icon}
-                          <span className="text-sm font-medium">{docType.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">{docType.label}</span>
                           {hasLinkedDocs && (
-                            <span className="text-xs text-muted-foreground">({docs.length})</span>
+                            <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-[10px] font-semibold rounded-full bg-primary/20 text-primary">
+                              {docs.length}
+                            </span>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => setShowDocLinks({ ...showDocLinks, [docType.type]: !showDocLinks[docType.type] })}
-                        >
-                          + Add
-                        </Button>
                       </div>
-
-                      {showDocLinks[docType.type] && (
-                        <div className="mt-2 pl-6">
-                          <DocumentLinkSearch
-                            docType={docType.type}
-                            ticketId={ticketId}
-                            onLinked={() => {
-                              setShowDocLinks({ ...showDocLinks, [docType.type]: false });
-                              queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
-                            }}
-                            onCustomerContactLinked={(customerId, contactId) => {
-                              if (customerId && !ticket?.customer_id) {
-                                updateTicketLinkMutation.mutate({ 
-                                  field: "customer_id", 
-                                  value: customerId 
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {hasLinkedDocs && (
-                        <div className="space-y-1 pl-6">
-                          {docs.map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="flex items-center justify-between py-1.5 text-sm group"
-                            >
-                              <span 
-                                className="text-foreground hover:text-primary cursor-pointer truncate"
-                                onClick={() => handleDocumentClick(docType.type, doc.document_id)}
-                              >
-                                {doc.document_number || doc.details?.title || 'Untitled'}
-                              </span>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenInNewTab(docType.type, doc.document_id);
-                                  }}
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    unlinkMutation.mutate(doc.id);
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {!hasLinkedDocs && !showDocLinks[docType.type] && (
-                        <p className="text-xs text-muted-foreground pl-6">
-                          No {docType.label.toLowerCase()} linked
-                        </p>
-                      )}
+                      <Button
+                        variant={showDocLinks[docType.type] ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-7 px-2.5 text-xs font-medium"
+                        onClick={() => setShowDocLinks({ ...showDocLinks, [docType.type]: !showDocLinks[docType.type] })}
+                      >
+                        {showDocLinks[docType.type] ? "Cancel" : hasLinkedDocs ? "Add More" : "+ Link"}
+                      </Button>
                     </div>
-                  );
-                })}
-              </div>
+
+                  {showDocLinks[docType.type] && (
+                    <div className="mt-2">
+                      <DocumentLinkSearch
+                        docType={docType.type}
+                        ticketId={ticketId}
+                        onLinked={() => {
+                          setShowDocLinks({ ...showDocLinks, [docType.type]: false });
+                          queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
+                        }}
+                        onCustomerContactLinked={(customerId, contactId) => {
+                          // Only update customer if we don't already have one and it's provided
+                          if (customerId && !ticket?.customer_id) {
+                            updateTicketLinkMutation.mutate({ 
+                              field: "customer_id", 
+                              value: customerId 
+                            });
+                          }
+                          
+                          // Contact linking now handled automatically via onCustomerContactLinked callback
+                        }}
+                      />
+                    </div>
+                  )}
+
+                    {hasLinkedDocs ? (
+                      <div className="space-y-2">
+                        {docs.map((doc, index) => {
+                      // Extract details from the fetched data
+                      const docData = doc.details;
+                      
+                      const getDocumentDetails = () => {
+                        switch (docType.type) {
+                          case 'service_order':
+                            return {
+                              title: docData?.work_order_number || doc.document_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.preferred_date,
+                              amount: docData?.total_amount,
+                              customer: docData?.customer?.name,
+                              description: docData?.description,
+                              label: 'Preferred Date'
+                            };
+                          case 'appointment':
+                            return {
+                              title: docData?.title || doc.document_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.start_time,
+                              time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null,
+                              location: docData?.location,
+                              label: 'Scheduled'
+                            };
+                          case 'quote':
+                            return {
+                              title: docData?.quote_number || doc.document_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.quote_date,
+                              amount: docData?.total,
+                              customer: docData?.customer?.name,
+                              label: 'Quote Date'
+                            };
+                          case 'invoice':
+                            return {
+                              title: docData?.invoice_number || doc.document_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.invoice_date,
+                              amount: docData?.total_amount,
+                              customer: docData?.customer?.name,
+                              label: 'Invoice Date'
+                            };
+                          case 'project':
+                            return {
+                              title: docData?.project_number || docData?.name || doc.document_number || 'Untitled',
+                              status: docData?.status,
+                              date: docData?.start_date,
+                              amount: docData?.budget,
+                              customer: docData?.customer?.name,
+                              label: 'Start Date'
+                            };
+                          case 'task':
+                            return {
+                              title: docData?.title || doc.document_number || 'Untitled',
+                              status: docData?.status,
+                              priority: docData?.priority,
+                              date: docData?.due_date,
+                              label: 'Due Date'
+                            };
+                          default:
+                            return { title: doc.document_number || 'Untitled' };
+                        }
+                      };
+                      
+                        const details = getDocumentDetails();
+                        
+                        return (
+                          <div
+                            key={doc.id}
+                            style={{ animationDelay: `${index * 40}ms` }}
+                            className="group relative p-3 rounded-lg border border-border/50 bg-gradient-to-br from-background to-muted/10 hover:from-background hover:to-muted/20 hover:border-primary/40 hover:shadow-lg transition-all duration-200 cursor-pointer animate-fade-in-up hover-lift"
+                            onClick={() => handleDocumentClick(docType.type, doc.document_id)}
+                          >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="font-bold text-sm text-foreground flex-1 group-hover:text-primary transition-colors">
+                              {details.title}
+                            </div>
+                            {details.status && (
+                              <span className={cn(
+                                "text-[10px] px-2 py-1 rounded-full shrink-0 font-bold uppercase tracking-wider transition-all",
+                                details.status === 'completed' && "bg-success/20 text-success border border-success/30",
+                                details.status === 'pending' && "bg-warning/15 text-warning border border-warning/30",
+                                details.status === 'in_progress' && "bg-info/15 text-info border border-info/30",
+                                details.status === 'cancelled' && "bg-destructive/15 text-destructive border border-destructive/30",
+                                details.status === 'draft' && "bg-muted text-muted-foreground border border-border",
+                                details.status === 'scheduled' && "bg-primary/15 text-primary border border-primary/30",
+                                details.status === 'confirmed' && "bg-success/15 text-success border border-success/30",
+                                details.status === 'sent' && "bg-info/15 text-info border border-info/30",
+                                details.status === 'accepted' && "bg-success/15 text-success border border-success/30"
+                              )}>
+                                {details.status.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {details.customer && (
+                              <div className="text-xs text-muted-foreground font-medium">
+                                {details.customer}
+                              </div>
+                            )}
+                            
+                            {details.description && docType.type === 'service_order' && (
+                              <div className="text-xs text-muted-foreground/80 line-clamp-2 italic">
+                                {details.description}
+                              </div>
+                            )}
+                            
+                            {details.location && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5 text-primary/60" />
+                                <span className="font-medium">{details.location}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between text-xs pt-1">
+                              {details.date && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-semibold">{details.label}:</span> {new Date(details.date).toLocaleDateString()}
+                                  {details.time && <div className="mt-0.5 text-[11px]">{details.time}</div>}
+                                </div>
+                              )}
+                              {details.amount && (
+                                <div className="font-bold text-sm text-foreground">
+                                  ${details.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {details.priority && (
+                              <span className={cn(
+                                "inline-flex text-xs px-2 py-1 rounded-full font-semibold border",
+                                details.priority === 'high' && "bg-destructive/15 text-destructive border-destructive/30",
+                                details.priority === 'medium' && "bg-warning/15 text-warning border-warning/30",
+                                details.priority === 'low' && "bg-success/15 text-success border-success/30"
+                              )}>
+                                {details.priority} priority
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 absolute top-10 right-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInNewTab(docType.type, doc.document_id);
+                              }}
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                unlinkMutation.mutate(doc.id);
+                              }}
+                              title="Unlink document"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
             </div>
           </ScrollArea>
         </TabsContent>
