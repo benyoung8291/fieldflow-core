@@ -89,7 +89,7 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     return "App";
   }, [pageName]);
 
-  // Cleanup function
+  // Cleanup function - stable reference with no dependencies
   const cleanup = useCallback(() => {
     console.log("[Presence] Cleaning up...");
     
@@ -104,17 +104,28 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     }
     
     if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+      try {
+        supabase.removeChannel(channelRef.current);
+      } catch (e) {
+        console.error("[Presence] Error removing channel:", e);
+      }
       channelRef.current = null;
     }
     
-    isInitializedRef.current = false;
     setIsConnected(false);
-  }, []);
+  }, []); // Empty deps for stable reference
 
-  // Update presence when page/document changes (separate effect to avoid re-subscription)
+  // Update presence when page/document changes (without re-subscribing)
   useEffect(() => {
-    if (!currentUser || !isConnected || !channelRef.current) return;
+    if (!currentUser || !isConnected || !channelRef.current) {
+      return;
+    }
+
+    // Only update if channel is in joined state
+    if (channelRef.current.state !== 'joined') {
+      console.log("[Presence] Channel not joined, skipping update. State:", channelRef.current.state);
+      return;
+    }
 
     const updatePresence = async () => {
       const currentPath = window.location.pathname + window.location.search;
@@ -139,11 +150,10 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     updatePresence();
   }, [currentUser, isConnected, pageName, documentId, documentType, getCurrentPage]);
 
-  // Main presence effect
+  // Main presence effect - runs once on mount
   useEffect(() => {
     if (!currentUser || !trackPresence) {
       console.log("[Presence] Not tracking - currentUser:", !!currentUser, "trackPresence:", trackPresence);
-      cleanup();
       return;
     }
 
@@ -154,12 +164,9 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     }
 
     console.log("[Presence] Initializing for user:", currentUser.name, currentUser.id);
-    const channelName = `team-presence-global-${currentUser.id}`;
-    
-    // Cleanup any existing channel first
-    cleanup();
+    isInitializedRef.current = true;
 
-    // Create channel with unique name per user
+    // Create channel with presence config
     const presenceChannel = supabase.channel("team-presence-global", {
       config: {
         presence: {
@@ -169,7 +176,6 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     });
     
     channelRef.current = presenceChannel;
-    isInitializedRef.current = true;
 
     // Handle presence sync - this is the source of truth for who's online
     presenceChannel.on("presence", { event: "sync" }, () => {
@@ -294,13 +300,14 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Cleanup
+    // Cleanup on unmount only
     return () => {
-      console.log("[Presence] Effect cleanup");
+      console.log("[Presence] Component unmounting");
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      isInitializedRef.current = false;
       cleanup();
     };
-  }, [currentUser, trackPresence, cleanup]); // Minimal deps - page/document updates handled in separate effect
+  }, [currentUser, trackPresence]); // Re-run if user loads or trackPresence changes, but isInitializedRef prevents re-init
 
   return {
     onlineUsers,
