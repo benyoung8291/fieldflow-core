@@ -23,6 +23,7 @@ import {
   Wrench,
   FileSignature,
   Headphones,
+  BookOpen,
 } from "lucide-react";
 
 interface SearchResult {
@@ -78,7 +79,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         projectsData,
         serviceOrdersData,
         contractsData,
-        helpdeskData
+        helpdeskData,
+        knowledgeData
       ] = await Promise.all([
         supabase
           .from("customers")
@@ -119,6 +121,12 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
           .from("helpdesk_tickets")
           .select("id, ticket_number, subject, sender_name, sender_email")
           .or(`ticket_number.ilike.%${query}%,subject.ilike.%${query}%,sender_name.ilike.%${query}%,sender_email.ilike.%${query}%`)
+          .limit(20),
+        supabase
+          .from("knowledge_articles")
+          .select("id, title, summary, knowledge_categories(name)")
+          .eq("status", "published")
+          .or(`title.ilike.%${query}%,summary.ilike.%${query}%,content.ilike.%${query}%`)
           .limit(20)
       ]);
 
@@ -130,7 +138,8 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         projects: projectsData.data || [],
         serviceOrders: serviceOrdersData.data || [],
         contracts: contractsData.data || [],
-        helpdesk: helpdeskData.data || []
+        helpdesk: helpdeskData.data || [],
+        knowledge: knowledgeData.data || []
       };
     },
     enabled: debouncedSearch.length >= 2,
@@ -187,6 +196,10 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
       ...h,
       searchText: `${h.ticket_number} ${h.subject || ''} ${h.sender_name || ''} ${h.sender_email || ''}`.toLowerCase()
     }));
+    const prepareKnowledge = allData.knowledge.map((k: any) => ({
+      ...k,
+      searchText: `${k.title} ${k.summary || ''} ${k.knowledge_categories?.name || ''}`.toLowerCase()
+    }));
 
     // Fuzzy search configuration
     const fuseOptions = {
@@ -205,6 +218,7 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
     const serviceOrdersFuse = new Fuse(prepareServiceOrders, fuseOptions);
     const contractsFuse = new Fuse(prepareContracts, fuseOptions);
     const helpdeskFuse = new Fuse(prepareHelpdesk, fuseOptions);
+    const knowledgeFuse = new Fuse(prepareKnowledge, fuseOptions);
 
     // Get results
     customersFuse.search(searchQuery).forEach(result => {
@@ -299,6 +313,19 @@ export function GlobalSearch({ open: externalOpen, setOpen: externalSetOpen }: G
         type: "helpdesk",
         route: `/helpdesk?ticket=${result.item.id}`,
         icon: Headphones,
+        score: result.score || 1
+      });
+    });
+
+    knowledgeFuse.search(searchQuery).forEach(result => {
+      const item = result.item as any;
+      allResults.push({
+        id: item.id,
+        title: item.title || "Article",
+        subtitle: item.knowledge_categories?.name || item.summary,
+        type: "knowledge",
+        route: `/knowledge-base/${item.id}`,
+        icon: BookOpen,
         score: result.score || 1
       });
     });
