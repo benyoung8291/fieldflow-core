@@ -1610,6 +1610,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "document_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "document_notes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
