@@ -59,6 +59,8 @@ import { SchemaValidatorTab } from "@/components/settings/SchemaValidatorTab";
 import { PerformanceMonitorTab } from "@/components/settings/PerformanceMonitorTab";
 import APInvoiceSettingsTab from "@/components/settings/APInvoiceSettingsTab";
 import { BugReportsList } from "@/components/settings/BugReportsList";
+import { TeamsTab } from "@/components/settings/TeamsTab";
+import { TeamOnboardingSteps } from "@/components/settings/TeamOnboardingSteps";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck, FileCheck } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -104,6 +106,7 @@ const settingsNavigation: SettingsNavGroup[] = [
     group: "Team",
     items: [
       { title: "Members", value: "users", icon: Users },
+      { title: "Teams", value: "teams", icon: Users },
       { title: "Roles & Permissions", value: "permissions", icon: Shield },
       { title: "Pay Rates", value: "pay-rates", icon: DollarSign },
     ]
@@ -473,6 +476,14 @@ export default function Settings() {
               <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <UserManagementTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "teams" && (
+              <Card className="border-none shadow-sm">
+                <CardContent className="pt-6">
+                  <TeamsTab />
                 </CardContent>
               </Card>
             )}

@@ -87,6 +87,7 @@ import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
 import { useRealtimeNotifications } from "./hooks/useNotifications";
 import { MobileBottomNav } from "./components/layout/MobileBottomNav";
 import { WorkerMobileBottomNav } from "./components/layout/WorkerMobileBottomNav";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -183,6 +184,7 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
+              {isAuthenticated && <OnboardingWizard />}
               <MobileBottomNav />
               <WorkerMobileBottomNav />
               <Routes>
