@@ -129,7 +129,7 @@ export function LinkedDocumentDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <DialogTitle className="text-xl">{getDocumentTitle()}</DialogTitle>
           <Button
@@ -143,14 +143,15 @@ export function LinkedDocumentDetailsDialog({
           </Button>
         </DialogHeader>
 
-{isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : document ? (
-          documentType === "service_order" ? (
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : document ? (
+            documentType === "service_order" ? (
+              <Tabs defaultValue="overview" className="w-full h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-5 flex-shrink-0">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="appointments">Appointments</TabsTrigger>
                 <TabsTrigger value="invoices">Invoices</TabsTrigger>
@@ -158,7 +159,7 @@ export function LinkedDocumentDetailsDialog({
                 <TabsTrigger value="notes">Notes</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="space-y-4 mt-4">
+              <TabsContent value="overview" className="space-y-4 mt-4 flex-1 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
                   {document.customer && (
                     <div>
@@ -236,7 +237,7 @@ export function LinkedDocumentDetailsDialog({
                 )}
               </TabsContent>
 
-              <TabsContent value="appointments" className="mt-4">
+              <TabsContent value="appointments" className="mt-4 flex-1 overflow-y-auto">
                 {isLoadingRelated ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -267,7 +268,7 @@ export function LinkedDocumentDetailsDialog({
                 )}
               </TabsContent>
 
-              <TabsContent value="invoices" className="mt-4">
+              <TabsContent value="invoices" className="mt-4 flex-1 overflow-y-auto">
                 {isLoadingRelated ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -299,7 +300,7 @@ export function LinkedDocumentDetailsDialog({
                 )}
               </TabsContent>
 
-              <TabsContent value="expenses" className="mt-4">
+              <TabsContent value="expenses" className="mt-4 flex-1 overflow-y-auto">
                 {isLoadingRelated ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -333,7 +334,7 @@ export function LinkedDocumentDetailsDialog({
                 )}
               </TabsContent>
 
-              <TabsContent value="notes" className="mt-4">
+              <TabsContent value="notes" className="mt-4 flex-1 overflow-y-auto">
                 {isLoadingRelated ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -406,11 +407,12 @@ export function LinkedDocumentDetailsDialog({
               )}
             </div>
           )
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            Document not found
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Document not found
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
