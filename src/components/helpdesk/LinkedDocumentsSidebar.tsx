@@ -840,7 +840,12 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
         </TabsContent>
 
         <TabsContent value="actions" className="flex-1 mt-0 p-0">
-          <QuickActionsTab ticket={ticket} />
+          <QuickActionsTab 
+            ticket={ticket} 
+            onDocumentLinked={() => {
+              queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
+            }}
+          />
         </TabsContent>
       </Tabs>
 
