@@ -14,6 +14,7 @@ import { InlineNoteEditor } from "./InlineNoteEditor";
 import { InlineTaskEditor } from "./InlineTaskEditor";
 import { InlineCheckboxEditor } from "./InlineCheckboxEditor";
 import { AttachmentViewer } from "./AttachmentViewer";
+import { EmailTextSelector } from "./EmailTextSelector";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
@@ -775,11 +776,13 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                               </span>
                             </div>
                             <div className="text-sm">
-                              {message.body_html ? (
-                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.body_html) }} />
-                              ) : (
-                                <div>{message.body_text || message.body}</div>
-                              )}
+                              <EmailTextSelector ticketId={ticketId}>
+                                {message.body_html ? (
+                                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.body_html) }} />
+                                ) : (
+                                  <div>{message.body_text || message.body}</div>
+                                )}
+                              </EmailTextSelector>
                             </div>
                           </Card>
                         </div>
@@ -882,6 +885,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
           isSending={sendReplyMutation.isPending}
           emailThread={emailThread}
+          ticketId={ticketId}
         />
       </div>
     </div>
