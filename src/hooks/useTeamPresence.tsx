@@ -117,10 +117,12 @@ export const useTeamPresence = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase.channel("team-presence", {
+    console.log("[Team Presence] Initializing for user:", currentUser.name);
+
+    const channel = supabase.channel("team-presence-global", {
       config: {
         presence: {
-          key: currentUser.id, // Use user ID as key to deduplicate
+          key: currentUser.id,
         },
       },
     });
@@ -139,9 +141,17 @@ export const useTeamPresence = () => {
           }
         });
 
+        console.log("[Team Presence] Synced users:", users.length, users);
         setActiveUsers(users);
       })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        console.log("[Team Presence] User joined:", key, newPresences);
+      })
+      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        console.log("[Team Presence] User left:", key, leftPresences);
+      })
       .subscribe(async (status) => {
+        console.log("[Team Presence] Subscription status:", status);
         if (status === "SUBSCRIBED") {
           updatePresence();
         }
@@ -151,7 +161,7 @@ export const useTeamPresence = () => {
       const currentPath = location.pathname;
       const documentInfo = getDocumentInfo(currentPath, params);
       
-      channel.track({
+      const presenceData = {
         user_id: currentUser.id,
         user_name: currentUser.name,
         avatar_url: currentUser.avatar_url,
@@ -159,7 +169,10 @@ export const useTeamPresence = () => {
         current_path: currentPath,
         ...documentInfo,
         online_at: new Date().toISOString(),
-      });
+      };
+      
+      console.log("[Team Presence] Tracking presence:", presenceData);
+      channel.track(presenceData);
     };
 
     // Update presence on location change

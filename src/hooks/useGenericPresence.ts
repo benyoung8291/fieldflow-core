@@ -64,9 +64,18 @@ export function useGenericPresence({
   useEffect(() => {
     if (!currentUser) return;
 
-    const presenceChannel = supabase.channel("dashboard-presence");
+    console.log("[Generic Presence] Initializing for:", moduleName, recordId);
+
+    const presenceChannel = supabase.channel("team-presence-global", {
+      config: {
+        presence: {
+          key: currentUser.id,
+        },
+      },
+    });
 
     presenceChannel.subscribe(async (status) => {
+      console.log("[Generic Presence] Subscription status:", status);
       if (status === "SUBSCRIBED") {
         const currentPath = window.location.pathname + window.location.search;
         let pageName = moduleName;
@@ -78,13 +87,18 @@ export function useGenericPresence({
           pageName = `${moduleName}: ${identifier}`;
         }
 
-        await presenceChannel.track({
+        const presenceData = {
           user_id: currentUser.id,
           user_name: currentUser.name,
           current_page: pageName,
           current_path: currentPath,
+          document_id: recordId,
+          document_type: tableName,
           online_at: new Date().toISOString(),
-        });
+        };
+
+        console.log("[Generic Presence] Tracking:", presenceData);
+        await presenceChannel.track(presenceData);
       }
     });
 

@@ -228,8 +228,12 @@ export function useRealtimeNotifications() {
   useEffect(() => {
     const initNotifications = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log("[Notifications] No user found");
+        return;
+      }
 
+      console.log("[Notifications] Initializing for user:", user.id);
       setCurrentUserId(user.id);
 
       // Listen for task assignments
@@ -244,6 +248,7 @@ export function useRealtimeNotifications() {
             filter: `assigned_to=eq.${user.id}`,
           },
           async (payload) => {
+            console.log("[Notifications] Task INSERT:", payload);
             const task = payload.new;
             
             // Fetch task creator info
@@ -269,6 +274,7 @@ export function useRealtimeNotifications() {
             filter: `assigned_to=eq.${user.id}`,
           },
           async (payload) => {
+            console.log("[Notifications] Task UPDATE:", payload);
             const oldTask = payload.old;
             const newTask = payload.new;
 
@@ -288,7 +294,9 @@ export function useRealtimeNotifications() {
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("[Notifications] Channel status:", status);
+        });
 
       return () => {
         supabase.removeChannel(tasksChannel);

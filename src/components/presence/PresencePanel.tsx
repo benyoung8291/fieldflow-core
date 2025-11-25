@@ -10,13 +10,13 @@ export default function PresencePanel() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const presenceChannel = supabase.channel('dashboard-presence');
+    const presenceChannel = supabase.channel('team-presence-global');
 
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
-        // Count unique users excluding self
         const userCount = Object.keys(state).length;
+        console.log("[Presence Panel] Active users:", userCount, state);
         setActiveUserCount(userCount > 0 ? userCount - 1 : 0);
       })
       .subscribe();
