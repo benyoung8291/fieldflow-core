@@ -11,6 +11,9 @@ serve(async (req) => {
   try {
     // Get JWT token from Authorization header
     const authHeader = req.headers.get("Authorization");
+    console.log("Authorization header present:", !!authHeader);
+    console.log("Authorization header value:", authHeader ? `${authHeader.substring(0, 20)}...` : "none");
+    
     if (!authHeader) {
       throw new Error("Missing authorization header");
     }
@@ -27,7 +30,14 @@ serve(async (req) => {
 
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    console.log("Auth check - Error:", authError?.message, "User:", user?.id);
+    
     if (authError || !user) {
+      console.error("Authentication failed:", { 
+        error: authError?.message, 
+        hasUser: !!user,
+        authHeader: authHeader ? "present" : "missing"
+      });
       throw new Error("Unauthorized: Invalid or missing authentication");
     }
 
