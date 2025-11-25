@@ -69,12 +69,11 @@ serve(async (req) => {
       </html>
     `
 
-    // Note: This is a placeholder. In production, use a proper PDF generation service
-    // For now, we'll return HTML that can be printed to PDF by the browser
+    // Return HTML optimized for printing to PDF
     return new Response(html, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'text/html',
+        'Content-Type': 'text/html; charset=utf-8',
       },
     })
 

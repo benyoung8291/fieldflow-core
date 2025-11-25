@@ -117,21 +117,16 @@ export function KnowledgeArticleView({
 
   const handleExportPDF = async () => {
     toast({
-      title: "Exporting...",
-      description: "Generating PDF export",
+      title: "Preparing export...",
+      description: "Opening print dialog",
     });
 
     const result = await exportArticleToPDF(article.id, article.title);
     
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: "Article exported to PDF",
-      });
-    } else {
+    if (!result.success) {
       toast({
         title: "Error",
-        description: "Failed to export article",
+        description: result.error instanceof Error ? result.error.message : "Failed to export article",
         variant: "destructive",
       });
     }

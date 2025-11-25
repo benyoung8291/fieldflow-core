@@ -8,20 +8,21 @@ export async function exportArticleToPDF(articleId: string, articleTitle: string
 
     if (error) throw error;
 
-    // Create a blob from the PDF data
-    const blob = new Blob([data], { type: "application/pdf" });
-    const url = window.URL.createObjectURL(blob);
+    // The edge function returns HTML for printing
+    // Open in new window and trigger print dialog
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      throw new Error('Pop-up blocked. Please allow pop-ups for this site.');
+    }
     
-    // Create a temporary link and trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${articleTitle.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    printWindow.document.write(data);
+    printWindow.document.close();
     
-    // Clean up
-    window.URL.revokeObjectURL(url);
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
     
     return { success: true };
   } catch (error) {
