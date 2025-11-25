@@ -23,60 +23,42 @@ export function PolicyDocumentRenderer({
   const parseMarkdown = (text: string): string => {
     let html = text;
     
-    // Headers (###, ##, #)
+    // Bold text first: **text** -> <strong>text</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
+    
+    // Italic text: *text* -> <em>text</em>
+    html = html.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+    
+    // Headers (must be done before line breaks)
     html = html.replace(/^#### (.+)$/gm, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
     html = html.replace(/^### (.+)$/gm, '<h3 class="text-xl font-semibold mt-6 mb-3">$1</h3>');
     html = html.replace(/^## (.+)$/gm, '<h2 class="text-2xl font-bold mt-8 mb-4">$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1 class="text-3xl font-bold mt-8 mb-4">$1</h1>');
     
-    // Tables - convert pipe tables to HTML tables
-    html = html.replace(/\n(\|.+\|\n)+/g, (match) => {
-      const rows = match.trim().split('\n');
-      const headerRow = rows[0];
-      const separatorRow = rows[1];
-      const bodyRows = rows.slice(2);
-      
-      if (separatorRow && separatorRow.match(/\|[-:\s]+\|/)) {
-        const headers = headerRow.split('|').map(h => h.trim()).filter(h => h);
-        const tableRows = bodyRows.map(row => 
-          row.split('|').map(cell => cell.trim()).filter(cell => cell)
-        );
-        
-        let tableHtml = '<table class="w-full my-4 border-collapse"><thead><tr>';
-        headers.forEach(header => {
-          tableHtml += `<th class="border border-border p-2 text-left font-semibold bg-muted">${header}</th>`;
-        });
-        tableHtml += '</tr></thead><tbody>';
-        
-        tableRows.forEach(row => {
-          tableHtml += '<tr>';
-          row.forEach(cell => {
-            tableHtml += `<td class="border border-border p-2">${cell}</td>`;
-          });
-          tableHtml += '</tr>';
-        });
-        
-        tableHtml += '</tbody></table>';
-        return tableHtml;
+    // Unordered lists (- or *)
+    html = html.replace(/^[\*\-] (.+)$/gm, '<li class="ml-6 my-1">$1</li>');
+    html = html.replace(/(<li class="ml-6 my-1">.+?<\/li>\s*)+/gs, '<ul class="list-disc list-outside my-3 space-y-1">$&</ul>');
+    
+    // Ordered lists
+    html = html.replace(/^\d+\.\s+(.+)$/gm, '<li class="ml-6 my-1">$1</li>');
+    html = html.replace(/(<li class="ml-6 my-1">.+?<\/li>\s*)+/gs, (match) => {
+      // Only wrap if it's not already wrapped in ul
+      if (!match.includes('<ul')) {
+        return `<ol class="list-decimal list-outside my-3 space-y-1">${match}</ol>`;
       }
       return match;
     });
     
-    // Unordered lists
-    html = html.replace(/^\* (.+)$/gm, '<li class="ml-4">$1</li>');
-    html = html.replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>');
-    html = html.replace(/(<li class="ml-4">.+<\/li>\n?)+/g, '<ul class="list-disc list-inside my-2">$&</ul>');
+    // Paragraphs - preserve double line breaks as paragraph breaks
+    html = html.replace(/\n\n+/g, '</p><p class="my-3">');
+    html = `<p class="my-3">${html}</p>`;
     
-    // Ordered lists
-    html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4">$1</li>');
+    // Single line breaks within paragraphs
+    html = html.replace(/\n(?!<)/g, '<br />');
     
-    // Bold text: **text** -> <strong>text</strong>
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    
-    // Italic text: *text* -> <em>text</em> (but not already processed asterisks)
-    html = html.replace(/(?<![*\w])\*([^*]+)\*(?![*\w])/g, '<em>$1</em>');
-    
-    // Line breaks
-    html = html.replace(/\n/g, '<br />');
+    // Clean up empty paragraphs
+    html = html.replace(/<p class="my-3"><\/p>/g, '');
+    html = html.replace(/<p class="my-3">\s*<br \/>\s*<\/p>/g, '');
     
     return html;
   };
