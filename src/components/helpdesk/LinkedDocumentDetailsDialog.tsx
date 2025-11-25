@@ -34,7 +34,7 @@ export function LinkedDocumentDetailsDialog({
       };
 
       const selectMap: Record<string, string> = {
-        service_order: "*, customer:customers(name), location:customer_locations(name, formatted_address), assigned_to:profiles(first_name, last_name)",
+        service_order: "*, customer:customers(name), location:customer_locations!location_id(name, formatted_address)",
         quote: "*, customer:customers(name)",
         invoice: "*, customer:customers(name)",
         project: "*, customer:customers(name)",
@@ -142,15 +142,6 @@ export function LinkedDocumentDetailsDialog({
                     </div>
                   )}
                 </div>
-
-                {document.assigned_to && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Assigned To</div>
-                    <div className="text-base">
-                      {document.assigned_to.first_name} {document.assigned_to.last_name}
-                    </div>
-                  </div>
-                )}
 
                 {document.location && (
                   <div>
