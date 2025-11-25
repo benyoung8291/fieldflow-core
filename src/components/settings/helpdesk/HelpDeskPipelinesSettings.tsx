@@ -1,11 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { HelpDeskPipelineDialog } from "./HelpDeskPipelineDialog";
+import { HelpDeskPipelineUserAssignments } from "./HelpDeskPipelineUserAssignments";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,33 +107,49 @@ export function HelpDeskPipelinesSettings() {
               key={pipeline.id}
               className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
             >
-              <div className="flex items-center gap-3 flex-1">
-                <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
-                <div
-                  className="h-8 w-8 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: pipeline.color + "20" }}
-                >
+              <Collapsible className="flex-1">
+                <div className="flex items-center gap-3 flex-1">
+                  <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
                   <div
-                    className="h-4 w-4 rounded-full"
-                    style={{ backgroundColor: pipeline.color }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{pipeline.name}</span>
-                    {!pipeline.is_active && (
-                      <Badge variant="secondary" className="text-xs">
-                        Inactive
-                      </Badge>
+                    className="h-8 w-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: pipeline.color + "20" }}
+                  >
+                    <div
+                      className="h-4 w-4 rounded-full"
+                      style={{ backgroundColor: pipeline.color }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{pipeline.name}</span>
+                      {!pipeline.is_active && (
+                        <Badge variant="secondary" className="text-xs">
+                          Inactive
+                        </Badge>
+                      )}
+                      {pipeline.requires_assignment && (
+                        <Badge variant="outline" className="text-xs">
+                          Requires Assignment
+                        </Badge>
+                      )}
+                    </div>
+                    {pipeline.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {pipeline.description}
+                      </p>
                     )}
                   </div>
-                  {pipeline.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {pipeline.description}
-                    </p>
-                  )}
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Users className="h-4 w-4 mr-2" />
+                      Manage Users
+                    </Button>
+                  </CollapsibleTrigger>
                 </div>
-              </div>
+                <CollapsibleContent className="mt-4 ml-16">
+                  <HelpDeskPipelineUserAssignments pipelineId={pipeline.id} />
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="flex items-center gap-2">
                 <Button

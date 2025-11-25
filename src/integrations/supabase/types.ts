@@ -2323,6 +2323,59 @@ export type Database = {
           },
         ]
       }
+      helpdesk_pipeline_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          pipeline_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          pipeline_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          pipeline_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helpdesk_pipeline_users_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_pipeline_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_pipeline_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_pipeline_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       helpdesk_pipelines: {
         Row: {
           color: string
@@ -2332,6 +2385,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          requires_assignment: boolean | null
           tenant_id: string
           updated_at: string
         }
@@ -2343,6 +2397,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          requires_assignment?: boolean | null
           tenant_id: string
           updated_at?: string
         }
@@ -2354,6 +2409,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          requires_assignment?: boolean | null
           tenant_id?: string
           updated_at?: string
         }

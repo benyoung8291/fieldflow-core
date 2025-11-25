@@ -35,6 +35,7 @@ interface TicketListProps {
   onSelectTicket: (ticketId: string) => void;
   pipelineId?: string | null;
   filterAssignment?: "all" | "unassigned" | "assigned_to_me";
+  filterUserId?: string | null;
   filterArchived?: boolean;
   selectedFolder?: MailboxFolder;
 }
@@ -43,7 +44,8 @@ export function TicketList({
   selectedTicketId, 
   onSelectTicket, 
   pipelineId, 
-  filterAssignment = "all", 
+  filterAssignment = "assigned_to_me", 
+  filterUserId = null,
   filterArchived = false,
   selectedFolder = "inbox"
 }: TicketListProps) {
@@ -251,11 +253,19 @@ export function TicketList({
     
     const matchesPipeline = !pipelineId || ticket.pipeline_id === pipelineId;
     
-    const matchesAssignment = 
-      filterAssignment === "all" ? true :
-      filterAssignment === "unassigned" ? !ticket.assigned_to :
-      filterAssignment === "assigned_to_me" ? ticket.assigned_to === currentUser?.id :
-      true;
+    // Assignment filtering - check both filterAssignment and filterUserId
+    const matchesAssignment = (() => {
+      // If a specific user is selected, filter by that user
+      if (filterUserId) {
+        return ticket.assigned_to === filterUserId;
+      }
+      
+      // Otherwise use the quick filter
+      if (filterAssignment === "all") return true;
+      if (filterAssignment === "unassigned") return !ticket.assigned_to;
+      if (filterAssignment === "assigned_to_me") return ticket.assigned_to === currentUser?.id;
+      return true;
+    })();
     
     // Folder filtering
     const matchesFolder = (() => {

@@ -42,7 +42,8 @@ export default function HelpDesk() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("all");
+  const [filterAssignment, setFilterAssignment] = useState<"all" | "unassigned" | "assigned_to_me">("assigned_to_me");
+  const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [selectedFolder, setSelectedFolder] = useState<MailboxFolder>("inbox");
@@ -50,16 +51,52 @@ export default function HelpDesk() {
   // Track presence for this user showing what ticket they're viewing
   useHelpdeskPresence(selectedTicketId);
 
+  // Fetch current user and their role
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user-helpdesk"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+
+      const isAboveWorker = roles?.some(r => 
+        r.role === "tenant_admin" || 
+        r.role === "supervisor" || 
+        r.role === "management"
+      );
+
+      return { ...profile, isAboveWorker };
+    },
+  });
+
   useEffect(() => {
     // Load last used filter from localStorage
     const lastFilter = localStorage.getItem('helpdeskLastFilter');
+    const lastUserId = localStorage.getItem('helpdeskLastUserId');
+    
     if (lastFilter && (lastFilter === 'all' || lastFilter === 'unassigned' || lastFilter === 'assigned_to_me')) {
       setFilterAssignment(lastFilter as any);
     } else {
-      // Default to "all" to show all tickets initially
-      setFilterAssignment('all');
+      // Default to "assigned_to_me" to show user's tickets initially
+      setFilterAssignment('assigned_to_me');
     }
-  }, []);
+
+    if (lastUserId) {
+      setFilterUserId(lastUserId);
+    } else if (currentUser?.id) {
+      setFilterUserId(currentUser.id);
+    }
+  }, [currentUser?.id]);
 
   // Handle ticket selection from URL params (e.g., from search)
   // URL is the single source of truth - only sync URL to state
@@ -86,16 +123,61 @@ export default function HelpDesk() {
     }
   }, [searchParams.get("ticket")]);
 
+  // Fetch pipelines filtered by user access
   const { data: pipelines } = useQuery({
-    queryKey: ["helpdesk-pipelines"],
+    queryKey: ["helpdesk-pipelines", currentUser?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!currentUser) return [];
+
+      const { data: allPipelines, error } = await supabase
         .from("helpdesk_pipelines" as any)
         .select("*")
         .order("name");
+      
       if (error) throw error;
-      return data as any[];
+
+      // If user is above worker, they can see all pipelines
+      if (currentUser.isAboveWorker) {
+        return allPipelines as any[];
+      }
+
+      // Otherwise, filter to only pipelines the user is assigned to
+      const { data: assignments, error: assignError } = await supabase
+        .from("helpdesk_pipeline_users" as any)
+        .select("pipeline_id")
+        .eq("user_id", currentUser.id);
+
+      if (assignError) throw assignError;
+
+      const assignedPipelineIds = new Set(assignments?.map((a: any) => a.pipeline_id) || []);
+
+      // If user has no specific assignments, they can see all pipelines
+      if (assignedPipelineIds.size === 0) {
+        return allPipelines as any[];
+      }
+
+      // Filter to assigned pipelines
+      return (allPipelines || []).filter((p: any) => assignedPipelineIds.has(p.id));
     },
+    enabled: !!currentUser,
+  });
+
+  // Fetch all users for the filter dropdown
+  const { data: allUsers } = useQuery({
+    queryKey: ["helpdesk-all-users"],
+    queryFn: async () => {
+      if (!currentUser) return [];
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email")
+        .eq("tenant_id", currentUser.tenant_id)
+        .order("first_name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentUser,
   });
 
   // Load last selected pipeline from localStorage
@@ -112,7 +194,7 @@ export default function HelpDesk() {
     }
   }, [pipelines]);
 
-  // Save selected pipeline to localStorage when it changes
+  // Save selected pipeline and filters to localStorage when they change
   useEffect(() => {
     if (selectedPipelineId !== null) {
       localStorage.setItem('helpdeskLastPipeline', selectedPipelineId);
@@ -120,6 +202,16 @@ export default function HelpDesk() {
       localStorage.setItem('helpdeskLastPipeline', 'all');
     }
   }, [selectedPipelineId]);
+
+  useEffect(() => {
+    localStorage.setItem('helpdeskLastFilter', filterAssignment);
+  }, [filterAssignment]);
+
+  useEffect(() => {
+    if (filterUserId) {
+      localStorage.setItem('helpdeskLastUserId', filterUserId);
+    }
+  }, [filterUserId]);
 
   const { data: emailAccounts } = useQuery({
     queryKey: ["helpdesk-email-accounts-active"],
@@ -357,6 +449,9 @@ export default function HelpDesk() {
               className="h-8 text-sm"
               onClick={() => {
                 setFilterAssignment("assigned_to_me");
+                if (currentUser?.id) {
+                  setFilterUserId(currentUser.id);
+                }
                 localStorage.setItem('helpdeskLastFilter', 'assigned_to_me');
               }}
             >
@@ -368,6 +463,7 @@ export default function HelpDesk() {
               className="h-8 text-sm"
               onClick={() => {
                 setFilterAssignment("unassigned");
+                setFilterUserId(null);
                 localStorage.setItem('helpdeskLastFilter', 'unassigned');
               }}
             >
@@ -379,11 +475,37 @@ export default function HelpDesk() {
               className="h-8 text-sm"
               onClick={() => {
                 setFilterAssignment("all");
+                setFilterUserId(null);
                 localStorage.setItem('helpdeskLastFilter', 'all');
               }}
             >
               All
             </Button>
+            
+            {/* User Filter Dropdown */}
+            <Select 
+              value={filterUserId || "none"} 
+              onValueChange={(value) => {
+                if (value === "none") {
+                  setFilterUserId(null);
+                } else {
+                  setFilterUserId(value);
+                  setFilterAssignment("all");
+                }
+              }}
+            >
+              <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectValue placeholder="Filter by user" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">All Users</SelectItem>
+                {allUsers?.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.first_name} {user.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
             
           <Select value={selectedPipelineId || "all"} onValueChange={(value) => setSelectedPipelineId(value === "all" ? null : value)}>
@@ -454,6 +576,7 @@ export default function HelpDesk() {
               onSelectTicket={handleSelectTicket}
               pipelineId={selectedPipelineId}
               filterAssignment={filterAssignment}
+              filterUserId={filterUserId}
               filterArchived={filterArchived}
               selectedFolder={selectedFolder}
             />

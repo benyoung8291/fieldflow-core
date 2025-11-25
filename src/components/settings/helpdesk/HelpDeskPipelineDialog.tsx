@@ -44,6 +44,7 @@ export function HelpDeskPipelineDialog({
     description: "",
     color: "#0891B2",
     is_active: true,
+    requires_assignment: true,
   });
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export function HelpDeskPipelineDialog({
         description: pipeline.description || "",
         color: pipeline.color || "#0891B2",
         is_active: pipeline.is_active ?? true,
+        requires_assignment: pipeline.requires_assignment ?? true,
       });
     } else {
       setFormData({
@@ -60,6 +62,7 @@ export function HelpDeskPipelineDialog({
         description: "",
         color: "#0891B2",
         is_active: true,
+        requires_assignment: true,
       });
     }
   }, [pipeline, open]);
@@ -172,6 +175,22 @@ export function HelpDeskPipelineDialog({
               checked={formData.is_active}
               onCheckedChange={(checked) =>
                 setFormData({ ...formData, is_active: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="requires_assignment">Requires Assignment</Label>
+              <p className="text-sm text-muted-foreground">
+                Tickets must be assigned to users (default view)
+              </p>
+            </div>
+            <Switch
+              id="requires_assignment"
+              checked={formData.requires_assignment}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, requires_assignment: checked })
               }
             />
           </div>
