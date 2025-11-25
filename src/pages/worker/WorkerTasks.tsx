@@ -150,41 +150,48 @@ export default function WorkerTasks() {
   }
 
   return (
-    <div className="container mx-auto px-4 pt-16 pb-20 space-y-4">{/* Added pt-16 for mobile header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Tasks</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCompleted(!showCompleted)}
-          >
-            {showCompleted ? 'Hide' : 'Show'} Completed
-          </Button>
-          <Badge variant="outline" className="text-lg">
-            {tasks.filter((t: any) => t.status !== 'completed').length}
-          </Badge>
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3">
+          <h1 className="text-base font-semibold">My Tasks</h1>
         </div>
-      </div>
+      </header>
 
-      {tasks.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No tasks assigned</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* Overdue Tasks */}
-          {groupedTasks.overdue.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                <h2 className="text-lg font-semibold text-destructive">
-                  Overdue ({groupedTasks.overdue.length})
-                </h2>
-              </div>
+      <div className="px-4 pt-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="h-8 text-xs"
+            >
+              {showCompleted ? 'Hide' : 'Show'} Completed
+            </Button>
+            <Badge variant="outline" className="text-sm">
+              {tasks.filter((t: any) => t.status !== 'completed').length}
+            </Badge>
+          </div>
+        </div>
+
+        {tasks.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <CheckCircle2 className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No tasks assigned</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {/* Overdue Tasks */}
+            {groupedTasks.overdue.length > 0 && (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 px-1">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <h2 className="text-sm font-semibold text-destructive">
+                    Overdue ({groupedTasks.overdue.length})
+                  </h2>
+                </div>
               {groupedTasks.overdue.map((task: any) => (
                 <TaskCard
                   key={task.id}
@@ -194,19 +201,19 @@ export default function WorkerTasks() {
                   onMarkInProgress={handleMarkInProgress}
                   getDueDateLabel={getDueDateLabel}
                 />
-              ))}
-            </div>
-          )}
-
-          {/* Today's Tasks */}
-          {groupedTasks.today.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-warning" />
-                <h2 className="text-lg font-semibold">
-                  Today ({groupedTasks.today.length})
-                </h2>
+                ))}
               </div>
+            )}
+
+            {/* Today's Tasks */}
+            {groupedTasks.today.length > 0 && (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 px-1">
+                  <Calendar className="h-4 w-4 text-warning" />
+                  <h2 className="text-sm font-semibold">
+                    Today ({groupedTasks.today.length})
+                  </h2>
+                </div>
               {groupedTasks.today.map((task: any) => (
                 <TaskCard
                   key={task.id}
@@ -216,16 +223,16 @@ export default function WorkerTasks() {
                   onMarkInProgress={handleMarkInProgress}
                   getDueDateLabel={getDueDateLabel}
                 />
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {/* Upcoming Tasks */}
-          {groupedTasks.upcoming.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold">
-                Upcoming ({groupedTasks.upcoming.length})
-              </h2>
+            {/* Upcoming Tasks */}
+            {groupedTasks.upcoming.length > 0 && (
+              <div className="space-y-2.5">
+                <h2 className="text-sm font-semibold px-1">
+                  Upcoming ({groupedTasks.upcoming.length})
+                </h2>
               {groupedTasks.upcoming.map((task: any) => (
                 <TaskCard
                   key={task.id}
@@ -235,16 +242,16 @@ export default function WorkerTasks() {
                   onMarkInProgress={handleMarkInProgress}
                   getDueDateLabel={getDueDateLabel}
                 />
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {/* Completed Tasks */}
-          {showCompleted && groupedTasks.completed.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-muted-foreground">
-                Completed ({groupedTasks.completed.length})
-              </h2>
+            {/* Completed Tasks */}
+            {showCompleted && groupedTasks.completed.length > 0 && (
+              <div className="space-y-2.5">
+                <h2 className="text-sm font-semibold text-muted-foreground px-1">
+                  Completed ({groupedTasks.completed.length})
+                </h2>
               {groupedTasks.completed.map((task: any) => (
                 <TaskCard
                   key={task.id}
@@ -254,11 +261,12 @@ export default function WorkerTasks() {
                   onMarkInProgress={handleMarkInProgress}
                   getDueDateLabel={getDueDateLabel}
                 />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Task Details Dialog */}
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
@@ -366,10 +374,10 @@ function TaskCard({ task, onSelect, onMarkComplete, onMarkInProgress, getDueDate
 
   return (
     <Card 
-      className="cursor-pointer hover:border-primary/50 transition-colors"
+      className="card-interactive"
       onClick={onSelect}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-3.5">
         <div className="flex items-start gap-3">
           <button
             onClick={(e) => {
@@ -386,31 +394,31 @@ function TaskCard({ task, onSelect, onMarkComplete, onMarkInProgress, getDueDate
           </button>
 
           <div className="flex-1 min-w-0">
-            <h3 className={`font-medium mb-1 ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+            <h3 className={`font-semibold text-sm mb-1 leading-tight ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
               {task.title}
             </h3>
 
             {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                 {task.description}
               </p>
             )}
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap text-xs">
               {dueDateLabel && (
-                <div className={`flex items-center gap-1 text-xs ${dueDateLabel.className}`}>
-                  <Calendar className="h-3 w-3" />
+                <div className={`flex items-center gap-1 ${dueDateLabel.className}`}>
+                  <Calendar className="h-3.5 w-3.5" />
                   <span>{dueDateLabel.label}</span>
                 </div>
               )}
 
-              <Badge variant="outline" className={`${priorityInfo.className} text-xs`}>
+              <Badge variant="outline" className={`${priorityInfo.className} text-[10px] h-5`}>
                 {priorityInfo.label}
               </Badge>
 
               {task.estimated_hours && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
                   <span>{task.estimated_hours}h</span>
                 </div>
               )}

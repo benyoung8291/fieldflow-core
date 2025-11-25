@@ -141,63 +141,65 @@ export default function WorkerSchedule() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
-      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground p-4 sticky top-14 z-10 shadow-md">{/* Added top-14 offset */}
-        <div className="flex items-center gap-3 max-w-screen-lg mx-auto">
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/worker/dashboard')}
-            className="text-primary-foreground hover:bg-primary-foreground/10 h-10 w-10 rounded-xl"
+            className="h-9 w-9 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-xl font-bold">My Schedule</h1>
+          <h1 className="text-base font-semibold">My Schedule</h1>
         </div>
       </header>
 
-      <div className="max-w-screen-lg mx-auto p-4 space-y-4">
+      <div className="px-4 pt-4 space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" />
               Working Hours
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {DAYS_OF_WEEK.map((day) => {
               const daySchedule = schedule.find((s) => s.day_of_week === day.value);
               if (!daySchedule) return null;
 
               return (
-                <div key={day.value} className="space-y-2">
+                <div key={day.value} className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label className="text-base font-medium">{day.label}</Label>
+                    <Label className="text-sm font-medium">{day.label}</Label>
                     <Switch
                       checked={daySchedule.is_active}
                       onCheckedChange={() => handleToggleDay(day.value)}
                     />
                   </div>
                   {daySchedule.is_active && (
-                    <div className="flex gap-3 pl-4">
+                    <div className="flex gap-2 pl-4">
                       <div className="flex-1">
-                        <Label className="text-xs text-muted-foreground">Start Time</Label>
+                        <Label className="text-[11px] text-muted-foreground">Start Time</Label>
                         <Input
                           type="time"
                           value={daySchedule.start_time?.slice(0, 5) || '09:00'}
                           onChange={(e) =>
                             handleTimeChange(day.value, 'start_time', e.target.value)
                           }
+                          className="h-8 text-xs"
                         />
                       </div>
                       <div className="flex-1">
-                        <Label className="text-xs text-muted-foreground">End Time</Label>
+                        <Label className="text-[11px] text-muted-foreground">End Time</Label>
                         <Input
                           type="time"
                           value={daySchedule.end_time?.slice(0, 5) || '17:00'}
                           onChange={(e) =>
                             handleTimeChange(day.value, 'end_time', e.target.value)
                           }
+                          className="h-8 text-xs"
                         />
                       </div>
                     </div>
@@ -211,10 +213,9 @@ export default function WorkerSchedule() {
         <Button
           onClick={handleSave}
           disabled={saving}
-          size="lg"
           className="w-full"
         >
-          <Save className="h-5 w-5 mr-2" />
+          <Save className="h-4 w-4 mr-2" />
           {saving ? 'Saving...' : 'Save Schedule'}
         </Button>
       </div>
