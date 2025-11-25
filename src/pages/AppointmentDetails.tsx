@@ -3,16 +3,36 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, Download, Trash2, Calendar, Clock, MapPin, Users, FileText, Send, UserPlus, X } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { 
+  ArrowLeft, 
+  Upload, 
+  Download, 
+  Trash2, 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  Users, 
+  FileText, 
+  Send, 
+  UserPlus, 
+  X,
+  Edit3,
+  Check,
+  Building2,
+  Phone,
+  Mail,
+  ExternalLink,
+  Paperclip,
+  Image as ImageIcon
+} from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import TimeLogsTable from "@/components/service-orders/TimeLogsTable";
@@ -20,30 +40,26 @@ import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useViewMode } from "@/contexts/ViewModeContext";
-import { useSwipeToClose } from "@/hooks/useSwipeGesture";
 import { cn } from "@/lib/utils";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 import FieldReportsList from "@/components/field-reports/FieldReportsList";
 import { DocumentNotes } from "@/components/notes/DocumentNotes";
 
 const statusColors = {
-  draft: "bg-muted text-muted-foreground",
-  published: "bg-info/10 text-info",
-  checked_in: "bg-warning/10 text-warning",
-  completed: "bg-success/10 text-success",
-  cancelled: "bg-destructive/10 text-destructive",
+  draft: "bg-muted text-muted-foreground border-muted",
+  published: "bg-info/10 text-info border-info/20",
+  checked_in: "bg-warning/10 text-warning border-warning/20",
+  completed: "bg-success/10 text-success border-success/20",
+  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
-const fileCategories = [
-  { value: "general", label: "General" },
-  { value: "floor_plan", label: "Floor Plan" },
-  { value: "photo", label: "Photo" },
-  { value: "notes", label: "Notes" },
-  { value: "measurement", label: "Measurement" },
-  { value: "marked_up_plan", label: "Marked Up Plan" },
-  { value: "contract", label: "Contract" },
-  { value: "invoice", label: "Invoice" },
-];
+const statusLabels = {
+  draft: "Draft",
+  published: "Published",
+  checked_in: "In Progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
 
 export default function AppointmentDetails() {
   const { id } = useParams();
@@ -57,29 +73,10 @@ export default function AppointmentDetails() {
   const [formData, setFormData] = useState({
     location_address: "",
   });
-  const [assignedWorkers, setAssignedWorkers] = useState<any[]>([]);
-  const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
   const [showAddWorker, setShowAddWorker] = useState(false);
+  const [selectedWorkerToAdd, setSelectedWorkerToAdd] = useState("");
 
-  // Call useSwipeToClose unconditionally (only used in mobile layout)
-  const { elementRef, swipeProgress } = useSwipeToClose(() => navigate("/appointments"), true);
-
-  // Query for field reports to determine button state
-  const { data: fieldReports = [] } = useQuery({
-    queryKey: ['field-reports', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('field_reports')
-        .select('id, status, created_by, approved_at, pdf_url')
-        .eq('appointment_id', id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
-
+  // Fetch current user
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
@@ -102,10 +99,13 @@ export default function AppointmentDetails() {
           service_orders (
             id,
             work_order_number,
-            purchase_order_number,
+            order_number,
+            title,
             customer_id,
             customers (
-              name
+              name,
+              email,
+              phone
             )
           ),
           appointment_workers (
@@ -114,35 +114,14 @@ export default function AppointmentDetails() {
             profiles (
               id,
               first_name,
-              last_name
+              last_name,
+              email,
+              phone
             )
           )
         `)
         .eq("id", id)
         .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch related appointments on same service order
-  const { data: relatedAppointments = [] } = useQuery({
-    queryKey: ["related-appointments", appointment?.service_order_id],
-    enabled: !!appointment?.service_order_id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select(`
-          id,
-          title,
-          start_time,
-          end_time,
-          status
-        `)
-        .eq("service_order_id", appointment.service_order_id)
-        .neq("id", id)
-        .order("start_time", { ascending: true });
 
       if (error) throw error;
       return data;
@@ -170,34 +149,12 @@ export default function AppointmentDetails() {
     },
   });
 
-  // Load assigned workers
-  const loadAssignedWorkers = async () => {
-    if (!id) return;
-    try {
-      const { data } = await supabase
-        .from('appointment_workers')
-        .select(`
-          worker_id,
-          profiles (
-            id,
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq('appointment_id', id);
-
-      setAssignedWorkers(data?.map(aw => aw.profiles).filter(Boolean) || []);
-    } catch (error) {
-      console.error('Error loading assigned workers:', error);
-    }
-  };
-
-  // Load available workers
-  const loadAvailableWorkers = async () => {
-    try {
+  // Fetch available workers
+  const { data: availableWorkers = [] } = useQuery({
+    queryKey: ['available-workers'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return [];
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -205,27 +162,30 @@ export default function AppointmentDetails() {
         .eq('id', user.id)
         .single();
 
-      if (!profile) return;
+      if (!profile) return [];
 
       const { data } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email')
+        .select('id, first_name, last_name, email, phone')
         .eq('tenant_id', profile.tenant_id)
         .order('first_name');
 
-      setAvailableWorkers(data || []);
-    } catch (error) {
-      console.error('Error loading available workers:', error);
-    }
-  };
+      return data || [];
+    },
+  });
 
-  // Load workers when appointment changes
-  useQuery({
-    queryKey: ['appointment-workers', id],
+  // Fetch field reports
+  const { data: fieldReports = [] } = useQuery({
+    queryKey: ['field-reports', id],
     queryFn: async () => {
-      await loadAssignedWorkers();
-      await loadAvailableWorkers();
-      return null;
+      const { data, error } = await supabase
+        .from('field_reports')
+        .select('id, status, created_by, approved_at, pdf_url')
+        .eq('appointment_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
     },
     enabled: !!id,
   });
@@ -254,8 +214,8 @@ export default function AppointmentDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointment', id] });
-      loadAssignedWorkers();
       setShowAddWorker(false);
+      setSelectedWorkerToAdd("");
       toast.success('Worker assigned successfully');
     },
     onError: () => {
@@ -276,7 +236,6 @@ export default function AppointmentDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointment', id] });
-      loadAssignedWorkers();
       toast.success('Worker removed successfully');
     },
     onError: () => {
@@ -296,7 +255,7 @@ export default function AppointmentDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointment", id] });
-      toast.success("Appointment updated successfully");
+      toast.success("Appointment updated");
       setEditMode(false);
     },
     onError: () => {
@@ -318,7 +277,6 @@ export default function AppointmentDetails() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      // Upload file to storage
       const fileExt = file.name.split(".").pop();
       const fileName = `${profile.tenant_id}/${id}/${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
@@ -327,12 +285,10 @@ export default function AppointmentDetails() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from("appointment-files")
         .getPublicUrl(fileName);
 
-      // Create attachment record
       const { error: dbError } = await supabase
         .from("appointment_attachments")
         .insert({
@@ -350,29 +306,10 @@ export default function AppointmentDetails() {
     },
     onSuccess: () => {
       refetchAttachments();
-      toast.success("File uploaded successfully");
+      toast.success("File uploaded");
     },
     onError: () => {
       toast.error("Failed to upload file");
-    },
-  });
-
-  // Delete attachment mutation
-  const deleteAttachmentMutation = useMutation({
-    mutationFn: async (attachmentId: string) => {
-      const { error } = await supabase
-        .from("appointment_attachments")
-        .delete()
-        .eq("id", attachmentId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      refetchAttachments();
-      toast.success("File deleted successfully");
-    },
-    onError: () => {
-      toast.error("Failed to delete file");
     },
   });
 
@@ -385,20 +322,20 @@ export default function AppointmentDetails() {
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent, category: string = "general") => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
     files.forEach((file) => {
-      uploadFileMutation.mutate({ file, category });
+      uploadFileMutation.mutate({ file, category: "general" });
     });
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, category: string = "general") => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     files.forEach((file) => {
-      uploadFileMutation.mutate({ file, category });
+      uploadFileMutation.mutate({ file, category: "general" });
     });
   };
 
@@ -415,34 +352,21 @@ export default function AppointmentDetails() {
   };
 
   const handleCreateFieldReport = () => {
-    // Check if there's a draft or submitted report by current user
     const userReport = fieldReports.find(r => r.created_by === currentUser?.id);
     
     if (userReport && !userReport.approved_at && !userReport.pdf_url) {
-      // Navigate to edit existing report
       navigate(`/worker/field-report/${id}/edit/${userReport.id}`);
     } else {
-      // Navigate to create new report
       navigate(`/worker/field-report/${id}`);
     }
   };
 
-  // Determine button text based on report state
   const getFieldReportButtonText = () => {
     const userReport = fieldReports.find(r => r.created_by === currentUser?.id);
     
-    if (!userReport) {
-      return "Create Field Report";
-    }
-    
-    if (userReport.status === 'draft') {
-      return "Finish Field Report";
-    }
-    
-    if (userReport.status === 'submitted' && !userReport.approved_at && !userReport.pdf_url) {
-      return "Edit Submitted Report";
-    }
-    
+    if (!userReport) return "Create Field Report";
+    if (userReport.status === 'draft') return "Continue Field Report";
+    if (userReport.status === 'submitted' && !userReport.approved_at) return "Edit Report";
     return "View Field Report";
   };
 
@@ -450,7 +374,10 @@ export default function AppointmentDetails() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-muted-foreground">Loading appointment...</div>
+          <div className="text-center space-y-3">
+            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-sm text-muted-foreground">Loading appointment...</p>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -459,201 +386,452 @@ export default function AppointmentDetails() {
   if (!appointment) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-muted-foreground">Appointment not found</div>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+            <Calendar className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-semibold">Appointment Not Found</h3>
+            <p className="text-sm text-muted-foreground">This appointment may have been deleted or doesn't exist.</p>
+            <Button onClick={() => navigate("/appointments")} variant="outline" className="mt-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Appointments
+            </Button>
+          </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  // Mobile Layout
+  const assignedWorkers = appointment.appointment_workers || [];
+  const unassignedWorkers = availableWorkers.filter(
+    w => !assignedWorkers.some(aw => aw.profiles?.id === w.id)
+  );
+
+  // MOBILE LAYOUT
   if (isMobile) {
     return (
       <DashboardLayout>
-        <div ref={elementRef} className="min-h-screen bg-background pb-20">
-          {/* Swipe indicator */}
-          {swipeProgress > 0 && (
-            <div 
-              className="fixed left-0 top-0 bottom-0 w-1 bg-primary/30 transition-opacity"
-              style={{ opacity: swipeProgress }}
-            />
-          )}
-          
-          {/* Mobile Header */}
-          <div className="sticky top-0 z-20 bg-background border-b p-3">
-            <div className="flex items-center gap-3">
+        <div className="min-h-screen bg-background pb-20">
+          {/* Mobile Header - Fixed */}
+          <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b">
+            <div className="flex items-center gap-3 p-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate("/appointments")}
+                className="shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-semibold truncate">{appointment.title}</h1>
+                <h1 className="text-base font-semibold truncate">{appointment.title}</h1>
                 <p className="text-xs text-muted-foreground truncate">
-                  {format(new Date(appointment.start_time), "MMM d, yyyy h:mm a")}
+                  {format(new Date(appointment.start_time), "MMM d, yyyy")}
                 </p>
               </div>
               <Badge
-                variant="outline"
-                className={cn("flex-shrink-0 text-xs", statusColors[appointment.status as keyof typeof statusColors])}
+                className={cn(
+                  "shrink-0 text-xs font-medium border",
+                  statusColors[appointment.status as keyof typeof statusColors]
+                )}
               >
-                {appointment.status}
+                {statusLabels[appointment.status as keyof typeof statusLabels]}
               </Badge>
+            </div>
+
+            {/* Quick Actions Bar */}
+            <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
               {appointment.status === 'draft' && (
                 <Button
                   size="sm"
                   onClick={() => updateAppointmentMutation.mutate({ status: 'published' })}
                   disabled={updateAppointmentMutation.isPending}
+                  className="shrink-0"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5 mr-1.5" />
+                  Publish
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCreateFieldReport}
+                className="shrink-0"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                {getFieldReportButtonText()}
+              </Button>
             </div>
           </div>
 
           {/* Mobile Content */}
-          <div className="p-3">
-            <Accordion type="multiple" defaultValue={["details"]} className="space-y-2">
-              {/* Details Section */}
-              <AccordionItem value="details" className="border rounded-lg bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <span className="font-medium">Details</span>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Start</Label>
-                      <p className="text-sm font-medium mt-1">
-                        {format(new Date(appointment.start_time), "h:mm a")}
-                      </p>
+          <div className="p-4 space-y-4">
+            {/* Hero Info Card */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-4 space-y-4">
+                {/* Time & Location */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">Time</span>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">End</Label>
-                      <p className="text-sm font-medium mt-1">
-                        {format(new Date(appointment.end_time), "h:mm a")}
-                      </p>
-                    </div>
+                    <p className="text-sm font-medium">
+                      {format(new Date(appointment.start_time), "h:mm a")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(appointment.end_time), "h:mm a")}
+                    </p>
                   </div>
-                  {appointment.description && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Description</Label>
-                      <p className="text-sm mt-1">{appointment.description}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">Date</span>
                     </div>
+                    <p className="text-sm font-medium">
+                      {format(new Date(appointment.start_time), "MMM d")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(appointment.start_time), "yyyy")}
+                    </p>
+                  </div>
+                </div>
+
+                {appointment.location_address && (
+                  <>
+                    <Separator />
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">Location</span>
+                      </div>
+                      <p className="text-sm">{appointment.location_address}</p>
+                    </div>
+                  </>
+                )}
+
+                {appointment.description && (
+                  <>
+                    <Separator />
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium">Description</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{appointment.description}</p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Service Order Link */}
+            {appointment.service_orders && (
+              <Link to={`/service-orders/${appointment.service_orders.id}`}>
+                <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Building2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground">Service Order</p>
+                        <p className="text-sm font-semibold truncate">
+                          {appointment.service_orders.work_order_number || appointment.service_orders.order_number}
+                        </p>
+                        {appointment.service_orders.customers && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {appointment.service_orders.customers.name}
+                          </p>
+                        )}
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
+
+            {/* Assigned Workers */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Team Members</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {assignedWorkers.length}
+                    </Badge>
+                  </div>
+                  {isSupervisorOrAdmin && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowAddWorker(true)}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
                   )}
-                </AccordionContent>
-              </AccordionItem>
+                </div>
 
-              {/* Workers Section */}
-              {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
-                <AccordionItem value="workers" className="border rounded-lg bg-card">
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span className="font-medium">Workers ({appointment.appointment_workers.length})</span>
+                {showAddWorker && (
+                  <div className="p-3 bg-muted rounded-lg space-y-2">
+                    <Select value={selectedWorkerToAdd} onValueChange={setSelectedWorkerToAdd}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select worker..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unassignedWorkers.map((worker) => (
+                          <SelectItem key={worker.id} value={worker.id}>
+                            {worker.first_name} {worker.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (selectedWorkerToAdd) {
+                            addWorkerMutation.mutate(selectedWorkerToAdd);
+                          }
+                        }}
+                        disabled={!selectedWorkerToAdd || addWorkerMutation.isPending}
+                        className="flex-1"
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1.5" />
+                        Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddWorker(false);
+                          setSelectedWorkerToAdd("");
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4 space-y-2">
-                    {appointment.appointment_workers.map((aw: any) => (
-                      <div key={aw.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-medium">
-                            {aw.profiles?.first_name?.[0]}{aw.profiles?.last_name?.[0]}
-                          </span>
-                        </div>
-                        <span className="text-sm">
-                          {aw.profiles?.first_name} {aw.profiles?.last_name}
-                        </span>
-                      </div>
-                    ))}
-                  </AccordionContent>
-                </AccordionItem>
-              )}
-
-              {/* Files & Time Logs */}
-              <AccordionItem value="files" className="border rounded-lg bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">Files ({attachments.length})</span>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
+                )}
+
+                {assignedWorkers.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Users className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No workers assigned</p>
+                  </div>
+                ) : (
                   <div className="space-y-2">
-                    {attachments.map((file: any) => (
-                      <div key={file.id} className="flex items-center justify-between p-2 border rounded-lg">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <FileText className="h-4 w-4 flex-shrink-0" />
-                          <p className="text-sm truncate">{file.file_name}</p>
+                    {assignedWorkers.map((aw: any) => (
+                      aw.profiles && (
+                        <div key={aw.id} className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-semibold text-primary">
+                              {aw.profiles.first_name?.[0]}{aw.profiles.last_name?.[0]}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">
+                              {aw.profiles.first_name} {aw.profiles.last_name}
+                            </p>
+                            {aw.profiles.email && (
+                              <p className="text-xs text-muted-foreground truncate">{aw.profiles.email}</p>
+                            )}
+                          </div>
+                          {isSupervisorOrAdmin && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => removeWorkerMutation.mutate(aw.worker_id)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
-                        <Button variant="ghost" size="icon" asChild>
-                          <a href={file.file_url} download>
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
+                      )
                     ))}
                   </div>
-                </AccordionContent>
-              </AccordionItem>
+                )}
+              </CardContent>
+            </Card>
 
-              <AccordionItem value="time-logs" className="border rounded-lg bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            {/* Files & Attachments */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span className="font-medium">Time Logs</span>
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Attachments</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {attachments.length}
+                    </Badge>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <TimeLogsTable appointmentId={id!} />
-                </AccordionContent>
-              </AccordionItem>
+                  <label>
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <Button size="sm" variant="ghost" asChild>
+                      <span className="cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                      </span>
+                    </Button>
+                  </label>
+                </div>
 
-              <AccordionItem value="field-reports" className="border rounded-lg bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">Field Reports</span>
+                {attachments.length === 0 ? (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={cn(
+                      "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+                      isDragging ? "border-primary bg-primary/5" : "border-border"
+                    )}
+                  >
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground">
+                      Drag files here or tap to upload
+                    </p>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-3">
-                  <Button onClick={handleCreateFieldReport} className="w-full">
-                    <FileText className="h-4 w-4 mr-2" />
-                    {getFieldReportButtonText()}
-                  </Button>
-                  <FieldReportsList appointmentId={id!} onReportStateChange={refetchAppointment} />
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+                ) : (
+                  <div className="space-y-2">
+                    {attachments.map((file: any) => {
+                      const isImage = file.file_type?.startsWith('image/');
+                      return (
+                        <div key={file.id} className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                          <div className="h-9 w-9 rounded-lg bg-background flex items-center justify-center shrink-0">
+                            {isImage ? (
+                              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{file.file_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {file.file_size ? `${(file.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                            </p>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 shrink-0"
+                            asChild
+                          >
+                            <a href={file.file_url} download>
+                              <Download className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Time Logs */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Time Logs</span>
+                </div>
+                <TimeLogsTable appointmentId={id!} />
+              </CardContent>
+            </Card>
+
+            {/* Field Reports */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Field Reports</span>
+                </div>
+                <FieldReportsList appointmentId={id!} onReportStateChange={refetchAppointment} />
+              </CardContent>
+            </Card>
+
+            {/* Notes */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Notes</span>
+                </div>
+                <DocumentNotes documentType="appointment" documentId={id!} />
+              </CardContent>
+            </Card>
+
+            {/* Tasks */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Tasks</span>
+                  </div>
+                  <CreateTaskButton
+                    linkedModule="appointment"
+                    linkedRecordId={id!}
+                  />
+                </div>
+                <LinkedTasksList
+                  linkedModule="appointment"
+                  linkedRecordId={id!}
+                />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  // Desktop Layout
+  // DESKTOP LAYOUT
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/appointments")}>
-              <ArrowLeft className="h-4 w-4" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/appointments")}
+              className="shrink-0 mt-1"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{appointment.title}</h1>
-              <p className="text-muted-foreground">Appointment Details</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight truncate">{appointment.title}</h1>
+              <div className="flex items-center gap-3 mt-2">
+                <Badge
+                  className={cn(
+                    "text-sm font-medium border",
+                    statusColors[appointment.status as keyof typeof statusColors]
+                  )}
+                >
+                  {statusLabels[appointment.status as keyof typeof statusLabels]}
+                </Badge>
+                {appointment.appointment_number && (
+                  <span className="text-sm text-muted-foreground font-mono">
+                    {appointment.appointment_number}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className={statusColors[appointment.status as keyof typeof statusColors]}
-            >
-              {appointment.status}
-            </Badge>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0">
             {appointment.status === 'draft' && (
               <Button
                 onClick={() => updateAppointmentMutation.mutate({ status: 'published' })}
@@ -664,9 +842,14 @@ export default function AppointmentDetails() {
               </Button>
             )}
             {!editMode ? (
-              <Button variant="outline" onClick={() => setEditMode(true)}>Edit Details</Button>
+              <Button variant="outline" onClick={() => setEditMode(true)}>
+                <Edit3 className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
             ) : (
-              <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setEditMode(false)}>
+                Cancel
+              </Button>
             )}
           </div>
         </div>
@@ -674,39 +857,56 @@ export default function AppointmentDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Details Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Appointment Information</CardTitle>
-              </CardHeader>
-              <CardContent>
+            {/* Hero Info Card */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
                 {editMode ? (
-                  <form onSubmit={handleFormSubmit} className="space-y-4">
-                    <div>
-                      <Label htmlFor="title">Title</Label>
-                      <Input id="title" name="title" defaultValue={appointment.title} required />
+                  <form onSubmit={handleFormSubmit} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="text-sm font-medium">Title</Label>
+                      <Input 
+                        id="title" 
+                        name="title" 
+                        defaultValue={appointment.title} 
+                        required 
+                        className="h-11"
+                      />
                     </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" name="description" defaultValue={appointment.description || ""} />
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+                      <Textarea 
+                        id="description" 
+                        name="description" 
+                        defaultValue={appointment.description || ""} 
+                        rows={4}
+                        className="resize-none"
+                      />
                     </div>
-                    <div>
-                      <Label htmlFor="status">Status</Label>
-                      <Select name="status" defaultValue={appointment.status}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="checked_in">Checked In</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+                        <Select name="status" defaultValue={appointment.status}>
+                          <SelectTrigger className="h-11">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="published">Published</SelectItem>
+                            <SelectItem value="checked_in">In Progress</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Duration</Label>
+                        <div className="h-11 flex items-center px-3 border rounded-md bg-muted/50 text-sm">
+                          {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="location_address">Location</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="location_address" className="text-sm font-medium">Location</Label>
                       <AddressAutocomplete
                         value={formData.location_address || appointment.location_address || ""}
                         onChange={(value) => setFormData({ ...formData, location_address: value })}
@@ -717,367 +917,428 @@ export default function AppointmentDetails() {
                         placeholder="Start typing to search address..."
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea id="notes" name="notes" defaultValue={appointment.notes || ""} />
+                    <div className="space-y-2">
+                      <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                      <Textarea 
+                        id="notes" 
+                        name="notes" 
+                        defaultValue={appointment.notes || ""} 
+                        rows={3}
+                        className="resize-none"
+                      />
                     </div>
-                    <Button type="submit" disabled={updateAppointmentMutation.isPending}>
-                      {updateAppointmentMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
+                    <div className="flex gap-3 pt-2">
+                      <Button 
+                        type="submit" 
+                        disabled={updateAppointmentMutation.isPending}
+                        className="min-w-[120px]"
+                      >
+                        {updateAppointmentMutation.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setEditMode(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </form>
-                 ) : (
-                   <div className="space-y-4">
-                     {appointment.appointment_number && (
-                       <div className="pb-4 border-b">
-                         <span className="font-medium text-sm">Appointment Number:</span>
-                         <p className="text-sm text-muted-foreground font-mono mt-1">{appointment.appointment_number}</p>
-                       </div>
-                     )}
-                     <div className="grid grid-cols-2 gap-4">
-                       <div className="flex items-center gap-2 text-sm">
-                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                         <span className="font-medium">Date:</span>
-                         <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
-                       </div>
-                       <div className="flex items-center gap-2 text-sm">
-                         <Clock className="h-4 w-4 text-muted-foreground" />
-                         <span className="font-medium">Time:</span>
-                         <span>{format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}</span>
-                       </div>
-                     </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Time & Date Grid */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span className="text-xs font-medium uppercase tracking-wide">Date</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          {format(new Date(appointment.start_time), "MMM d, yyyy")}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(appointment.start_time), "EEEE")}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span className="text-xs font-medium uppercase tracking-wide">Start</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          {format(new Date(appointment.start_time), "h:mm a")}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span className="text-xs font-medium uppercase tracking-wide">End</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          {format(new Date(appointment.end_time), "h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Location */}
                     {appointment.location_address && (
-                      <div className="flex items-start gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <span className="font-medium">Location:</span>
-                          <p className="text-muted-foreground">{appointment.location_address}</p>
+                      <>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span className="text-xs font-medium uppercase tracking-wide">Location</span>
+                          </div>
+                          <p className="text-sm leading-relaxed">{appointment.location_address}</p>
                         </div>
-                      </div>
+                        <Separator />
+                      </>
                     )}
+
+                    {/* Description */}
                     {appointment.description && (
-                      <div className="flex items-start gap-2 text-sm">
-                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <span className="font-medium">Description:</span>
-                          <p className="text-muted-foreground">{appointment.description}</p>
+                      <>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-xs font-medium uppercase tracking-wide">Description</span>
+                          </div>
+                          <p className="text-sm leading-relaxed text-muted-foreground">
+                            {appointment.description}
+                          </p>
                         </div>
-                      </div>
+                        <Separator />
+                      </>
                     )}
+
+                    {/* Notes */}
                     {appointment.notes && (
-                      <div className="pt-4 border-t">
-                        <span className="font-medium text-sm">Notes:</span>
-                        <p className="text-sm text-muted-foreground mt-1">{appointment.notes}</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-xs font-medium uppercase tracking-wide">Notes</span>
+                        </div>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {appointment.notes}
+                        </p>
                       </div>
                     )}
-                    {(appointment.service_order_id || appointment.service_orders) && (
-                      <div className="pt-4 border-t">
-                        <span className="font-medium text-sm">Service Order:</span>
-                        <div className="mt-1 text-sm space-y-1">
-                          <Link
-                            to={`/service-orders/${appointment.service_order_id || appointment.service_orders?.id}`}
-                            className="inline-block text-primary hover:underline"
-                          >
-                            {appointment.service_orders?.work_order_number 
-                              ? `WO: ${appointment.service_orders.work_order_number}`
-                              : 'View Service Order'}
-                          </Link>
-                          {appointment.service_orders?.purchase_order_number && (
-                            <p className="text-muted-foreground">PO: {appointment.service_orders.purchase_order_number}</p>
-                          )}
-                          {appointment.service_orders?.customers?.name && (
-                            <p className="text-muted-foreground">Customer: {appointment.service_orders.customers.name}</p>
-                          )}
-                        </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Service Order Info */}
+            {appointment.service_orders && (
+              <Link to={`/service-orders/${appointment.service_orders.id}`}>
+                <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Building2 className="h-7 w-7 text-primary" />
                       </div>
-                     )}
-                   </div>
-                 )}
-               </CardContent>
-             </Card>
-
-             {/* Notes Section */}
-             <Card>
-               <CardHeader>
-                 <CardTitle>Quick Notes</CardTitle>
-               </CardHeader>
-               <CardContent>
-                 <DocumentNotes documentType="appointment" documentId={id!} />
-               </CardContent>
-             </Card>
-
-             {/* Tabs */}
-             <Tabs defaultValue="files" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="files">Files & Documents</TabsTrigger>
-                <TabsTrigger value="time-logs">Time Logs</TabsTrigger>
-              </TabsList>
-
-              {/* Files Tab */}
-              <TabsContent value="files" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Files & Documents</CardTitle>
-                      <label>
-                        <input
-                          type="file"
-                          multiple
-                          className="hidden"
-                          onChange={(e) => handleFileSelect(e)}
-                        />
-                        <Button variant="outline" size="sm" asChild>
-                          <span className="cursor-pointer">
-                            <Upload className="h-4 w-4 mr-2" />
-                            Upload Files
-                          </span>
-                        </Button>
-                      </label>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                          Service Order
+                        </p>
+                        <p className="text-lg font-semibold truncate mb-1">
+                          {appointment.service_orders.work_order_number || appointment.service_orders.order_number}
+                        </p>
+                        {appointment.service_orders.title && (
+                          <p className="text-sm text-muted-foreground truncate">
+                            {appointment.service_orders.title}
+                          </p>
+                        )}
+                        {appointment.service_orders.customers && (
+                          <div className="flex items-center gap-2 mt-2 text-sm">
+                            <span className="text-muted-foreground">Customer:</span>
+                            <span className="font-medium">{appointment.service_orders.customers.name}</span>
+                          </div>
+                        )}
+                      </div>
+                      <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e)}
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                        isDragging ? "border-primary bg-primary/5" : "border-border"
-                      }`}
-                    >
-                      <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Drag and drop files here, or click the upload button
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Supports all file types
-                      </p>
-                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
 
-                    {/* Files by Category */}
-                    <div className="mt-6 space-y-6">
-                      {fileCategories.map((category) => {
-                        const categoryFiles = attachments.filter(
-                          (att: any) => att.category === category.value
-                        );
+            {/* Files & Attachments */}
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Paperclip className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Attachments</h3>
+                    <Badge variant="secondary">{attachments.length}</Badge>
+                  </div>
+                  <label>
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <Button size="sm" variant="outline" asChild>
+                      <span className="cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Files
+                      </span>
+                    </Button>
+                  </label>
+                </div>
 
-                        if (categoryFiles.length === 0) return null;
-
-                        return (
-                          <div key={category.value}>
-                            <h3 className="font-medium text-sm mb-3">{category.label}</h3>
-                            <div className="space-y-2">
-                              {categoryFiles.map((file: any) => (
-                                <div
-                                  key={file.id}
-                                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
-                                >
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium truncate">{file.file_name}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Uploaded by {file.profiles?.first_name} {file.profiles?.last_name} on{" "}
-                                        {format(new Date(file.uploaded_at), "MMM d, yyyy")}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      asChild
-                                    >
-                                      <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                                        <Download className="h-4 w-4" />
-                                      </a>
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => deleteAttachmentMutation.mutate(file.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
+                {attachments.length === 0 ? (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={cn(
+                      "border-2 border-dashed rounded-xl p-12 text-center transition-all",
+                      isDragging ? "border-primary bg-primary/5 scale-[0.99]" : "border-border hover:border-muted-foreground/50"
+                    )}
+                  >
+                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-sm font-medium mb-1">Drop files here to upload</p>
+                    <p className="text-xs text-muted-foreground">or click the button above</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {attachments.map((file: any) => {
+                      const isImage = file.file_type?.startsWith('image/');
+                      return (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
+                        >
+                          <div className="h-12 w-12 rounded-lg bg-background flex items-center justify-center shrink-0 border">
+                            {isImage ? (
+                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                              {file.file_name}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <p className="text-xs text-muted-foreground">
+                                {file.file_size ? `${(file.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                              </p>
+                              {file.uploaded_at && (
+                                <>
+                                  <span className="text-muted-foreground">•</span>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(file.uploaded_at), "MMM d, yyyy")}
+                                  </p>
+                                </>
+                              )}
                             </div>
                           </div>
-                        );
-                      })}
-
-                      {attachments.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No files uploaded yet
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="shrink-0"
+                            asChild
+                          >
+                            <a href={file.file_url} download>
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              {/* Time Logs Tab */}
-              <TabsContent value="time-logs">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Time Logs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <TimeLogsTable
-                      appointmentId={id!}
-                    />
-                    {isSupervisorOrAdmin && (
-                      <p className="text-xs text-muted-foreground mt-4">
-                        As a supervisor or admin, you can edit time logs for timecard and payroll adjustments.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            {/* Time Logs */}
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Time Logs</h3>
+                </div>
+                <TimeLogsTable appointmentId={id!} />
+              </CardContent>
+            </Card>
+
+            {/* Notes */}
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Notes</h3>
+                </div>
+                <DocumentNotes documentType="appointment" documentId={id!} />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Assigned Workers */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Assigned Workers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {assignedWorkers.length > 0 ? (
-                    assignedWorkers.map((worker) => (
-                      <div key={worker.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-medium">
-                              {worker.first_name?.[0]}{worker.last_name?.[0]}
-                            </span>
-                          </div>
-                          <span className="text-sm">
-                            {worker.first_name} {worker.last_name}
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeWorkerMutation.mutate(worker.id)}
-                          disabled={removeWorkerMutation.isPending}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No workers assigned</p>
-                  )}
-                  
-                  {!showAddWorker ? (
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Team</h3>
+                    <Badge variant="secondary">{assignedWorkers.length}</Badge>
+                  </div>
+                  {isSupervisorOrAdmin && !showAddWorker && (
                     <Button
-                      variant="outline"
                       size="sm"
+                      variant="outline"
                       onClick={() => setShowAddWorker(true)}
-                      className="w-full"
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
-                      Add Worker
+                      Add
                     </Button>
-                  ) : (
-                    <div className="space-y-2">
-                      <Select onValueChange={(value) => addWorkerMutation.mutate(value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select worker" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableWorkers
-                            .filter(w => !assignedWorkers.find(aw => aw.id === w.id))
-                            .map((worker) => (
-                              <SelectItem key={worker.id} value={worker.id}>
-                                {worker.first_name} {worker.last_name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                  )}
+                </div>
+
+                {showAddWorker && (
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                    <Select value={selectedWorkerToAdd} onValueChange={setSelectedWorkerToAdd}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select worker..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unassignedWorkers.map((worker) => (
+                          <SelectItem key={worker.id} value={worker.id}>
+                            {worker.first_name} {worker.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
                       <Button
-                        variant="ghost"
                         size="sm"
-                        onClick={() => setShowAddWorker(false)}
-                        className="w-full"
+                        onClick={() => {
+                          if (selectedWorkerToAdd) {
+                            addWorkerMutation.mutate(selectedWorkerToAdd);
+                          }
+                        }}
+                        disabled={!selectedWorkerToAdd || addWorkerMutation.isPending}
+                        className="flex-1"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Add Worker
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddWorker(false);
+                          setSelectedWorkerToAdd("");
+                        }}
                       >
                         Cancel
                       </Button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {assignedWorkers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                      <Users className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">No workers assigned yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assignedWorkers.map((aw: any) => (
+                      aw.profiles && (
+                        <div
+                          key={aw.id}
+                          className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
+                        >
+                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-semibold text-primary">
+                              {aw.profiles.first_name?.[0]}{aw.profiles.last_name?.[0]}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold">
+                              {aw.profiles.first_name} {aw.profiles.last_name}
+                            </p>
+                            {aw.profiles.email && (
+                              <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+                                <Mail className="h-3 w-3" />
+                                {aw.profiles.email}
+                              </p>
+                            )}
+                            {aw.profiles.phone && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                <Phone className="h-3 w-3" />
+                                {aw.profiles.phone}
+                              </p>
+                            )}
+                          </div>
+                          {isSupervisorOrAdmin && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeWorkerMutation.mutate(aw.worker_id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Related Appointments */}
-            {relatedAppointments.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Other Appointments on Service Order</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {relatedAppointments.map((apt: any) => (
-                      <Link
-                        key={apt.id}
-                        to={`/appointments/${apt.id}`}
-                        className="block p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">{apt.title}</span>
-                          <Badge
-                            variant="outline"
-                            className={`${statusColors[apt.status as keyof typeof statusColors]} text-xs`}
-                          >
-                            {apt.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(apt.start_time), "MMM d, h:mm a")}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Field Reports */}
             <Card>
-              <CardHeader>
-                <CardTitle>Field Reports</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button onClick={handleCreateFieldReport} className="w-full">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Field Reports</h3>
+                </div>
+                <Button
+                  onClick={handleCreateFieldReport}
+                  className="w-full"
+                  variant="outline"
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   {getFieldReportButtonText()}
                 </Button>
-                <FieldReportsList appointmentId={id!} onReportStateChange={refetchAppointment} />
+                <FieldReportsList 
+                  appointmentId={id!} 
+                  onReportStateChange={refetchAppointment} 
+                />
               </CardContent>
             </Card>
 
             {/* Tasks */}
             <Card>
-              <CardHeader>
+              <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle>Tasks</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Tasks</h3>
+                  </div>
                   <CreateTaskButton
                     linkedModule="appointment"
                     linkedRecordId={id!}
-                    variant="default"
-                    size="sm"
                   />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <LinkedTasksList linkedModule="appointment" linkedRecordId={id!} />
+                <LinkedTasksList
+                  linkedModule="appointment"
+                  linkedRecordId={id!}
+                />
               </CardContent>
             </Card>
           </div>
