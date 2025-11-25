@@ -4976,8 +4976,11 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          conditions: Json | null
           created_at: string | null
+          description: string | null
           id: string
+          is_active: boolean | null
           module: Database["public"]["Enums"]["app_module"]
           permission: Database["public"]["Enums"]["permission_type"]
           role: Database["public"]["Enums"]["user_role"]
@@ -4985,8 +4988,11 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          conditions?: Json | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          is_active?: boolean | null
           module: Database["public"]["Enums"]["app_module"]
           permission: Database["public"]["Enums"]["permission_type"]
           role: Database["public"]["Enums"]["user_role"]
@@ -4994,8 +5000,11 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          conditions?: Json | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          is_active?: boolean | null
           module?: Database["public"]["Enums"]["app_module"]
           permission?: Database["public"]["Enums"]["permission_type"]
           role?: Database["public"]["Enums"]["user_role"]
@@ -7359,6 +7368,14 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_permissions: {
+        Args: { user_id_input: string }
+        Returns: {
+          conditions: Json
+          module: string
+          permission: string
+        }[]
+      }
       get_user_tenant_id: { Args: never; Returns: string }
       get_xero_credentials: {
         Args: { integration_id: string }
@@ -7449,6 +7466,14 @@ export type Database = {
           new_refresh_token: string
         }
         Returns: undefined
+      }
+      user_has_permission: {
+        Args: {
+          module_input: string
+          permission_input: string
+          user_id_input: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
