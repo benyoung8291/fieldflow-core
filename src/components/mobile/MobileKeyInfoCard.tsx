@@ -16,15 +16,15 @@ export const MobileKeyInfoCard = ({
   className,
 }: MobileKeyInfoCardProps) => {
   return (
-    <Card className={cn("shadow-sm", className)}>
+    <Card className={cn("border-border/50 shadow-sm bg-card", className)}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-0.5 text-muted-foreground">
+          <div className="flex-shrink-0 mt-1 text-primary bg-primary/10 p-2 rounded-xl">
             {icon}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground mb-1">{label}</p>
-            <div className="text-sm font-medium break-words">{value}</div>
+            <p className="text-xs font-medium text-muted-foreground mb-1.5">{label}</p>
+            <div className="text-base font-semibold break-words">{value}</div>
           </div>
         </div>
       </CardContent>

@@ -19,16 +19,16 @@ export const MobileHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
-      <div className="flex items-center justify-between px-3 py-2">
-        {/* Left side - Logo only */}
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-xs">SP</span>
+    <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+      <div className="flex items-center justify-between h-14 px-4">
+        {/* Logo */}
+        <div className="flex items-center">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary to-primary-hover shadow-sm flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">SP</span>
           </div>
         </div>
 
-        {/* Right side - Controls and User Menu */}
+        {/* Right Controls */}
         <div className="flex items-center gap-1">
           <TeamPresence />
           <IssueReportDialog />
@@ -36,12 +36,22 @@ export const MobileHeader = () => {
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10 rounded-xl touch-target hover:bg-muted/80 transition-colors"
+              >
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="z-50 bg-popover backdrop-blur-sm">
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <DropdownMenuContent 
+              align="end" 
+              className="w-48 bg-popover/95 backdrop-blur-xl border-border/50 shadow-lg"
+            >
+              <DropdownMenuItem 
+                onClick={() => navigate("/settings")}
+                className="cursor-pointer py-3 text-base"
+              >
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -51,6 +61,7 @@ export const MobileHeader = () => {
                   navigate("/auth");
                   toast.success("Signed out successfully");
                 }}
+                className="cursor-pointer py-3 text-base text-destructive focus:text-destructive"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
@@ -59,6 +70,6 @@ export const MobileHeader = () => {
           </DropdownMenu>
         </div>
       </div>
-    </div>
+    </header>
   );
 };
