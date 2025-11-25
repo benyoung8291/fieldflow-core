@@ -91,6 +91,41 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     };
   }, [serviceOrderId, queryClient]);
 
+  // Check and update service order status based on assigned hours
+  useEffect(() => {
+    const checkServiceOrderStatus = async () => {
+      if (!appointments || appointments.length === 0) return;
+
+      const { data: serviceOrder } = await supabase
+        .from("service_orders")
+        .select("id, estimated_hours, status")
+        .eq("id", serviceOrderId)
+        .single();
+
+      if (!serviceOrder || serviceOrder.status === "scheduled" || !serviceOrder.estimated_hours) return;
+
+      // Calculate total assigned hours
+      const totalAssignedHours = appointments.reduce((sum, apt) => {
+        const start = new Date(apt.start_time);
+        const end = new Date(apt.end_time);
+        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        return sum + hours;
+      }, 0);
+
+      // If all estimated hours are assigned, update to scheduled
+      if (totalAssignedHours >= serviceOrder.estimated_hours) {
+        await supabase
+          .from("service_orders")
+          .update({ status: "scheduled" })
+          .eq("id", serviceOrderId);
+        
+        queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+      }
+    };
+
+    checkServiceOrderStatus();
+  }, [appointments, serviceOrderId, queryClient]);
+
   const updateAppointmentStatusMutation = useMutation({
     mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: "draft" | "published" | "checked_in" | "completed" | "cancelled" }) => {
       // Update appointment status
@@ -103,7 +138,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
 
       // If publishing, check if we should update service order status
       if (status === "published") {
-        // Get service order details with appointments
+        // Get service order details with all appointments and their estimated hours
         const { data: serviceOrder, error: soError } = await supabase
           .from("service_orders")
           .select(`
@@ -116,14 +151,25 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
 
         if (soError) throw soError;
 
-        if (serviceOrder) {
-          // Check if all appointments are published
-          const allPublished = serviceOrder.appointments.every(
-            (apt: any) => apt.status === "published" || apt.id === appointmentId
-          );
+        if (serviceOrder && serviceOrder.estimated_hours) {
+          // Calculate total assigned hours from all appointments
+          const { data: allAppointments, error: aptsError } = await supabase
+            .from("appointments")
+            .select("start_time, end_time")
+            .eq("service_order_id", serviceOrderId);
 
-          // If all appointments are published, update service order to scheduled
-          if (allPublished) {
+          if (aptsError) throw aptsError;
+
+          // Calculate total hours assigned across all appointments
+          const totalAssignedHours = allAppointments.reduce((sum, apt) => {
+            const start = new Date(apt.start_time);
+            const end = new Date(apt.end_time);
+            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            return sum + hours;
+          }, 0);
+
+          // If all estimated hours are assigned, update service order to scheduled
+          if (totalAssignedHours >= serviceOrder.estimated_hours) {
             const { error: updateError } = await supabase
               .from("service_orders")
               .update({ status: "scheduled" })
@@ -217,16 +263,18 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                   </div>
                   
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      onClick={() => updateAppointmentStatusMutation.mutate({
-                        appointmentId: appointment.id,
-                        status: "published",
-                      })}
-                    >
-                      Publish
-                    </Button>
+                    {appointment.status !== "published" && (
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => updateAppointmentStatusMutation.mutate({
+                          appointmentId: appointment.id,
+                          status: "published",
+                        })}
+                      >
+                        Publish
+                      </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="ghost">
