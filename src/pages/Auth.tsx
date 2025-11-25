@@ -22,46 +22,20 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Check if user is already authenticated on mount
+  // Check if user is already authenticated on mount - simplified
   useEffect(() => {
     let mounted = true;
     
     const checkAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (mounted) {
-          if (user) {
-            // Check access to determine proper redirect
-            const { data: roleData } = await (supabase as any)
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", user.id)
-              .maybeSingle();
-
-            const { data: workerData } = await (supabase as any)
-              .from("workers")
-              .select("id")
-              .eq("user_id", user.id)
-              .maybeSingle();
-
-            const hasRole = !!roleData;
-            const isWorker = !!workerData;
-
-            // Redirect based on access
-            if (hasRole) {
-              navigate("/dashboard", { replace: true });
-            } else if (isWorker) {
-              navigate("/worker/dashboard", { replace: true });
-            } else {
-              // User has no access - sign them out
-              await supabase.auth.signOut();
-              setIsCheckingAuth(false);
-              toast.error("Access denied. Please contact your administrator.");
-            }
-          } else {
-            setIsCheckingAuth(false);
-          }
+        if (mounted && session) {
+          // User is already authenticated - redirect to dashboard
+          // ProtectedRoute will handle the proper routing based on access
+          navigate("/dashboard", { replace: true });
+        } else {
+          setIsCheckingAuth(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
@@ -76,7 +50,7 @@ export default function Auth() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,12 +78,16 @@ export default function Auth() {
       if (error) {
         toast.error("Invalid email or password.");
         console.error("Sign in error:", error);
+        setIsLoading(false);
         return;
       }
 
       // Get user access to determine redirect
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
       const { data: roleData } = await (supabase as any)
         .from("user_roles")
@@ -126,22 +104,25 @@ export default function Auth() {
       const hasRole = !!roleData;
       const isWorker = !!workerData;
 
-      toast.success("Welcome back!");
-      
-      // Redirect based on access
-      if (hasRole) {
-        navigate("/dashboard");
-      } else if (isWorker) {
-        navigate("/worker/dashboard");
-      } else {
+      // Check if user has any access
+      if (!hasRole && !isWorker) {
         toast.error("Access denied. Please contact your administrator.");
         await supabase.auth.signOut();
+        setIsLoading(false);
+        return;
+      }
+
+      // Show success and redirect
+      toast.success("Welcome back!");
+      
+      if (hasRole) {
+        navigate("/dashboard", { replace: true });
+      } else if (isWorker) {
+        navigate("/worker/dashboard", { replace: true });
       }
     } catch (error: any) {
-      // Generic error message for unexpected errors
       toast.error("An unexpected error occurred. Please try again.");
       console.error("Auth error:", error);
-    } finally {
       setIsLoading(false);
     }
   };
