@@ -100,17 +100,17 @@ export default function ServiceOrders() {
         .select(`
           id,
           order_number,
+          work_order_number,
           title,
           customer_id,
+          location_id,
           status,
           priority,
-          actual_cost,
-          cost_of_labor,
-          cost_of_materials,
-          other_costs,
+          subtotal,
           completed_date,
           created_at,
-          customers!service_orders_customer_id_fkey(name)
+          customers!service_orders_customer_id_fkey(name),
+          customer_locations!service_orders_location_id_fkey(name)
         `, { count: 'exact' })
         .order("created_at", { ascending: false });
 
@@ -454,7 +454,7 @@ export default function ServiceOrders() {
                     { label: 'Customer', value: order.customers?.name || '-' },
                     { label: 'Location', value: order.customer_locations?.name || '-' },
                     ...(order.work_order_number ? [{ label: 'WO#', value: order.work_order_number }] : []),
-                    { label: 'Total', value: `$${order.total_amount?.toFixed(2) || '0.00'}` },
+                    { label: 'Total', value: `$${order.subtotal?.toFixed(2) || '0.00'}` },
                   ]}
                   onClick={() => window.location.href = `/service-orders/${order.id}`}
                 />
@@ -462,72 +462,60 @@ export default function ServiceOrders() {
             )}
           </div>
         ) : (
-          /* Desktop Grid View - Beautiful cards */
-          <div>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : orders.length === 0 ? (
-              <Card className="border-none shadow-sm">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                  <p className="text-lg font-medium text-muted-foreground">No orders found</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">Try adjusting your search or filters</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          /* Desktop List View */
+          <Card className="border-none shadow-md">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
                 {orders.map((order: any) => (
-                  <Card 
+                  <div
                     key={order.id}
-                    className="border-none shadow-md hover:shadow-lg hover-scale transition-all cursor-pointer group"
+                    className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => window.location.href = `/service-orders/${order.id}`}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg font-bold">#{order.order_number}</CardTitle>
-                          <p className="text-sm text-muted-foreground line-clamp-1">{order.title}</p>
-                        </div>
-                        <Badge className={cn("shrink-0", statusColors[order.status as keyof typeof statusColors])}>
-                          {statusLabels[order.status as keyof typeof statusLabels] || order.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-foreground truncate">{order.customers?.name || '-'}</span>
-                        </div>
-                        {order.customer_locations?.name && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="text-muted-foreground truncate">{order.customer_locations.name}</span>
-                          </div>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        <div className="text-sm font-semibold text-foreground">#{order.order_number}</div>
+                        {order.work_order_number && (
+                          <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
                         )}
                       </div>
                       
-                      <Separator />
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("text-xs", priorityColors[order.priority as keyof typeof priorityColors])}>
-                            {order.priority}
-                          </Badge>
-                        </div>
-                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Total</p>
-                          <p className="text-lg font-bold">${order.total_amount?.toFixed(2) || '0.00'}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{order.title}</div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            <span className="truncate">{order.customers?.name || '-'}</span>
+                          </div>
+                          {order.customer_locations?.name && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              <span className="truncate">{order.customer_locations.name}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <Badge variant="outline" className={cn("text-xs", priorityColors[order.priority as keyof typeof priorityColors])}>
+                        {order.priority}
+                      </Badge>
+                      
+                      <Badge className={cn("min-w-[100px] justify-center", statusColors[order.status as keyof typeof statusColors])}>
+                        {statusLabels[order.status as keyof typeof statusLabels] || order.status}
+                      </Badge>
+                      
+                      <div className="text-right min-w-[100px]">
+                        <div className="text-xs text-muted-foreground">Total (ex GST)</div>
+                        <div className="text-sm font-bold">${order.subtotal?.toFixed(2) || '0.00'}</div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
+            </CardContent>
+           </Card>
         )}
         
         {/* Pagination Controls */}
