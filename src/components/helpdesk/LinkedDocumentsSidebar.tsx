@@ -744,7 +744,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             key={doc.id}
                             style={{ animationDelay: `${index * 40}ms` }}
                             className="group relative p-3 rounded-lg border border-border/50 bg-gradient-to-br from-background to-muted/10 hover:from-background hover:to-muted/20 hover:border-primary/40 hover:shadow-lg transition-all duration-200 cursor-pointer animate-fade-in-up hover-lift"
-                            onClick={() => handleOpenInNewTab(docType.type, doc.document_id)}
+                            onClick={() => handleDocumentClick(docType.type, doc.document_id)}
                           >
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="font-bold text-sm text-foreground flex-1 group-hover:text-primary transition-colors">
@@ -814,17 +814,32 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             )}
                           </div>
                           
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all text-destructive hover:text-destructive hover:bg-destructive/20"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              unlinkMutation.mutate(doc.id);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInNewTab(docType.type, doc.document_id);
+                              }}
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                unlinkMutation.mutate(doc.id);
+                              }}
+                              title="Unlink document"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                           </div>
                         );
                       })}
