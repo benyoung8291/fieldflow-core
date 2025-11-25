@@ -121,7 +121,7 @@ export default function ServiceOrderDetails() {
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name, email, phone),
-          customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
+          customer_locations!service_orders_location_id_fkey(name, address, city, state, postcode),
           service_contracts!service_orders_contract_id_fkey(id, contract_number, title),
           projects(id, name)
         `)
