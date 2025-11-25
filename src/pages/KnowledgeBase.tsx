@@ -11,6 +11,7 @@ import { KnowledgeCategoryNav } from "@/components/knowledge/KnowledgeCategoryNa
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,6 +86,7 @@ export default function KnowledgeBase() {
   }
 
   return (
+    <DashboardLayout>
     <div className="h-full flex flex-col">
       <ModuleTutorial
         moduleName="Knowledge Base"
@@ -151,5 +153,6 @@ export default function KnowledgeBase() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }
