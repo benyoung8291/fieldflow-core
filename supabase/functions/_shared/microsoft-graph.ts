@@ -155,7 +155,22 @@ async function refreshAccessToken(params: {
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Token refresh failed:", errorText);
-    throw new TokenRefreshError("Microsoft authentication expired. Please reconnect your email account.");
+    
+    // Parse error to provide specific guidance
+    try {
+      const errorData = JSON.parse(errorText);
+      if (errorData.error === "invalid_grant") {
+        throw new TokenRefreshError(
+          "Microsoft authentication has expired or been revoked. Please disconnect and reconnect your email account in Settings > Help Desk > Email Accounts."
+        );
+      }
+    } catch (parseError) {
+      // If we can't parse the error, use the generic message
+    }
+    
+    throw new TokenRefreshError(
+      "Failed to refresh Microsoft token. Please reconnect your email account in Settings > Help Desk > Email Accounts."
+    );
   }
 
   const data = await response.json();
