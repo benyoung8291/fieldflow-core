@@ -42,7 +42,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
           *,
           appointment_workers(
             worker_id,
-            profiles!appointment_workers_worker_id_fkey(
+            workers!appointment_workers_worker_id_fkey(
               id,
               first_name,
               last_name,
@@ -131,9 +131,9 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                           {appointment.assigned_workers?.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
                               {appointment.assigned_workers.map((aw: any) => (
-                                aw.profiles && (
+                                aw.workers && (
                                   <Badge key={aw.worker_id} className="bg-primary text-primary-foreground font-medium">
-                                    {aw.profiles.first_name} {aw.profiles.last_name}
+                                    {aw.workers.first_name} {aw.workers.last_name}
                                   </Badge>
                                 )
                               ))}
