@@ -33,5 +33,12 @@ export function useHasRole(requiredRoles: UserRole[]) {
 }
 
 export function useCanManageKnowledge() {
-  return useHasRole(["supervisor", "management", "tenant_admin", "super_admin"]);
+  const result = useHasRole(["supervisor", "management", "tenant_admin", "super_admin"]);
+  
+  // Show button while loading or if user has required role
+  // This prevents the button from disappearing during role check
+  return {
+    ...result,
+    hasRole: result.isLoading || result.hasRole,
+  };
 }
