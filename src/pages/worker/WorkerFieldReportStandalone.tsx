@@ -91,16 +91,15 @@ export default function WorkerFieldReportStandalone() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-10 bg-background border-b p-4">
+    <div className="min-h-screen bg-background pb-20 pt-14">
+      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-md border-b border-border/50 p-4 shadow-sm">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={() => navigate(-1)}
-          className="mb-2"
+          className="mb-2 h-10 w-10 rounded-xl"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold">Create Field Report</h1>
       </div>
