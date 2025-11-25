@@ -21,23 +21,23 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
       
       switch (docType) {
         case "service_order":
-          selectFields = "id, order_number, customer_id, contact_id";
+          selectFields = "id, order_number, customer_id";
           query = supabase.from("service_orders" as any).select(selectFields).order("order_number", { ascending: false });
           break;
         case "appointment":
-          selectFields = "id, title, customer_id, contact_id";
+          selectFields = "id, title, customer_id";
           query = supabase.from("appointments").select(selectFields).order("created_at", { ascending: false });
           break;
         case "quote":
-          selectFields = "id, quote_number, customer_id, contact_id";
+          selectFields = "id, quote_number, customer_id";
           query = supabase.from("quotes" as any).select(selectFields).order("quote_number", { ascending: false });
           break;
         case "invoice":
-          selectFields = "id, invoice_number, customer_id, contact_id";
+          selectFields = "id, invoice_number, customer_id";
           query = supabase.from("invoices" as any).select(selectFields).eq("invoice_type", "AR").order("invoice_number", { ascending: false });
           break;
         case "project":
-          selectFields = "id, name, customer_id, contact_id";
+          selectFields = "id, name, customer_id";
           query = supabase.from("projects" as any).select(selectFields).order("name");
           break;
         case "task":
@@ -67,15 +67,14 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
       
       if (error) throw error;
 
-      // Get customer_id and contact_id from the linked document
+      // Get customer_id from the linked document
       const linkedDoc = documents?.find((doc) => doc.id === documentId);
       if (linkedDoc && onCustomerContactLinked) {
         const customerId = (linkedDoc as any).customer_id;
-        const contactId = (linkedDoc as any).contact_id;
         
-        // Pass through the IDs - let the database handle validation
-        if (customerId || contactId) {
-          onCustomerContactLinked(customerId, contactId);
+        // Pass through the customer ID - let the database handle validation
+        if (customerId) {
+          onCustomerContactLinked(customerId, undefined);
         }
       }
     },
