@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
+import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -153,6 +155,13 @@ export default function Customers() {
 
   return (
     <DashboardLayout>
+      <ModuleTutorial 
+        moduleName="customers"
+        defaultSteps={TUTORIAL_CONTENT.customers.steps}
+        title={TUTORIAL_CONTENT.customers.title}
+        description={TUTORIAL_CONTENT.customers.description}
+      />
+      
       <div ref={containerRef} className="relative h-full overflow-y-auto">
         <PullToRefreshIndicator
           isPulling={isPulling}
