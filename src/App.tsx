@@ -101,22 +101,28 @@ const queryClient = new QueryClient({
 });
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { data: access, isLoading } = useUserAccess();
+  const { data: access, isLoading, error } = useUserAccess();
   const location = window.location.pathname;
   
+  // Show loading while checking access
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
+  // If there's an error (user not authenticated), redirect to auth
+  if (error || !access) {
+    return <Navigate to="/auth" replace />;
+  }
+
   // Worker-only routes - require worker access
   if (location.startsWith("/worker")) {
-    if (!access?.canAccessWorker) {
+    if (!access.canAccessWorker) {
       return <Navigate to="/auth" replace />;
     }
   } 
   // Office routes - require role
   else {
-    if (!access?.canAccessOffice) {
+    if (!access.canAccessOffice) {
       return <Navigate to="/auth" replace />;
     }
   }
