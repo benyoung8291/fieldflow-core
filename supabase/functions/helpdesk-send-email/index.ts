@@ -107,6 +107,11 @@ serve(async (req: Request) => {
     // Generate message ID
     const messageId = `${Date.now()}-${ticket_id}@${emailAccount.email_address.split("@")[1]}`;
 
+    // Validate Resend API key exists
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+
     // Send email via Resend
     const emailSubject = subject || `Re: ${ticket.subject}`;
     
@@ -123,7 +128,13 @@ serve(async (req: Request) => {
       },
     });
 
-    console.log("Email sent via Resend:", emailResponse);
+    // Critical: Check if Resend returned an error
+    if (emailResponse.error) {
+      console.error("Resend API error:", emailResponse.error.message);
+      throw new Error(`Failed to send email: ${emailResponse.error.message}`);
+    }
+
+    console.log("Email sent successfully. Resend ID:", emailResponse.data?.id);
 
     // Create message record
     const { error: messageError } = await supabase

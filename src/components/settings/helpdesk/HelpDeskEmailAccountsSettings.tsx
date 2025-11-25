@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Mail, AlertCircle, CheckCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Mail, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { HelpDeskEmailAccountDialog } from "./HelpDeskEmailAccountDialog";
 import {
   AlertDialog,
@@ -25,7 +25,8 @@ export function HelpDeskEmailAccountsSettings() {
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<any>(null);
-  const [oauthData, setOauthData] = useState<any>(null);
+  const [testingAccount, setTestingAccount] = useState<string | null>(null);
+  const [syncingAccount, setSyncingAccount] = useState<string | null>(null);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["helpdesk-email-accounts-settings"],
@@ -54,7 +55,10 @@ export function HelpDeskEmailAccountsSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-email-accounts-settings"] });
-      toast({ title: "Email account deleted successfully" });
+      toast({ 
+        title: "Email account deleted",
+        description: "Email account removed successfully",
+      });
       setDeleteDialogOpen(false);
       setAccountToDelete(null);
     },
@@ -68,9 +72,8 @@ export function HelpDeskEmailAccountsSettings() {
   });
 
   const testEmailConnection = async (accountId: string) => {
+    setTestingAccount(accountId);
     try {
-      toast({ title: "Sending test email..." });
-      
       const { data, error } = await supabase.functions.invoke(
         "helpdesk-test-email-connection",
         {
@@ -78,26 +81,50 @@ export function HelpDeskEmailAccountsSettings() {
         }
       );
 
-      if (error) throw error;
+      // Check for edge function invocation errors
+      if (error) {
+        throw new Error(error.message || "Failed to send test email");
+      }
+
+      // Check for application-level errors in the response
+      if (data && !data.success) {
+        throw new Error(data.error || "Failed to send test email");
+      }
 
       toast({
-        title: "Test email sent successfully",
+        title: "Test email sent",
         description: `Check your inbox at ${data.sent_to}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["helpdesk-email-accounts-settings"] });
     } catch (error: any) {
+      console.error("Test email error:", error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = error.message;
+      if (errorMessage.includes("API key is invalid")) {
+        errorMessage = "Invalid Resend API key. Please check your API key configuration in Settings.";
+      } else if (errorMessage.includes("RESEND_API_KEY is not configured")) {
+        errorMessage = "Resend API key not configured. Please add your API key in Settings.";
+      }
+
       toast({
         title: "Failed to send test email",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setTestingAccount(null);
     }
   };
 
   const syncEmails = async (accountId: string) => {
+    setSyncingAccount(accountId);
     try {
-      toast({ title: "Syncing emails...", description: "Fetching new messages from your mailbox" });
+      toast({ 
+        title: "Syncing emails...", 
+        description: "Fetching new messages from your mailbox" 
+      });
       
       const { data, error } = await supabase.functions.invoke(
         "microsoft-sync-emails",
@@ -118,17 +145,20 @@ export function HelpDeskEmailAccountsSettings() {
 
       toast({
         title: "Email sync complete",
-        description: `Synced ${data.syncedCount} new tickets from ${data.totalMessages} messages`,
+        description: `Synced ${data.syncedCount || 0} new tickets from ${data.totalMessages || 0} messages`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["helpdesk-email-accounts-settings"] });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
     } catch (error: any) {
+      console.error("Email sync error:", error);
       toast({
         title: "Failed to sync emails",
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setSyncingAccount(null);
     }
   };
 
@@ -145,138 +175,168 @@ export function HelpDeskEmailAccountsSettings() {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setEditingAccount(null);
-    setOauthData(null);
   };
 
   const getProviderIcon = (provider: string) => {
     return <Mail className="h-5 w-5" />;
   };
 
+  const getStatusBadge = (account: any) => {
+    if (account.sync_error) {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Error
+        </Badge>
+      );
+    }
+    if (!account.is_active) {
+      return (
+        <Badge variant="secondary" className="text-xs">
+          Inactive
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-xs border-green-200 text-green-700 dark:border-green-800 dark:text-green-400">
+        <CheckCircle className="h-3 w-3 mr-1" />
+        Connected
+      </Badge>
+    );
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
           <h3 className="text-lg font-semibold">Email Accounts</h3>
-          <p className="text-sm text-muted-foreground">
-            Connect email accounts to automatically create tickets from incoming emails
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Connect email accounts to automatically create tickets from incoming emails and send replies to customers
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => setDialogOpen(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          Add Email Account
+          Add Account
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading email accounts...</div>
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+          Loading email accounts...
+        </div>
       ) : accounts && accounts.length > 0 ? (
         <div className="space-y-3">
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="flex items-start justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+              className="group relative flex items-start gap-4 p-4 border rounded-lg bg-card hover:border-primary/50 transition-all"
             >
-              <div className="flex items-start gap-3 flex-1">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  {getProviderIcon(account.provider)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{account.display_name || account.email_address}</span>
-                    {!account.is_active && (
-                      <Badge variant="secondary" className="text-xs">
-                        Inactive
-                      </Badge>
-                    )}
-                    {account.sync_error && (
-                      <Badge variant="destructive" className="text-xs">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Error
-                      </Badge>
-                    )}
-                    {account.is_active && !account.sync_error && (
-                      <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Connected
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">{account.email_address}</p>
-                  
-                  {account.pipeline && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-muted-foreground">Routes to:</span>
-                      <div className="flex items-center gap-1">
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: account.pipeline.color }}
-                        />
-                        <span className="text-xs font-medium">{account.pipeline.name}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {account.sync_error && (
-                    <p className="text-xs text-destructive mt-2">{account.sync_error}</p>
-                  )}
-
-                  {account.last_sync_at && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Last synced {formatDistanceToNow(new Date(account.last_sync_at), { addSuffix: true })}
-                    </p>
-                  )}
-                </div>
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                {getProviderIcon(account.provider)}
               </div>
+              
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {account.display_name || account.email_address}
+                      </span>
+                      {getStatusBadge(account)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{account.email_address}</p>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEdit(account)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                {account.provider === 'microsoft' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(account)}
-                  >
-                    Reconnect
-                  </Button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleEdit(account)}
+                      title="Edit account"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => syncEmails(account.id)}
+                      disabled={syncingAccount === account.id}
+                      title="Sync emails"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${syncingAccount === account.id ? 'animate-spin' : ''}`} />
+                      Sync
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => testEmailConnection(account.id)}
+                      disabled={testingAccount === account.id}
+                      title="Send test email"
+                    >
+                      {testingAccount === account.id ? (
+                        <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Mail className="h-4 w-4 mr-1" />
+                      )}
+                      Test
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(account)}
+                      title="Delete account"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {account.pipeline && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Routes to:</span>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: account.pipeline.color }}
+                      />
+                      <span className="font-medium">{account.pipeline.name}</span>
+                    </div>
+                  </div>
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => syncEmails(account.id)}
-                >
-                  Sync
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => testEmailConnection(account.id)}
-                >
-                  Test
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(account)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+
+                {account.sync_error && (
+                  <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <p className="text-xs text-destructive">{account.sync_error}</p>
+                  </div>
+                )}
+
+                {account.last_sync_at && !account.sync_error && (
+                  <p className="text-xs text-muted-foreground">
+                    Last synced {formatDistanceToNow(new Date(account.last_sync_at), { addSuffix: true })}
+                  </p>
+                )}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 border rounded-lg bg-muted/10">
-          <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-4">No email accounts configured yet</p>
+        <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/10">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Mail className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="font-medium mb-2">No email accounts configured</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+            Connect your first email account to start receiving and managing support tickets
+          </p>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Connect Your First Email Account
+            Connect Email Account
           </Button>
         </div>
       )}
@@ -285,7 +345,6 @@ export function HelpDeskEmailAccountsSettings() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         account={editingAccount}
-        oauthData={oauthData}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -293,8 +352,14 @@ export function HelpDeskEmailAccountsSettings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Email Account</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{accountToDelete?.email_address}"? New emails to
-              this account will no longer create tickets automatically.
+              Are you sure you want to delete "{accountToDelete?.email_address}"? 
+              <br /><br />
+              <strong>This will:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Stop automatic ticket creation from new emails</li>
+                <li>Prevent sending replies from this account</li>
+                <li>Not affect existing tickets</li>
+              </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -303,7 +368,7 @@ export function HelpDeskEmailAccountsSettings() {
               onClick={() => deleteMutation.mutate(accountToDelete?.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Delete Account
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
