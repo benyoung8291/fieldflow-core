@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2, XCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -110,7 +110,10 @@ export default function ServiceOrders() {
           completed_date,
           created_at,
           customers!service_orders_customer_id_fkey(name),
-          customer_locations!service_orders_location_id_fkey(name)
+          customer_locations!service_orders_location_id_fkey(name),
+          appointments(count),
+          purchase_orders(count),
+          invoices(count)
         `, { count: 'exact' })
         .order("created_at", { ascending: false });
 
@@ -463,59 +466,85 @@ export default function ServiceOrders() {
           </div>
         ) : (
           /* Desktop List View */
-          <Card className="border-none shadow-md">
+          <Card className="border-none shadow-md overflow-hidden">
             <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {orders.map((order: any) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => window.location.href = `/service-orders/${order.id}`}
-                  >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="flex-shrink-0">
-                        <div className="text-sm font-semibold text-foreground">#{order.order_number}</div>
-                        {order.work_order_number && (
-                          <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{order.title}</div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <User className="h-3 w-3" />
-                            <span className="truncate">{order.customers?.name || '-'}</span>
-                          </div>
-                          {order.customer_locations?.name && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              <span className="truncate">{order.customer_locations.name}</span>
-                            </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Order #</th>
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Title</th>
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Customer</th>
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Location</th>
+                      <th className="text-center p-3 text-xs font-medium text-muted-foreground">Appointments</th>
+                      <th className="text-center p-3 text-xs font-medium text-muted-foreground">POs</th>
+                      <th className="text-center p-3 text-xs font-medium text-muted-foreground">Invoiced</th>
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Priority</th>
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Status</th>
+                      <th className="text-right p-3 text-xs font-medium text-muted-foreground">Total (ex GST)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {orders.map((order: any) => (
+                      <tr
+                        key={order.id}
+                        className="hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => window.location.href = `/service-orders/${order.id}`}
+                      >
+                        <td className="p-3">
+                          <div className="text-sm font-semibold text-foreground">#{order.order_number}</div>
+                          {order.work_order_number && (
+                            <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
                           )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <Badge variant="outline" className={cn("text-xs", priorityColors[order.priority as keyof typeof priorityColors])}>
-                        {order.priority}
-                      </Badge>
-                      
-                      <Badge className={cn("min-w-[100px] justify-center", statusColors[order.status as keyof typeof statusColors])}>
-                        {statusLabels[order.status as keyof typeof statusLabels] || order.status}
-                      </Badge>
-                      
-                      <div className="text-right min-w-[100px]">
-                        <div className="text-xs text-muted-foreground">Total (ex GST)</div>
-                        <div className="text-sm font-bold">${order.subtotal?.toFixed(2) || '0.00'}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm font-medium text-foreground truncate max-w-[300px]">{order.title}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm text-foreground truncate max-w-[200px]">{order.customers?.name || '-'}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                            {order.customer_locations?.name || '-'}
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <Badge variant="secondary" className="text-xs">
+                            {order.appointments?.[0]?.count || 0}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-center">
+                          <Badge variant="secondary" className="text-xs">
+                            {order.purchase_orders?.[0]?.count || 0}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-center">
+                          {(order.invoices?.[0]?.count || 0) > 0 ? (
+                            <CheckCircle className="h-4 w-4 text-success mx-auto" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground mx-auto" />
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <Badge variant="outline" className={cn("text-xs", priorityColors[order.priority as keyof typeof priorityColors])}>
+                            {order.priority}
+                          </Badge>
+                        </td>
+                        <td className="p-3">
+                          <Badge className={cn("text-xs", statusColors[order.status as keyof typeof statusColors])}>
+                            {statusLabels[order.status as keyof typeof statusLabels] || order.status}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="text-sm font-bold">${(order.subtotal || 0).toFixed(2)}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
-           </Card>
+          </Card>
         )}
         
         {/* Pagination Controls */}
