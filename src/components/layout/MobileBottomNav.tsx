@@ -26,14 +26,6 @@ const primaryNavItems: NavItem[] = [
   { icon: FileText, label: "Quotes", path: "/quotes" },
 ];
 
-const crmPages = [
-  { icon: Users, label: "Leads", path: "/leads" },
-  { icon: Users, label: "Contacts", path: "/contacts" },
-  { icon: Users, label: "Customers", path: "/customers" },
-  { icon: FileText, label: "Quotes", path: "/quotes" },
-  { icon: FileText, label: "Pipeline", path: "/quote-pipeline" },
-];
-
 const moreNavItems: NavItem[] = [
   { icon: Receipt, label: "Invoices", path: "/invoices" },
   { icon: Calendar, label: "Scheduler", path: "/scheduler" },
@@ -65,16 +57,8 @@ export const MobileBottomNav = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Only show on mobile devices
-  if (!isMobile) return null;
-
-  // Don't show when not authenticated
-  if (!isAuthenticated) return null;
-
-  // Don't show on worker app routes
+  if (!isMobile || !isAuthenticated) return null;
   if (location.pathname.startsWith('/worker')) return null;
-
-  // Don't show on excluded pages (settings, help desk)
   if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/helpdesk')) {
     return null;
   }
@@ -82,8 +66,8 @@ export const MobileBottomNav = () => {
   const isActivePath = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border shadow-lg pb-safe">
-      <div className="flex items-center justify-around h-14 px-4 safe-padding-x">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50 shadow-xl pb-safe">
+      <div className="flex items-center justify-around h-16 px-2">
         {primaryNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(item.path);
@@ -93,33 +77,41 @@ export const MobileBottomNav = () => {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-md transition-colors flex-1 min-w-0",
+                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1",
                 isActive
-                  ? "text-sidebar-primary"
-                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                  ? "text-primary scale-105"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
-              <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
-              <span className="text-[10px] font-medium truncate">{item.label}</span>
+              <Icon className={cn(
+                "h-5 w-5 transition-transform",
+                isActive && "scale-110"
+              )} />
+              <span className={cn(
+                "text-[11px] font-medium",
+                isActive && "font-semibold"
+              )}>
+                {item.label}
+              </span>
             </button>
           );
         })}
         
-        {/* More menu */}
         <Sheet>
           <SheetTrigger asChild>
-            <button
-              className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-md transition-colors flex-1 min-w-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
-            >
+            <button className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1 text-muted-foreground hover:text-foreground hover:bg-muted/50">
               <MoreHorizontal className="h-5 w-5" />
-              <span className="text-[10px] font-medium">More</span>
+              <span className="text-[11px] font-medium">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[60vh] bg-sidebar">
-            <SheetHeader>
-              <SheetTitle className="text-sidebar-foreground">More Options</SheetTitle>
+          <SheetContent 
+            side="bottom" 
+            className="h-[70vh] bg-background/95 backdrop-blur-xl border-t-2 border-border/50 rounded-t-3xl"
+          >
+            <SheetHeader className="mb-6">
+              <SheetTitle className="text-xl font-semibold">More Options</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-3 gap-3 pb-6">
               {moreNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActivePath(item.path);
@@ -130,14 +122,14 @@ export const MobileBottomNav = () => {
                     variant="ghost"
                     onClick={() => navigate(item.path)}
                     className={cn(
-                      "flex flex-col items-center justify-center h-20 gap-2",
+                      "flex flex-col items-center justify-center h-24 gap-2 rounded-2xl mobile-tap",
                       isActive
-                        ? "text-sidebar-primary bg-sidebar-accent"
-                        : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                        ? "text-primary bg-primary/10 border-2 border-primary/20"
+                        : "text-foreground hover:bg-muted/80"
                     )}
                   >
                     <Icon className="h-6 w-6" />
-                    <span className="text-xs font-medium text-center">{item.label}</span>
+                    <span className="text-xs font-medium text-center leading-tight">{item.label}</span>
                   </Button>
                 );
               })}

@@ -69,20 +69,29 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(21 63% 53%), hsl(21 63% 63%));
     --gradient-accent: linear-gradient(135deg, hsl(34 90% 77%), hsl(34 90% 87%));
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(200 5% 19% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(200 5% 19% / 0.08);
-    --shadow-lg: 0 10px 15px -3px hsl(200 5% 19% / 0.1);
+    /* Shadows - Apple/Google inspired */
+    --shadow-xs: 0 1px 2px 0 hsl(200 5% 19% / 0.04);
+    --shadow-sm: 0 2px 4px 0 hsl(200 5% 19% / 0.06);
+    --shadow-md: 0 4px 12px 0 hsl(200 5% 19% / 0.08);
+    --shadow-lg: 0 8px 24px 0 hsl(200 5% 19% / 0.1);
+    --shadow-xl: 0 16px 48px 0 hsl(200 5% 19% / 0.12);
     
-    /* Transitions */
+    /* Transitions - Apple/Google inspired */
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
     --transition-snappy: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     
     /* Micro-interactions */
-    --hover-lift: translateY(-1px);
+    --hover-lift: translateY(-2px);
     --hover-scale: scale(1.02);
-    --active-scale: scale(0.98);
+    --active-scale: scale(0.96);
+    --tap-scale: scale(0.98);
+    
+    /* Mobile-specific */
+    --mobile-header-height: 56px;
+    --mobile-nav-height: 64px;
+    --mobile-touch-target: 44px;
   }
 
   .dark {
@@ -202,7 +211,11 @@ All colors MUST be HSL.
 /* Safe area utilities for mobile devices */
 @layer utilities {
   .pb-safe {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
   }
   
   .pl-safe {
@@ -218,6 +231,24 @@ All colors MUST be HSL.
     padding-right: max(1rem, env(safe-area-inset-right));
   }
   
+  .py-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  /* Mobile spacing rhythm - 8px base unit */
+  .space-mobile-xs { margin: 0.5rem; }
+  .space-mobile-sm { margin: 0.75rem; }
+  .space-mobile-md { margin: 1rem; }
+  .space-mobile-lg { margin: 1.5rem; }
+  .space-mobile-xl { margin: 2rem; }
+  
+  /* Touch targets */
+  .touch-target {
+    min-height: var(--mobile-touch-target);
+    min-width: var(--mobile-touch-target);
+  }
+  
   /* Smooth transitions */
   .transition-smooth {
     transition: var(--transition-smooth);
@@ -225,6 +256,20 @@ All colors MUST be HSL.
   
   .transition-snappy {
     transition: var(--transition-snappy);
+  }
+  
+  .transition-spring {
+    transition: var(--transition-spring);
+  }
+  
+  /* Mobile interactions */
+  .mobile-tap {
+    transition: transform 0.1s ease, background-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .mobile-tap:active {
+    transform: var(--tap-scale);
   }
   
   /* Hover lift effect */
@@ -239,5 +284,21 @@ All colors MUST be HSL.
   
   .hover-lift:active {
     transform: var(--active-scale);
+  }
+  
+  /* Card interactions */
+  .card-interactive {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .card-interactive:hover {
+    box-shadow: var(--shadow-md);
+  }
+  
+  .card-interactive:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow-sm);
   }
 }

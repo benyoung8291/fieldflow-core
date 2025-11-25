@@ -73,9 +73,17 @@ export default {
         },
       },
       boxShadow: {
+        'xs': 'var(--shadow-xs)',
         'sm': 'var(--shadow-sm)',
         'md': 'var(--shadow-md)',
         'lg': 'var(--shadow-lg)',
+        'xl': 'var(--shadow-xl)',
+      },
+      spacing: {
+        'safe-top': 'var(--safe-area-inset-top, 0px)',
+        'safe-bottom': 'var(--safe-area-inset-bottom, 0px)',
+        'mobile-header': 'var(--mobile-header-height)',
+        'mobile-nav': 'var(--mobile-nav-height)',
       },
       transitionProperty: {
         'base': 'var(--transition-base)',

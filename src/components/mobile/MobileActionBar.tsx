@@ -26,36 +26,43 @@ export const MobileActionBar = ({
   menuActions = [],
 }: MobileActionBarProps) => {
   return (
-    <div className="sticky top-0 z-10 bg-background border-b p-3 flex items-center gap-2">
+    <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-md border-b border-border/50 p-3 flex items-center gap-2 shadow-sm">
       {primaryActions.map((action, index) => (
         <Button
           key={index}
           variant={action.variant || "default"}
-          size="sm"
+          size="default"
           onClick={action.onClick}
-          className={action.className}
+          className={`${action.className} h-10 rounded-xl mobile-tap font-medium`}
         >
-          {action.icon}
-          <span className="ml-2">{action.label}</span>
+          <span className="mr-2">{action.icon}</span>
+          {action.label}
         </Button>
       ))}
       
       {menuActions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="ml-auto h-10 w-10 rounded-xl border-border/50 mobile-tap"
+            >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent 
+            align="end" 
+            className="w-56 bg-popover/95 backdrop-blur-xl border-border/50 shadow-lg"
+          >
             {menuActions.map((action, index) => (
               <DropdownMenuItem
                 key={index}
                 onClick={action.onClick}
-                className={action.className}
+                className={`${action.className} cursor-pointer py-3 text-base mobile-tap`}
               >
-                {action.icon}
-                <span className="ml-2">{action.label}</span>
+                <span className="mr-2">{action.icon}</span>
+                {action.label}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

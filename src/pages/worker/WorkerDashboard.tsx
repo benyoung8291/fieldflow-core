@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText, ChevronRight } from 'lucide-react';
 import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -183,47 +183,61 @@ export default function WorkerDashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
-        <div className="flex items-center justify-between max-w-screen-lg mx-auto">
-          <div className="flex items-center gap-3">
-            <User className="h-8 w-8" />
-            <div>
-              <h1 className="text-xl font-bold">Service Pulse</h1>
-              <p className="text-sm opacity-90">{user?.first_name} {user?.last_name}</p>
+      {/* Modern Mobile Header */}
+      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground sticky top-0 z-20 shadow-lg">
+        <div className="px-4 pt-4 pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-primary-foreground/10 backdrop-blur-sm flex items-center justify-center">
+                <User className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-medium opacity-80">Welcome back</p>
+                <h1 className="text-lg font-bold">{user?.first_name} {user?.last_name}</h1>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <Wifi className="h-5 w-5 text-green-300" />
-            ) : (
-              <WifiOff className="h-5 w-5 text-yellow-300" />
-            )}
-            <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-primary-foreground hover:bg-primary-foreground/20"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {isOnline ? (
+                <div className="h-8 w-8 rounded-full bg-success/20 flex items-center justify-center">
+                  <Wifi className="h-4 w-4 text-success" />
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
+                  <WifiOff className="h-4 w-4 text-warning" />
+                </div>
+              )}
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="h-10 w-10 text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-screen-lg mx-auto p-4 space-y-4">
-        {/* Sync Status */}
+      <div className="px-4 -mt-4 pb-4 space-y-4">
+        {/* Status Cards */}
         {!isOnline && (
-          <Card className="bg-yellow-50 border-yellow-200">
+          <Card className="bg-warning/5 border-warning/20 animate-fade-in">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-yellow-800">
-                <WifiOff className="h-5 w-5" />
-                <div>
-                  <p className="font-medium">Offline Mode</p>
-                  <p className="text-sm">Changes will sync when you're back online</p>
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+                  <WifiOff className="h-5 w-5 text-warning" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">Offline Mode</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Changes will sync when back online
+                  </p>
                   {pendingItems > 0 && (
-                    <p className="text-xs mt-1">{pendingItems} items pending sync</p>
+                    <Badge variant="outline" className="mt-2 text-xs">
+                      {pendingItems} pending
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -232,11 +246,11 @@ export default function WorkerDashboard() {
         )}
 
         {isSyncing && (
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-info/5 border-info/20 animate-fade-in">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-blue-800">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-800"></div>
-                <p className="text-sm">Syncing offline data...</p>
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-info border-t-transparent"></div>
+                <p className="text-sm font-medium">Syncing data...</p>
               </div>
             </CardContent>
           </Card>
@@ -244,176 +258,178 @@ export default function WorkerDashboard() {
 
         {/* Supervisor Access */}
         {isSupervisorOrAbove && (
-          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-4">
-              <Button
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 card-interactive">
+            <CardContent className="p-0">
+              <button
                 onClick={() => navigate('/worker/supervisor/dashboard')}
-                className="w-full h-16 flex items-center justify-start gap-3"
+                className="w-full p-4 flex items-center gap-3 text-left"
               >
-                <Briefcase className="h-6 w-6" />
-                <div className="text-left">
-                  <p className="font-semibold">Supervisor Dashboard</p>
-                  <p className="text-xs opacity-90">Manage team & operations</p>
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Briefcase className="h-6 w-6 text-primary" />
                 </div>
-              </Button>
+                <div className="flex-1">
+                  <p className="font-semibold text-base">Supervisor Dashboard</p>
+                  <p className="text-xs text-muted-foreground">Manage team & operations</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
             </CardContent>
           </Card>
         )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-3">
-          <Button
-            size="lg"
+          <button
             onClick={() => navigate('/worker/appointments')}
-            className="h-24 flex-col gap-2"
+            className="bg-primary text-primary-foreground rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap"
           >
             <CalendarDays className="h-6 w-6" />
-            <span className="text-xs">All Appointments</span>
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
+            <span className="text-xs font-medium text-center leading-tight">All Appointments</span>
+          </button>
+          <button
             onClick={() => navigate('/worker/schedule')}
-            className="h-24 flex-col gap-2"
+            className="bg-card border-2 border-border/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap"
           >
-            <Clock className="h-6 w-6" />
-            <span className="text-xs">My Schedule</span>
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
+            <Clock className="h-6 w-6 text-foreground" />
+            <span className="text-xs font-medium text-center leading-tight">My Schedule</span>
+          </button>
+          <button
             onClick={() => navigate('/worker/field-report-new')}
-            className="h-24 flex-col gap-2"
+            className="bg-card border-2 border-border/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap"
           >
-            <FileText className="h-6 w-6" />
-            <span className="text-xs">Field Report</span>
-          </Button>
+            <FileText className="h-6 w-6 text-foreground" />
+            <span className="text-xs font-medium text-center leading-tight">Field Report</span>
+          </button>
         </div>
 
-        {/* View Filter Controls */}
+        {/* View Filter */}
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">View:</span>
+                <span className="text-sm font-semibold">View</span>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant={viewFilter === 'today' ? 'default' : 'outline'}
-                  onClick={() => setViewFilter('today')}
-                  className="text-xs"
-                >
-                  Today
-                </Button>
-                <Button
-                  size="sm"
-                  variant={viewFilter === 'week' ? 'default' : 'outline'}
-                  onClick={() => setViewFilter('week')}
-                  className="text-xs"
-                >
-                  Next 7 Days
-                </Button>
-                <Button
-                  size="sm"
-                  variant={viewFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setViewFilter('all')}
-                  className="text-xs"
-                >
-                  All
-                </Button>
-              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant={viewFilter === 'today' ? 'default' : 'outline'}
+                onClick={() => setViewFilter('today')}
+                className="flex-1"
+              >
+                Today
+              </Button>
+              <Button
+                size="sm"
+                variant={viewFilter === 'week' ? 'default' : 'outline'}
+                onClick={() => setViewFilter('week')}
+                className="flex-1"
+              >
+                Next 7 Days
+              </Button>
+              <Button
+                size="sm"
+                variant={viewFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setViewFilter('all')}
+                className="flex-1"
+              >
+                All
+              </Button>
             </div>
             
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  size="sm"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
-                    viewFilter === 'custom' && "border-primary",
-                    !customDate && viewFilter !== 'custom' && "text-muted-foreground"
+                    "w-full justify-start",
+                    viewFilter === 'custom' && "border-primary text-primary"
                   )}
                 >
                   <CalendarIcon className="h-4 w-4 mr-2" />
                   {customDate && viewFilter === 'custom'
                     ? format(customDate, "PPP")
-                    : "Pick a custom date"}
+                    : "Pick custom date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-popover/95 backdrop-blur-xl" align="start">
                 <Calendar
                   mode="single"
                   selected={customDate}
                   onSelect={(date) => {
                     setCustomDate(date);
-                    if (date) {
-                      setViewFilter('custom');
-                    }
+                    if (date) setViewFilter('custom');
                   }}
                   initialFocus
-                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
           </CardContent>
         </Card>
 
-        {/* Appointments List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {viewFilter === 'today' && 'Today\'s Appointments'}
-              {viewFilter === 'week' && 'Next 7 Days'}
-              {viewFilter === 'all' && 'All Upcoming Appointments'}
-              {viewFilter === 'custom' && customDate && format(customDate, 'MMMM d, yyyy')}
-            </CardTitle>
-            <CardDescription>
-              {appointments.length} appointment{appointments.length !== 1 ? 's' : ''} scheduled
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {appointments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No appointments scheduled for this period
+        {/* Appointments Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <h2 className="text-lg font-bold">
+                {viewFilter === 'today' && 'Today'}
+                {viewFilter === 'week' && 'Next 7 Days'}
+                {viewFilter === 'all' && 'All Upcoming'}
+                {viewFilter === 'custom' && customDate && format(customDate, 'MMM d, yyyy')}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
               </p>
-            ) : (
-              appointments.map((apt) => (
+            </div>
+          </div>
+
+          {appointments.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <CalendarDays className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground">No appointments scheduled</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {appointments.map((apt) => (
                 <Card
                   key={apt.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="card-interactive"
                   onClick={() => navigate(`/worker/appointments/${apt.id}`)}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{apt.title}</h3>
-                        <p className="text-sm text-muted-foreground">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base truncate">{apt.title}</h3>
+                        <p className="text-sm text-muted-foreground truncate">
                           {apt.service_order?.customer?.name}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(apt.status)}>
+                      <Badge 
+                        variant={apt.status === 'completed' ? 'default' : 'secondary'}
+                        className="shrink-0"
+                      >
                         {apt.status?.replace('_', ' ')}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <CalendarDays className="h-4 w-4" />
-                        {format(parseISO(apt.start_time), 'MMM d, yyyy')}
+                        <span>{format(parseISO(apt.start_time), 'MMM d')}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Clock className="h-4 w-4" />
-                        {format(parseISO(apt.start_time), 'h:mm a')}
+                        <span>{format(parseISO(apt.start_time), 'h:mm a')}</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
