@@ -89,17 +89,20 @@ export default function Auth() {
         return;
       }
 
-      const { data: roleData } = await (supabase as any)
+      const { data: roleData, error: roleError } = await (supabase as any)
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const { data: workerData } = await (supabase as any)
+      const { data: workerData, error: workerError } = await (supabase as any)
         .from("workers")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("id", user.id)  // workers.id is the link, not user_id
         .maybeSingle();
+
+      if (roleError) console.error("Role check error:", roleError);
+      if (workerError) console.error("Worker check error:", workerError);
 
       const hasRole = !!roleData;
       const isWorker = !!workerData;
