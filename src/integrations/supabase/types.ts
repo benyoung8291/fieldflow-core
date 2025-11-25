@@ -8236,6 +8236,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_access_info: {
+        Args: never
+        Returns: {
+          can_access_office: boolean
+          can_access_worker: boolean
+          default_route: string
+          has_role: boolean
+          is_worker: boolean
+          show_toggle: boolean
+          user_id: string
+        }[]
+      }
       get_user_permissions: {
         Args: { user_id_input: string }
         Returns: {
