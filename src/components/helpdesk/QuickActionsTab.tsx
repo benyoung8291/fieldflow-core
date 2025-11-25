@@ -22,11 +22,12 @@ import { InlineLeadForm } from "./inline-forms/InlineLeadForm";
 
 interface QuickActionsTabProps {
   ticket: any;
+  onDocumentLinked?: () => void;
 }
 
 type ViewType = 'menu' | 'invoice' | 'purchase_order' | 'service_order' | 'contact' | 'lead';
 
-export function QuickActionsTab({ ticket }: QuickActionsTabProps) {
+export function QuickActionsTab({ ticket, onDocumentLinked }: QuickActionsTabProps) {
   const { toast } = useToast();
   const [currentView, setCurrentView] = useState<ViewType>('menu');
 
@@ -47,6 +48,9 @@ export function QuickActionsTab({ ticket }: QuickActionsTabProps) {
         title: "Document linked",
         description: "The document has been created and linked to this ticket.",
       });
+      
+      // Trigger refresh of linked documents
+      onDocumentLinked?.();
     } catch (error) {
       console.error("Error linking document:", error);
     }
