@@ -87,19 +87,20 @@ export default function Auth() {
 
       if (accessError) {
         console.error("Access check error:", accessError);
-        toast.error("Failed to verify access. Please try again.");
+        toast.error("Access verification error. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      if (!accessData || (Array.isArray(accessData) && accessData.length === 0)) {
+      // RPC functions return arrays, get first result
+      const access = Array.isArray(accessData) && accessData.length > 0 ? accessData[0] : null;
+
+      if (!access) {
         toast.error("Access denied. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
       }
-
-      const access = Array.isArray(accessData) ? accessData[0] : accessData;
 
       // Check if user has any access
       if (!access.can_access_office && !access.can_access_worker) {
