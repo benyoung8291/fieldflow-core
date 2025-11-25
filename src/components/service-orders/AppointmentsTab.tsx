@@ -34,7 +34,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const { data: appointments = [], isLoading } = useQuery({
-    queryKey: ["service-order-appointments", serviceOrderId],
+    queryKey: ["service-order-appointments-v2", serviceOrderId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
@@ -42,7 +42,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
           *,
           appointment_workers(
             worker_id,
-            workers!appointment_workers_worker_id_fkey(
+            workers(
               id,
               first_name,
               last_name,
