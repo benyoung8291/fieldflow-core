@@ -81,6 +81,7 @@ import SupervisorMapDashboard from "./pages/worker/supervisor/SupervisorMapDashb
 import SupervisorAppointments from "./pages/worker/supervisor/SupervisorAppointments";
 import SupervisorServiceOrders from "./pages/worker/supervisor/SupervisorServiceOrders";
 import FinancialReconciliation from "./pages/FinancialReconciliation";
+import KnowledgeBase from "./pages/KnowledgeBase";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useOfflineSyncOffice } from "./hooks/useOfflineSyncOffice";
@@ -244,6 +245,7 @@ const App = () => {
             <Route path="/helpdesk" element={isAuthenticated ? <HelpDesk /> : <Navigate to="/auth" replace />} />
             <Route path="/helpdesk/analytics" element={isAuthenticated ? <HelpdeskAnalytics /> : <Navigate to="/auth" replace />} />
             <Route path="/crm-hub" element={isAuthenticated ? <CRMHub /> : <Navigate to="/auth" replace />} />
+            <Route path="/knowledge-base" element={isAuthenticated ? <KnowledgeBase /> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
             <Route path="/worker/auth" element={isAuthenticated ? <Navigate to="/worker/dashboard" replace /> : <WorkerAuth />} />
             <Route path="/worker/dashboard" element={isAuthenticated ? <WorkerDashboard /> : <Navigate to="/worker/auth" replace />} />
