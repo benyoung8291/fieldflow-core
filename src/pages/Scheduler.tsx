@@ -193,31 +193,30 @@ export default function Scheduler() {
     },
   });
 
-  // Fetch all active workers/profiles with skills
+  // Fetch all active workers from workers view
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
-      // Get all user_roles with worker role
-      const { data: workerRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "worker");
-
-      if (rolesError) throw rolesError;
-      
-      const workerUserIds = workerRoles?.map(r => r.user_id) || [];
-      
-      if (workerUserIds.length === 0) return [];
-
-      // Fetch profiles for those users
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, is_active, standard_work_hours, employment_type")
-        .in("id", workerUserIds)
+      // Query the workers view which only includes workers
+      const { data: workersData, error: workersError } = await supabase
+        .from("workers")
+        .select("id, first_name, last_name, is_active, phone, avatar_url, preferred_days, preferred_start_time, preferred_end_time")
         .eq("is_active", true)
         .order("first_name", { ascending: true });
 
-      if (profilesError) throw profilesError;
+      if (workersError) throw workersError;
+
+      const workerIds = workersData?.map(w => w.id).filter(Boolean) || [];
+      
+      if (workerIds.length === 0) return [];
+
+      // Fetch additional profile data for capacity planning
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, standard_work_hours, employment_type")
+        .in("id", workerIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       // Fetch worker skills separately
       const { data: workerSkills } = await supabase
@@ -228,19 +227,24 @@ export default function Scheduler() {
           proficiency_level,
           skills(name)
         `)
-        .in("worker_id", workerUserIds);
+        .in("worker_id", workerIds);
 
-      // Combine profiles with their skills
-      const workersWithSkills = (profiles || []).map(profile => ({
-        ...profile,
-        worker_skills: (workerSkills || [])
-          .filter(ws => ws.worker_id === profile.id)
-          .map(ws => ({
-            skill_id: ws.skill_id,
-            proficiency_level: ws.proficiency_level,
-            skills: ws.skills
-          }))
-      }));
+      // Combine workers with their skills and profile data
+      const workersWithSkills = (workersData || []).map(worker => {
+        const profile = profileMap.get(worker.id);
+        return {
+          ...worker,
+          standard_work_hours: profile?.standard_work_hours,
+          employment_type: profile?.employment_type,
+          worker_skills: (workerSkills || [])
+            .filter(ws => ws.worker_id === worker.id)
+            .map(ws => ({
+              skill_id: ws.skill_id,
+              proficiency_level: ws.proficiency_level,
+              skills: ws.skills
+            }))
+        };
+      });
 
       return workersWithSkills;
     },
