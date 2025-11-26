@@ -254,8 +254,9 @@ export function SeasonalAvailabilityDialog({
 
         {step === 'details' ? (
           <form onSubmit={handleNext} className="flex flex-col flex-1 min-h-0">
-            <ScrollArea className="h-full px-6" style={{ maxHeight: 'calc(90vh - 300px)' }}>
-              <div className="space-y-4 pb-4">
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-full px-6">
+                <div className="space-y-4 pb-4">
                 <div className="space-y-2">
                   <Label htmlFor="season-name" className="text-base">Period Name</Label>
                   <Input
@@ -312,7 +313,8 @@ export function SeasonalAvailabilityDialog({
                   />
                 </div>
               </div>
-            </ScrollArea>
+              </ScrollArea>
+            </div>
 
             <div className="p-6 pt-4 border-t flex gap-3 shrink-0">
               <Button 
@@ -385,8 +387,9 @@ export function SeasonalAvailabilityDialog({
               </div>
             </div>
 
-            <ScrollArea className="flex-1 px-6" style={{ maxHeight: 'calc(90vh - 400px)' }}>
-              <div className="space-y-2 pb-4">
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-full px-6">
+                <div className="space-y-2 pb-4">
                 {allDatesInRange.map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const periods = dateAvailability[dateStr] || [];
@@ -457,7 +460,8 @@ export function SeasonalAvailabilityDialog({
                   );
                 })}
               </div>
-            </ScrollArea>
+              </ScrollArea>
+            </div>
 
             <div className="p-6 pt-4 border-t shrink-0">
               <div className="mb-3 text-center text-sm text-muted-foreground">
