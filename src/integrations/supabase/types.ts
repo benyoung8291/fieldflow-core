@@ -565,6 +565,77 @@ export type Database = {
           },
         ]
       }
+      appointment_worker_confirmations: {
+        Row: {
+          appointment_id: string
+          confirmed_at: string | null
+          created_at: string | null
+          id: string
+          last_appointment_end_time: string | null
+          last_appointment_start_time: string | null
+          notified_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          appointment_id: string
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_appointment_end_time?: string | null
+          last_appointment_start_time?: string | null
+          notified_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          appointment_id?: string
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_appointment_end_time?: string | null
+          last_appointment_start_time?: string | null
+          notified_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_worker_confirmations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_worker_confirmations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_worker_confirmations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_worker_confirmations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_workers: {
         Row: {
           appointment_id: string

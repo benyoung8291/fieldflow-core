@@ -198,7 +198,7 @@ export default function AppointmentDialog({
       description: "",
       start_time: "",
       end_time: "",
-      status: "draft",
+      status: "published",
       location_address: "",
       location_lat: "",
       location_lng: "",
@@ -776,7 +776,7 @@ export default function AppointmentDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
                   <SelectItem value="checked_in">Checked In</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>

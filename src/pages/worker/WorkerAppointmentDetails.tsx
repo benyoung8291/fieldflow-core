@@ -38,6 +38,7 @@ import { useQuery } from '@tanstack/react-query';
 import FieldReportsList from '@/components/field-reports/FieldReportsList';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
+import { WorkerAppointmentConfirmation } from '@/components/worker/WorkerAppointmentConfirmation';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
@@ -902,6 +903,17 @@ export default function WorkerAppointmentDetails() {
       </header>
 
       <div className="max-w-screen-lg mx-auto p-4 space-y-4">
+        {/* Appointment Confirmation */}
+        {currentUser && appointment.status === 'published' && (
+          <WorkerAppointmentConfirmation
+            appointmentId={appointment.id}
+            workerId={currentUser.id}
+            appointmentTitle={appointment.title}
+            startTime={appointment.start_time}
+            endTime={appointment.end_time}
+          />
+        )}
+
         {/* Clock In/Out Card */}
         {!isCompleted && (
           <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
