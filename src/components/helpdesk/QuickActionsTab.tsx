@@ -238,7 +238,7 @@ export function QuickActionsTab({ ticket, onDocumentLinked }: QuickActionsTabPro
 
       <Separator />
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 w-full">
         <div className="p-4 space-y-3">
           {/* Email Info Summary */}
           <Card className="p-3 bg-muted/30">
