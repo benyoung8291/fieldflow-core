@@ -337,8 +337,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
           </div>
         </div>
 
-        <TabsContent value="documents" className="flex-1 mt-0 p-0 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1">
+        <TabsContent value="documents" className="flex-1 mt-0 p-0 data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:overflow-hidden">
+          <ScrollArea className="h-full w-full">
             <div className="p-4 pb-8 space-y-4">
               {/* AI Thread Summary */}
               <ThreadSummaryCard ticketId={ticketId} />
@@ -854,8 +854,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="actions" className="flex-1 mt-0 p-0 flex flex-col overflow-hidden">
-          <QuickActionsTab 
+        <TabsContent value="actions" className="flex-1 mt-0 p-0 data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:overflow-hidden">
+          <QuickActionsTab
             ticket={ticket} 
             onDocumentLinked={() => {
               queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
