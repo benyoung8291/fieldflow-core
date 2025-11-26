@@ -7615,6 +7615,95 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_seasonal_availability: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          end_date: string
+          friday_available: boolean | null
+          friday_periods: string[] | null
+          id: string
+          monday_available: boolean | null
+          monday_periods: string[] | null
+          notes: string | null
+          saturday_available: boolean | null
+          saturday_periods: string[] | null
+          season_name: string
+          start_date: string
+          sunday_available: boolean | null
+          sunday_periods: string[] | null
+          tenant_id: string
+          thursday_available: boolean | null
+          thursday_periods: string[] | null
+          tuesday_available: boolean | null
+          tuesday_periods: string[] | null
+          updated_at: string | null
+          wednesday_available: boolean | null
+          wednesday_periods: string[] | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          end_date: string
+          friday_available?: boolean | null
+          friday_periods?: string[] | null
+          id?: string
+          monday_available?: boolean | null
+          monday_periods?: string[] | null
+          notes?: string | null
+          saturday_available?: boolean | null
+          saturday_periods?: string[] | null
+          season_name: string
+          start_date: string
+          sunday_available?: boolean | null
+          sunday_periods?: string[] | null
+          tenant_id: string
+          thursday_available?: boolean | null
+          thursday_periods?: string[] | null
+          tuesday_available?: boolean | null
+          tuesday_periods?: string[] | null
+          updated_at?: string | null
+          wednesday_available?: boolean | null
+          wednesday_periods?: string[] | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string
+          friday_available?: boolean | null
+          friday_periods?: string[] | null
+          id?: string
+          monday_available?: boolean | null
+          monday_periods?: string[] | null
+          notes?: string | null
+          saturday_available?: boolean | null
+          saturday_periods?: string[] | null
+          season_name?: string
+          start_date?: string
+          sunday_available?: boolean | null
+          sunday_periods?: string[] | null
+          tenant_id?: string
+          thursday_available?: boolean | null
+          thursday_periods?: string[] | null
+          tuesday_available?: boolean | null
+          tuesday_periods?: string[] | null
+          updated_at?: string | null
+          wednesday_available?: boolean | null
+          wednesday_periods?: string[] | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_seasonal_availability_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_skills: {
         Row: {
           created_at: string | null
@@ -8237,6 +8326,13 @@ export type Database = {
           tenant_id: string
           total_amount: number
           updated_at: string
+        }[]
+      }
+      get_seasonal_availability_for_date: {
+        Args: { p_date: string; p_worker_id: string }
+        Returns: {
+          day_periods: string[]
+          season_name: string
         }[]
       }
       get_user_access_info: {

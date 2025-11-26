@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Clock, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { SeasonalAvailabilityList } from "./SeasonalAvailabilityList";
 
 interface WorkerAvailabilityProps {
   workerId: string;
@@ -38,6 +39,19 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
     notes: "",
   });
   const queryClient = useQueryClient();
+
+  // Fetch tenant ID for the worker
+  const { data: tenantId } = useQuery({
+    queryKey: ["worker-tenant", workerId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", workerId)
+        .single();
+      return data?.tenant_id || "";
+    },
+  });
 
   // Fetch worker's regular schedule
   const { data: schedule = [] } = useQuery({
@@ -556,6 +570,11 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Seasonal Availability */}
+      {tenantId && (
+        <SeasonalAvailabilityList workerId={workerId} tenantId={tenantId} />
+      )}
     </div>
   );
 }
