@@ -40,6 +40,7 @@ export const WorkerMobileBottomNav = () => {
   const location = useLocation();
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -130,7 +131,7 @@ export const WorkerMobileBottomNav = () => {
           );
         })}
         
-        <Sheet>
+        <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
           <SheetTrigger asChild>
             <button className="flex flex-col items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all mobile-tap flex-1 text-muted-foreground active:text-foreground active:scale-95 touch-manipulation">
               <MoreHorizontal className="h-6 w-6" strokeWidth={2} />
@@ -150,7 +151,10 @@ export const WorkerMobileBottomNav = () => {
                   <Button
                     key={item.path}
                     variant="ghost"
-                    onClick={() => navigate(item.path)}
+                    onClick={() => {
+                      navigate(item.path);
+                      setIsMoreMenuOpen(false);
+                    }}
                     className={cn(
                       "flex flex-col items-center justify-center h-32 gap-3 rounded-3xl mobile-tap p-4",
                       isActive
