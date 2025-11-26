@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Camera, Image as ImageIcon, ZoomIn } from 'lucide-react';
+import { Upload, X, Camera, Image as ImageIcon, ZoomIn, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -304,6 +304,13 @@ export default function BeforeAfterPhotoUpload({
     onPhotosChange(updatedPairs);
   };
 
+  const addNewPair = () => {
+    const newPair: PhotoPair = { id: crypto.randomUUID() };
+    const updatedPairs = [...pairs, newPair];
+    setPairs(updatedPairs);
+    onPhotosChange(updatedPairs);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -477,6 +484,18 @@ export default function BeforeAfterPhotoUpload({
           </div>
         ))}
       </div>
+
+      {!appointmentId && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addNewPair}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Another Photo Pair
+        </Button>
+      )}
 
       {/* Image Viewer Dialog */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
