@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import DeleteDropZone from "@/components/scheduler/DeleteDropZone";
 
 export default function Scheduler() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewType, setViewType] = useState<"day" | "week" | "timegrid" | "month" | "kanban" | "capacity">("week");
   const [showServiceOrderView, setShowServiceOrderView] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -280,7 +282,21 @@ export default function Scheduler() {
     },
   });
 
-  const todayAppointments = appointments.filter(apt => 
+  // Check for appointment query parameter and open details dialog
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointment');
+    if (appointmentId && appointments.length > 0) {
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      if (appointment) {
+        setViewDetailsAppointmentId(appointmentId);
+        // Clean up the URL parameter
+        searchParams.delete('appointment');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, appointments, setSearchParams]);
+
+  const todayAppointments = appointments.filter(apt =>
     isSameDay(new Date(apt.start_time), new Date())
   );
   

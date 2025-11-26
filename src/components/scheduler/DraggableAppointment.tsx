@@ -56,6 +56,17 @@ export default function DraggableAppointment({
         (e.target as HTMLElement).closest('button')) {
       return;
     }
+    
+    // Check for Cmd (Mac) or Ctrl (Windows) key
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Open appointment in new tab
+      const url = `/scheduler?appointment=${appointment.id}`;
+      window.open(url, '_blank');
+      return;
+    }
+    
     // Only trigger if not currently dragging
     if (!isDragging) {
       onViewHistory();
