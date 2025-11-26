@@ -338,7 +338,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
         </div>
 
         <TabsContent value="documents" className="flex-1 mt-0 p-0 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1">
+          <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
               {/* AI Thread Summary */}
               <ThreadSummaryCard ticketId={ticketId} />
