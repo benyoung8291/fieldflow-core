@@ -199,10 +199,23 @@ export default function Scheduler() {
   const { data: workers = [] } = useQuery({
     queryKey: ["workers"],
     queryFn: async () => {
-      // Query the workers view which only includes workers
+      // First, get all user IDs with worker role
+      const { data: workerRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "worker");
+
+      if (rolesError) throw rolesError;
+
+      const workerUserIds = workerRoles?.map(r => r.user_id).filter(Boolean) || [];
+
+      if (workerUserIds.length === 0) return [];
+
+      // Query the workers view filtering by worker role users
       const { data: workersData, error: workersError } = await supabase
         .from("workers")
         .select("id, first_name, last_name, is_active, phone, avatar_url, preferred_days, preferred_start_time, preferred_end_time")
+        .in("id", workerUserIds)
         .eq("is_active", true)
         .order("first_name", { ascending: true });
 
