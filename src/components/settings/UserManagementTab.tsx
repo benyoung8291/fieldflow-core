@@ -162,7 +162,6 @@ export const UserManagementTab = () => {
           user_id: userId,
           role: role as any,
           tenant_id: profile.tenant_id,
-          created_by: user.id,
         } as any);
 
       if (error) throw error;
