@@ -155,6 +155,7 @@ export default function WorkerAppointmentDetails() {
                 id,
                 work_order_number,
                 description,
+                worker_can_contact_customer,
                 customer:customers(name, phone, email, address, city, state, postcode),
                 line_items:service_order_line_items(id, description, quantity, estimated_hours)
               `)
@@ -820,27 +821,28 @@ export default function WorkerAppointmentDetails() {
   const isCompleted = appointment.status === 'completed';
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
-      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground p-4 sticky top-14 z-10 shadow-md">
-        <div className="flex items-center gap-3 max-w-screen-lg mx-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/worker/dashboard')}
-            className="text-primary-foreground hover:bg-primary-foreground/10 h-10 w-10 rounded-xl"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold flex-1">Job Details</h1>
-          <Badge className={
-            isCompleted ? 'bg-green-600' :
-            timeLog ? 'bg-blue-600' : 'bg-gray-600'
-          }>
-            {isCompleted ? 'Completed' : timeLog ? 'In Progress' : 'Pending'}
-          </Badge>
-        </div>
-        <div className="flex justify-end mt-2">
-          <LocationPermissionHelp />
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground sticky top-0 z-10 shadow-md">
+        <div className="max-w-screen-lg mx-auto px-3 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/worker/dashboard')}
+                className="text-primary-foreground hover:bg-primary-foreground/15 h-7 w-7 rounded-lg"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+              </Button>
+              <h1 className="text-base font-semibold">Job Details</h1>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
+                {isCompleted ? 'Completed' : timeLog ? 'In Progress' : 'Pending'}
+              </Badge>
+              <LocationPermissionHelp />
+            </div>
+          </div>
         </div>
       </header>
 
@@ -998,24 +1000,28 @@ export default function WorkerAppointmentDetails() {
           <CardContent className="space-y-3">
             <p className="font-medium text-lg">{customer?.name}</p>
             
-            {customer?.phone && (
-              <div className="flex gap-2">
-                <Button onClick={callCustomer} variant="outline" className="flex-1">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call
-                </Button>
-                <Button onClick={smsCustomer} variant="outline" className="flex-1">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  SMS
-                </Button>
-              </div>
-            )}
+            {appointment.service_order?.worker_can_contact_customer && (
+              <>
+                {customer?.phone && (
+                  <div className="flex gap-2">
+                    <Button onClick={callCustomer} variant="outline" className="flex-1">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Call
+                    </Button>
+                    <Button onClick={smsCustomer} variant="outline" className="flex-1">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      SMS
+                    </Button>
+                  </div>
+                )}
 
-            {customer?.email && (
-              <Button onClick={emailCustomer} variant="outline" className="w-full">
-                <Mail className="h-4 w-4 mr-2" />
-                Email
-              </Button>
+                {customer?.email && (
+                  <Button onClick={emailCustomer} variant="outline" className="w-full">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email
+                  </Button>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

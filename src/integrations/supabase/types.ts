@@ -6192,6 +6192,7 @@ export type Database = {
           total_amount: number | null
           updated_at: string | null
           work_order_number: string | null
+          worker_can_contact_customer: boolean | null
         }
         Insert: {
           actual_cost?: number | null
@@ -6242,6 +6243,7 @@ export type Database = {
           total_amount?: number | null
           updated_at?: string | null
           work_order_number?: string | null
+          worker_can_contact_customer?: boolean | null
         }
         Update: {
           actual_cost?: number | null
@@ -6292,6 +6294,7 @@ export type Database = {
           total_amount?: number | null
           updated_at?: string | null
           work_order_number?: string | null
+          worker_can_contact_customer?: boolean | null
         }
         Relationships: [
           {

@@ -148,16 +148,16 @@ export default function WorkerAppointments() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3 flex items-center gap-3">
+        <div className="px-3 py-2.5 flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/worker/dashboard')}
-            className="h-9 w-9 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
+            className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3 w-3" />
           </Button>
-          <h1 className="text-base font-semibold">My Appointments</h1>
+          <h1 className="text-base font-semibold">Appointments</h1>
         </div>
       </header>
 
