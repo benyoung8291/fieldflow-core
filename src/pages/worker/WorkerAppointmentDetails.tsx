@@ -26,6 +26,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import PhotoCapture from '@/components/worker/PhotoCapture';
+import QuickPhotoCapture from '@/components/worker/QuickPhotoCapture';
 import SignaturePad from '@/components/worker/SignaturePad';
 import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHelp';
 import { cacheAppointments } from '@/lib/offlineSync';
@@ -46,6 +47,7 @@ export default function WorkerAppointmentDetails() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [showQuickPhotoCapture, setShowQuickPhotoCapture] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [timeLog, setTimeLog] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
@@ -731,6 +733,49 @@ export default function WorkerAppointmentDetails() {
     }
   };
 
+  const handleQuickPhotoSave = async (file: File) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${id}/before_photo/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('appointment-attachments')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('appointment-attachments')
+        .getPublicUrl(fileName);
+
+      await supabase.from('appointment_attachments').insert({
+        tenant_id: profile?.tenant_id,
+        appointment_id: id,
+        file_name: file.name,
+        file_url: publicUrl,
+        file_type: file.type,
+        file_size: file.size,
+        category: 'before_photo',
+        notes: null,
+        uploaded_by: user.id,
+      });
+
+      await loadAppointmentData();
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      throw error;
+    }
+  };
+
   const handleSavePhoto = async (file: File, category: string, notes: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -742,28 +787,28 @@ export default function WorkerAppointmentDetails() {
         .eq('id', user.id)
         .single();
 
-      const fileName = `${Date.now()}_${file.name}`;
-      const filePath = `${profile?.tenant_id}/${id}/${fileName}`;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${id}/before_photo/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('appointment-files')
-        .upload(filePath, file);
+        .from('appointment-attachments')
+        .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('appointment-files')
-        .getPublicUrl(filePath);
+        .from('appointment-attachments')
+        .getPublicUrl(fileName);
 
       await supabase.from('appointment_attachments').insert({
         tenant_id: profile?.tenant_id,
         appointment_id: id,
-        file_name: fileName,
+        file_name: file.name,
         file_url: publicUrl,
         file_type: file.type,
         file_size: file.size,
-        category,
-        notes,
+        category: 'before_photo',
+        notes: notes || null,
         uploaded_by: user.id,
       });
 
@@ -1239,6 +1284,13 @@ export default function WorkerAppointmentDetails() {
           </Card>
         )}
       </div>
+
+      {showQuickPhotoCapture && (
+        <QuickPhotoCapture
+          onSave={handleQuickPhotoSave}
+          onClose={() => setShowQuickPhotoCapture(false)}
+        />
+      )}
 
       {showPhotoCapture && (
         <PhotoCapture
