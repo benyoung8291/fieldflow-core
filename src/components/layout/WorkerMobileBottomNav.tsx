@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, Clock, MoreHorizontal, FileText, User } from "lucide-react";
+import { Home, Calendar, Clock, MoreHorizontal, FileText, User, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ const primaryNavItems: NavItem[] = [
 ];
 
 const moreNavItems: NavItem[] = [
+  { icon: CalendarClock, label: "Availability", path: "/worker/calendar" },
   { icon: Clock, label: "Time Logs", path: "/worker/time-logs" },
   { icon: FileText, label: "Field Report", path: "/worker/field-report-new" },
   { icon: User, label: "Profile", path: "/worker/profile" },
@@ -136,11 +137,11 @@ export const WorkerMobileBottomNav = () => {
               <span className="text-[11px] font-medium">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[55vh] bg-background/98 backdrop-blur-2xl border-t-2 border-border/40 rounded-t-[32px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
-            <SheetHeader className="mb-8">
-              <SheetTitle className="text-2xl font-bold">More</SheetTitle>
+          <SheetContent side="bottom" className="h-[60vh] bg-background backdrop-blur-2xl border-t-2 border-border/40 rounded-t-[32px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)] z-[100]">
+            <SheetHeader className="mb-6">
+              <SheetTitle className="text-2xl font-bold">More Options</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-3 gap-4 pb-8">
+            <div className="grid grid-cols-2 gap-4 pb-8 overflow-y-auto max-h-[calc(60vh-100px)]">
               {moreNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActivePath(item.path);
@@ -151,13 +152,18 @@ export const WorkerMobileBottomNav = () => {
                     variant="ghost"
                     onClick={() => navigate(item.path)}
                     className={cn(
-                      "flex flex-col items-center justify-center h-28 gap-3 rounded-3xl mobile-tap",
+                      "flex flex-col items-center justify-center h-32 gap-3 rounded-3xl mobile-tap p-4",
                       isActive
                         ? "text-primary bg-primary/10 border-2 border-primary/30 shadow-sm"
-                        : "text-foreground hover:bg-muted/80 active:scale-95"
+                        : "text-foreground hover:bg-muted/50 active:scale-95 border border-border/50"
                     )}
                   >
-                    <Icon className="h-7 w-7" strokeWidth={isActive ? 2.5 : 2} />
+                    <div className={cn(
+                      "h-12 w-12 rounded-2xl flex items-center justify-center",
+                      isActive ? "bg-primary/20" : "bg-muted/50"
+                    )}>
+                      <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />
+                    </div>
                     <span className={cn("text-sm text-center leading-tight", isActive ? "font-bold" : "font-medium")}>{item.label}</span>
                   </Button>
                 );
