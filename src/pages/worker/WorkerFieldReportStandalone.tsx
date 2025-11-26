@@ -91,7 +91,7 @@ export default function WorkerFieldReportStandalone() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-32">
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
         <div className="px-4 py-3 flex items-center gap-3">
           <Button

@@ -158,9 +158,21 @@ export function SeasonalAvailabilityDialog({
   const togglePeriod = (date: string, period: string) => {
     setDateAvailability(prev => {
       const currentPeriods = prev[date] || [];
-      const newPeriods = currentPeriods.includes(period)
-        ? currentPeriods.filter(p => p !== period)
-        : [...currentPeriods, period];
+      
+      // If selecting "anytime", clear other periods and set only anytime
+      if (period === 'anytime') {
+        const isCurrentlySelected = currentPeriods.includes('anytime');
+        return {
+          ...prev,
+          [date]: isCurrentlySelected ? [] : ['anytime'],
+        };
+      }
+      
+      // If selecting specific period, remove "anytime" if present
+      const withoutAnytime = currentPeriods.filter(p => p !== 'anytime');
+      const newPeriods = withoutAnytime.includes(period)
+        ? withoutAnytime.filter(p => p !== period)
+        : [...withoutAnytime, period];
       
       return {
         ...prev,

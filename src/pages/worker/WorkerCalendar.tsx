@@ -161,7 +161,7 @@ export default function WorkerCalendar() {
   };
 
   return (
-    <div className="container mx-auto px-4 pb-20 space-y-6">
+    <div className="container mx-auto px-4 pb-32 space-y-6">
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm -mx-4 px-4 py-3">
         <h1 className="text-lg font-bold">My Availability</h1>
       </header>
@@ -272,21 +272,27 @@ export default function WorkerCalendar() {
                 </div>
                 
                 {dayData.is_available && (
-                  <div className="flex items-center gap-2 flex-1 flex-wrap">
-                    <Input
-                      type="time"
-                      value={dayData.start_time}
-                      onChange={(e) => updateDay(day.value, 'start_time', e.target.value)}
-                      className="h-9 w-28"
-                    />
-                    <span className="text-sm text-muted-foreground">to</span>
-                    <Input
-                      type="time"
-                      value={dayData.end_time}
-                      onChange={(e) => updateDay(day.value, 'end_time', e.target.value)}
-                      className="h-9 w-28"
-                    />
-                  </div>
+                  <>
+                    {(dayData.start_time === "00:00" && dayData.end_time === "23:59") ? (
+                      <span className="text-sm text-primary font-medium">Available anytime</span>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-1 flex-wrap">
+                        <Input
+                          type="time"
+                          value={dayData.start_time}
+                          onChange={(e) => updateDay(day.value, 'start_time', e.target.value)}
+                          className="h-9 w-28"
+                        />
+                        <span className="text-sm text-muted-foreground">to</span>
+                        <Input
+                          type="time"
+                          value={dayData.end_time}
+                          onChange={(e) => updateDay(day.value, 'end_time', e.target.value)}
+                          className="h-9 w-28"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
                 
                 {!dayData.is_available && (
