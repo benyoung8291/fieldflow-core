@@ -4,11 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText, ChevronRight } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText, ChevronRight, RefreshCw } from 'lucide-react';
 import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { usePWAUpdate } from '@/hooks/usePWAUpdate';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
 import { toast } from 'sonner';
@@ -34,6 +35,7 @@ export default function WorkerDashboard() {
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+  const { clearCacheAndReload } = usePWAUpdate();
   const { isSupervisorOrAbove } = useWorkerRole();
 
   useEffect(() => {
@@ -219,6 +221,15 @@ export default function WorkerDashboard() {
                 <ViewToggleButton />
               </div>
               <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={clearCacheAndReload}
+                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
+                title="Clear cache and update"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         </div>
