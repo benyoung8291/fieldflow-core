@@ -35,7 +35,7 @@ interface SchedulerWeekViewProps {
   onEditAppointment: (id: string) => void;
   onRemoveWorker: (appointmentId: string, workerId: string) => void;
   onGPSCheckIn: (appointment: any) => void;
-  checkAvailability?: (workerId: string, startTime: Date, endTime: Date) => { isAvailable: boolean; reason?: string };
+  checkAvailability?: (workerId: string, startTime: Date, endTime: Date) => { isAvailable: boolean; reason?: string; availablePeriods?: string[] };
 }
 
 const statusColors = {
@@ -259,9 +259,9 @@ export default function SchedulerWeekView({
                 const dayEnd = new Date(day);
                 dayEnd.setHours(17, 0, 0, 0);
                 
-                const isAvailable = !worker.id || !checkAvailability 
-                  ? true 
-                  : checkAvailability(worker.id, dayStart, dayEnd).isAvailable;
+                const availabilityInfo = !worker.id || !checkAvailability 
+                  ? { isAvailable: true } 
+                  : checkAvailability(worker.id, dayStart, dayEnd);
 
                 return (
                   <DroppableTimeSlot
@@ -269,14 +269,23 @@ export default function SchedulerWeekView({
                     id={`slot-${worker.id || 'unassigned'}-${day.toISOString()}`}
                     date={day}
                     workerId={worker.id}
-                    isAvailable={isAvailable}
+                    isAvailable={availabilityInfo.isAvailable}
                     className={cn(
                       "min-h-[150px] h-full p-2 border-2 border-dashed rounded-lg space-y-1 flex flex-col",
                       isSameDay(day, new Date()) 
                         ? "border-primary/30 bg-primary/5" 
-                        : "border-border bg-muted/20"
+                        : "border-border bg-muted/20",
+                      !availabilityInfo.isAvailable && "opacity-50"
                     )}
                   >
+                    {availabilityInfo.availablePeriods && availabilityInfo.availablePeriods.length > 0 && !availabilityInfo.availablePeriods.includes('anytime') && (
+                      <div className="text-xs text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded mb-1">
+                        {availabilityInfo.availablePeriods.map(p => {
+                          const emoji: Record<string, string> = { morning: '🌅', afternoon: '☀️', evening: '🌙' };
+                          return emoji[p] || '';
+                        }).join(' ')}
+                      </div>
+                    )}
                     {dayAppointments.map(apt => (
                       <AppointmentContextMenu
                         key={apt.id}

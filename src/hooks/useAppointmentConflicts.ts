@@ -103,11 +103,14 @@ export function useAppointmentConflicts() {
     workerId: string,
     startTime: Date,
     endTime: Date
-  ): { isAvailable: boolean; reason?: string } => {
+  ): { isAvailable: boolean; reason?: string; availablePeriods?: string[] } => {
     const dayOfWeek = getDay(startTime); // 0 = Sunday, 6 = Saturday
     const startTimeStr = format(startTime, "HH:mm");
     const endTimeStr = format(endTime, "HH:mm");
     const dateStr = format(startTime, "yyyy-MM-dd");
+
+    // Check if this is a day-level check (checking a large time range like 9-5 for calendar display)
+    const isDayLevelCheck = (endTime.getTime() - startTime.getTime()) >= (6 * 60 * 60 * 1000); // 6+ hours
 
     // FIRST: Check if there's a seasonal availability period that covers this date
     const workerSeasonalPeriod = seasonalAvailability.find(
@@ -136,9 +139,28 @@ export function useAppointmentConflicts() {
       
       if (isAnytime) {
         // Worker is available all day during this seasonal period
-        return { isAvailable: true };
+        return { isAvailable: true, availablePeriods: ['anytime'] };
       }
 
+      // For day-level checks (like calendar view), if they have ANY periods, show as available
+      if (isDayLevelCheck) {
+        const periodLabels = periods.map(p => {
+          const labels: Record<string, string> = {
+            morning: 'Morning',
+            afternoon: 'Afternoon',
+            evening: 'Evening'
+          };
+          return labels[p] || p;
+        });
+        
+        return {
+          isAvailable: true,
+          reason: `Available: ${periodLabels.join(', ')}`,
+          availablePeriods: periods
+        };
+      }
+
+      // For specific time checks (like when scheduling an appointment)
       // Define time ranges for each period
       const periodRanges: Record<string, { start: string; end: string }> = {
         morning: { start: '06:00', end: '12:00' },
@@ -165,12 +187,13 @@ export function useAppointmentConflicts() {
 
         return {
           isAvailable: false,
-          reason: `Worker is only available during: ${availablePeriods} (${workerSeasonalPeriod.season_name})`
+          reason: `Worker is only available during: ${availablePeriods} (${workerSeasonalPeriod.season_name})`,
+          availablePeriods: periods
         };
       }
 
       // Seasonal period allows this - skip regular schedule check
-      return { isAvailable: true };
+      return { isAvailable: true, availablePeriods: periods };
     }
 
     // SECOND: Fall back to regular schedule if no seasonal period
