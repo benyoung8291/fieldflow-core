@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppointmentConfirmations } from "@/hooks/useAppointmentConfirmations";
 import { AppointmentConfirmationBadge } from "./AppointmentConfirmationBadge";
 import { NotifyWorkersButton } from "./NotifyWorkersButton";
+import { cn } from "@/lib/utils";
 
 interface AppointmentDetailsDialogProps {
   appointment: any;
@@ -291,23 +292,43 @@ export default function AppointmentDetailsDialog({
                 <div className="space-y-2 mb-3">
                   {workers.map((worker: any) => {
                     const confirmation = confirmations.find(c => c.worker_id === worker.worker_id);
+                    const isDeclined = confirmation?.status === "declined";
                     return (
-                      <div key={worker.worker_id} className="flex items-center justify-between gap-3 p-2 rounded-md bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs">
-                              {worker.profiles?.first_name?.[0]}{worker.profiles?.last_name?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">
-                            {worker.profiles?.first_name} {worker.profiles?.last_name}
-                          </span>
+                      <div 
+                        key={worker.worker_id} 
+                        className={cn(
+                          "p-3 rounded-md space-y-2",
+                          isDeclined 
+                            ? "border-2 border-destructive bg-destructive/5" 
+                            : "bg-muted/50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs">
+                                {worker.profiles?.first_name?.[0]}{worker.profiles?.last_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium">
+                              {worker.profiles?.first_name} {worker.profiles?.last_name}
+                            </span>
+                          </div>
+                          {confirmation && (
+                            <AppointmentConfirmationBadge 
+                              confirmations={[confirmation]} 
+                              compact 
+                            />
+                          )}
                         </div>
-                        {confirmation && (
-                          <AppointmentConfirmationBadge 
-                            confirmations={[confirmation]} 
-                            compact 
-                          />
+                        {isDeclined && confirmation.decline_reason && (
+                          <div className="flex items-start gap-2 text-sm text-destructive border-l-2 border-destructive pl-3 ml-11">
+                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="font-medium block">Declined - Action Required:</span>
+                              <span>{confirmation.decline_reason}</span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     );

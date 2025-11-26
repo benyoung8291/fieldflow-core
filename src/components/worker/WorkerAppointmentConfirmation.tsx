@@ -1,8 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAppointmentConfirmations } from "@/hooks/useAppointmentConfirmations";
 import { format } from "date-fns";
+import { useState } from "react";
 
 interface WorkerAppointmentConfirmationProps {
   appointmentId: string;
@@ -20,6 +22,8 @@ export function WorkerAppointmentConfirmation({
   endTime,
 }: WorkerAppointmentConfirmationProps) {
   const { confirmations, confirmAppointment } = useAppointmentConfirmations(appointmentId);
+  const [showDeclineInput, setShowDeclineInput] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
   
   const myConfirmation = confirmations.find(c => c.worker_id === workerId);
 
@@ -32,7 +36,15 @@ export function WorkerAppointmentConfirmation({
   };
 
   const handleDecline = () => {
-    confirmAppointment({ confirmationId: myConfirmation.id, status: "declined" });
+    if (!declineReason.trim()) {
+      setShowDeclineInput(true);
+      return;
+    }
+    confirmAppointment({ 
+      confirmationId: myConfirmation.id, 
+      status: "declined",
+      declineReason: declineReason.trim()
+    });
   };
 
   return (
@@ -58,24 +70,59 @@ export function WorkerAppointmentConfirmation({
             {format(new Date(startTime), "h:mm a")} - {format(new Date(endTime), "h:mm a")}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={handleConfirm}
-            className="flex-1 gap-2"
-            variant="default"
-          >
-            <CheckCircle className="h-4 w-4" />
-            Confirm Assignment
-          </Button>
-          <Button 
-            onClick={handleDecline}
-            variant="outline"
-            className="flex-1 gap-2"
-          >
-            <XCircle className="h-4 w-4" />
-            Decline
-          </Button>
-        </div>
+        {showDeclineInput ? (
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Reason for declining (required)</label>
+              <Textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="Please provide a reason for declining this appointment..."
+                className="min-h-[100px]"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleDecline}
+                variant="destructive"
+                className="flex-1 gap-2"
+                disabled={!declineReason.trim()}
+              >
+                <XCircle className="h-4 w-4" />
+                Confirm Decline
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowDeclineInput(false);
+                  setDeclineReason("");
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleConfirm}
+              className="flex-1 gap-2"
+              variant="default"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Confirm Assignment
+            </Button>
+            <Button 
+              onClick={() => setShowDeclineInput(true)}
+              variant="outline"
+              className="flex-1 gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <XCircle className="h-4 w-4" />
+              Decline
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

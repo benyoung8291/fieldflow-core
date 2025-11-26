@@ -72,12 +72,21 @@ export function useAppointmentConfirmations(appointmentId?: string) {
   });
 
   const confirmAppointmentMutation = useMutation({
-    mutationFn: async ({ confirmationId, status }: { confirmationId: string; status: "confirmed" | "declined" }) => {
+    mutationFn: async ({ 
+      confirmationId, 
+      status, 
+      declineReason 
+    }: { 
+      confirmationId: string; 
+      status: "confirmed" | "declined";
+      declineReason?: string;
+    }) => {
       const { error } = await supabase
         .from("appointment_worker_confirmations")
         .update({
           status,
           confirmed_at: status === "confirmed" ? new Date().toISOString() : null,
+          decline_reason: status === "declined" ? declineReason : null,
         })
         .eq("id", confirmationId);
 
