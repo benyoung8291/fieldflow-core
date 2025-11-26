@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,15 +26,14 @@ interface LocationFormData {
   city: string;
   state: string;
   postcode: string;
-  contact_name: string;
-  contact_phone: string;
-  contact_email: string;
   location_notes: string;
   customer_location_id: string;
   is_primary: boolean;
   is_active: boolean;
   latitude?: number | null;
   longitude?: number | null;
+  facility_manager_contact_id?: string;
+  site_contact_id?: string;
 }
 
 export default function CustomerLocationDialog({
@@ -44,6 +44,7 @@ export default function CustomerLocationDialog({
   location,
 }: CustomerLocationDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
   const queryClient = useQueryClient();
   
   const { register, handleSubmit, watch, setValue } = useForm<LocationFormData>({
@@ -53,21 +54,38 @@ export default function CustomerLocationDialog({
       city: "",
       state: "",
       postcode: "",
-      contact_name: "",
-      contact_phone: "",
-      contact_email: "",
       location_notes: "",
       customer_location_id: "",
       is_primary: false,
       is_active: true,
       latitude: null,
       longitude: null,
+      facility_manager_contact_id: "",
+      site_contact_id: "",
     },
   });
 
   const isPrimary = watch("is_primary");
   const isActive = watch("is_active");
   const address = watch("address");
+  const facilityManagerId = watch("facility_manager_contact_id");
+  const siteContactId = watch("site_contact_id");
+
+  useEffect(() => {
+    if (open && customerId) {
+      fetchContacts();
+    }
+  }, [open, customerId]);
+
+  const fetchContacts = async () => {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, email, phone")
+      .eq("customer_id", customerId)
+      .order("first_name");
+    
+    if (!error) setContacts(data || []);
+  };
 
   const onSubmit = async (data: LocationFormData) => {
     setIsSubmitting(true);
@@ -160,19 +178,44 @@ export default function CustomerLocationDialog({
           <div className="border-t pt-4">
             <h3 className="font-medium mb-4">Contact Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="contact_name">Contact Name</Label>
-                <Input id="contact_name" {...register("contact_name")} />
+              <div>
+                <Label htmlFor="site_contact_id">Site Contact</Label>
+                <Select
+                  value={siteContactId || ""}
+                  onValueChange={(value) => setValue("site_contact_id", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select site contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.first_name} {contact.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <Label htmlFor="contact_phone">Contact Phone</Label>
-                <Input id="contact_phone" type="tel" {...register("contact_phone")} />
-              </div>
-
-              <div>
-                <Label htmlFor="contact_email">Contact Email</Label>
-                <Input id="contact_email" type="email" {...register("contact_email")} />
+                <Label htmlFor="facility_manager_contact_id">Facility Manager</Label>
+                <Select
+                  value={facilityManagerId || ""}
+                  onValueChange={(value) => setValue("facility_manager_contact_id", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select facility manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.first_name} {contact.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

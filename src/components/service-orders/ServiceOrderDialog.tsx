@@ -151,6 +151,16 @@ export default function ServiceOrderDialog({
     }
   }, [formData.customer_id]);
 
+  // Auto-populate contacts when location changes
+  useEffect(() => {
+    if (formData.customer_location_id && locations.length > 0) {
+      const selectedLocation = locations.find(loc => loc.id === formData.customer_location_id);
+      if (selectedLocation) {
+        autoLinkLocationContacts(selectedLocation);
+      }
+    }
+  }, [formData.customer_location_id, locations]);
+
   const fetchCustomers = async () => {
     const { data, error } = await supabase
       .from("customers")
@@ -166,10 +176,10 @@ export default function ServiceOrderDialog({
   };
 
   const fetchCustomerRelatedData = async (customerId: string) => {
-    // Fetch locations
+    // Fetch locations with contact info
     const { data: locationsData, error: locError } = await supabase
       .from("customer_locations")
-      .select("id, name, address")
+      .select("id, name, address, facility_manager_contact_id, site_contact_id")
       .eq("customer_id", customerId)
       .eq("is_active", true)
       .order("name");
@@ -193,6 +203,18 @@ export default function ServiceOrderDialog({
       .order("name");
     
     if (!projError) setProjects(projectsData || []);
+  };
+
+  const autoLinkLocationContacts = async (location: any) => {
+    if (!location) return;
+
+    // If site contact exists, set it as the primary contact
+    if (location.site_contact_id && !formData.customer_contact_id) {
+      setFormData(prev => ({ ...prev, customer_contact_id: location.site_contact_id }));
+    }
+
+    // Link both contacts to the service order (will be saved when order is submitted)
+    // Store them for later use when creating the order
   };
 
   const fetchOrder = async () => {

@@ -25,7 +25,23 @@ export default function CustomerLocationDetails() {
     queryFn: async () => {
       const { data: locationData, error: locationError } = await supabase
         .from("customer_locations")
-        .select("*")
+        .select(`
+          *,
+          site_contact:contacts!customer_locations_site_contact_id_fkey (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
+          ),
+          facility_manager_contact:contacts!customer_locations_facility_manager_contact_id_fkey (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
+          )
+        `)
         .eq("id", id)
         .maybeSingle();
 
@@ -341,35 +357,38 @@ export default function CustomerLocationDetails() {
                   </div>
                 )}
 
-                {location.contact_name && (
+                {location.site_contact && (
                   <div>
                     <div className="text-sm text-muted-foreground">Site Contact</div>
-                    <div className="font-medium">{location.contact_name}</div>
+                    <div className="font-medium">
+                      {location.site_contact.first_name} {location.site_contact.last_name}
+                    </div>
+                    {location.site_contact.email && (
+                      <div className="text-sm text-muted-foreground">{location.site_contact.email}</div>
+                    )}
+                    {location.site_contact.phone && (
+                      <div className="text-sm text-muted-foreground">{location.site_contact.phone}</div>
+                    )}
+                  </div>
+                )}
+
+                {location.facility_manager_contact && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Facility Manager</div>
+                    <div className="font-medium">
+                      {location.facility_manager_contact.first_name} {location.facility_manager_contact.last_name}
+                    </div>
+                    {location.facility_manager_contact.email && (
+                      <div className="text-sm text-muted-foreground">{location.facility_manager_contact.email}</div>
+                    )}
+                    {location.facility_manager_contact.phone && (
+                      <div className="text-sm text-muted-foreground">{location.facility_manager_contact.phone}</div>
+                    )}
                   </div>
                 )}
               </div>
 
               <div className="space-y-3">
-                {location.contact_phone && (
-                  <div className="flex items-start gap-2">
-                    <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">Phone</div>
-                      <div className="font-medium">{location.contact_phone}</div>
-                    </div>
-                  </div>
-                )}
-
-                {location.contact_email && (
-                  <div className="flex items-start gap-2">
-                    <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">Email</div>
-                      <div className="font-medium">{location.contact_email}</div>
-                    </div>
-                  </div>
-                )}
-
                 {(location.latitude && location.longitude) && (
                   <div>
                     <div className="text-sm text-muted-foreground">Coordinates</div>

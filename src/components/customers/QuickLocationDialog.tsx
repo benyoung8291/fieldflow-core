@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -25,19 +26,19 @@ export default function QuickLocationDialog({
 }: QuickLocationDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     city: "",
     state: "",
     postcode: "",
-    contact_name: "",
-    contact_phone: "",
-    contact_email: "",
     location_notes: "",
     customer_location_id: "",
     latitude: null as number | null,
     longitude: null as number | null,
+    facility_manager_contact_id: "",
+    site_contact_id: "",
   });
 
   const resetForm = () => {
@@ -47,13 +48,12 @@ export default function QuickLocationDialog({
       city: "",
       state: "",
       postcode: "",
-      contact_name: "",
-      contact_phone: "",
-      contact_email: "",
       location_notes: "",
       customer_location_id: "",
       latitude: null,
       longitude: null,
+      facility_manager_contact_id: "",
+      site_contact_id: "",
     });
   };
 
@@ -61,8 +61,19 @@ export default function QuickLocationDialog({
   useEffect(() => {
     if (open) {
       resetForm();
+      if (customerId) fetchContacts();
     }
   }, [open, customerId]);
+
+  const fetchContacts = async () => {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, email, phone")
+      .eq("customer_id", customerId)
+      .order("first_name");
+    
+    if (!error) setContacts(data || []);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,13 +99,12 @@ export default function QuickLocationDialog({
           city: formData.city || null,
           state: formData.state || null,
           postcode: formData.postcode || null,
-          contact_name: formData.contact_name || null,
-          contact_phone: formData.contact_phone || null,
-          contact_email: formData.contact_email || null,
           location_notes: formData.location_notes || null,
           customer_location_id: formData.customer_location_id || null,
           latitude: formData.latitude,
           longitude: formData.longitude,
+          facility_manager_contact_id: formData.facility_manager_contact_id || null,
+          site_contact_id: formData.site_contact_id || null,
         })
         .select()
         .single();
@@ -208,31 +218,43 @@ export default function QuickLocationDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Contact Name</Label>
-              <Input
-                value={formData.contact_name}
-                onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-                placeholder="Site contact"
-              />
+              <Label>Site Contact</Label>
+              <Select
+                value={formData.site_contact_id}
+                onValueChange={(value) => setFormData({ ...formData, site_contact_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select site contact" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {contacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>
+                      {contact.first_name} {contact.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Contact Phone</Label>
-              <Input
-                value={formData.contact_phone}
-                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                placeholder="Phone number"
-              />
-            </div>
-
-            <div className="space-y-2 col-span-2">
-              <Label>Contact Email</Label>
-              <Input
-                type="email"
-                value={formData.contact_email}
-                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                placeholder="email@example.com"
-              />
+              <Label>Facility Manager</Label>
+              <Select
+                value={formData.facility_manager_contact_id}
+                onValueChange={(value) => setFormData({ ...formData, facility_manager_contact_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select facility manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {contacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>
+                      {contact.first_name} {contact.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

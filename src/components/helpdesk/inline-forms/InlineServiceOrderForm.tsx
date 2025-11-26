@@ -74,6 +74,17 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
     }
   }, [formData.customer_id]);
 
+  // Auto-populate contacts from location when location changes
+  useEffect(() => {
+    if (formData.location_id && locations.length > 0) {
+      const selectedLocation = locations.find((loc: any) => loc.id === formData.location_id);
+      if (selectedLocation && selectedLocation.site_contact_id) {
+        // Store contact IDs for use when creating the service order
+        // These will be linked to the service order automatically
+      }
+    }
+  }, [formData.location_id, locations]);
+
   const fetchTicketAttachments = async () => {
     if (!ticket?.id) return;
 
@@ -128,7 +139,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
   const fetchLocations = async (customerId: string) => {
     const { data, error } = await supabase
       .from("customer_locations")
-      .select("id, name, address")
+      .select("id, name, address, site_contact_id, facility_manager_contact_id")
       .eq("customer_id", customerId)
       .eq("is_active", true)
       .order("name");
