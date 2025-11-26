@@ -318,6 +318,7 @@ export default function ServiceOrderDetails() {
           console.log('[ServiceOrderDetails] Service order updated, refreshing');
           queryClient.invalidateQueries({ queryKey: ["service_order", id] });
           queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
+          queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", id] });
         }
       )
       .subscribe();
@@ -490,6 +491,7 @@ export default function ServiceOrderDetails() {
     onSuccess: () => {
       console.log("Invalidating queries for service-order-appointments:", id);
       queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
+      queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", id] });
       setCreateAppointmentDialogOpen(false);
       toast({ title: "Appointment created successfully" });
     },
