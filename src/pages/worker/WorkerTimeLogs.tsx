@@ -67,7 +67,7 @@ export default function WorkerTimeLogs() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3">
+        <div className="px-3 py-2.5">
           <h1 className="text-base font-semibold">My Time Logs</h1>
         </div>
       </header>
