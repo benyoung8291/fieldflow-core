@@ -79,25 +79,35 @@ export const usePWAUpdate = () => {
     try {
       toast.info('Updating app...', { duration: 2000 });
       
-      // Clear all caches
+      // Check if there's a new service worker waiting
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        
+        // Check for updates first
+        if (registration) {
+          await registration.update();
+        }
+        
+        // If there's a waiting service worker, it will auto-activate due to skipWaiting
+        if (registration?.waiting || registration?.installing) {
+          // Wait a bit for the new SW to activate
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      // Clear all caches to ensure fresh content
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
 
-      // Unregister all service workers
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(reg => reg.unregister()));
-      }
-
       // Wait a moment for cleanup
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Force reload from server with cache bypass
+      // Force reload from server
       window.location.reload();
     } catch (error) {
-      console.error('Error clearing cache:', error);
+      console.error('Error updating app:', error);
       toast.error('Failed to update app. Please try again.');
     }
   };
