@@ -77,6 +77,8 @@ export const usePWAUpdate = () => {
 
   const clearCacheAndReload = async () => {
     try {
+      toast.info('Updating app...', { duration: 2000 });
+      
       // Clear all caches
       if ('caches' in window) {
         const cacheNames = await caches.keys();
@@ -89,11 +91,14 @@ export const usePWAUpdate = () => {
         await Promise.all(registrations.map(reg => reg.unregister()));
       }
 
-      // Force reload from server
+      // Wait a moment for cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Force reload from server with cache bypass
       window.location.reload();
     } catch (error) {
       console.error('Error clearing cache:', error);
-      toast.error('Failed to clear cache. Please try again.');
+      toast.error('Failed to update app. Please try again.');
     }
   };
 
