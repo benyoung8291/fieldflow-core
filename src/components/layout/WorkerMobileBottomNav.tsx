@@ -94,8 +94,8 @@ export const WorkerMobileBottomNav = () => {
   );
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50 shadow-xl pb-safe">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-2xl border-t border-border/40 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_16px_rgba(0,0,0,0.3)] pb-safe">
+      <div className="flex items-center justify-around h-20 px-4">
         {navItemsWithBadge.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(item.path);
@@ -105,24 +105,24 @@ export const WorkerMobileBottomNav = () => {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1",
+                "relative flex flex-col items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all mobile-tap flex-1 touch-manipulation",
                 isActive
                   ? "text-primary scale-105"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  : "text-muted-foreground active:text-foreground active:scale-95"
               )}
             >
               <div className="relative">
-                <Icon className={cn("h-5 w-5 transition-transform", isActive && "scale-110")} />
+                <Icon className={cn("h-6 w-6 transition-transform", isActive && "scale-110")} strokeWidth={isActive ? 2.5 : 2} />
                 {item.badge !== undefined && item.badge > 0 && (
                   <Badge 
                     variant="destructive" 
-                    className="absolute -top-2 -right-2 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold"
+                    className="absolute -top-2 -right-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] font-bold shadow-sm"
                   >
                     {item.badge > 99 ? '99+' : item.badge}
                   </Badge>
                 )}
               </div>
-              <span className={cn("text-[11px] font-medium", isActive && "font-semibold")}>
+              <span className={cn("text-[11px] transition-all", isActive ? "font-bold" : "font-medium")}>
                 {item.label}
               </span>
             </button>
@@ -131,16 +131,16 @@ export const WorkerMobileBottomNav = () => {
         
         <Sheet>
           <SheetTrigger asChild>
-            <button className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1 text-muted-foreground hover:text-foreground hover:bg-muted/50">
-              <MoreHorizontal className="h-5 w-5" />
+            <button className="flex flex-col items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all mobile-tap flex-1 text-muted-foreground active:text-foreground active:scale-95 touch-manipulation">
+              <MoreHorizontal className="h-6 w-6" strokeWidth={2} />
               <span className="text-[11px] font-medium">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[60vh] bg-background/95 backdrop-blur-xl border-t-2 border-border/50 rounded-t-3xl">
-            <SheetHeader className="mb-6">
-              <SheetTitle className="text-xl font-semibold">More Options</SheetTitle>
+          <SheetContent side="bottom" className="h-[55vh] bg-background/98 backdrop-blur-2xl border-t-2 border-border/40 rounded-t-[32px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+            <SheetHeader className="mb-8">
+              <SheetTitle className="text-2xl font-bold">More</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-3 gap-3 pb-6">
+            <div className="grid grid-cols-3 gap-4 pb-8">
               {moreNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActivePath(item.path);
@@ -151,14 +151,14 @@ export const WorkerMobileBottomNav = () => {
                     variant="ghost"
                     onClick={() => navigate(item.path)}
                     className={cn(
-                      "flex flex-col items-center justify-center h-24 gap-2 rounded-2xl mobile-tap",
+                      "flex flex-col items-center justify-center h-28 gap-3 rounded-3xl mobile-tap",
                       isActive
-                        ? "text-primary bg-primary/10 border-2 border-primary/20"
-                        : "text-foreground hover:bg-muted/80"
+                        ? "text-primary bg-primary/10 border-2 border-primary/30 shadow-sm"
+                        : "text-foreground hover:bg-muted/80 active:scale-95"
                     )}
                   >
-                    <Icon className="h-6 w-6" />
-                    <span className="text-xs font-medium text-center leading-tight">{item.label}</span>
+                    <Icon className="h-7 w-7" strokeWidth={isActive ? 2.5 : 2} />
+                    <span className={cn("text-sm text-center leading-tight", isActive ? "font-bold" : "font-medium")}>{item.label}</span>
                   </Button>
                 );
               })}

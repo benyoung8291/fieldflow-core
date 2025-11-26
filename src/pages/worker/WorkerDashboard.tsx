@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText, ChevronRight, RefreshCw, Settings } from 'lucide-react';
+import { CalendarDays, Clock, User, RefreshCw, Briefcase, ChevronRight, WifiOff } from 'lucide-react';
 import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -20,9 +20,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLocation } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { ViewToggleButton } from '@/components/layout/ViewToggleButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type ViewFilter = 'today' | 'week' | 'all' | 'custom';
@@ -34,12 +31,8 @@ export default function WorkerDashboard() {
   const [user, setUser] = useState<any>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInstallBanner, setShowInstallBanner] = useState(true);
-  const [viewFilter, setViewFilter] = useState<ViewFilter>('week');
-  const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
-  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
   const { clearCacheAndReload } = usePWAUpdate();
   const { isSupervisorOrAbove } = useWorkerRole();
 
@@ -51,7 +44,7 @@ export default function WorkerDashboard() {
 
   useEffect(() => {
     loadUserAndAppointments();
-  }, [viewFilter, customDate]);
+  }, []);
 
   const loadUserAndAppointments = async () => {
     try {
@@ -70,24 +63,9 @@ export default function WorkerDashboard() {
 
       setUser(profile);
 
-      // Calculate date range based on filter
-      let startDate: string;
-      let endDate: string;
-
-      if (viewFilter === 'custom' && customDate) {
-        startDate = format(startOfDay(customDate), 'yyyy-MM-dd');
-        endDate = format(endOfDay(customDate), "yyyy-MM-dd'T'HH:mm:ss");
-      } else if (viewFilter === 'week') {
-        startDate = format(new Date(), 'yyyy-MM-dd');
-        endDate = format(addDays(new Date(), 7), "yyyy-MM-dd'T'23:59:59");
-      } else if (viewFilter === 'today') {
-        startDate = format(new Date(), 'yyyy-MM-dd');
-        endDate = format(new Date(), "yyyy-MM-dd'T'23:59:59");
-      } else {
-        // 'all' - get all future appointments
-        startDate = format(new Date(), 'yyyy-MM-dd');
-        endDate = format(addDays(new Date(), 365), "yyyy-MM-dd'T'23:59:59");
-      }
+      // Get today's appointments only
+      const startDate = format(new Date(), 'yyyy-MM-dd');
+      const endDate = format(new Date(), "yyyy-MM-dd'T'23:59:59");
 
       // Try to load from network first
       if (isOnline) {
@@ -132,9 +110,13 @@ export default function WorkerDashboard() {
       } else {
         // Load from cache when offline
         const cached = await getCachedAppointments();
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        
         const filteredCached = cached.filter((apt) => {
           const aptDate = new Date(apt.start_time);
-          return aptDate >= new Date(startDate) && aptDate <= new Date(endDate);
+          return aptDate >= startOfToday && aptDate <= endOfToday;
         });
         setAppointments(filteredCached);
       }
@@ -147,30 +129,9 @@ export default function WorkerDashboard() {
   };
 
   const handleLogout = async () => {
-    setShowLogoutDialog(false);
     await supabase.auth.signOut();
     navigate('/worker/auth');
   };
-
-  const handleInstallClick = async () => {
-    const installed = await promptInstall();
-    if (installed) {
-      toast.success('App installed successfully!');
-      setShowInstallBanner(false);
-    }
-  };
-
-  const dismissInstallBanner = () => {
-    setShowInstallBanner(false);
-    localStorage.setItem('pwa-install-dismissed', 'true');
-  };
-
-  useEffect(() => {
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
-    if (dismissed) {
-      setShowInstallBanner(false);
-    }
-  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -201,77 +162,38 @@ export default function WorkerDashboard() {
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
       {/* Clean Modern Header */}
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-3 py-2.5">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-primary-foreground/15 backdrop-blur-sm flex items-center justify-center">
-                <User className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center">
+                <User className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[10px] font-medium opacity-70 leading-tight">Welcome back</p>
-                <h1 className="text-sm font-semibold leading-tight">{user?.first_name} {user?.last_name}</h1>
+                <p className="text-xs font-medium opacity-90">Welcome back</p>
+                <h1 className="text-base font-bold">{user?.first_name} {user?.last_name}</h1>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              {isInstallable && !isInstalled && (
-                <Button
-                  onClick={promptInstall}
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs px-2 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
-                >
-                  <Download className="h-3 w-3 mr-1" />
-                  Install
-                </Button>
-              )}
+            <div className="flex items-center gap-2">
               {isOnline ? (
-                <div className="h-7 w-7 rounded-lg bg-primary-foreground/15 flex items-center justify-center">
-                  <Wifi className="h-3 w-3" />
-                </div>
+                <div className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]" title="Online" />
               ) : (
-                <div className="h-7 w-7 rounded-lg bg-warning/30 flex items-center justify-center">
-                  <WifiOff className="h-3 w-3 text-warning-foreground" />
-                </div>
+                <div className="h-2 w-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.6)]" title="Offline" />
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/worker/profile')}
-                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
-                title="Profile settings"
-              >
-                <Settings className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowLogoutDialog(true)}
-                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
-              >
-                <LogOut className="h-3 w-3" />
-              </Button>
-              <ViewToggleButton />
-              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={clearCacheAndReload}
-                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
-                title="Clear cache and update"
+                className="h-8 w-8 rounded-full text-primary-foreground hover:bg-primary-foreground/20"
+                title="Update app"
               >
-                <RefreshCw className="h-3 w-3" />
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="px-4 pt-4 space-y-3">
-        {/* Version Number */}
-        <div className="text-[10px] text-muted-foreground/40 text-right">
-          v{APP_VERSION}
-        </div>
-        
+      <div className="px-4 pt-6 space-y-4">
         {/* Status Cards */}
         {!isOnline && (
           <Card className="bg-warning/5 border-warning/20 animate-fade-in">
@@ -309,168 +231,84 @@ export default function WorkerDashboard() {
 
         {/* Supervisor Access */}
         {isSupervisorOrAbove && (
-          <Card className="border-primary/20 card-interactive overflow-hidden">
-            <CardContent className="p-0">
-              <button
-                onClick={() => navigate('/worker/supervisor/dashboard')}
-                className="w-full p-3.5 flex items-center gap-3 text-left bg-gradient-to-br from-primary/5 to-transparent"
-              >
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Supervisor Dashboard</p>
-                  <p className="text-xs text-muted-foreground">Manage team & operations</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </CardContent>
+          <Card className="border-primary/20 overflow-hidden shadow-sm">
+            <button
+              onClick={() => navigate('/worker/supervisor/dashboard')}
+              className="w-full p-4 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors mobile-tap"
+            >
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Briefcase className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-base">Supervisor Dashboard</p>
+                <p className="text-sm text-muted-foreground">Manage team & operations</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
           </Card>
         )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <button
-            onClick={() => navigate('/worker/appointments')}
-            className="bg-primary text-primary-foreground rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap min-h-[90px]"
-          >
-            <CalendarDays className="h-5 w-5" />
-            <span className="text-[11px] font-medium text-center leading-tight">All<br/>Appointments</span>
-          </button>
-          <button
-            onClick={() => navigate('/worker/schedule')}
-            className="bg-card border border-border/50 rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap min-h-[90px]"
-          >
-            <Clock className="h-5 w-5 text-foreground" />
-            <span className="text-[11px] font-medium text-center leading-tight">My<br/>Schedule</span>
-          </button>
-          <button
-            onClick={() => navigate('/worker/field-report-new')}
-            className="bg-card border border-border/50 rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 shadow-sm mobile-tap min-h-[90px]"
-          >
-            <FileText className="h-5 w-5 text-foreground" />
-            <span className="text-[11px] font-medium text-center leading-tight">Field<br/>Report</span>
-          </button>
-        </div>
-
-        {/* View Filter */}
-        <Card>
-          <CardContent className="p-3 space-y-2.5">
-            <div className="flex items-center gap-2">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold">View</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={viewFilter === 'today' ? 'default' : 'outline'}
-                onClick={() => setViewFilter('today')}
-                className="flex-1 h-8 text-xs rounded-lg"
-              >
-                Today
-              </Button>
-              <Button
-                size="sm"
-                variant={viewFilter === 'week' ? 'default' : 'outline'}
-                onClick={() => setViewFilter('week')}
-                className="flex-1 h-8 text-xs rounded-lg"
-              >
-                Next 7 Days
-              </Button>
-              <Button
-                size="sm"
-                variant={viewFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setViewFilter('all')}
-                className="flex-1 h-8 text-xs rounded-lg"
-              >
-                All
-              </Button>
-            </div>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "w-full justify-start h-8 text-xs rounded-lg",
-                    viewFilter === 'custom' && "border-primary text-primary"
-                  )}
-                >
-                  <CalendarIcon className="h-3.5 w-3.5 mr-2" />
-                  {customDate && viewFilter === 'custom'
-                    ? format(customDate, "PPP")
-                    : "Pick custom date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-popover/95 backdrop-blur-xl" align="start">
-                <Calendar
-                  mode="single"
-                  selected={customDate}
-                  onSelect={(date) => {
-                    setCustomDate(date);
-                    if (date) setViewFilter('custom');
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </CardContent>
-        </Card>
-
-        {/* Appointments Section */}
-        <div className="space-y-2.5 pb-2">
-          <div className="flex items-center justify-between px-1">
+        {/* Today's Appointments */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold">
-                {viewFilter === 'today' && 'Today'}
-                {viewFilter === 'week' && 'Next 7 Days'}
-                {viewFilter === 'all' && 'All Upcoming'}
-                {viewFilter === 'custom' && customDate && format(customDate, 'MMM d, yyyy')}
-              </h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="text-xl font-bold">Today's Schedule</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
               </p>
             </div>
+            {appointments.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/worker/appointments')}
+                className="text-primary h-8 px-3 text-sm font-medium"
+              >
+                View All
+              </Button>
+            )}
           </div>
 
           {appointments.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center">
-                <CalendarDays className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No appointments scheduled</p>
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center">
+                <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <CalendarDays className="h-8 w-8 text-muted-foreground/40" />
+                </div>
+                <p className="text-base font-medium text-muted-foreground mb-1">No appointments today</p>
+                <p className="text-sm text-muted-foreground/70">Your schedule is clear</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2.5">
-              {appointments.map((apt) => (
+            <div className="space-y-3">
+              {appointments.slice(0, 5).map((apt) => (
                 <Card
                   key={apt.id}
-                  className="card-interactive"
+                  className="card-interactive overflow-hidden shadow-sm"
                   onClick={() => navigate(`/worker/appointments/${apt.id}`)}
                 >
-                  <CardContent className="p-3.5">
-                    <div className="flex items-start justify-between gap-3 mb-2.5">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm truncate leading-tight">{apt.title}</h3>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        <h3 className="font-semibold text-base truncate mb-1">{apt.title}</h3>
+                        <p className="text-sm text-muted-foreground truncate">
                           {apt.service_order?.customer?.name}
                         </p>
                       </div>
                       <Badge 
                         variant={apt.status === 'completed' ? 'default' : 'secondary'}
-                        className="shrink-0 text-[10px] h-5"
+                        className="shrink-0 text-xs h-6 px-2.5"
                       >
                         {apt.status?.replace('_', ' ')}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <CalendarDays className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDays className="h-4 w-4" />
                         <span>{format(parseISO(apt.start_time), 'MMM d')}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4" />
                         <span>{format(parseISO(apt.start_time), 'h:mm a')}</span>
                       </div>
                     </div>
@@ -480,17 +318,10 @@ export default function WorkerDashboard() {
             </div>
           )}
         </div>
-        
-        {/* Footer with Version */}
-        <div className="mt-6 pb-4 pt-6 border-t border-border/30">
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground/60">
-              App Version {APP_VERSION}
-            </p>
-            <p className="text-[10px] text-muted-foreground/40 mt-1">
-              {isOnline ? 'Connected' : 'Offline Mode'}
-            </p>
-          </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-center gap-2 pt-8 pb-4 text-xs text-muted-foreground/50">
+          v{APP_VERSION}
         </div>
       </div>
 
@@ -500,7 +331,7 @@ export default function WorkerDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to log out? Any unsaved changes will be lost.
+              Are you sure you want to log out?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
