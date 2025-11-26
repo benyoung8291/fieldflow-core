@@ -17,7 +17,10 @@ export const usePullToRefresh = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const startY = useRef(0);
+  const currentY = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasStartedPulling = useRef(false);
+  const initialScrollTop = useRef(0);
 
   useEffect(() => {
     if (!isMobile || disabled) return;
@@ -25,58 +28,94 @@ export const usePullToRefresh = ({
     const container = containerRef.current;
     if (!container) return;
 
-    let isAtTop = true;
-
     const handleTouchStart = (e: TouchEvent) => {
-      const scrollTop = container.scrollTop;
-      isAtTop = scrollTop === 0;
+      const scrollTop = container.scrollTop || window.scrollY || document.documentElement.scrollTop;
       
-      if (isAtTop && !isRefreshing) {
+      // Only enable pull-to-refresh if user is at the very top
+      if (scrollTop <= 3) { // Allow 3px tolerance
         startY.current = e.touches[0].clientY;
+        currentY.current = e.touches[0].clientY;
+        initialScrollTop.current = scrollTop;
+        hasStartedPulling.current = false;
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isAtTop || isRefreshing) return;
+      if (isRefreshing) return;
 
-      const currentY = e.touches[0].clientY;
-      const distance = currentY - startY.current;
-
-      if (distance > 0) {
-        setIsPulling(true);
-        // Apply resistance curve to make it feel natural
-        const resistanceFactor = Math.min(distance / threshold, 1.5);
-        const adjustedDistance = Math.pow(resistanceFactor, 0.7) * threshold;
-        setPullDistance(adjustedDistance);
-
-        // Prevent default scroll behavior only when pulling
-        if (distance > 10) {
-          e.preventDefault();
+      currentY.current = e.touches[0].clientY;
+      const distance = currentY.current - startY.current;
+      
+      // Check if still at top
+      const scrollTop = container.scrollTop || window.scrollY || document.documentElement.scrollTop;
+      
+      // Only start pulling if:
+      // 1. User is pulling DOWN (distance > 0)
+      // 2. Still at the top of the page
+      // 3. Has pulled at least 20px (intentional gesture threshold)
+      if (!hasStartedPulling.current) {
+        if (distance > 20 && scrollTop <= 3) {
+          hasStartedPulling.current = true;
+          setIsPulling(true);
+        } else {
+          return; // Don't do anything until threshold is met
         }
+      }
+
+      if (hasStartedPulling.current && distance > 20 && scrollTop <= 3) {
+        // Apply exponential resistance to make it feel more natural
+        // The further you pull, the harder it gets
+        const adjustedDistance = distance - 20; // Subtract the initial threshold
+        const resistanceFactor = Math.pow(adjustedDistance / threshold, 0.65);
+        const finalDistance = Math.min(resistanceFactor * threshold, threshold * 1.3);
+        
+        setPullDistance(finalDistance);
+
+        // Prevent default scroll behavior when actively pulling
+        e.preventDefault();
       }
     };
 
     const handleTouchEnd = async () => {
+      if (!hasStartedPulling.current) {
+        setPullDistance(0);
+        setIsPulling(false);
+        return;
+      }
+
+      hasStartedPulling.current = false;
+
       if (isPulling && pullDistance >= threshold && !isRefreshing) {
         setIsRefreshing(true);
+        setPullDistance(threshold); // Lock at threshold during refresh
+        
         try {
           await onRefresh();
         } finally {
-          setIsRefreshing(false);
+          // Smooth animation back to zero
+          setTimeout(() => {
+            setIsRefreshing(false);
+            setPullDistance(0);
+            setIsPulling(false);
+          }, 300);
         }
+      } else {
+        // Snap back animation if threshold not met
+        setPullDistance(0);
+        setIsPulling(false);
       }
-      setIsPulling(false);
-      setPullDistance(0);
     };
 
     container.addEventListener("touchstart", handleTouchStart, { passive: true });
     container.addEventListener("touchmove", handleTouchMove, { passive: false });
     container.addEventListener("touchend", handleTouchEnd, { passive: true });
+    container.addEventListener("touchcancel", handleTouchEnd, { passive: true });
 
     return () => {
       container.removeEventListener("touchstart", handleTouchStart);
       container.removeEventListener("touchmove", handleTouchMove);
       container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, [isMobile, disabled, isPulling, pullDistance, threshold, isRefreshing, onRefresh]);
 
