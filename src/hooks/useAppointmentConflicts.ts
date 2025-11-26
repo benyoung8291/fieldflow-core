@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { parseISO, getDay, format, isWithinInterval } from "date-fns";
+import { parseISO, getDay, format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 export function useAppointmentConflicts() {
   const { data: appointments = [] } = useQuery({
@@ -34,6 +34,30 @@ export function useAppointmentConflicts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("worker_unavailability")
+        .select("*");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: seasonalAvailability = [] } = useQuery({
+    queryKey: ["worker-seasonal-availability-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("worker_seasonal_availability")
+        .select("*");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: seasonalDates = [] } = useQuery({
+    queryKey: ["worker-seasonal-dates-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("worker_seasonal_availability_dates")
         .select("*");
       
       if (error) throw error;
@@ -85,7 +109,71 @@ export function useAppointmentConflicts() {
     const endTimeStr = format(endTime, "HH:mm");
     const dateStr = format(startTime, "yyyy-MM-dd");
 
-    // Check if worker has a schedule for this day
+    // FIRST: Check if there's a seasonal availability period that covers this date
+    const workerSeasonalPeriod = seasonalAvailability.find(
+      sa => sa.worker_id === workerId &&
+            dateStr >= sa.start_date &&
+            dateStr <= sa.end_date
+    );
+
+    if (workerSeasonalPeriod) {
+      // Check if worker has specific availability set for this date
+      const dateAvailability = seasonalDates.find(
+        sd => sd.seasonal_availability_id === workerSeasonalPeriod.id &&
+              sd.date === dateStr
+      );
+
+      if (!dateAvailability || !dateAvailability.periods || dateAvailability.periods.length === 0) {
+        return {
+          isAvailable: false,
+          reason: `Worker is not available on this date (${workerSeasonalPeriod.season_name})`
+        };
+      }
+
+      // Check if the appointment time falls within the available periods
+      const periods = dateAvailability.periods;
+      const isAnytime = periods.includes('anytime');
+      
+      if (isAnytime) {
+        // Worker is available all day during this seasonal period
+        return { isAvailable: true };
+      }
+
+      // Define time ranges for each period
+      const periodRanges: Record<string, { start: string; end: string }> = {
+        morning: { start: '06:00', end: '12:00' },
+        afternoon: { start: '12:00', end: '18:00' },
+        evening: { start: '18:00', end: '23:59' }
+      };
+
+      // Check if appointment fits within any of the selected periods
+      const isInSelectedPeriod = periods.some(period => {
+        const range = periodRanges[period];
+        if (!range) return false;
+        return startTimeStr >= range.start && endTimeStr <= range.end;
+      });
+
+      if (!isInSelectedPeriod) {
+        const availablePeriods = periods.map(p => {
+          const labels: Record<string, string> = {
+            morning: 'Morning (6am-12pm)',
+            afternoon: 'Afternoon (12pm-6pm)',
+            evening: 'Evening (6pm-12am)'
+          };
+          return labels[p] || p;
+        }).join(', ');
+
+        return {
+          isAvailable: false,
+          reason: `Worker is only available during: ${availablePeriods} (${workerSeasonalPeriod.season_name})`
+        };
+      }
+
+      // Seasonal period allows this - skip regular schedule check
+      return { isAvailable: true };
+    }
+
+    // SECOND: Fall back to regular schedule if no seasonal period
     const workerSchedule = schedules.find(
       s => s.worker_id === workerId && s.day_of_week === dayOfWeek
     );
