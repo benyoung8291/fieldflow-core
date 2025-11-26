@@ -23,6 +23,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ViewToggleButton } from '@/components/layout/ViewToggleButton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 type ViewFilter = 'today' | 'week' | 'all' | 'custom';
 
@@ -36,6 +37,7 @@ export default function WorkerDashboard() {
   const [showInstallBanner, setShowInstallBanner] = useState(true);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('week');
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const { isOnline, isSyncing, pendingItems } = useOfflineSync();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
   const { clearCacheAndReload } = usePWAUpdate();
@@ -145,6 +147,7 @@ export default function WorkerDashboard() {
   };
 
   const handleLogout = async () => {
+    setShowLogoutDialog(false);
     await supabase.auth.signOut();
     navigate('/worker/auth');
   };
@@ -242,7 +245,7 @@ export default function WorkerDashboard() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutDialog(true)}
                 className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
               >
                 <LogOut className="h-3 w-3" />
@@ -478,6 +481,24 @@ export default function WorkerDashboard() {
           )}
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out? Any unsaved changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
