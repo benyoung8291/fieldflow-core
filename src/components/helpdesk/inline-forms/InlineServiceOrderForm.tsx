@@ -336,9 +336,9 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="flex flex-col h-full">
-      <ScrollArea className="flex-1 px-4">
-        <div className="space-y-4 py-4">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+      <ScrollArea className="flex-1 overflow-y-auto">
+        <div className="space-y-4 py-4 px-4">
           <div className="space-y-2">
             <Label htmlFor="customer_id">Customer *</Label>
             <Select
