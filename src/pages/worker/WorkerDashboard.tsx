@@ -480,6 +480,18 @@ export default function WorkerDashboard() {
             </div>
           )}
         </div>
+        
+        {/* Footer with Version */}
+        <div className="mt-6 pb-4 pt-6 border-t border-border/30">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground/60">
+              App Version {APP_VERSION}
+            </p>
+            <p className="text-[10px] text-muted-foreground/40 mt-1">
+              {isOnline ? 'Connected' : 'Offline Mode'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Logout Confirmation Dialog */}
