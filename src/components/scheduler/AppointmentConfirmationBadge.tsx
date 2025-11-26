@@ -20,24 +20,25 @@ export function AppointmentConfirmationBadge({ confirmations, compact = false }:
   const pendingCount = confirmations.filter(c => c.status === "pending").length;
   const declinedCount = confirmations.filter(c => c.status === "declined").length;
 
-  const allConfirmed = confirmedCount === confirmations.length;
+  const allConfirmed = confirmedCount === confirmations.length && confirmations.length > 0;
   const anyDeclined = declinedCount > 0;
   const anyPending = pendingCount > 0;
 
   if (compact) {
+    // Show declined first as it's most critical
+    if (anyDeclined) {
+      return (
+        <Badge variant="outline" className="gap-1 bg-destructive text-destructive-foreground border-destructive font-semibold">
+          <XCircle className="h-3 w-3" />
+          {declinedCount} Declined
+        </Badge>
+      );
+    }
     if (allConfirmed) {
       return (
         <Badge variant="outline" className="gap-1 bg-success/10 text-success border-success/20">
           <CheckCircle className="h-3 w-3" />
           {confirmedCount}
-        </Badge>
-      );
-    }
-    if (anyDeclined) {
-      return (
-        <Badge variant="outline" className="gap-1 bg-destructive/10 text-destructive border-destructive/20">
-          <XCircle className="h-3 w-3" />
-          {declinedCount}
         </Badge>
       );
     }
@@ -51,6 +52,12 @@ export function AppointmentConfirmationBadge({ confirmations, compact = false }:
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
+      {declinedCount > 0 && (
+        <Badge variant="outline" className="gap-1 bg-destructive text-destructive-foreground border-destructive font-semibold animate-pulse">
+          <XCircle className="h-3.5 w-3.5" />
+          {declinedCount} Declined - Action Required
+        </Badge>
+      )}
       {confirmedCount > 0 && (
         <Badge variant="outline" className="gap-1 bg-success/10 text-success border-success/20">
           <CheckCircle className="h-3 w-3" />
@@ -61,12 +68,6 @@ export function AppointmentConfirmationBadge({ confirmations, compact = false }:
         <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20">
           <Clock className="h-3 w-3" />
           {pendingCount} Pending
-        </Badge>
-      )}
-      {declinedCount > 0 && (
-        <Badge variant="outline" className="gap-1 bg-destructive/10 text-destructive border-destructive/20">
-          <XCircle className="h-3 w-3" />
-          {declinedCount} Declined
         </Badge>
       )}
     </div>

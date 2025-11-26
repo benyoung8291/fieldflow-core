@@ -570,6 +570,7 @@ export type Database = {
           appointment_id: string
           confirmed_at: string | null
           created_at: string | null
+          decline_reason: string | null
           id: string
           last_appointment_end_time: string | null
           last_appointment_start_time: string | null
@@ -583,6 +584,7 @@ export type Database = {
           appointment_id: string
           confirmed_at?: string | null
           created_at?: string | null
+          decline_reason?: string | null
           id?: string
           last_appointment_end_time?: string | null
           last_appointment_start_time?: string | null
@@ -596,6 +598,7 @@ export type Database = {
           appointment_id?: string
           confirmed_at?: string | null
           created_at?: string | null
+          decline_reason?: string | null
           id?: string
           last_appointment_end_time?: string | null
           last_appointment_start_time?: string | null
