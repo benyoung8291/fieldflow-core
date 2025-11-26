@@ -35,6 +35,7 @@ export default function DroppableTimeSlot({
 
   const isDraggingServiceOrder = active?.data?.current?.type === "service-order";
   const isDraggingAppointment = active?.data?.current?.type === "appointment";
+  const isDraggingWorker = active?.data?.current?.type === "worker";
 
   return (
     <div
@@ -44,7 +45,8 @@ export default function DroppableTimeSlot({
         className,
         !isAvailable && "opacity-30 cursor-not-allowed bg-muted/50",
         isOver && isAvailable && isDraggingServiceOrder && "ring-2 ring-primary ring-offset-2 bg-primary/5",
-        isOver && isAvailable && isDraggingAppointment && "ring-2 ring-warning ring-offset-2 bg-warning/5"
+        isOver && isAvailable && isDraggingAppointment && "ring-2 ring-warning ring-offset-2 bg-warning/5",
+        isOver && isAvailable && isDraggingWorker && "ring-2 ring-success ring-offset-2 bg-success/5"
       )}
     >
       {children}

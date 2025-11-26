@@ -1048,6 +1048,74 @@ export default function Scheduler() {
       return;
     }
 
+    // Handle dropping worker onto time slot in SO calendar view to create appointment
+    if (draggedItem?.type === "worker" && dropTarget?.type === "time-slot") {
+      const workerId = draggedItem.worker.id;
+      const { date, hour } = dropTarget;
+      
+      // Extract service order ID from slot ID (format: so-slot-{orderId}-{date})
+      const slotId = over.id as string;
+      if (slotId.startsWith("so-slot-")) {
+        // Extract the service order UUID (36 chars) after "so-slot-"
+        const serviceOrderId = slotId.substring(8, 44); // "so-slot-" is 8 chars, UUID is 36 chars
+        
+        // Calculate start and end times
+        let startTime = hour !== undefined 
+          ? setMinutes(setHours(date, hour), 0)
+          : setHours(date, 9); // Default to 9 AM if no hour specified
+        
+        // Default 4 hour duration for service order appointments
+        let endTime = addHours(startTime, 4);
+
+        // Check for conflicts and find next available slot
+        const workerAppointmentsOnDate = appointments.filter(apt => 
+          apt.assigned_to === workerId &&
+          new Date(apt.start_time).toDateString() === date.toDateString()
+        ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+        let hasConflict = true;
+        let attemptCount = 0;
+        const maxAttempts = 20;
+
+        while (hasConflict && attemptCount < maxAttempts) {
+          hasConflict = false;
+          
+          for (const apt of workerAppointmentsOnDate) {
+            const aptStart = new Date(apt.start_time);
+            const aptEnd = new Date(apt.end_time);
+            
+            if (startTime < aptEnd && endTime > aptStart) {
+              hasConflict = true;
+              startTime = new Date(aptEnd);
+              endTime = addHours(startTime, 4);
+              break;
+            }
+          }
+          attemptCount++;
+        }
+
+        // Final conflict check
+        const conflict = checkConflict(workerId, startTime, endTime);
+        if (conflict.hasConflict) {
+          toast.error(conflict.reason);
+          return;
+        }
+
+        const availability = checkAvailability(workerId, startTime, endTime);
+        if (!availability.isAvailable) {
+          toast.warning(availability.reason || "Worker may not be available");
+        }
+
+        createAppointmentMutation.mutate({
+          serviceOrderId,
+          startTime,
+          endTime,
+          workerId,
+        });
+        return;
+      }
+    }
+
     // Handle dropping a service order on capacity week
     if (draggedItem?.type === "service-order" && dropTarget?.type === "capacity-week") {
       const serviceOrder = draggedItem.serviceOrder;
