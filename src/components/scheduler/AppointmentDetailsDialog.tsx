@@ -227,12 +227,42 @@ export default function AppointmentDetailsDialog({
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
-              {onDelete && (
-                <Button variant="outline" size="sm" onClick={onDelete}>
-                  <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                  Delete
-                </Button>
-              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={async () => {
+                  // Check for time logs
+                  const { data: timeLogs } = await supabase
+                    .from("time_logs")
+                    .select("id")
+                    .eq("appointment_id", appointment.id)
+                    .limit(1);
+                  
+                  // Check for field reports
+                  const { data: fieldReports } = await supabase
+                    .from("field_reports")
+                    .select("id")
+                    .eq("appointment_id", appointment.id)
+                    .limit(1);
+                  
+                  if (timeLogs && timeLogs.length > 0) {
+                    alert("Cannot delete appointment: This appointment has time logs recorded. Please delete the time logs first.");
+                    return;
+                  }
+                  
+                  if (fieldReports && fieldReports.length > 0) {
+                    alert("Cannot delete appointment: This appointment has field reports. Please delete the field reports first.");
+                    return;
+                  }
+                  
+                  if (onDelete) {
+                    onDelete();
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                Delete
+              </Button>
             </div>
           </div>
         </DialogHeader>
