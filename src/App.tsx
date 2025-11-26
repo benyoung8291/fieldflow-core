@@ -76,6 +76,7 @@ const APInvoicesList = lazy(() => import("./pages/APInvoicesList"));
 const APInvoiceDetails = lazy(() => import("./pages/APInvoiceDetails"));
 const APInvoiceApprovalQueue = lazy(() => import("./pages/APInvoiceApprovalQueue"));
 const WorkerDashboard = lazy(() => import("./pages/worker/WorkerDashboard"));
+const WorkerProfile = lazy(() => import("./pages/worker/WorkerProfile"));
 const WorkerAppointments = lazy(() => import("./pages/worker/WorkerAppointments"));
 const WorkerAppointmentDetails = lazy(() => import("./pages/worker/WorkerAppointmentDetails"));
 const WorkerTimeLogs = lazy(() => import("./pages/worker/WorkerTimeLogs"));
@@ -302,6 +303,7 @@ const App = () => {
             <Route path="/knowledge-base" element={isAuthenticated ? <ProtectedRoute><KnowledgeBase /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
             <Route path="/worker/dashboard" element={isAuthenticated ? <ProtectedRoute><WorkerDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/profile" element={isAuthenticated ? <ProtectedRoute><WorkerProfile /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/supervisor/dashboard" element={isAuthenticated ? <ProtectedRoute><SupervisorDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/supervisor/map" element={isAuthenticated ? <ProtectedRoute><SupervisorMapDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/supervisor/appointments" element={isAuthenticated ? <ProtectedRoute><SupervisorAppointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
