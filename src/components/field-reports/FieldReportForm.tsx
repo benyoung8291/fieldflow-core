@@ -6,12 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SignaturePad from '@/components/worker/SignaturePad';
 import BeforeAfterPhotoUpload from './BeforeAfterPhotoUpload';
-import { useQuery } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 
 interface FieldReportFormProps {
@@ -528,34 +526,6 @@ export default function FieldReportForm({
     loadUserName();
   }, []);
 
-  // Fetch open appointments
-  const { data: appointments } = useQuery({
-    queryKey: ['open-appointments'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('appointments')
-        .select('id, title, start_time')
-        .in('status', ['published', 'checked_in'])
-        .order('start_time', { ascending: true })
-        .limit(50);
-      return data || [];
-    },
-  });
-
-  // Fetch service orders
-  const { data: serviceOrders } = useQuery({
-    queryKey: ['service-orders'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('service_orders')
-        .select('id, work_order_number, title')
-        .in('status', ['scheduled', 'in_progress'])
-        .order('created_at', { ascending: false })
-        .limit(50);
-      return data || [];
-    },
-  });
-
   const handleSubmit = async () => {
     try {
       setLoading(true);
@@ -805,42 +775,6 @@ export default function FieldReportForm({
                   onChange={(e) => setFormData({ ...formData, worker_name: e.target.value })}
                   required
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="appointment">Link to Appointment (Optional)</Label>
-                <Select
-                  value={formData.appointment_id}
-                  onValueChange={(val) => setFormData({ ...formData, appointment_id: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select appointment..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {appointments?.map((apt) => (
-                      <SelectItem key={apt.id} value={apt.id}>
-                        {apt.title} - {new Date(apt.start_time).toLocaleDateString()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="service_order">Link to Service Order (Optional)</Label>
-                <Select
-                  value={formData.service_order_id}
-                  onValueChange={(val) => setFormData({ ...formData, service_order_id: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service order..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceOrders?.map((so) => (
-                      <SelectItem key={so.id} value={so.id}>
-                        {so.work_order_number} - {so.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="service_date">Date of Service *</Label>
