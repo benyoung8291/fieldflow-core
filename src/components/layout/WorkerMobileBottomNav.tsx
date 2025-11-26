@@ -29,7 +29,6 @@ const primaryNavItems: NavItem[] = [
 ];
 
 const moreNavItems: NavItem[] = [
-  { icon: Calendar, label: "Calendar", path: "/worker/calendar" },
   { icon: Clock, label: "Time Logs", path: "/worker/time-logs" },
   { icon: FileText, label: "Field Report", path: "/worker/field-report-new" },
   { icon: User, label: "Profile", path: "/worker/profile" },
