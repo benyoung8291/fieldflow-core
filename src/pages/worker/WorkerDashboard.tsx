@@ -13,6 +13,7 @@ import { usePWAUpdate } from '@/hooks/usePWAUpdate';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
+import { APP_VERSION } from '@/lib/version';
 import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -254,6 +255,11 @@ export default function WorkerDashboard() {
       </header>
 
       <div className="px-4 pt-4 space-y-3">
+        {/* Version Number */}
+        <div className="text-[10px] text-muted-foreground/40 text-right">
+          v{APP_VERSION}
+        </div>
+        
         {/* Status Cards */}
         {!isOnline && (
           <Card className="bg-warning/5 border-warning/20 animate-fade-in">
