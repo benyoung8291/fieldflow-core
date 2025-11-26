@@ -86,22 +86,22 @@ export default function SupervisorAppointments() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="bg-gradient-to-br from-primary to-primary-hover text-primary-foreground p-4 sticky top-14 z-10 shadow-md">
-        <div className="flex items-center justify-between max-w-screen-lg mx-auto">
-          <div className="flex items-center gap-3">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3 max-w-screen-lg mx-auto">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => navigate('/worker/supervisor/dashboard')}
-              className="text-primary-foreground hover:bg-primary-foreground/20"
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Appointments</h1>
-              <p className="text-sm opacity-90">{appointments.length} total</p>
+              <h1 className="text-lg font-bold">Appointments</h1>
+              <p className="text-xs opacity-90">{appointments.length} total</p>
             </div>
           </div>
         </div>

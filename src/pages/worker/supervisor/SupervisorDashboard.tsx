@@ -104,23 +104,27 @@ export default function SupervisorDashboard() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
-        <div className="flex items-center justify-between max-w-screen-lg mx-auto">
-          <div className="flex items-center gap-3">
-            <User className="h-8 w-8" />
-            <div>
-              <h1 className="text-xl font-bold">Supervisor Dashboard</h1>
-              <p className="text-sm opacity-90">{user?.first_name} {user?.last_name}</p>
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between max-w-screen-lg mx-auto">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center">
+                <User className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium opacity-90">Supervisor</p>
+                <h1 className="text-base font-bold">{user?.first_name} {user?.last_name}</h1>
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="h-8 w-8 rounded-full text-primary-foreground hover:bg-primary-foreground/20"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-primary-foreground hover:bg-primary-foreground/20"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </header>
 

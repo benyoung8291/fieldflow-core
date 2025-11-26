@@ -27,18 +27,20 @@ export default function WorkerFieldReport() {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
-      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-md border-b border-border/50 p-4 shadow-sm">{/* Added top-14 offset */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="mb-2 h-10 w-10 rounded-xl"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">Field Report</h1>
-      </div>
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-lg font-bold">Field Report</h1>
+        </div>
+      </header>
 
       <FieldReportForm
         appointmentId={id}

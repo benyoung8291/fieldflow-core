@@ -35,7 +35,20 @@ export default function EditFieldReport() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20 pt-14">
+      <div className="min-h-screen bg-background pb-20">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Edit Field Report</h1>
+          </div>
+        </header>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Loading field report...</div>
         </div>
@@ -45,7 +58,20 @@ export default function EditFieldReport() {
 
   if (!report) {
     return (
-      <div className="min-h-screen bg-background pb-20 pt-14">
+      <div className="min-h-screen bg-background pb-20">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Edit Field Report</h1>
+          </div>
+        </header>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Field report not found</div>
         </div>
@@ -59,8 +85,21 @@ export default function EditFieldReport() {
 
   if (!isCreator) {
     return (
-      <div className="min-h-screen bg-background pb-20 pt-14">
-        <div className="max-w-2xl mx-auto p-6">
+      <div className="min-h-screen bg-background pb-20">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Edit Field Report</h1>
+          </div>
+        </header>
+        <div className="p-4">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
@@ -81,7 +120,20 @@ export default function EditFieldReport() {
   if (isLocked) {
     return (
       <div className="min-h-screen bg-background pb-20">
-        <div className="max-w-2xl mx-auto p-6">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Edit Field Report</h1>
+          </div>
+        </header>
+        <div className="p-4">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
@@ -100,19 +152,20 @@ export default function EditFieldReport() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-14">
-      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-md border-b border-border/50 p-4 shadow-sm">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
-          className="mb-2 h-10 w-10 rounded-xl"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold">Edit Field Report</h1>
-      </div>
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+            className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-lg font-bold">Edit Field Report</h1>
+        </div>
+      </header>
 
       <FieldReportForm
         appointmentId={appointmentId}
