@@ -21,6 +21,7 @@ import NotificationCenter from "@/components/notifications/NotificationCenter";
 import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 import { IssueReportDialog } from "@/components/common/IssueReportDialog";
 import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
+import { APP_VERSION } from "@/lib/version";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -240,6 +241,11 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
           </nav>
           
           <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4 bg-sidebar">
+            {!sidebarCollapsed && (
+              <div className="text-[10px] text-muted-foreground/40 text-center mb-2">
+                v{APP_VERSION}
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"
