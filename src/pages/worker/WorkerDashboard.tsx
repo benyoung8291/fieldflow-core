@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText, ChevronRight, RefreshCw } from 'lucide-react';
+import { CalendarDays, Clock, LogOut, Wifi, WifiOff, User, Download, CheckCircle2, X, Filter, CalendarIcon, Briefcase, FileText, ChevronRight, RefreshCw, Settings } from 'lucide-react';
 import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -230,6 +230,15 @@ export default function WorkerDashboard() {
                   <WifiOff className="h-3 w-3 text-warning-foreground" />
                 </div>
               )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/worker/profile')}
+                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
+                title="Profile settings"
+              >
+                <Settings className="h-3 w-3" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
