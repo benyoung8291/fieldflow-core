@@ -25,7 +25,7 @@ import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, DragCancelEvent } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
 import DraggableWorker from "@/components/scheduler/DraggableWorker";
 import { CapacityPlanningView } from "@/components/scheduler/CapacityPlanningView";
@@ -33,6 +33,7 @@ import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import DeleteDropZone from "@/components/scheduler/DeleteDropZone";
 
 export default function Scheduler() {
   const [viewType, setViewType] = useState<"day" | "week" | "timegrid" | "month" | "kanban" | "capacity">("week");
@@ -54,6 +55,7 @@ export default function Scheduler() {
   }>>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [successWeek, setSuccessWeek] = useState<Date | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const queryClient = useQueryClient();
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
@@ -700,6 +702,28 @@ export default function Scheduler() {
 
   const deleteAppointmentMutation = useMutation({
     mutationFn: async (appointmentId: string) => {
+      // Check for time logs
+      const { data: timeLogs } = await supabase
+        .from("time_logs")
+        .select("id")
+        .eq("appointment_id", appointmentId)
+        .limit(1);
+      
+      // Check for field reports
+      const { data: fieldReports } = await supabase
+        .from("field_reports")
+        .select("id")
+        .eq("appointment_id", appointmentId)
+        .limit(1);
+      
+      if (timeLogs && timeLogs.length > 0) {
+        throw new Error("Cannot delete: This appointment has time logs recorded. Please delete the time logs first.");
+      }
+      
+      if (fieldReports && fieldReports.length > 0) {
+        throw new Error("Cannot delete: This appointment has field reports. Please delete the field reports first.");
+      }
+
       const { error } = await supabase
         .from("appointments")
         .delete()
@@ -948,15 +972,44 @@ export default function Scheduler() {
 
   const viewDetailsAppointment = appointments.find(apt => apt.id === viewDetailsAppointmentId);
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+    setIsDragging(true);
+  };
+
+  const handleDragCancel = (event: DragCancelEvent) => {
+    setActiveId(null);
+    setIsDragging(false);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setIsDragging(false);
 
     if (!over) return;
 
     const draggedItem = active.data.current;
     const dropTarget = over.data.current;
     const isDraggingSelectedAppointment = draggedItem?.isSelected && selectedAppointmentIds.size > 1;
+
+    // Handle dropping appointment into delete zone
+    if (over.id === "delete-zone" && draggedItem?.type === "appointment") {
+      const appointmentId = draggedItem.appointmentId || active.id;
+      
+      if (isDraggingSelectedAppointment) {
+        // Delete all selected appointments
+        const appointmentsToDelete = Array.from(selectedAppointmentIds);
+        appointmentsToDelete.forEach(id => {
+          deleteAppointmentMutation.mutate(id);
+        });
+        clearSelection();
+      } else {
+        // Delete single appointment
+        deleteAppointmentMutation.mutate(appointmentId as string);
+      }
+      return;
+    }
 
     // Handle dropping worker onto appointment card
     if (draggedItem?.type === "worker" && dropTarget?.type === "appointment-card") {
@@ -1222,7 +1275,12 @@ export default function Scheduler() {
         />
       )}
 
-      <DndContext onDragEnd={handleDragEnd} onDragStart={(e) => setActiveId(e.active.id as string)}>
+      <DndContext 
+        onDragEnd={handleDragEnd} 
+        onDragStart={handleDragStart}
+        onDragCancel={handleDragCancel}
+      >
+        <DeleteDropZone isVisible={isDragging} />
         <div className="overflow-x-auto overflow-y-hidden h-[calc(100vh-64px)]">
           <div className={cn(
             "grid gap-3 h-full transition-all duration-300 min-w-[900px]",
