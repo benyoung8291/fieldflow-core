@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { format, addDays, startOfWeek, addWeeks, isSameDay } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 interface SeasonalAvailabilityDialogProps {
   open: boolean;
@@ -17,17 +18,21 @@ interface SeasonalAvailabilityDialogProps {
   existingData?: any;
 }
 
-const DAYS = [
-  { key: 'monday', label: 'Monday' },
-  { key: 'tuesday', label: 'Tuesday' },
-  { key: 'wednesday', label: 'Wednesday' },
-  { key: 'thursday', label: 'Thursday' },
-  { key: 'friday', label: 'Friday' },
-  { key: 'saturday', label: 'Saturday' },
-  { key: 'sunday', label: 'Sunday' },
-];
-
 const TIME_PERIODS = ['morning', 'afternoon', 'evening', 'anytime'];
+
+// Calculate 6 weeks starting from the Saturday before Christmas
+const getDefaultDateRange = () => {
+  const currentYear = new Date().getFullYear();
+  const christmas = new Date(currentYear, 11, 25); // Dec 25
+  const christmasDay = christmas.getDay();
+  
+  // Find the Saturday before Christmas (or Christmas if it's Saturday)
+  const daysToSaturday = christmasDay === 6 ? 0 : (christmasDay + 1);
+  const startDate = addDays(christmas, -daysToSaturday);
+  const endDate = addWeeks(startDate, 6);
+  
+  return { startDate, endDate };
+};
 
 export function SeasonalAvailabilityDialog({ 
   open, 
@@ -37,24 +42,48 @@ export function SeasonalAvailabilityDialog({
   existingData 
 }: SeasonalAvailabilityDialogProps) {
   const queryClient = useQueryClient();
-  const [seasonName, setSeasonName] = useState(existingData?.season_name || "");
-  const [startDate, setStartDate] = useState(existingData?.start_date || "");
-  const [endDate, setEndDate] = useState(existingData?.end_date || "");
+  const defaultRange = getDefaultDateRange();
+  
+  const [seasonName, setSeasonName] = useState(existingData?.season_name || "Christmas Period");
+  const [startDate, setStartDate] = useState(
+    existingData?.start_date || format(defaultRange.startDate, 'yyyy-MM-dd')
+  );
+  const [endDate, setEndDate] = useState(
+    existingData?.end_date || format(defaultRange.endDate, 'yyyy-MM-dd')
+  );
   const [notes, setNotes] = useState(existingData?.notes || "");
-  const [availability, setAvailability] = useState(() => {
-    const initial: Record<string, { available: boolean; periods: string[] }> = {};
-    DAYS.forEach(day => {
-      initial[day.key] = {
-        available: existingData?.[`${day.key}_available`] || false,
-        periods: existingData?.[`${day.key}_periods`] || [],
-      };
-    });
-    return initial;
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateAvailability, setDateAvailability] = useState<Record<string, string[]>>({});
+
+  // Fetch existing date availability
+  const { data: existingDates } = useQuery({
+    queryKey: ['seasonal-dates', existingData?.id],
+    queryFn: async () => {
+      if (!existingData?.id) return [];
+      const { data, error } = await supabase
+        .from('worker_seasonal_availability_dates')
+        .select('*')
+        .eq('seasonal_availability_id', existingData.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!existingData?.id && open,
   });
+
+  useEffect(() => {
+    if (existingDates) {
+      const availability: Record<string, string[]> = {};
+      existingDates.forEach((date: any) => {
+        availability[date.date] = date.periods || [];
+      });
+      setDateAvailability(availability);
+    }
+  }, [existingDates]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const data: any = {
+      const periodData: any = {
         worker_id: workerId,
         tenant_id: tenantId,
         season_name: seasonName,
@@ -63,26 +92,52 @@ export function SeasonalAvailabilityDialog({
         notes: notes || null,
       };
 
-      DAYS.forEach(day => {
-        data[`${day.key}_available`] = availability[day.key].available;
-        data[`${day.key}_periods`] = availability[day.key].periods;
-      });
+      let periodId = existingData?.id;
 
       if (existingData?.id) {
         const { error } = await supabase
           .from('worker_seasonal_availability')
-          .update(data)
+          .update(periodData)
           .eq('id', existingData.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('worker_seasonal_availability')
-          .insert(data);
+          .insert(periodData)
+          .select()
+          .single();
+        if (error) throw error;
+        periodId = data.id;
+      }
+
+      // Delete existing dates if updating
+      if (existingData?.id) {
+        await supabase
+          .from('worker_seasonal_availability_dates')
+          .delete()
+          .eq('seasonal_availability_id', existingData.id);
+      }
+
+      // Insert date-specific availability
+      const dateRecords = Object.entries(dateAvailability)
+        .filter(([_, periods]) => periods.length > 0)
+        .map(([date, periods]) => ({
+          seasonal_availability_id: periodId,
+          date,
+          periods,
+          tenant_id: tenantId,
+        }));
+
+      if (dateRecords.length > 0) {
+        const { error } = await supabase
+          .from('worker_seasonal_availability_dates')
+          .insert(dateRecords);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seasonal-availability'] });
+      queryClient.invalidateQueries({ queryKey: ['seasonal-dates'] });
       toast.success(existingData ? "Seasonal availability updated" : "Seasonal availability added");
       onOpenChange(false);
     },
@@ -92,32 +147,22 @@ export function SeasonalAvailabilityDialog({
     },
   });
 
-  const toggleDay = (day: string) => {
-    setAvailability(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        available: !prev[day].available,
-      },
-    }));
-  };
-
-  const togglePeriod = (day: string, period: string) => {
-    setAvailability(prev => {
-      const currentPeriods = prev[day].periods;
+  const togglePeriod = (date: string, period: string) => {
+    setDateAvailability(prev => {
+      const currentPeriods = prev[date] || [];
       const newPeriods = currentPeriods.includes(period)
         ? currentPeriods.filter(p => p !== period)
         : [...currentPeriods, period];
       
       return {
         ...prev,
-        [day]: {
-          ...prev[day],
-          periods: newPeriods,
-        },
+        [date]: newPeriods,
       };
     });
   };
+
+  const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
+  const selectedDatePeriods = selectedDateStr ? (dateAvailability[selectedDateStr] || []) : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,13 +182,13 @@ export function SeasonalAvailabilityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {existingData ? 'Edit' : 'Add'} Seasonal Availability Override
           </DialogTitle>
           <DialogDescription>
-            Set special availability for a specific period (e.g., Christmas, summer holidays)
+            Select specific dates and time periods when you're available (defaults to 6 weeks from weekend before Christmas)
           </DialogDescription>
         </DialogHeader>
 
@@ -198,48 +243,91 @@ export function SeasonalAvailabilityDialog({
           </div>
 
           <div className="space-y-4">
-            <Label className="text-base font-semibold">Day Availability</Label>
-            <div className="space-y-3">
-              {DAYS.map(day => (
-                <div key={day.key} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={availability[day.key].available}
-                      onCheckedChange={() => toggleDay(day.key)}
-                      id={`day-${day.key}`}
-                    />
-                    <Label htmlFor={`day-${day.key}`} className="font-semibold cursor-pointer">
-                      {day.label}
-                    </Label>
-                  </div>
-
-                  {availability[day.key].available && (
-                    <div className="pl-6 space-y-2">
-                      <Label className="text-sm text-muted-foreground">Available during:</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {TIME_PERIODS.map(period => (
-                          <label
-                            key={period}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors ${
-                              availability[day.key].periods.includes(period)
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={availability[day.key].periods.includes(period)}
-                              onChange={() => togglePeriod(day.key, period)}
-                              className="sr-only"
-                            />
-                            <span className="text-sm capitalize">{period}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            <Label className="text-base font-semibold">Date-Specific Availability</Label>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Select dates you're available</Label>
+                <div className="border rounded-lg p-3">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    disabled={(date) => {
+                      const dateStr = format(date, 'yyyy-MM-dd');
+                      return dateStr < startDate || dateStr > endDate;
+                    }}
+                    modifiers={{
+                      hasAvailability: (date) => {
+                        const dateStr = format(date, 'yyyy-MM-dd');
+                        return (dateAvailability[dateStr]?.length || 0) > 0;
+                      }
+                    }}
+                    modifiersClassNames={{
+                      hasAvailability: "bg-primary/20 font-bold"
+                    }}
+                    className="rounded-md"
+                  />
                 </div>
-              ))}
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm">
+                  {selectedDate 
+                    ? `Availability for ${format(selectedDate, 'MMM d, yyyy')}`
+                    : 'Select a date to set availability'}
+                </Label>
+                
+                {selectedDate && selectedDateStr && (
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {TIME_PERIODS.map(period => (
+                        <label
+                          key={period}
+                          className={`flex items-center gap-2 px-4 py-3 rounded-md border cursor-pointer transition-colors ${
+                            selectedDatePeriods.includes(period)
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-muted'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedDatePeriods.includes(period)}
+                            onChange={() => togglePeriod(selectedDateStr, period)}
+                            className="sr-only"
+                          />
+                          <span className="text-sm capitalize font-medium">{period}</span>
+                        </label>
+                      ))}
+                    </div>
+                    
+                    {selectedDatePeriods.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Select at least one time period to mark this date as available
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 space-y-2">
+                  <Label className="text-sm font-semibold">Summary</Label>
+                  <div className="text-xs text-muted-foreground space-y-1 max-h-48 overflow-y-auto border rounded-lg p-3">
+                    {Object.entries(dateAvailability)
+                      .filter(([_, periods]) => periods.length > 0)
+                      .sort()
+                      .map(([date, periods]) => (
+                        <div key={date} className="flex items-center justify-between py-1">
+                          <span className="font-medium">{format(new Date(date + 'T00:00:00'), 'MMM d, yyyy')}</span>
+                          <span className="text-xs">
+                            {periods.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}
+                          </span>
+                        </div>
+                      ))}
+                    {Object.keys(dateAvailability).filter(date => dateAvailability[date].length > 0).length === 0 && (
+                      <p className="text-center py-2">No dates selected yet</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
