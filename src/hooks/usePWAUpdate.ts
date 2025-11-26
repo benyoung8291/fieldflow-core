@@ -77,38 +77,48 @@ export const usePWAUpdate = () => {
 
   const clearCacheAndReload = async () => {
     try {
+      console.log('Starting app update process...');
       toast.info('Updating app...', { duration: 2000 });
       
       // Check if there's a new service worker waiting
       if ('serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.getRegistration();
-        
-        // Check for updates first
-        if (registration) {
-          await registration.update();
-        }
-        
-        // If there's a waiting service worker, it will auto-activate due to skipWaiting
-        if (registration?.waiting || registration?.installing) {
-          // Wait a bit for the new SW to activate
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          console.log('Service Worker registration:', registration ? 'Found' : 'Not found');
+          
+          // Check for updates first
+          if (registration) {
+            console.log('Checking for SW updates...');
+            await registration.update();
+            console.log('SW update check complete');
+          }
+        } catch (swError) {
+          console.warn('Service Worker update failed, continuing anyway:', swError);
         }
       }
       
       // Clear all caches to ensure fresh content
       if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        try {
+          console.log('Clearing caches...');
+          const cacheNames = await caches.keys();
+          console.log(`Found ${cacheNames.length} caches to clear`);
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+          console.log('Caches cleared successfully');
+        } catch (cacheError) {
+          console.warn('Cache clearing failed, continuing anyway:', cacheError);
+        }
       }
 
       // Wait a moment for cleanup
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Force reload from server
+      console.log('Reloading app...');
       window.location.reload();
     } catch (error) {
-      console.error('Error updating app:', error);
-      toast.error('Failed to update app. Please try again.');
+      console.error('Critical error updating app:', error);
+      toast.error('Failed to update app. Please refresh manually.');
     }
   };
 
