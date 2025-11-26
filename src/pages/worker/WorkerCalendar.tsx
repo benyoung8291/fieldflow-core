@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
 import { AlertCircle, Save } from "lucide-react";
+import { SeasonalAvailabilityList } from "@/components/workers/SeasonalAvailabilityList";
 
 const daysOfWeek = [
   { value: "monday", label: "Monday" },
@@ -159,21 +160,19 @@ export default function WorkerCalendar() {
     }));
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 pb-20 space-y-6">
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm -mx-4 px-4 py-3">
         <h1 className="text-lg font-bold">My Availability</h1>
       </header>
 
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      ) : (
+        <>
       {/* Unavailability Status */}
       <Card>
         <CardHeader>
@@ -299,7 +298,15 @@ export default function WorkerCalendar() {
         </CardContent>
       </Card>
 
-      <Button 
+      {/* Seasonal Availability */}
+      {profile?.tenant_id && (
+        <SeasonalAvailabilityList 
+          workerId={currentUser!.id} 
+          tenantId={profile.tenant_id}
+        />
+      )}
+
+      <Button
         onClick={() => saveAvailability.mutate()}
         disabled={saveAvailability.isPending}
         className="w-full h-12 text-base font-semibold shadow-sm"
@@ -316,6 +323,8 @@ export default function WorkerCalendar() {
           </>
         )}
       </Button>
+      </>
+      )}
     </div>
   );
 }
