@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppointmentConfirmations } from "@/hooks/useAppointmentConfirmations";
+import { AppointmentConfirmationBadge } from "./AppointmentConfirmationBadge";
+import { NotifyWorkersButton } from "./NotifyWorkersButton";
 
 interface AppointmentDetailsDialogProps {
   appointment: any;
@@ -26,6 +29,8 @@ export default function AppointmentDetailsDialog({
   onDelete,
 }: AppointmentDetailsDialogProps) {
   if (!appointment) return null;
+
+  const { confirmations } = useAppointmentConfirmations(appointment.id);
 
   const startTime = new Date(appointment.start_time);
   const endTime = new Date(appointment.end_time);
@@ -282,20 +287,43 @@ export default function AppointmentDetailsDialog({
               </span>
             </div>
             {workers.length > 0 ? (
-              <div className="space-y-2">
-                {workers.map((worker: any) => (
-                  <div key={worker.worker_id} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {worker.profiles?.first_name?.[0]}{worker.profiles?.last_name?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">
-                      {worker.profiles?.first_name} {worker.profiles?.last_name}
-                    </span>
+              <>
+                <div className="space-y-2 mb-3">
+                  {workers.map((worker: any) => {
+                    const confirmation = confirmations.find(c => c.worker_id === worker.worker_id);
+                    return (
+                      <div key={worker.worker_id} className="flex items-center justify-between gap-3 p-2 rounded-md bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs">
+                              {worker.profiles?.first_name?.[0]}{worker.profiles?.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {worker.profiles?.first_name} {worker.profiles?.last_name}
+                          </span>
+                        </div>
+                        {confirmation && (
+                          <AppointmentConfirmationBadge 
+                            confirmations={[confirmation]} 
+                            compact 
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {appointment.status === 'published' && (
+                  <div className="flex items-center gap-2">
+                    <NotifyWorkersButton 
+                      appointmentId={appointment.id} 
+                      variant="outline"
+                      size="sm"
+                    />
+                    <AppointmentConfirmationBadge confirmations={confirmations} />
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ) : (
               <p className="text-sm text-muted-foreground">No workers assigned</p>
             )}

@@ -379,7 +379,7 @@ export default function Scheduler() {
         end_time: endTime.toISOString(),
         assigned_to: workerId,
         location_address: customer?.address,
-        status: "draft",
+        status: "published",
         created_by: (await supabase.auth.getUser()).data.user?.id,
       }).select(`
         *,
