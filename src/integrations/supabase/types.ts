@@ -7620,83 +7620,83 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           end_date: string
-          friday_available: boolean | null
-          friday_periods: string[] | null
           id: string
-          monday_available: boolean | null
-          monday_periods: string[] | null
           notes: string | null
-          saturday_available: boolean | null
-          saturday_periods: string[] | null
           season_name: string
           start_date: string
-          sunday_available: boolean | null
-          sunday_periods: string[] | null
           tenant_id: string
-          thursday_available: boolean | null
-          thursday_periods: string[] | null
-          tuesday_available: boolean | null
-          tuesday_periods: string[] | null
           updated_at: string | null
-          wednesday_available: boolean | null
-          wednesday_periods: string[] | null
           worker_id: string
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
           end_date: string
-          friday_available?: boolean | null
-          friday_periods?: string[] | null
           id?: string
-          monday_available?: boolean | null
-          monday_periods?: string[] | null
           notes?: string | null
-          saturday_available?: boolean | null
-          saturday_periods?: string[] | null
           season_name: string
           start_date: string
-          sunday_available?: boolean | null
-          sunday_periods?: string[] | null
           tenant_id: string
-          thursday_available?: boolean | null
-          thursday_periods?: string[] | null
-          tuesday_available?: boolean | null
-          tuesday_periods?: string[] | null
           updated_at?: string | null
-          wednesday_available?: boolean | null
-          wednesday_periods?: string[] | null
           worker_id: string
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
           end_date?: string
-          friday_available?: boolean | null
-          friday_periods?: string[] | null
           id?: string
-          monday_available?: boolean | null
-          monday_periods?: string[] | null
           notes?: string | null
-          saturday_available?: boolean | null
-          saturday_periods?: string[] | null
           season_name?: string
           start_date?: string
-          sunday_available?: boolean | null
-          sunday_periods?: string[] | null
           tenant_id?: string
-          thursday_available?: boolean | null
-          thursday_periods?: string[] | null
-          tuesday_available?: boolean | null
-          tuesday_periods?: string[] | null
           updated_at?: string | null
-          wednesday_available?: boolean | null
-          wednesday_periods?: string[] | null
           worker_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "worker_seasonal_availability_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_seasonal_availability_dates: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          periods: string[]
+          seasonal_availability_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          periods?: string[]
+          seasonal_availability_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          periods?: string[]
+          seasonal_availability_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_seasonal_availability_date_seasonal_availability_id_fkey"
+            columns: ["seasonal_availability_id"]
+            isOneToOne: false
+            referencedRelation: "worker_seasonal_availability"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_seasonal_availability_dates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

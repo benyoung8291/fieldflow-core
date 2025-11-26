@@ -72,19 +72,27 @@ export function SeasonalAvailabilityList({ workerId, tenantId }: SeasonalAvailab
     setDialogOpen(true);
   };
 
-  const getPeriodsBadges = (data: any, dayKey: string) => {
-    if (!data[`${dayKey}_available`]) return null;
-    const periods = data[`${dayKey}_periods`] || [];
-    return periods.map((period: string) => (
-      <Badge key={period} variant="secondary" className="text-xs capitalize">
-        {period}
-      </Badge>
-    ));
-  };
+  // Fetch date-specific availability for each period
+  const { data: allDates = [] } = useQuery({
+    queryKey: ['seasonal-availability-dates', workerId],
+    queryFn: async () => {
+      const periodIds = seasonalAvailability.map((p: any) => p.id);
+      if (periodIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('worker_seasonal_availability_dates')
+        .select('*')
+        .in('seasonal_availability_id', periodIds)
+        .order('date', { ascending: true });
 
-  const getAvailableDays = (data: any) => {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    return days.filter(day => data[`${day}_available`]);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: seasonalAvailability.length > 0,
+  });
+
+  const getDatesByPeriod = (periodId: string) => {
+    return allDates.filter((d: any) => d.seasonal_availability_id === periodId);
   };
 
   return (
@@ -120,7 +128,7 @@ export function SeasonalAvailabilityList({ workerId, tenantId }: SeasonalAvailab
           ) : (
             <div className="space-y-3">
               {seasonalAvailability.map((period: any) => {
-                const availableDays = getAvailableDays(period);
+                const dates = getDatesByPeriod(period.id);
                 const isActive = 
                   new Date(period.start_date) <= new Date() &&
                   new Date(period.end_date) >= new Date();
@@ -163,21 +171,31 @@ export function SeasonalAvailabilityList({ workerId, tenantId }: SeasonalAvailab
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Available days:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {availableDays.map(day => (
-                          <div key={day} className="flex flex-col gap-1">
-                            <Badge variant="outline" className="capitalize text-xs">
-                              {day}
-                            </Badge>
-                            <div className="flex flex-wrap gap-1">
-                              {getPeriodsBadges(period, day)}
+                    {dates.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {dates.length} date{dates.length !== 1 ? 's' : ''} selected:
+                        </p>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {dates.map((date: any) => (
+                            <div key={date.id} className="flex items-center justify-between text-sm py-1 px-2 bg-muted/50 rounded">
+                              <span className="font-medium">
+                                {format(new Date(date.date + 'T00:00:00'), 'MMM d, yyyy')}
+                              </span>
+                              <div className="flex gap-1">
+                                {date.periods.map((period: string) => (
+                                  <Badge key={period} variant="secondary" className="text-xs capitalize">
+                                    {period}
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No specific dates selected</p>
+                    )}
                   </div>
                 );
               })}
