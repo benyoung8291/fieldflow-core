@@ -92,9 +92,9 @@ export default function ServiceOrders() {
     numberField: "order_number",
   });
 
-  // Set up realtime updates for appointments to refresh counts
+  // Set up realtime updates for appointments and service orders to refresh counts and status
   useEffect(() => {
-    const channel = supabase
+    const appointmentsChannel = supabase
       .channel('service-orders-appointments-updates')
       .on(
         'postgres_changes',
@@ -110,8 +110,25 @@ export default function ServiceOrders() {
       )
       .subscribe();
 
+    const serviceOrdersChannel = supabase
+      .channel('service-orders-status-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'service_orders'
+        },
+        () => {
+          console.log('[ServiceOrders] Service order updated, refreshing list');
+          queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(serviceOrdersChannel);
     };
   }, [queryClient]);
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -299,6 +299,33 @@ export default function ServiceOrderDetails() {
     },
     enabled: !!id,
   });
+
+  // Set up realtime subscription for service order updates
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`service-order-${id}-updates`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'service_orders',
+          filter: `id=eq.${id}`
+        },
+        () => {
+          console.log('[ServiceOrderDetails] Service order updated, refreshing');
+          queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+          queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
 
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 

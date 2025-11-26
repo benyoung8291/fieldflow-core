@@ -67,7 +67,7 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     },
   });
 
-  // Real-time subscription for appointments
+  // Real-time subscription for appointments with automatic status updates
   useEffect(() => {
     const channel = supabase
       .channel('appointments-changes')
@@ -79,9 +79,70 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
           table: 'appointments',
           filter: `service_order_id=eq.${serviceOrderId}`
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
+        async () => {
+          // Invalidate queries first to get fresh data
+          await queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
+          
+          // Check and update service order status
+          const { data: serviceOrder } = await supabase
+            .from("service_orders")
+            .select("id, estimated_hours, status")
+            .eq("id", serviceOrderId)
+            .single();
+
+          if (!serviceOrder || serviceOrder.status === "scheduled") {
+            queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+            queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+            return;
+          }
+
+          // Get all appointments for this service order
+          const { data: allAppointments } = await supabase
+            .from("appointments")
+            .select("id, status, start_time, end_time")
+            .eq("service_order_id", serviceOrderId);
+
+          if (!allAppointments || allAppointments.length === 0) {
+            queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+            queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+            return;
+          }
+
+          // Check if any appointments are published
+          const hasPublishedAppointments = allAppointments.some(apt => apt.status === "published");
+
+          if (hasPublishedAppointments) {
+            let shouldUpdateToScheduled = false;
+
+            // If there are estimated hours, check if they're all assigned
+            if (serviceOrder.estimated_hours && serviceOrder.estimated_hours > 0) {
+              const totalAssignedHours = allAppointments.reduce((sum, apt) => {
+                const start = new Date(apt.start_time);
+                const end = new Date(apt.end_time);
+                const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                return sum + hours;
+              }, 0);
+
+              // Update to scheduled if hours are fully assigned
+              if (totalAssignedHours >= serviceOrder.estimated_hours) {
+                shouldUpdateToScheduled = true;
+              }
+            } else {
+              // No estimated hours set, update to scheduled if any appointment is published
+              shouldUpdateToScheduled = true;
+            }
+
+            if (shouldUpdateToScheduled) {
+              await supabase
+                .from("service_orders")
+                .update({ status: "scheduled" })
+                .eq("id", serviceOrderId);
+            }
+          }
+          
+          // Invalidate all related queries to update UI
           queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+          queryClient.invalidateQueries({ queryKey: ["service_orders"] });
         }
       )
       .subscribe();
@@ -100,10 +161,67 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
         .eq("id", appointmentId);
       
       if (aptError) throw aptError;
+
+      // If publishing, check if we should update service order status
+      if (status === "published") {
+        // Get service order details
+        const { data: serviceOrder, error: soError } = await supabase
+          .from("service_orders")
+          .select("id, estimated_hours, status")
+          .eq("id", serviceOrderId)
+          .single();
+
+        if (soError) throw soError;
+
+        if (serviceOrder && serviceOrder.status !== "scheduled") {
+          // Get all appointments for this service order
+          const { data: allAppointments, error: aptsError } = await supabase
+            .from("appointments")
+            .select("start_time, end_time, status")
+            .eq("service_order_id", serviceOrderId);
+
+          if (aptsError) throw aptsError;
+
+          let shouldUpdateToScheduled = false;
+
+          // Check if we have published appointments
+          const hasPublishedAppointments = allAppointments.some(apt => apt.status === "published");
+
+          if (hasPublishedAppointments) {
+            if (serviceOrder.estimated_hours && serviceOrder.estimated_hours > 0) {
+              // Calculate total hours assigned across all appointments
+              const totalAssignedHours = allAppointments.reduce((sum, apt) => {
+                const start = new Date(apt.start_time);
+                const end = new Date(apt.end_time);
+                const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                return sum + hours;
+              }, 0);
+
+              // If all estimated hours are assigned, update service order to scheduled
+              if (totalAssignedHours >= serviceOrder.estimated_hours) {
+                shouldUpdateToScheduled = true;
+              }
+            } else {
+              // No estimated hours, update to scheduled when appointment is published
+              shouldUpdateToScheduled = true;
+            }
+
+            if (shouldUpdateToScheduled) {
+              const { error: updateError } = await supabase
+                .from("service_orders")
+                .update({ status: "scheduled" })
+                .eq("id", serviceOrderId);
+
+              if (updateError) throw updateError;
+            }
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
       queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["service_orders"] }); // Update service orders list
       toast({ title: "Appointment status updated" });
     },
     onError: (error: any) => {
