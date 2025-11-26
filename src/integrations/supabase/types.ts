@@ -1335,12 +1335,10 @@ export type Database = {
           address: string | null
           archived: boolean | null
           city: string | null
-          contact_email: string | null
-          contact_name: string | null
-          contact_phone: string | null
           created_at: string | null
           customer_id: string
           customer_location_id: string | null
+          facility_manager_contact_id: string | null
           formatted_address: string | null
           id: string
           is_active: boolean | null
@@ -1351,6 +1349,7 @@ export type Database = {
           merged_into_location_id: string | null
           name: string
           postcode: string | null
+          site_contact_id: string | null
           state: string | null
           tenant_id: string
           updated_at: string | null
@@ -1359,12 +1358,10 @@ export type Database = {
           address?: string | null
           archived?: boolean | null
           city?: string | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
           created_at?: string | null
           customer_id: string
           customer_location_id?: string | null
+          facility_manager_contact_id?: string | null
           formatted_address?: string | null
           id?: string
           is_active?: boolean | null
@@ -1375,6 +1372,7 @@ export type Database = {
           merged_into_location_id?: string | null
           name: string
           postcode?: string | null
+          site_contact_id?: string | null
           state?: string | null
           tenant_id: string
           updated_at?: string | null
@@ -1383,12 +1381,10 @@ export type Database = {
           address?: string | null
           archived?: boolean | null
           city?: string | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
           created_at?: string | null
           customer_id?: string
           customer_location_id?: string | null
+          facility_manager_contact_id?: string | null
           formatted_address?: string | null
           id?: string
           is_active?: boolean | null
@@ -1399,6 +1395,7 @@ export type Database = {
           merged_into_location_id?: string | null
           name?: string
           postcode?: string | null
+          site_contact_id?: string | null
           state?: string | null
           tenant_id?: string
           updated_at?: string | null
@@ -1412,10 +1409,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "customer_locations_facility_manager_contact_id_fkey"
+            columns: ["facility_manager_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "customer_locations_merged_into_location_id_fkey"
             columns: ["merged_into_location_id"]
             isOneToOne: false
             referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_locations_site_contact_id_fkey"
+            columns: ["site_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
