@@ -238,8 +238,8 @@ export function SeasonalAvailabilityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
-        <DialogHeader className="p-6 pb-4">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+        <DialogHeader className="p-6 pb-4 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
             {existingData ? 'Edit' : 'Set'} Availability Period
@@ -253,8 +253,8 @@ export function SeasonalAvailabilityDialog({
         </DialogHeader>
 
         {step === 'details' ? (
-          <form onSubmit={handleNext} className="flex flex-col h-full">
-            <ScrollArea className="flex-1 px-6">
+          <form onSubmit={handleNext} className="flex flex-col flex-1 min-h-0">
+            <ScrollArea className="h-full px-6">
               <div className="space-y-4 pb-4">
                 <div className="space-y-2">
                   <Label htmlFor="season-name" className="text-base">Period Name</Label>
@@ -314,7 +314,7 @@ export function SeasonalAvailabilityDialog({
               </div>
             </ScrollArea>
 
-            <div className="p-6 pt-4 border-t flex gap-3">
+            <div className="p-6 pt-4 border-t flex gap-3 shrink-0">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -330,8 +330,8 @@ export function SeasonalAvailabilityDialog({
             </div>
           </form>
         ) : (
-          <div className="flex flex-col h-full">
-            <div className="px-6 pb-3 space-y-3">
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="px-6 pb-3 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="text-sm">
                   <p className="font-medium">{seasonName}</p>
@@ -385,7 +385,7 @@ export function SeasonalAvailabilityDialog({
               </div>
             </div>
 
-            <ScrollArea className="flex-1 px-6">
+            <ScrollArea className="h-full px-6">
               <div className="space-y-2 pb-4">
                 {allDatesInRange.map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
@@ -459,7 +459,7 @@ export function SeasonalAvailabilityDialog({
               </div>
             </ScrollArea>
 
-            <div className="p-6 pt-4 border-t">
+            <div className="p-6 pt-4 border-t shrink-0">
               <div className="mb-3 text-center text-sm text-muted-foreground">
                 {Object.values(dateAvailability).filter(p => p.length > 0).length} of {allDatesInRange.length} dates set
               </div>
