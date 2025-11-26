@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Save } from "lucide-react";
 
 const daysOfWeek = [
   { value: "monday", label: "Monday" },
@@ -168,18 +169,15 @@ export default function WorkerCalendar() {
   }
 
   return (
-    <div className="container mx-auto px-4 pt-16 pb-20 space-y-4">{/* Added pt-16 for mobile header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Availability</h1>
-        <Button onClick={() => saveAvailability.mutate()}>
-          Save Changes
-        </Button>
-      </div>
+    <div className="container mx-auto px-4 pb-20 space-y-6">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm -mx-4 px-4 py-3">
+        <h1 className="text-lg font-bold">My Availability</h1>
+      </header>
 
       {/* Unavailability Status */}
       <Card>
         <CardHeader>
-          <CardTitle>Unavailability Status</CardTitle>
+          <CardTitle className="text-lg">Unavailability Status</CardTitle>
           <CardDescription>
             Mark yourself as unavailable for a period of time (e.g., leave, sick days)
           </CardDescription>
@@ -190,47 +188,47 @@ export default function WorkerCalendar() {
               checked={isUnavailable}
               onCheckedChange={setIsUnavailable}
             />
-            <Label className="text-base">
+            <Label className="text-base cursor-pointer">
               I am currently unavailable
             </Label>
           </div>
 
           {isUnavailable && (
-            <div className="space-y-4 pl-8 border-l-2 border-warning">
+            <div className="space-y-4 pl-4 border-l-2 border-warning/50">
               <div className="flex items-start gap-2 text-warning">
-                <AlertCircle className="h-5 w-5 mt-0.5" />
+                <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
                 <p className="text-sm">
                   You will not be assigned to new appointments while marked as unavailable
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unavailable-from">Unavailable From (Optional)</Label>
-                  <input
+                  <Label htmlFor="unavailable-from" className="text-sm font-medium">Unavailable From (Optional)</Label>
+                  <Input
                     id="unavailable-from"
                     type="date"
                     value={unavailableFrom}
                     onChange={(e) => setUnavailableFrom(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="h-10"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unavailable-to">Unavailable Until (Optional)</Label>
-                  <input
+                  <Label htmlFor="unavailable-to" className="text-sm font-medium">Unavailable Until (Optional)</Label>
+                  <Input
                     id="unavailable-to"
                     type="date"
                     value={unavailableTo}
                     onChange={(e) => setUnavailableTo(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="h-10"
                     min={unavailableFrom}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="unavailable-reason">Reason (Optional)</Label>
+                <Label htmlFor="unavailable-reason" className="text-sm font-medium">Reason (Optional)</Label>
                 <Textarea
                   id="unavailable-reason"
                   value={unavailableReason}
@@ -254,52 +252,70 @@ export default function WorkerCalendar() {
       {/* Weekly Schedule */}
       <Card>
         <CardHeader>
-          <CardTitle>Weekly Schedule</CardTitle>
+          <CardTitle className="text-lg">Weekly Schedule</CardTitle>
           <CardDescription>
             Set your regular working hours for each day of the week
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {daysOfWeek.map((day) => {
             const dayData = availability[day.value];
             if (!dayData) return null;
 
             return (
-              <div key={day.value} className="flex items-center gap-4 p-4 border rounded-lg">
-                <div className="flex items-center gap-2 min-w-[120px]">
+              <div key={day.value} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border rounded-lg bg-card hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3 min-w-[140px]">
                   <Switch
                     checked={dayData.is_available}
                     onCheckedChange={(checked) => updateDay(day.value, 'is_available', checked)}
                   />
-                  <Label className="font-semibold">{day.label}</Label>
+                  <Label className="font-semibold text-sm cursor-pointer">{day.label}</Label>
                 </div>
                 
                 {dayData.is_available && (
-                  <div className="flex items-center gap-2 flex-1">
-                    <input
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    <Input
                       type="time"
                       value={dayData.start_time}
                       onChange={(e) => updateDay(day.value, 'start_time', e.target.value)}
-                      className="px-3 py-2 border rounded-md"
+                      className="h-9 w-28"
                     />
-                    <span className="text-muted-foreground">to</span>
-                    <input
+                    <span className="text-sm text-muted-foreground">to</span>
+                    <Input
                       type="time"
                       value={dayData.end_time}
                       onChange={(e) => updateDay(day.value, 'end_time', e.target.value)}
-                      className="px-3 py-2 border rounded-md"
+                      className="h-9 w-28"
                     />
                   </div>
                 )}
                 
                 {!dayData.is_available && (
-                  <span className="text-muted-foreground">Unavailable</span>
+                  <span className="text-sm text-muted-foreground">Unavailable</span>
                 )}
               </div>
             );
           })}
         </CardContent>
       </Card>
+
+      <Button 
+        onClick={() => saveAvailability.mutate()}
+        disabled={saveAvailability.isPending}
+        className="w-full h-12 text-base font-semibold shadow-sm"
+      >
+        {saveAvailability.isPending ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent mr-2" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Save className="h-4 w-4 mr-2" />
+            Save Changes
+          </>
+        )}
+      </Button>
     </div>
   );
 }

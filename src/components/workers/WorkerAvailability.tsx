@@ -268,12 +268,12 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
   }, {} as Record<number, any>);
 
   return (
-    <div className="grid gap-4">
+    <div className="space-y-6">
       {/* Regular Weekly Schedule */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Regular Weekly Schedule</CardTitle>
+            <CardTitle className="text-lg">Regular Weekly Schedule</CardTitle>
             <Button size="sm" onClick={() => setIsScheduleDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Day
@@ -281,51 +281,48 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {DAYS_OF_WEEK.map((day, index) => {
               const daySchedule = scheduleByDay[index];
+              const isAllDay = daySchedule && 
+                (daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
+                (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00");
+              
               return (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="font-medium w-24">{day}</div>
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border rounded-lg bg-card hover:bg-muted/30 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-1">{day}</div>
                     {daySchedule ? (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        {((daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
-                          (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00")) ? (
-                          <span>Anytime</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        {isAllDay ? (
+                          <span>Available anytime</span>
                         ) : (
-                          <span>{daySchedule.start_time} - {daySchedule.end_time}</span>
+                          <span>{daySchedule.start_time.substring(0, 5)} - {daySchedule.end_time.substring(0, 5)}</span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Not working</span>
+                      <span className="text-sm text-muted-foreground">Not scheduled</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`anytime-${index}`} className="text-sm cursor-pointer">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-md">
+                      <Label htmlFor={`anytime-${index}`} className="text-xs cursor-pointer whitespace-nowrap">
                         Anytime
                       </Label>
                       <Switch
                         id={`anytime-${index}`}
-                        checked={
-                          daySchedule && 
-                          (daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
-                          (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00")
-                        }
+                        checked={isAllDay}
                         onCheckedChange={() => toggleAllDay.mutate({ dayOfWeek: index, currentSchedule: daySchedule })}
                       />
                     </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
+                      className="h-8"
                       onClick={() => {
                         setSelectedDayOfWeek(index);
                         if (daySchedule) {
-                          const isAllDay = 
-                            (daySchedule.start_time === "00:00" || daySchedule.start_time === "00:00:00") && 
-                            (daySchedule.end_time === "23:59" || daySchedule.end_time === "23:59:00");
                           setScheduleFormData({
                             start_time: isAllDay ? "09:00" : daySchedule.start_time.substring(0, 5),
                             end_time: isAllDay ? "17:00" : daySchedule.end_time.substring(0, 5),
@@ -341,15 +338,16 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
                         setIsScheduleDialogOpen(true);
                       }}
                     >
-                      {daySchedule ? "Edit Time" : "Set Time"}
+                      {daySchedule ? "Edit" : "Set Time"}
                     </Button>
                     {daySchedule && (
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-8 w-8 p-0"
                         onClick={() => deleteScheduleDay.mutate(daySchedule.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
                   </div>
@@ -364,7 +362,7 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Unavailable Periods</CardTitle>
+            <CardTitle className="text-lg">Unavailable Periods</CardTitle>
             <Button size="sm" onClick={() => setIsUnavailableDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Period
@@ -373,35 +371,38 @@ export default function WorkerAvailability({ workerId }: WorkerAvailabilityProps
         </CardHeader>
         <CardContent>
           {unavailability.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No unavailable periods set</p>
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">No unavailable periods set</p>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {unavailability.map((item) => (
-                <div key={item.id} className="flex items-start justify-between p-3 border rounded-lg">
-                  <div className="space-y-1">
-                    <div className="font-medium">
+                <div key={item.id} className="flex flex-col sm:flex-row sm:items-start gap-3 p-4 border rounded-lg bg-card hover:bg-muted/30 transition-colors">
+                  <div className="flex-1 space-y-2">
+                    <div className="font-semibold text-sm">
                       {format(new Date(item.start_date), "MMM d, yyyy")} -{" "}
                       {format(new Date(item.end_date), "MMM d, yyyy")}
                     </div>
                     {item.start_time && item.end_time && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>{item.start_time} - {item.end_time}</span>
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{item.start_time.substring(0, 5)} - {item.end_time.substring(0, 5)}</span>
                       </div>
                     )}
                     {item.reason && (
-                      <Badge variant="secondary" className="mt-1">{item.reason}</Badge>
+                      <Badge variant="secondary" className="text-xs">{item.reason}</Badge>
                     )}
                     {item.notes && (
-                      <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{item.notes}</p>
                     )}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-8 w-8 p-0 shrink-0"
                     onClick={() => deleteUnavailability.mutate(item.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               ))}
