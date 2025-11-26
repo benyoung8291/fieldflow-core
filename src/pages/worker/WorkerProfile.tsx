@@ -125,7 +125,7 @@ export default function WorkerProfile() {
   if (!profile) return null;
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-background pb-20">
+    <div ref={containerRef} className="min-h-screen bg-background pb-32">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       
       {/* Header */}
@@ -148,7 +148,7 @@ export default function WorkerProfile() {
         </div>
       </header>
 
-      <div className="p-4 space-y-4 pb-20">
+      <div className="p-4 space-y-4 pb-8">
         {/* Personal Information */}
         <Card className="overflow-hidden shadow-sm">
           <CardHeader className="pb-3">
