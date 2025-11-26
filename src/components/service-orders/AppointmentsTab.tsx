@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Clock, MoreVertical } from "lucide-react";
+import { Calendar, User, Clock, MoreVertical, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import TimeLogsTable from "./TimeLogsTable";
 import { useToast } from "@/hooks/use-toast";
@@ -91,56 +91,6 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
     };
   }, [serviceOrderId, queryClient]);
 
-  // Check and update service order status based on assigned hours
-  useEffect(() => {
-    const checkServiceOrderStatus = async () => {
-      if (!appointments || appointments.length === 0) return;
-
-      const { data: serviceOrder } = await supabase
-        .from("service_orders")
-        .select("id, estimated_hours, status")
-        .eq("id", serviceOrderId)
-        .single();
-
-      if (!serviceOrder || serviceOrder.status === "scheduled") return;
-
-      // Check if any appointments are published
-      const hasPublishedAppointments = appointments.some(apt => apt.status === "published");
-
-      if (hasPublishedAppointments) {
-        // If there are estimated hours, check if they're all assigned
-        if (serviceOrder.estimated_hours && serviceOrder.estimated_hours > 0) {
-          const totalAssignedHours = appointments.reduce((sum, apt) => {
-            const start = new Date(apt.start_time);
-            const end = new Date(apt.end_time);
-            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-            return sum + hours;
-          }, 0);
-
-          // Update to scheduled if hours are fully assigned
-          if (totalAssignedHours >= serviceOrder.estimated_hours) {
-            await supabase
-              .from("service_orders")
-              .update({ status: "scheduled" })
-              .eq("id", serviceOrderId);
-            
-            queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
-          }
-        } else {
-          // No estimated hours set, update to scheduled if any appointment is published
-          await supabase
-            .from("service_orders")
-            .update({ status: "scheduled" })
-            .eq("id", serviceOrderId);
-          
-          queryClient.invalidateQueries({ queryKey: ["service-order", serviceOrderId] });
-        }
-      }
-    };
-
-    checkServiceOrderStatus();
-  }, [appointments, serviceOrderId, queryClient]);
-
   const updateAppointmentStatusMutation = useMutation({
     mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: "draft" | "published" | "checked_in" | "completed" | "cancelled" }) => {
       // Update appointment status
@@ -150,50 +100,6 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
         .eq("id", appointmentId);
       
       if (aptError) throw aptError;
-
-      // If publishing, check if we should update service order status
-      if (status === "published") {
-        // Get service order details with all appointments and their estimated hours
-        const { data: serviceOrder, error: soError } = await supabase
-          .from("service_orders")
-          .select(`
-            id,
-            estimated_hours,
-            appointments(id, status)
-          `)
-          .eq("id", serviceOrderId)
-          .single();
-
-        if (soError) throw soError;
-
-        if (serviceOrder && serviceOrder.estimated_hours) {
-          // Calculate total assigned hours from all appointments
-          const { data: allAppointments, error: aptsError } = await supabase
-            .from("appointments")
-            .select("start_time, end_time")
-            .eq("service_order_id", serviceOrderId);
-
-          if (aptsError) throw aptsError;
-
-          // Calculate total hours assigned across all appointments
-          const totalAssignedHours = allAppointments.reduce((sum, apt) => {
-            const start = new Date(apt.start_time);
-            const end = new Date(apt.end_time);
-            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-            return sum + hours;
-          }, 0);
-
-          // If all estimated hours are assigned, update service order to scheduled
-          if (totalAssignedHours >= serviceOrder.estimated_hours) {
-            const { error: updateError } = await supabase
-              .from("service_orders")
-              .update({ status: "scheduled" })
-              .eq("id", serviceOrderId);
-
-            if (updateError) throw updateError;
-          }
-        }
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
@@ -320,6 +226,65 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                           })}
                         >
                           Cancel Appointment
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            
+                            // Check for time logs
+                            const { data: timeLogs } = await supabase
+                              .from("time_logs")
+                              .select("id")
+                              .eq("appointment_id", appointment.id)
+                              .limit(1);
+                            
+                            // Check for field reports
+                            const { data: fieldReports } = await supabase
+                              .from("field_reports")
+                              .select("id")
+                              .eq("appointment_id", appointment.id)
+                              .limit(1);
+                            
+                            if (timeLogs && timeLogs.length > 0) {
+                              toast({
+                                title: "Cannot delete appointment",
+                                description: "This appointment has time logs recorded. Please delete the time logs first.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            
+                            if (fieldReports && fieldReports.length > 0) {
+                              toast({
+                                title: "Cannot delete appointment",
+                                description: "This appointment has field reports. Please delete the field reports first.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            
+                            if (confirm("Are you sure you want to delete this appointment?")) {
+                              const { error } = await supabase
+                                .from("appointments")
+                                .delete()
+                                .eq("id", appointment.id);
+                              
+                              if (error) {
+                                toast({
+                                  title: "Error deleting appointment",
+                                  description: error.message,
+                                  variant: "destructive",
+                                });
+                              } else {
+                                toast({ title: "Appointment deleted successfully" });
+                                queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", serviceOrderId] });
+                              }
+                            }
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Appointment
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
