@@ -39,13 +39,7 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
-    // Get reporter's profile
-    const { data: reporterProfile } = await supabase
-      .from("profiles")
-      .select("first_name, last_name, email, tenant_id")
-      .eq("id", user.id)
-      .single();
-
+    const requestBody = await req.json() as ReportIssueRequest;
     const {
       description,
       currentPage,
@@ -53,16 +47,26 @@ serve(async (req) => {
       logs,
       timestamp,
       userAgent,
-    } = await req.json() as ReportIssueRequest;
+    } = requestBody;
 
-    // Get all super_admin users for this tenant
-    const { data: adminRoles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "super_admin");
+    // Parallel fetch of reporter profile and admin roles
+    const [profileResult, rolesResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("first_name, last_name, email, tenant_id")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "super_admin")
+    ]);
 
-    if (rolesError) {
-      console.error("Error fetching admin roles:", rolesError);
+    const reporterProfile = profileResult.data;
+    const adminRoles = rolesResult.data;
+    
+    if (rolesResult.error) {
+      console.error("Error fetching admin roles:", rolesResult.error);
     }
 
     console.log("Admin roles found:", adminRoles?.length || 0);
@@ -103,11 +107,12 @@ serve(async (req) => {
       tenantId: reporterProfile?.tenant_id,
     };
 
-    // Create task for each admin
-    if (adminUsers && adminUsers.length > 0) {
-      for (const admin of adminUsers) {
-        const taskTitle = `🐛 Issue Report: ${currentPath}`;
-        const taskDescription = `**Reported By:** ${reporterName} (${user.email})
+    // Create tasks and notifications for all admins in parallel
+    const createTasksAndNotifications = async () => {
+      if (!adminUsers || adminUsers.length === 0) return;
+
+      const taskTitle = `🐛 Issue Report: ${currentPath}`;
+      const taskDescription = `**Reported By:** ${reporterName} (${user.email})
 
 **Description:**
 ${description}
@@ -126,7 +131,8 @@ ${logs || 'No logs available'}
 ---
 **Task Link:** [View in System](/tasks)`;
 
-        const { data: task, error: taskError } = await supabase
+      const taskPromises = adminUsers.map(admin =>
+        supabase
           .from("tasks")
           .insert({
             tenant_id: admin.profiles.tenant_id,
@@ -139,35 +145,55 @@ ${logs || 'No logs available'}
             linked_module: "bug_report",
           })
           .select()
-          .single();
+          .single()
+          .then(({ data: task, error: taskError }) => {
+            if (taskError) {
+              console.error("Error creating task for admin:", admin.user_id, taskError);
+              return null;
+            }
+            console.log("Task created successfully for admin:", admin.user_id, "Task ID:", task?.id);
+            
+            // Create notification for this admin
+            return supabase.rpc("create_notification", {
+              p_user_id: admin.user_id,
+              p_type: "bug_report",
+              p_title: "New Bug Report",
+              p_message: `${reporterName} reported: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
+              p_link: `/tasks`,
+              p_metadata: { taskId: task?.id, reportPath: currentPath },
+            }).then(({ error: notifError }) => {
+              if (notifError) {
+                console.error("Error creating notification:", notifError);
+              } else {
+                console.log("Notification created successfully for admin:", admin.user_id);
+              }
+            });
+          })
+      );
 
-        if (taskError) {
-          console.error("Error creating task for admin:", admin.user_id, taskError);
-        } else {
-          console.log("Task created successfully for admin:", admin.user_id, "Task ID:", task?.id);
-        }
+      await Promise.allSettled(taskPromises);
+    };
 
-        // Create notification for admin
-        try {
-          const { data: notifData, error: notifError } = await supabase.rpc("create_notification", {
-            p_user_id: admin.user_id,
-            p_type: "bug_report",
-            p_title: "New Bug Report",
-            p_message: `${reporterName} reported: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
-            p_link: `/tasks`,
-            p_metadata: { taskId: task?.id, reportPath: currentPath },
-          });
-          
-          if (notifError) {
-            console.error("Error creating notification:", notifError);
-          } else {
-            console.log("Notification created successfully for admin:", admin.user_id);
-          }
-        } catch (notifError) {
-          console.error("Error creating notification (catch):", notifError);
-        }
+    // Send email async without blocking response
+    const sendEmailAsync = async () => {
+      try {
+        await resend.emails.send({
+          from: "ServicePro Bug Reports <jobs@premrest.com.au>",
+          to: ["ben.young@premrest.com.au"],
+          subject: `🐛 Bug Report: ${currentPath} | ${reporterName}`,
+          html: emailHtml,
+        });
+        console.log("Email sent to ben.young@premrest.com.au");
+      } catch (emailError) {
+        console.error("Failed to send email:", emailError);
       }
-    }
+    };
+
+    // Execute tasks/notifications and wait for completion
+    await createTasksAndNotifications();
+    
+    // Send email in background (don't await)
+    sendEmailAsync();
 
     // Prepare detailed email for ben.young@premrest.com.au
     const emailHtml = `
@@ -268,20 +294,6 @@ Please investigate the issue and provide a fix. Focus on:<br>
   </div>
 </body>
 </html>`;
-
-    // Send email to ben.young@premrest.com.au
-    try {
-      await resend.emails.send({
-        from: "ServicePro Bug Reports <jobs@premrest.com.au>",
-        to: ["ben.young@premrest.com.au"],
-        subject: `🐛 Bug Report: ${currentPath} | ${reporterName}`,
-        html: emailHtml,
-      });
-      console.log("Email sent to ben.young@premrest.com.au");
-    } catch (emailError) {
-      console.error("Failed to send email:", emailError);
-      // Don't fail the whole request if email fails
-    }
 
     return new Response(
       JSON.stringify({ 
