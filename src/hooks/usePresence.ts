@@ -56,11 +56,14 @@ export function usePresence({ page, field }: UsePresenceOptions) {
   const [autoAwayMinutes, setAutoAwayMinutes] = useState<number>(5);
 
   useEffect(() => {
+    let presenceChannel: RealtimeChannel | null = null;
+    let mounted = true;
+
     // Get current user info
     const initPresence = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user) return;
+      if (!user || !mounted) return;
 
       // Fetch user's status and auto-away settings from profiles
       const { data: profile } = await supabase
@@ -73,6 +76,8 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       const status = (profile?.status || 'available') as 'available' | 'busy' | 'away';
       // @ts-ignore - Types will update after migration
       const autoAway = profile?.auto_away_minutes || 5;
+      
+      if (!mounted) return;
       
       setUserStatus(status);
       setAutoAwayMinutes(autoAway);
@@ -92,10 +97,11 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         lastActivity: new Date().toISOString(),
       };
 
+      if (!mounted) return;
       setCurrentUser(userData);
 
       // Create presence channel for the page
-      const presenceChannel = supabase.channel(`presence:${page}`, {
+      presenceChannel = supabase.channel(`presence:${page}`, {
         config: {
           presence: {
             key: user.id,
@@ -106,6 +112,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       // Track presence state
       presenceChannel
         .on("presence", { event: "sync" }, () => {
+          if (!mounted || !presenceChannel) return;
           const state = presenceChannel.presenceState();
           const users: Record<string, PresenceUser> = {};
           
@@ -120,7 +127,9 @@ export function usePresence({ page, field }: UsePresenceOptions) {
             }
           });
           
-          setOnlineUsers(users);
+          if (mounted) {
+            setOnlineUsers(users);
+          }
         })
         .on("presence", { event: "join" }, ({ key, newPresences }) => {
           console.log("User joined:", key, newPresences);
@@ -129,15 +138,35 @@ export function usePresence({ page, field }: UsePresenceOptions) {
           console.log("User left:", key, leftPresences);
         })
         .subscribe(async (status) => {
-          if (status === "SUBSCRIBED") {
+          if (status === "SUBSCRIBED" && mounted && presenceChannel) {
             await presenceChannel.track(userData);
           }
         });
 
-      setChannel(presenceChannel);
+      if (mounted) {
+        setChannel(presenceChannel);
+      }
     };
 
     initPresence();
+
+    return () => {
+      mounted = false;
+      if (presenceChannel) {
+        presenceChannel.unsubscribe();
+      }
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+      }
+    };
+  }, [page]);
+
+  // Separate effect for activity tracking that doesn't recreate the channel
+  useEffect(() => {
+    if (!channel || !currentUser) return;
 
     // Start activity tracking for auto-away
     const resetActivityTimer = () => {
@@ -160,7 +189,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
               .eq('id', user.id);
             
             setUserStatus('away');
-            channel.track({
+            await channel.track({
               ...currentUser,
               status: 'away',
               lastActivity: new Date().toISOString(),
@@ -188,12 +217,6 @@ export function usePresence({ page, field }: UsePresenceOptions) {
     resetActivityTimer();
 
     return () => {
-      if (channel) {
-        channel.unsubscribe();
-      }
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
       if (activityTimeout) {
         clearTimeout(activityTimeout);
       }
@@ -201,7 +224,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('click', handleActivity);
     };
-  }, [page, autoAwayMinutes, userStatus]);
+  }, [channel, currentUser, autoAwayMinutes, userStatus, activityTimeout]);
 
   // Update field when it changes
   useEffect(() => {
@@ -210,7 +233,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         ...currentUser,
         currentField: field,
         lastSeen: new Date().toISOString(),
-      });
+      }).catch(err => console.error("Error tracking field update:", err));
     }
   }, [field, channel, currentUser]);
 
@@ -221,7 +244,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         cursorX: x,
         cursorY: y,
         lastSeen: new Date().toISOString(),
-      });
+      }).catch(err => console.error("Error tracking cursor:", err));
     }
   };
 
@@ -231,7 +254,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         ...currentUser,
         currentField: newField,
         lastSeen: new Date().toISOString(),
-      });
+      }).catch(err => console.error("Error tracking field:", err));
     }
   };
 
@@ -249,7 +272,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         typingInField: fieldName,
         currentField: fieldName,
         lastSeen: new Date().toISOString(),
-      });
+      }).catch(err => console.error("Error tracking typing:", err));
 
       // Auto-stop typing after 2 seconds of inactivity
       const timeout = setTimeout(() => {
@@ -272,7 +295,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
         isTyping: false,
         typingInField: undefined,
         lastSeen: new Date().toISOString(),
-      });
+      }).catch(err => console.error("Error stopping typing:", err));
     }
   };
 
@@ -300,7 +323,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       };
       
       setCurrentUser(updatedUser);
-      channel.track(updatedUser);
+      await channel.track(updatedUser);
     }
   };
 
