@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sunday' },
@@ -25,6 +27,12 @@ export default function WorkerSchedule() {
   const [saving, setSaving] = useState(false);
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
+
+  const { containerRef, isRefreshing: isPulling, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await loadSchedule();
+    },
+  });
 
   useEffect(() => {
     loadSchedule();
@@ -141,7 +149,8 @@ export default function WorkerSchedule() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div ref={containerRef} className="min-h-screen bg-background pb-20">
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
         <div className="px-3 py-2.5 flex items-center gap-2">
           <Button
