@@ -11,6 +11,8 @@ import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { usePWAUpdate } from '@/hooks/usePWAUpdate';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 import { cacheAppointments, getCachedAppointments } from '@/lib/offlineSync';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -37,6 +39,12 @@ export default function WorkerDashboard() {
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
   const { clearCacheAndReload } = usePWAUpdate();
   const { isSupervisorOrAbove } = useWorkerRole();
+
+  const { containerRef, isRefreshing: isPulling, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await loadUserAndAppointments();
+    },
+  });
 
   useEffect(() => {
     loadUserAndAppointments();
@@ -185,7 +193,8 @@ export default function WorkerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div ref={containerRef} className="min-h-screen bg-background pb-20">
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
       {/* Clean Modern Header */}
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
         <div className="px-3 py-2.5">

@@ -16,6 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 
 const statusConfig = {
   pending: {
@@ -59,6 +61,12 @@ export default function WorkerTasks() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const queryClient = useQueryClient();
+
+  const { containerRef, isRefreshing: isPulling, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["worker-tasks"] });
+    },
+  });
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -150,7 +158,8 @@ export default function WorkerTasks() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div ref={containerRef} className="min-h-screen bg-background pb-20">
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
         <div className="px-3 py-2.5">
           <h1 className="text-base font-semibold">My Tasks</h1>
