@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, addDays, eachDayOfInterval, startOfDay, isSameDay } from "date-fns";
 import { ChevronRight, Check, Calendar as CalendarIcon } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface SeasonalAvailabilityDialogProps {
@@ -238,8 +237,8 @@ export function SeasonalAvailabilityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-        <DialogHeader className="p-6 pb-4 shrink-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
             {existingData ? 'Edit' : 'Set'} Availability Period
@@ -253,10 +252,9 @@ export function SeasonalAvailabilityDialog({
         </DialogHeader>
 
         {step === 'details' ? (
-          <form onSubmit={handleNext} className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full px-6">
-                <div className="space-y-4 pb-4">
+          <form onSubmit={handleNext} className="flex flex-col">
+            <div className="overflow-y-auto px-6" style={{ maxHeight: 'calc(90vh - 220px)' }}>
+              <div className="space-y-4 pb-4">
                 <div className="space-y-2">
                   <Label htmlFor="season-name" className="text-base">Period Name</Label>
                   <Input
@@ -313,10 +311,9 @@ export function SeasonalAvailabilityDialog({
                   />
                 </div>
               </div>
-              </ScrollArea>
             </div>
 
-            <div className="p-6 pt-4 border-t flex gap-3 shrink-0">
+            <div className="p-6 pt-4 border-t flex gap-3">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -332,8 +329,8 @@ export function SeasonalAvailabilityDialog({
             </div>
           </form>
         ) : (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="px-6 pb-3 space-y-3 shrink-0">
+          <div className="flex flex-col">
+            <div className="px-6 pb-3 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="text-sm">
                   <p className="font-medium">{seasonName}</p>
@@ -387,9 +384,8 @@ export function SeasonalAvailabilityDialog({
               </div>
             </div>
 
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full px-6">
-                <div className="space-y-2 pb-4">
+            <div className="overflow-y-auto px-6" style={{ maxHeight: 'calc(90vh - 420px)' }}>
+              <div className="space-y-2 pb-4">
                 {allDatesInRange.map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const periods = dateAvailability[dateStr] || [];
@@ -460,10 +456,9 @@ export function SeasonalAvailabilityDialog({
                   );
                 })}
               </div>
-              </ScrollArea>
             </div>
 
-            <div className="p-6 pt-4 border-t shrink-0">
+            <div className="p-6 pt-4 border-t">
               <div className="mb-3 text-center text-sm text-muted-foreground">
                 {Object.values(dateAvailability).filter(p => p.length > 0).length} of {allDatesInRange.length} dates set
               </div>
