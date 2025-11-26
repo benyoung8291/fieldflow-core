@@ -130,89 +130,82 @@ export default function WorkerProfile() {
       
       {/* Header */}
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-3 py-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/worker/dashboard')}
-                className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div>
-                <p className="text-[10px] font-medium opacity-70 leading-tight">Settings</p>
-                <h1 className="text-sm font-semibold leading-tight">My Profile</h1>
-              </div>
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/worker/dashboard')}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <p className="text-xs font-medium opacity-90">Settings</p>
+              <h1 className="text-base font-bold">My Profile</h1>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="p-4 space-y-4">
-        {/* Version Number */}
-        <div className="text-[10px] text-muted-foreground/40 text-right">
-          v{APP_VERSION}
-        </div>
-
+      <div className="p-4 space-y-4 pb-20">
         {/* Personal Information */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
+        <Card className="overflow-hidden shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Personal Information</CardTitle>
-                <CardDescription className="text-xs">Your basic profile details</CardDescription>
+                <CardTitle className="text-lg">Personal Information</CardTitle>
+                <CardDescription className="text-sm">Your basic profile details</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="first_name" className="text-xs">First Name</Label>
+              <div className="space-y-2">
+                <Label htmlFor="first_name" className="text-sm font-medium">First Name</Label>
                 <Input
                   id="first_name"
                   value={profile.first_name}
                   onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                  className="h-9 text-sm"
+                  className="h-10"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="last_name" className="text-xs">Last Name</Label>
+              <div className="space-y-2">
+                <Label htmlFor="last_name" className="text-sm font-medium">Last Name</Label>
                 <Input
                   id="last_name"
                   value={profile.last_name}
                   onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                  className="h-9 text-sm"
+                  className="h-10"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs">Email (Read Only)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">Email (Read Only)</Label>
               <div className="relative">
-                <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   value={profile.email}
                   disabled
-                  className="h-9 text-sm pl-9 bg-muted"
+                  className="h-10 pl-10 bg-muted"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-xs">Phone Number</Label>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
               <div className="relative">
-                <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="phone"
                   value={profile.phone || ''}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  className="h-9 text-sm pl-9"
+                  className="h-10 pl-10"
                   placeholder="Enter phone number"
                 />
               </div>
@@ -222,19 +215,19 @@ export default function WorkerProfile() {
 
         {/* Worker Preferences (Read Only) */}
         {worker && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Briefcase className="h-4 w-4 text-primary" />
+          <Card className="overflow-hidden shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Briefcase className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Work Preferences</CardTitle>
-                  <CardDescription className="text-xs">Read-only preferences</CardDescription>
+                  <CardTitle className="text-lg">Work Preferences</CardTitle>
+                  <CardDescription className="text-sm">Read-only settings</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               {worker.preferred_days && worker.preferred_days.length > 0 && (
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Preferred Days</Label>
@@ -269,39 +262,39 @@ export default function WorkerProfile() {
         )}
 
         {/* Emergency Contact */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <Phone className="h-4 w-4 text-destructive" />
+        <Card className="overflow-hidden shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <Phone className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <CardTitle className="text-base">Emergency Contact</CardTitle>
-                <CardDescription className="text-xs">In case of emergency</CardDescription>
+                <CardTitle className="text-lg">Emergency Contact</CardTitle>
+                <CardDescription className="text-sm">In case of emergency</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="emergency_name" className="text-xs">Contact Name</Label>
+          <CardContent className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="emergency_name" className="text-sm font-medium">Contact Name</Label>
               <Input
                 id="emergency_name"
                 value={profile.emergency_contact_name || ''}
                 onChange={(e) => setProfile({ ...profile, emergency_contact_name: e.target.value })}
-                className="h-9 text-sm"
+                className="h-10"
                 placeholder="Emergency contact name"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="emergency_phone" className="text-xs">Contact Phone</Label>
+            <div className="space-y-2">
+              <Label htmlFor="emergency_phone" className="text-sm font-medium">Contact Phone</Label>
               <div className="relative">
-                <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="emergency_phone"
                   value={profile.emergency_contact_phone || ''}
                   onChange={(e) => setProfile({ ...profile, emergency_contact_phone: e.target.value })}
-                  className="h-9 text-sm pl-9"
+                  className="h-10 pl-10"
                   placeholder="Emergency contact phone"
                 />
               </div>
@@ -313,7 +306,7 @@ export default function WorkerProfile() {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="w-full h-11 text-sm font-semibold"
+          className="w-full h-12 text-base font-semibold shadow-sm"
         >
           {saving ? (
             <>
@@ -327,6 +320,11 @@ export default function WorkerProfile() {
             </>
           )}
         </Button>
+
+        {/* Version Footer */}
+        <div className="flex items-center justify-center pt-4 text-xs text-muted-foreground/50">
+          v{APP_VERSION}
+        </div>
       </div>
     </div>
   );

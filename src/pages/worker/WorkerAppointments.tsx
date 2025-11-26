@@ -157,25 +157,28 @@ export default function WorkerAppointments() {
     <div ref={containerRef} className="min-h-screen bg-background pb-20">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-3 py-2.5 flex items-center gap-2">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/worker/dashboard')}
-            className="h-7 w-7 rounded-lg text-primary-foreground hover:bg-primary-foreground/15"
+            className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
           >
-            <ArrowLeft className="h-3 w-3" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-base font-semibold">Appointments</h1>
+          <h1 className="text-lg font-bold">All Appointments</h1>
         </div>
       </header>
 
-      <div className="px-4 pt-4 space-y-3">
+      <div className="px-4 pt-6 space-y-4">
         {appointments.length === 0 ? (
-          <Card>
-            <CardContent className="py-10 text-center">
-              <Calendar className="h-10 w-10 mx-auto text-muted-foreground/20 mb-2" />
-              <p className="text-sm text-muted-foreground">No appointments this week</p>
+          <Card className="border-dashed">
+            <CardContent className="py-16 text-center">
+              <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <Calendar className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <p className="text-base font-medium text-muted-foreground mb-1">No appointments</p>
+              <p className="text-sm text-muted-foreground/70">You have no appointments this week</p>
             </CardContent>
           </Card>
         ) : (
@@ -185,36 +188,36 @@ export default function WorkerAppointments() {
             return (
               <Card
                 key={apt.id}
-                className="card-interactive"
+                className="card-interactive overflow-hidden shadow-sm"
                 onClick={() => navigate(`/worker/appointments/${apt.id}`)}
               >
-                <CardContent className="p-3.5">
-                  <div className="flex items-start justify-between gap-3 mb-2.5">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate leading-tight mb-0.5">{apt.title}</h3>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <h3 className="font-semibold text-base truncate mb-1">{apt.title}</h3>
+                      <p className="text-sm text-muted-foreground truncate">
                         {apt.service_orders?.customers?.name}
                       </p>
                       {isClockedIn && (
-                        <Badge variant="outline" className="shrink-0 text-[10px] h-5 border-green-200 text-green-700 mt-2">
+                        <Badge variant="outline" className="shrink-0 text-xs h-6 border-green-200 text-green-700 mt-2">
                           Active • {formatElapsedTime(isClockedIn.clock_in)}
                         </Badge>
                       )}
                     </div>
                     <Badge 
                       variant={apt.status === 'completed' ? 'default' : 'secondary'}
-                      className="shrink-0 text-[10px] h-5"
+                      className="shrink-0 text-xs h-6 px-2.5"
                     >
                       {apt.status?.replace('_', ' ')}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" />
                       <span>{format(parseISO(apt.start_time), 'MMM d')}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
                       <span>{format(parseISO(apt.start_time), 'h:mm a')}</span>
                     </div>
                   </div>
