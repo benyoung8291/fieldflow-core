@@ -32,6 +32,7 @@ export default function DraggableAppointment({
     data: {
       type: "appointment",
       appointment,
+      appointmentId: appointment.id,
     },
   });
 
