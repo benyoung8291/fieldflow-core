@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Clock, User, RefreshCw, Briefcase, ChevronRight, WifiOff } from 'lucide-react';
 import { useWorkerRole } from '@/hooks/useWorkerRole';
+import { ViewToggleButton } from '@/components/layout/ViewToggleButton';
 import { format, parseISO, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -179,6 +180,7 @@ export default function WorkerDashboard() {
               ) : (
                 <div className="h-2 w-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.6)]" title="Offline" />
               )}
+              <ViewToggleButton />
               <Button
                 variant="ghost"
                 size="icon"
