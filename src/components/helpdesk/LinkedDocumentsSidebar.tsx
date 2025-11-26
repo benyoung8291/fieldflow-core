@@ -290,9 +290,9 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
 
   return (
     <div className="flex flex-col h-full border-l bg-gradient-to-b from-background to-muted/10">
-      <Tabs defaultValue="documents" className="flex flex-col h-full">
+      <Tabs defaultValue="documents" className="flex flex-col flex-1 overflow-hidden">
         {/* Enhanced Header */}
-        <div className="px-4 py-4 border-b bg-background/95 backdrop-blur-sm">
+        <div className="px-4 py-4 border-b bg-background/95 backdrop-blur-sm shrink-0">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-foreground">Links & Actions</h3>
