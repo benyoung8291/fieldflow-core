@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, MapPin, FileText, LogOut } from "lucide-react";
+import { Home, MapPin, FileText, LogOut, ClipboardList, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,6 +26,9 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
     { path: "/customer", icon: Home, label: "Dashboard" },
     { path: "/customer/locations", icon: MapPin, label: "Locations" },
     { path: "/customer/requests", icon: FileText, label: "Requests" },
+    { path: "/customer/service-orders", icon: ClipboardList, label: "Service Orders" },
+    { path: "/customer/appointments", icon: Calendar, label: "Appointments" },
+    { path: "/customer/field-reports", icon: FileText, label: "Field Reports" },
   ];
 
   return (
@@ -33,7 +36,7 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
       {/* Apple-inspired Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
         <div className="flex h-16 items-center justify-between px-6 md:ml-64">
-          <h1 className="text-xl font-semibold tracking-tight">Portal</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Premrest Pulse</h1>
           <Button
             variant="ghost"
             size="icon"
