@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import {
   Sheet,
   SheetContent,
@@ -44,6 +45,7 @@ export const MobileBottomNav = () => {
   const location = useLocation();
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { data: access, isLoading } = useUserAccess();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -58,7 +60,13 @@ export const MobileBottomNav = () => {
   }, []);
 
   if (!isMobile || !isAuthenticated) return null;
-  if (location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
+  if (location.pathname.startsWith('/worker') || location.pathname.startsWith('/customer') || location.pathname === '/auth') return null;
+  
+  // Wait for access check to complete to prevent flash of wrong menu
+  if (isLoading) return null;
+  
+  // Only show for users with office access
+  if (!access?.canAccessOffice) return null;
   if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/helpdesk')) {
     return null;
   }
