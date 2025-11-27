@@ -78,21 +78,10 @@ export default function CustomerPortalUserDialog({
           return;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          toast.error("You must be logged in");
-          return;
-        }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-customer-portal-user`,
+        const { data: result, error: functionError } = await supabase.functions.invoke(
+          "create-customer-portal-user",
           {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${session.access_token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
+            body: {
               tenantId,
               customerId,
               firstName: data.first_name,
@@ -100,14 +89,12 @@ export default function CustomerPortalUserDialog({
               email: data.email,
               phone: data.phone,
               password: data.password,
-            }),
+            },
           }
         );
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to create portal user");
+        if (functionError) {
+          throw new Error(functionError.message || "Failed to create portal user");
         }
 
         toast.success("Portal user created successfully");
