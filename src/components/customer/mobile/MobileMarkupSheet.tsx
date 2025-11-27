@@ -2,7 +2,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Trash2, MapPin, Square, ChevronUp } from "lucide-react";
+import { Trash2, MapPin, Square } from "lucide-react";
 import { Markup } from "../FloorPlanViewer";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,8 @@ interface MobileMarkupSheetProps {
   onMarkupSelect: (id: string | null) => void;
   onMarkupUpdate: (id: string, notes: string) => void;
   onMarkupDelete: (id: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function MobileMarkupSheet({
@@ -21,18 +23,11 @@ export function MobileMarkupSheet({
   onMarkupSelect,
   onMarkupUpdate,
   onMarkupDelete,
+  open,
+  onOpenChange,
 }: MobileMarkupSheetProps) {
   return (
-    <Drawer>
-      <DrawerTrigger asChild>
-        <Button
-          variant="default"
-          className="fixed bottom-24 right-4 z-20 h-14 rounded-full shadow-2xl"
-        >
-          <ChevronUp className="h-5 w-5 mr-2" />
-          Markups ({markups.length})
-        </Button>
-      </DrawerTrigger>
+    <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="pb-4">
           <DrawerTitle className="text-xl">Markup List</DrawerTitle>

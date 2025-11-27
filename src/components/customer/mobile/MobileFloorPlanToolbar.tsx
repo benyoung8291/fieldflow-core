@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MapPin, Square, Hand, Undo, Redo, ZoomIn, ZoomOut } from "lucide-react";
+import { MapPin, Square, Hand, ZoomIn, ZoomOut, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarkupType } from "../FloorPlanViewer";
@@ -10,10 +10,8 @@ interface MobileFloorPlanToolbarProps {
   scale: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onUndo: () => void;
-  onRedo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
+  markupsCount: number;
+  onOpenMarkups: () => void;
 }
 
 export function MobileFloorPlanToolbar({
@@ -22,10 +20,8 @@ export function MobileFloorPlanToolbar({
   scale,
   onZoomIn,
   onZoomOut,
-  onUndo,
-  onRedo,
-  canUndo,
-  canRedo,
+  markupsCount,
+  onOpenMarkups,
 }: MobileFloorPlanToolbarProps) {
   return (
     <>
@@ -58,7 +54,16 @@ export function MobileFloorPlanToolbar({
       </div>
 
       {/* Bottom Tool Selection */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+        <Button
+          variant="default"
+          onClick={onOpenMarkups}
+          className="h-14 rounded-full shadow-2xl px-4"
+        >
+          <ChevronUp className="h-5 w-5 mr-2" />
+          Markups ({markupsCount})
+        </Button>
+        
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-background shadow-2xl border-2 border-border">
           <Button
             size="icon"
@@ -99,36 +104,6 @@ export function MobileFloorPlanToolbar({
             title="Draw Area"
           >
             <Square className="h-5 w-5" />
-          </Button>
-          
-          <div className="w-px h-6 bg-border" />
-          
-          <Button
-            size="icon"
-            variant="secondary"
-            onClick={onUndo}
-            disabled={!canUndo}
-            className={cn(
-              "h-11 w-11 rounded-full bg-secondary/80 text-secondary-foreground hover:bg-secondary",
-              !canUndo && "opacity-40"
-            )}
-            title="Undo"
-          >
-            <Undo className="h-5 w-5" />
-          </Button>
-          
-          <Button
-            size="icon"
-            variant="secondary"
-            onClick={onRedo}
-            disabled={!canRedo}
-            className={cn(
-              "h-11 w-11 rounded-full bg-secondary/80 text-secondary-foreground hover:bg-secondary",
-              !canRedo && "opacity-40"
-            )}
-            title="Redo"
-          >
-            <Redo className="h-5 w-5" />
           </Button>
         </div>
       </div>
