@@ -44,7 +44,7 @@ export default function CustomerFieldReports() {
               id,
               work_order_number,
               customer_id,
-              location:customer_locations(name, address)
+              location:customer_locations!service_orders_location_id_fkey(name, address)
             )
           ),
           created_by_profile:profiles(first_name, last_name)
