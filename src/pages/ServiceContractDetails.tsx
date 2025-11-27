@@ -158,6 +158,7 @@ export default function ServiceContractDetails() {
         .from("service_contract_line_items" as any)
         .insert({
           contract_id: id,
+          tenant_id: contract.tenant_id,
           description: lineItem.description,
           quantity: lineItem.quantity,
           unit_price: lineItem.unit_price,
