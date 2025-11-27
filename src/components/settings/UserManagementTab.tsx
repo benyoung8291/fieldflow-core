@@ -647,11 +647,15 @@ export const UserManagementTab = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-             {users?.map((user) => (
+            {users?.map((user) => (
               <TableRow 
                 key={user.id}
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => {
+                onClick={(e) => {
+                  // Only open dialog if clicking the row itself, not interactive elements
+                  if ((e.target as HTMLElement).closest('button, .badge-interactive')) {
+                    return;
+                  }
                   setSelectedUser(user);
                   setIsUserDialogOpen(true);
                 }}
@@ -669,18 +673,19 @@ export const UserManagementTab = () => {
                   <div className="flex gap-2 flex-wrap">
                     {user.user_roles && user.user_roles.length > 0 ? (
                       user.user_roles.map((ur: any, idx: number) => (
-                        <Badge
-                          key={idx}
-                          variant={getRoleBadgeVariant(ur.role)}
-                          className="cursor-pointer hover:opacity-80"
-                          onClick={() =>
-                            handleRemoveRoleClick(
-                              user.id,
-                              ur.role,
-                              `${user.first_name} ${user.last_name}`
-                            )
-                          }
-                        >
+                    <Badge
+                      key={idx}
+                      variant={getRoleBadgeVariant(ur.role)}
+                      className="cursor-pointer hover:opacity-80 badge-interactive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveRoleClick(
+                          user.id,
+                          ur.role,
+                          `${user.first_name} ${user.last_name}`
+                        );
+                      }}
+                    >
                           <Shield className="h-3 w-3 mr-1" />
                           {ur.role}
                         </Badge>
@@ -697,13 +702,14 @@ export const UserManagementTab = () => {
                         <Badge
                           key={team.id}
                           variant="secondary"
-                          className="cursor-pointer hover:opacity-80"
-                          onClick={() =>
+                          className="cursor-pointer hover:opacity-80 badge-interactive"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             removeTeamMutation.mutate({
                               userId: user.id,
                               teamId: team.id,
-                            })
-                          }
+                            });
+                          }}
                         >
                           {team.name}
                         </Badge>
@@ -715,7 +721,8 @@ export const UserManagementTab = () => {
                       size="sm"
                       variant="ghost"
                       className="h-6"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedUserId(user.id);
                         setShowTeamDialog(true);
                       }}
@@ -725,7 +732,7 @@ export const UserManagementTab = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <Switch
                       checked={user.has_worker_role}
                       onCheckedChange={(checked) => {
@@ -747,7 +754,7 @@ export const UserManagementTab = () => {
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-3">
+                  <div className="flex items-center justify-center gap-3" onClick={(e) => e.stopPropagation()}>
                     <Switch
                       id={`status-${user.id}`}
                       checked={user.is_active}
