@@ -113,27 +113,18 @@ export function FloorPlanViewer({
     setNumPages(numPages);
   };
 
-  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (mode !== "pin") return;
     
-    const container = e.currentTarget;
+    // Don't prevent clicks on child elements for pin mode
+    const container = containerRef.current;
+    if (!container) return;
+    
     const rect = container.getBoundingClientRect();
     
-    // Get touch or mouse coordinates
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      if (e.touches.length !== 1) return;
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      if (e.target !== e.currentTarget) return;
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    
-    // Calculate position relative to the PDF page
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    const y = ((clientY - rect.top) / rect.height) * 100;
+    // Calculate position relative to the container
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     const newMarkup: PinMarkup = {
       id: crypto.randomUUID(),
@@ -421,7 +412,7 @@ export function FloorPlanViewer({
                 return (
                   <div
                     key={markup.id}
-                    className="absolute border-2 border-yellow-500 bg-yellow-500/20 pointer-events-none"
+                    className="absolute border-4 border-orange-500 bg-orange-500/30 pointer-events-none shadow-lg"
                     style={{
                       left: `${markup.bounds.x}%`,
                       top: `${markup.bounds.y}%`,
@@ -440,7 +431,7 @@ export function FloorPlanViewer({
             {/* Drawing preview for zones */}
             {isDrawing && drawStart && drawCurrent && mode === "zone" && (
               <div
-                className="absolute border-2 border-dashed border-primary bg-primary/10 pointer-events-none animate-pulse"
+                className="absolute border-4 border-dashed border-orange-500 bg-orange-500/20 pointer-events-none animate-pulse shadow-lg"
                 style={{
                   left: `${Math.min(drawStart.x, drawCurrent.x)}%`,
                   top: `${Math.min(drawStart.y, drawCurrent.y)}%`,
@@ -448,7 +439,7 @@ export function FloorPlanViewer({
                   height: `${Math.abs(drawCurrent.y - drawStart.y)}%`,
                 }}
               >
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-primary">
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-orange-600">
                   Release to create
                 </div>
               </div>

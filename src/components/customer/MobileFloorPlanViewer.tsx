@@ -465,8 +465,8 @@ export function MobileFloorPlanViewer({
                   <div
                     key={markup.id}
                     className={cn(
-                      "absolute border-4 border-yellow-500 bg-yellow-500/20 transition-all touch-none",
-                      selectedMarkupId === markup.id && "border-yellow-600 bg-yellow-500/30 animate-pulse",
+                      "absolute border-4 border-orange-500 bg-orange-500/30 transition-all shadow-lg touch-none",
+                      selectedMarkupId === markup.id && "border-orange-600 bg-orange-500/40 animate-pulse",
                       isDragging && draggedMarkupId === markup.id && "z-50"
                     )}
                     style={{
@@ -491,7 +491,7 @@ export function MobileFloorPlanViewer({
             {/* Drawing preview */}
             {isDrawing && drawStart && drawCurrent && mode === "zone" && (
               <div
-                className="absolute border-4 border-dashed border-primary bg-primary/20 pointer-events-none animate-pulse"
+                className="absolute border-4 border-dashed border-orange-500 bg-orange-500/20 pointer-events-none animate-pulse shadow-lg"
                 style={{
                   left: `${Math.min(drawStart.x, drawCurrent.x)}%`,
                   top: `${Math.min(drawStart.y, drawCurrent.y)}%`,
