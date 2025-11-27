@@ -24,7 +24,7 @@ export default function LocationFloorPlans() {
   const [markups, setMarkups] = useState<Markup[]>([]);
   const [mode, setMode] = useState<MarkupType>("pin");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [taskTitle, setTaskTitle] = useState("");
+  const [taskTitle, setTaskTitle] = useState("Add to next service");
   const [taskDescription, setTaskDescription] = useState("");
   const [selectedMarkupId, setSelectedMarkupId] = useState<string | null>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -129,8 +129,20 @@ export default function LocationFloorPlans() {
 
   const createRequestMutation = useMutation({
     mutationFn: async () => {
-      if (!profile?.customer_id || !profile?.tenant_id || !requestsPipeline?.id) {
-        throw new Error("Missing required information");
+      console.log("Creating request with:", { 
+        customerId: profile?.customer_id, 
+        tenantId: profile?.tenant_id, 
+        pipelineId: requestsPipeline?.id,
+        title: taskTitle,
+        markupsCount: markups.length 
+      });
+
+      if (!profile?.customer_id || !profile?.tenant_id) {
+        throw new Error("Missing customer or tenant information");
+      }
+
+      if (!requestsPipeline?.id) {
+        throw new Error("Requests pipeline not found. Please contact support.");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -150,7 +162,29 @@ export default function LocationFloorPlans() {
         .select()
         .single();
 
-      if (ticketError) throw ticketError;
+      if (ticketError) {
+        console.error("Error creating ticket:", ticketError);
+        throw ticketError;
+      }
+
+      // Create initial message with description if provided
+      if (taskDescription) {
+        const { error: messageError } = await supabase
+          .from("helpdesk_messages")
+          .insert([{
+            ticket_id: ticket.id,
+            tenant_id: profile.tenant_id,
+            body: taskDescription,
+            message_type: "note",
+            is_internal: false,
+            is_from_customer: true,
+          }]);
+
+        if (messageError) {
+          console.error("Error creating message:", messageError);
+          // Don't throw - ticket was created successfully
+        }
+      }
 
       // Create markups
       const markupInserts = markups.map((markup) => {
@@ -197,13 +231,14 @@ export default function LocationFloorPlans() {
       queryClient.invalidateQueries({ queryKey: ["customer-tickets"] });
       setShowCreateDialog(false);
       setMarkups([]);
-      setTaskTitle("");
+      setTaskTitle("Add to next service");
       setTaskDescription("");
       navigate("/customer/requests");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Failed to create request:", error);
-      toast.error("Failed to create request");
+      const errorMessage = error?.message || "Failed to create request";
+      toast.error(errorMessage);
     },
   });
 
@@ -244,7 +279,11 @@ export default function LocationFloorPlans() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => setShowCreateDialog(true)}
+                onClick={() => {
+                  setTaskTitle("Add to next service");
+                  setTaskDescription("");
+                  setShowCreateDialog(true);
+                }}
                 disabled={markups.length === 0}
                 className="shadow-lg"
               >
@@ -383,7 +422,11 @@ export default function LocationFloorPlans() {
                     Back to Plans
                   </Button>
                   <Button
-                    onClick={() => setShowCreateDialog(true)}
+                    onClick={() => {
+                      setTaskTitle("Add to next service");
+                      setTaskDescription("");
+                      setShowCreateDialog(true);
+                    }}
                     disabled={markups.length === 0}
                   >
                     Create Request ({markups.length})
