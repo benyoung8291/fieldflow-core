@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Loader2, Calendar, MapPin, FileText, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MobileFloorPlanViewer } from "@/components/customer/MobileFloorPlanViewer";
 
 export default function RequestView() {
   const { requestId } = useParams();
@@ -245,36 +246,45 @@ export default function RequestView() {
         </Card>
 
         {/* Floor Plan Markups */}
-        {markups && markups.length > 0 && (
-          <Card className="border-border/40">
-            <CardHeader>
-              <CardTitle className="text-lg">Floor Plan Markups</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {markups.map((markup: any) => (
-                <div key={markup.id} className="p-4 border border-border/40 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <span className="font-medium">
-                        {markup.floor_plan?.floor_number && `${markup.floor_plan.floor_number} - `}
-                        {markup.floor_plan?.name}
-                      </span>
-                    </div>
-                    <Badge variant="outline">
-                      {markup.markup_data?.type === "pin" ? "Pin" : "Area"}
-                    </Badge>
-                  </div>
-                  {markup.markup_data?.notes && (
-                    <p className="text-sm text-muted-foreground">
-                      {markup.markup_data.notes}
-                    </p>
-                  )}
+        {markups && markups.length > 0 && (() => {
+          // Group markups by floor plan
+          const floorPlanGroups = markups.reduce((acc: any, markup: any) => {
+            const floorPlanId = markup.floor_plan_id;
+            if (!acc[floorPlanId]) {
+              acc[floorPlanId] = {
+                floorPlan: markup.floor_plan,
+                markups: []
+              };
+            }
+            acc[floorPlanId].markups.push(markup.markup_data);
+            return acc;
+          }, {});
+
+          return Object.entries(floorPlanGroups).map(([floorPlanId, group]: [string, any]) => (
+            <Card key={floorPlanId} className="border-border/40">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">
+                    {group.floorPlan?.floor_number && `${group.floorPlan.floor_number} - `}
+                    {group.floorPlan?.name}
+                  </CardTitle>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+              </CardHeader>
+              <CardContent>
+                <div className="h-[500px] rounded-lg overflow-hidden border border-border/40">
+                  <MobileFloorPlanViewer
+                    pdfUrl={group.floorPlan?.file_url || ""}
+                    imageUrl={group.floorPlan?.image_url}
+                    markups={group.markups}
+                    onMarkupsChange={() => {}}
+                    readOnly={true}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ));
+        })()}
 
         {/* Appointment Details */}
         {ticket.appointment && (

@@ -40,6 +40,7 @@ interface MobileFloorPlanViewerProps {
   imageUrl?: string;
   markups: Markup[];
   onMarkupsChange: (markups: Markup[]) => void;
+  readOnly?: boolean;
 }
 
 export function MobileFloorPlanViewer({
@@ -47,6 +48,7 @@ export function MobileFloorPlanViewer({
   imageUrl,
   markups,
   onMarkupsChange,
+  readOnly = false,
 }: MobileFloorPlanViewerProps) {
   const displayUrl = imageUrl || pdfUrl;
   const isImage = imageUrl || !pdfUrl.toLowerCase().endsWith('.pdf');
@@ -359,24 +361,26 @@ export function MobileFloorPlanViewer({
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-muted/20">
-      <MobileFloorPlanToolbar
-        mode={mode}
-        onModeChange={setMode}
-        scale={scale}
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        markupsCount={markups.length}
-        onOpenMarkups={() => setMarkupSheetOpen(true)}
-      />
+      {!readOnly && (
+        <MobileFloorPlanToolbar
+          mode={mode}
+          onModeChange={setMode}
+          scale={scale}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          markupsCount={markups.length}
+          onOpenMarkups={() => setMarkupSheetOpen(true)}
+        />
+      )}
 
       <div
         ref={containerRef}
         className="w-full h-full overflow-hidden touch-none"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStart={readOnly ? undefined : handleTouchStart}
+        onTouchMove={readOnly ? undefined : handleTouchMove}
+        onTouchEnd={readOnly ? undefined : handleTouchEnd}
         style={{
-          cursor: mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : isPanning ? "grabbing" : "grab",
+          cursor: readOnly ? "default" : mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : isPanning ? "grabbing" : "grab",
         }}
       >
         <div
@@ -502,15 +506,17 @@ export function MobileFloorPlanViewer({
         </div>
       </div>
 
-      <MobileMarkupSheet
-        markups={markups}
-        selectedMarkupId={selectedMarkupId}
-        onMarkupSelect={setSelectedMarkupId}
-        onMarkupUpdate={updateMarkupNote}
-        onMarkupDelete={deleteMarkup}
-        open={markupSheetOpen}
-        onOpenChange={setMarkupSheetOpen}
-      />
+      {!readOnly && (
+        <MobileMarkupSheet
+          markups={markups}
+          selectedMarkupId={selectedMarkupId}
+          onMarkupSelect={setSelectedMarkupId}
+          onMarkupUpdate={updateMarkupNote}
+          onMarkupDelete={deleteMarkup}
+          open={markupSheetOpen}
+          onOpenChange={setMarkupSheetOpen}
+        />
+      )}
     </div>
   );
 }
