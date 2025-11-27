@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { UserPlus, Shield, AlertCircle } from "lucide-react";
+import { UserPlus, Shield, AlertCircle, Mail, Pencil } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 
 const UserManagement = () => {
@@ -25,6 +25,8 @@ const UserManagement = () => {
   const [showTeamDialog, setShowTeamDialog] = useState(false);
   const [roleToRemove, setRoleToRemove] = useState<{ userId: string; role: string; userName: string } | null>(null);
   const [removeRoleConfirmation, setRemoveRoleConfirmation] = useState("");
+  const [editEmailUserId, setEditEmailUserId] = useState<string | null>(null);
+  const [editEmailValue, setEditEmailValue] = useState("");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -248,6 +250,40 @@ const UserManagement = () => {
     },
   });
 
+  const updateEmailMutation = useMutation({
+    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-email`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, email }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update email');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Email updated successfully");
+      setEditEmailUserId(null);
+      setEditEmailValue("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update email");
+    },
+  });
+
   const handleAssignRole = () => {
     if (!selectedUserId || !selectedRole) {
       toast.error("Please select a user and role");
@@ -396,28 +432,67 @@ const UserManagement = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
                     <TableHead>Roles</TableHead>
                     <TableHead>Teams</TableHead>
-                    <TableHead>Account Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users?.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div className="font-medium">{user.first_name} {user.last_name}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
-                          </div>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{user.first_name} {user.last_name}</div>
+                          <div className="text-xs text-muted-foreground">{user.phone || "No phone"}</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-muted-foreground">{user.email}</span>
+                        <div className="flex items-center gap-2">
+                          {editEmailUserId === user.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="email"
+                                value={editEmailValue}
+                                onChange={(e) => setEditEmailValue(e.target.value)}
+                                className="h-8 w-64"
+                                placeholder="Enter new email"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => updateEmailMutation.mutate({ userId: user.id, email: editEmailValue })}
+                                disabled={!editEmailValue || updateEmailMutation.isPending}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditEmailUserId(null);
+                                  setEditEmailValue("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-sm">{user.email}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  setEditEmailUserId(user.id);
+                                  setEditEmailValue(user.email);
+                                }}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>{user.phone || "-"}</TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
                           {user.user_roles && user.user_roles.length > 0 ? (
@@ -477,21 +552,8 @@ const UserManagement = () => {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Badge 
-                            variant={user.is_active ? "default" : "secondary"}
-                            className="min-w-[80px] justify-center"
-                          >
-                            {user.is_active ? "Active" : "Deactivated"}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Label htmlFor={`status-${user.id}`} className="text-xs text-muted-foreground cursor-pointer">
-                            {user.is_active ? "Deactivate" : "Activate"}
-                          </Label>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-3">
                           <Switch
                             id={`status-${user.id}`}
                             checked={user.is_active}
@@ -502,6 +564,12 @@ const UserManagement = () => {
                               });
                             }}
                           />
+                          <Badge 
+                            variant={user.is_active ? "default" : "secondary"}
+                            className="min-w-20 justify-center"
+                          >
+                            {user.is_active ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
                       </TableCell>
                     </TableRow>

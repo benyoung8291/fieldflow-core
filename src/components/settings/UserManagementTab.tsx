@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { UserPlus, Shield, KeyRound, ExternalLink, UserRoundPlus, Eye, EyeOff } from "lucide-react";
+import { UserPlus, Shield, KeyRound, UserRoundPlus, Eye, EyeOff, Pencil, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -35,6 +35,8 @@ export const UserManagementTab = () => {
   const [showTeamDialog, setShowTeamDialog] = useState(false);
   const [roleToRemove, setRoleToRemove] = useState<{ userId: string; role: string; userName: string } | null>(null);
   const [removeRoleConfirmation, setRemoveRoleConfirmation] = useState("");
+  const [editEmailUserId, setEditEmailUserId] = useState<string | null>(null);
+  const [editEmailValue, setEditEmailValue] = useState("");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -373,6 +375,40 @@ export const UserManagementTab = () => {
     },
   });
 
+  const updateEmailMutation = useMutation({
+    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-email`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, email }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update email');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      toast.success("Email updated successfully");
+      setEditEmailUserId(null);
+      setEditEmailValue("");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update email");
+    },
+  });
+
   const handleAssignRole = () => {
     if (!selectedUserId || !selectedRole) {
       toast.error("Please select a user and role");
@@ -636,22 +672,68 @@ export const UserManagementTab = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
               <TableHead>Roles</TableHead>
               <TableHead>Teams</TableHead>
               <TableHead>Is Worker</TableHead>
-              <TableHead>Account Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-center">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users?.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">
-                  {user.first_name} {user.last_name}
+                <TableCell>
+                  <div>
+                    <div className="font-medium">{user.first_name} {user.last_name}</div>
+                    <div className="text-xs text-muted-foreground">{user.phone || "No phone"}</div>
+                  </div>
                 </TableCell>
-                <TableCell>{user.email || "-"}</TableCell>
-                <TableCell>{user.phone || "-"}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {editEmailUserId === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="email"
+                          value={editEmailValue}
+                          onChange={(e) => setEditEmailValue(e.target.value)}
+                          className="h-8 w-64"
+                          placeholder="Enter new email"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => updateEmailMutation.mutate({ userId: user.id, email: editEmailValue })}
+                          disabled={!editEmailValue || updateEmailMutation.isPending}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditEmailUserId(null);
+                            setEditEmailValue("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm">{user.email}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            setEditEmailUserId(user.id);
+                            setEditEmailValue(user.email);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-2 flex-wrap">
                     {user.user_roles && user.user_roles.length > 0 ? (
@@ -733,43 +815,35 @@ export const UserManagementTab = () => {
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-3">
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-3">
+                    <Switch
+                      id={`status-${user.id}`}
+                      checked={user.is_active}
+                      onCheckedChange={(checked) => {
+                        toggleUserStatusMutation.mutate({
+                          userId: user.id,
+                          isActive: checked,
+                        });
+                      }}
+                    />
                     <Badge 
                       variant={user.is_active ? "default" : "secondary"}
-                      className="min-w-[90px] justify-center"
+                      className="min-w-20 justify-center"
                     >
-                      {user.is_active ? "Active" : "Deactivated"}
+                      {user.is_active ? "Active" : "Inactive"}
                     </Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`status-${user.id}`} className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
-                        {user.is_active ? "Deactivate" : "Activate"}
-                      </Label>
-                      <Switch
-                        id={`status-${user.id}`}
-                        checked={user.is_active}
-                        onCheckedChange={(checked) => {
-                          toggleUserStatusMutation.mutate({
-                            userId: user.id,
-                            isActive: checked,
-                          });
-                        }}
-                      />
-                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="h-7"
                       onClick={() => {
                         setResetPasswordUserId(user.id);
                         setIsResetPasswordDialogOpen(true);
                       }}
-                      title="Reset Password"
+                      title="Reset password"
                     >
-                      <KeyRound className="h-4 w-4" />
+                      <KeyRound className="h-3 w-3" />
                     </Button>
                   </div>
                 </TableCell>
