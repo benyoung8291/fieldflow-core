@@ -8259,7 +8259,11 @@ export type Database = {
         Returns: undefined
       }
       calculate_next_generation_date: {
-        Args: { p_current_date: string; p_frequency: string }
+        Args: {
+          p_current_date: string
+          p_frequency: string
+          p_original_day_of_month?: number
+        }
         Returns: string
       }
       can_manage_user: {
