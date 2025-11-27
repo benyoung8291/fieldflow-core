@@ -8751,10 +8751,13 @@ export type Database = {
       get_user_access_info: {
         Args: never
         Returns: {
+          can_access_customer_portal: boolean
           can_access_office: boolean
           can_access_worker: boolean
+          customer_id: string
           default_route: string
           has_role: boolean
+          is_customer: boolean
           is_worker: boolean
           show_toggle: boolean
           user_id: string
