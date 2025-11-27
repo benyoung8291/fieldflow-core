@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { CustomerPortalLayout } from "@/components/layout/CustomerPortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,16 @@ export default function LocationFloorPlans() {
   const { locationId } = useParams<{ locationId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  // Auto-select floor plan from URL params if present
+  useEffect(() => {
+    const floorPlanId = searchParams.get("floorPlan");
+    if (floorPlanId) {
+      setSelectedPlan(floorPlanId);
+    }
+  }, [searchParams]);
   const [markups, setMarkups] = useState<Markup[]>([]);
   const [mode, setMode] = useState<MarkupType>("pin");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
