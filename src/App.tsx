@@ -133,15 +133,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   // CRITICAL SECURITY: Customer portal users can ONLY access /customer routes
+  // Check for exact /customer path match (not /customers or other paths)
+  const isCustomerPortalRoute = location === "/customer" || location.startsWith("/customer/");
+  
   if (access.isCustomer && !access.canAccessOffice && !access.canAccessWorker) {
-    if (!location.startsWith("/customer")) {
+    if (!isCustomerPortalRoute) {
       return <Navigate to="/customer" replace />;
     }
     return <>{children}</>;
   }
 
   // Customer portal routes - require customer access
-  if (location.startsWith("/customer")) {
+  if (isCustomerPortalRoute) {
     if (!access.canAccessCustomerPortal) {
       // User is authenticated but doesn't have customer portal access
       if (access.canAccessOffice) {
