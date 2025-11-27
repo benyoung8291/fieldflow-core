@@ -55,6 +55,11 @@ export function MobileFloorPlanViewer({
   const displayUrl = imageUrl || pdfUrl;
   const isImage = imageUrl || !pdfUrl.toLowerCase().endsWith('.pdf');
   
+  console.log("MobileFloorPlanViewer: Received markups:", markups);
+  console.log("MobileFloorPlanViewer: PDF URL:", pdfUrl);
+  console.log("MobileFloorPlanViewer: Image URL:", imageUrl);
+  console.log("MobileFloorPlanViewer: Read-only mode:", readOnly);
+  
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);

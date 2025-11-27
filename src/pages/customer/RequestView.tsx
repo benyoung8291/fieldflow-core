@@ -276,6 +276,8 @@ export default function RequestView() {
 
         {/* Floor Plan Markups */}
         {markups && markups.length > 0 && (() => {
+          console.log("RequestView: Raw markups data:", markups);
+          
           // Group markups by floor plan
           const floorPlanGroups = markups.reduce((acc: any, markup: any) => {
             const floorPlanId = markup.floor_plan_id;
@@ -285,34 +287,40 @@ export default function RequestView() {
                 markups: []
               };
             }
+            console.log("RequestView: Adding markup to group:", markup.markup_data);
             acc[floorPlanId].markups.push(markup.markup_data);
             return acc;
           }, {});
 
-          return Object.entries(floorPlanGroups).map(([floorPlanId, group]: [string, any]) => (
-            <Card key={floorPlanId} className="border-border/40">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">
-                    {group.floorPlan?.floor_number && `${group.floorPlan.floor_number} - `}
-                    {group.floorPlan?.name}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[500px] rounded-lg overflow-hidden border border-border/40">
-                  <MobileFloorPlanViewer
-                    pdfUrl={group.floorPlan?.file_url || ""}
-                    imageUrl={group.floorPlan?.image_url}
-                    markups={group.markups}
-                    onMarkupsChange={() => {}}
-                    readOnly={true}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ));
+          console.log("RequestView: Floor plan groups:", floorPlanGroups);
+
+          return Object.entries(floorPlanGroups).map(([floorPlanId, group]: [string, any]) => {
+            console.log("RequestView: Rendering floor plan group:", floorPlanId, "with markups:", group.markups);
+            return (
+              <Card key={floorPlanId} className="border-border/40">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">
+                      {group.floorPlan?.floor_number && `${group.floorPlan.floor_number} - `}
+                      {group.floorPlan?.name}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[500px] rounded-lg overflow-hidden border border-border/40">
+                    <MobileFloorPlanViewer
+                      pdfUrl={group.floorPlan?.file_url || ""}
+                      imageUrl={group.floorPlan?.image_url}
+                      markups={group.markups}
+                      onMarkupsChange={() => {}}
+                      readOnly={true}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          });
         })()}
 
         {/* Appointment Details */}
