@@ -69,7 +69,10 @@ export function MobileFloorPlanViewer({
   
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [contentDimensions, setContentDimensions] = useState({ width: 0, height: 0 });
+  const [isInitialZoomSet, setIsInitialZoomSet] = useState(false);
   
   // Pan state
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
@@ -115,35 +118,36 @@ export function MobileFloorPlanViewer({
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  // Initial zoom and center on mount
+  // Initial zoom and center when content loads
   useEffect(() => {
-    if (!containerDimensions.width || !containerDimensions.height || !contentRef.current) {
+    if (isInitialZoomSet || !containerDimensions.width || !containerDimensions.height || !contentDimensions.height) {
       return;
     }
 
-    // Get the natural dimensions of the content
-    const contentWidth = containerDimensions.width;
-    const contentHeight = containerDimensions.height;
-
     // Calculate scale to fit 80% of screen height
-    const targetHeightScale = (containerDimensions.height * 0.8) / contentHeight;
-    const initialScale = Math.max(0.5, Math.min(3, targetHeightScale));
+    const targetHeight = containerDimensions.height * 0.8;
+    const initialScale = targetHeight / contentDimensions.height;
+    const clampedScale = Math.max(0.5, Math.min(3, initialScale));
 
     // Calculate offset to center the content
-    const scaledWidth = contentWidth * initialScale;
-    const scaledHeight = contentHeight * initialScale;
+    const scaledWidth = contentDimensions.width * clampedScale;
+    const scaledHeight = contentDimensions.height * clampedScale;
     const offsetX = (containerDimensions.width - scaledWidth) / 2;
     const offsetY = (containerDimensions.height - scaledHeight) / 2;
 
     console.log("Initial zoom setup:", {
       containerDimensions,
+      contentDimensions,
+      targetHeight,
       initialScale,
+      clampedScale,
       offset: { x: offsetX, y: offsetY }
     });
 
-    setScale(initialScale);
+    setScale(clampedScale);
     setOffset({ x: offsetX, y: offsetY });
-  }, [containerDimensions.width, containerDimensions.height]);
+    setIsInitialZoomSet(true);
+  }, [containerDimensions.width, containerDimensions.height, contentDimensions.height, isInitialZoomSet]);
 
   // Auto-zoom to fit markups in read-only mode
   useEffect(() => {
@@ -552,16 +556,26 @@ export function MobileFloorPlanViewer({
         >
           {isImage ? (
             <img
+              ref={imgRef}
               src={displayUrl}
               alt="Floor plan"
-              onLoad={() => {
+              onLoad={(e) => {
+                const img = e.currentTarget;
                 if (containerRef.current) {
                   setContainerDimensions({
                     width: containerRef.current.clientWidth,
                     height: containerRef.current.clientHeight,
                   });
                 }
+                setContentDimensions({
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                });
                 setNumPages(1);
+                console.log("Image loaded:", {
+                  natural: { width: img.naturalWidth, height: img.naturalHeight },
+                  rendered: { width: img.width, height: img.height }
+                });
               }}
               style={{
                 width: containerDimensions.width || "100%",
@@ -581,6 +595,17 @@ export function MobileFloorPlanViewer({
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
                 width={containerDimensions.width || window.innerWidth}
+                onLoadSuccess={(page) => {
+                  const viewport = page.getViewport({ scale: 1 });
+                  setContentDimensions({
+                    width: viewport.width,
+                    height: viewport.height,
+                  });
+                  console.log("PDF page loaded:", {
+                    width: viewport.width,
+                    height: viewport.height
+                  });
+                }}
               />
             </Document>
           )}
