@@ -11,15 +11,16 @@ import WorkerSuggestionsDialog from "./WorkerSuggestionsDialog";
 
 interface ServiceOrdersSidebarProps {
   onSelectWorkerForOrder?: (workerId: string, serviceOrderId: string, suggestedDate?: string) => void;
+  stateFilter?: string;
 }
 
-export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: ServiceOrdersSidebarProps) {
+export default function ServiceOrdersSidebar({ onSelectWorkerForOrder, stateFilter = "all" }: ServiceOrdersSidebarProps) {
   const [showWorkerSuggestions, setShowWorkerSuggestions] = useState(false);
   const [aiServiceOrderId, setAiServiceOrderId] = useState<string>("");
   const [aiServiceOrderTitle, setAiServiceOrderTitle] = useState<string>("");
 
   const { data: serviceOrdersWithAppointments = [], error } = useQuery({
-    queryKey: ["service-orders-with-appointments"],
+    queryKey: ["service-orders-with-appointments", stateFilter],
     queryFn: async () => {
       const { data: orders, error: ordersError } = await supabase
         .from("service_orders")
@@ -27,7 +28,8 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
           *,
           customers!service_orders_customer_id_fkey(name),
           appointments(id, start_time, end_time, status),
-          service_order_line_items(description, quantity)
+          service_order_line_items(description, quantity),
+          customer_locations!service_orders_customer_location_id_fkey(state)
         `)
         .in("status", ["draft", "scheduled", "in_progress"])
         .order("created_at", { ascending: false });
@@ -37,8 +39,16 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder }: Service
         throw ordersError;
       }
 
+      // Filter by state if filter is applied
+      let filteredOrders = orders || [];
+      if (stateFilter !== "all") {
+        filteredOrders = filteredOrders.filter((order: any) => 
+          order.customer_locations?.state === stateFilter
+        );
+      }
+
       // Calculate remaining hours and generate summary for each service order
-      return (orders || []).map((order: any) => {
+      return filteredOrders.map((order: any) => {
         const estimatedHours = order.estimated_hours || 0;
         
         // Calculate total scheduled hours from appointments
