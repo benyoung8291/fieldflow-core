@@ -181,14 +181,14 @@ export default function CustomerLocationDialog({
               <div>
                 <Label htmlFor="site_contact_id">Site Contact</Label>
                 <Select
-                  value={siteContactId || ""}
-                  onValueChange={(value) => setValue("site_contact_id", value)}
+                  value={siteContactId || "none"}
+                  onValueChange={(value) => setValue("site_contact_id", value === "none" ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select site contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {contacts.map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.first_name} {contact.last_name}
@@ -201,14 +201,14 @@ export default function CustomerLocationDialog({
               <div>
                 <Label htmlFor="facility_manager_contact_id">Facility Manager</Label>
                 <Select
-                  value={facilityManagerId || ""}
-                  onValueChange={(value) => setValue("facility_manager_contact_id", value)}
+                  value={facilityManagerId || "none"}
+                  onValueChange={(value) => setValue("facility_manager_contact_id", value === "none" ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select facility manager" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {contacts.map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.first_name} {contact.last_name}
