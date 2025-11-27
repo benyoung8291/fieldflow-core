@@ -2292,35 +2292,63 @@ export type Database = {
       floor_plans: {
         Row: {
           created_at: string | null
+          customer_location_id: string
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
           file_url: string
+          floor_number: number | null
           id: string
-          location_id: string | null
           name: string
           tenant_id: string
           updated_at: string | null
+          uploaded_by: string | null
         }
         Insert: {
           created_at?: string | null
+          customer_location_id: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
           file_url: string
+          floor_number?: number | null
           id?: string
-          location_id?: string | null
           name: string
           tenant_id: string
           updated_at?: string | null
+          uploaded_by?: string | null
         }
         Update: {
           created_at?: string | null
+          customer_location_id?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
           file_url?: string
+          floor_number?: number | null
           id?: string
-          location_id?: string | null
           name?: string
           tenant_id?: string
           updated_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "floor_plans_customer_location_id_fkey"
+            columns: ["customer_location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "floor_plans_location_id_fkey"
-            columns: ["location_id"]
+            columns: ["customer_location_id"]
             isOneToOne: false
             referencedRelation: "customer_locations"
             referencedColumns: ["id"]
