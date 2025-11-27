@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function PresencePanel() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { onlineCount, isConnected } = usePresenceSystem();
+  const { onlineCount, isConnected, onlineUsers } = usePresenceSystem();
 
   return (
     <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -31,7 +31,7 @@ export default function PresencePanel() {
           <SheetTitle>Team Activity</SheetTitle>
         </SheetHeader>
         <div className="h-[calc(100vh-73px)]">
-          <ActivityAndUsers />
+          <ActivityAndUsers onlineUsers={onlineUsers} />
         </div>
       </SheetContent>
     </Sheet>

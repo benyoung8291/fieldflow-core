@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay, startOfMonth, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { TodaysTasks } from "@/components/dashboard/TodaysTasks";
-import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 import { PerrAIAssistant } from "@/components/dashboard/PerrAIAssistant";
 
 export default function Dashboard() {
