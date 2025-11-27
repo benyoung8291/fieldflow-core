@@ -1,7 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-import { sanitizeError } from "../_shared/errorHandler.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+function getErrorMessage(error: any): string {
+  if (typeof error === 'string') return error;
+  if (error?.message) return error.message;
+  if (error?.msg) return error.msg;
+  return 'An unexpected error occurred';
+}
 
 const createPortalUserSchema = z.object({
   tenantId: z.string().uuid(),
@@ -15,8 +26,10 @@ const createPortalUserSchema = z.object({
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" } });
+    return new Response("ok", { headers: corsHeaders });
   }
+
+  console.log("Starting create-customer-portal-user function");
 
   try {
     const supabaseAdmin = createClient(
@@ -28,15 +41,25 @@ serve(async (req) => {
     // Authenticate requesting user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), { status: 401 });
+      console.error("Missing authorization header");
+      return new Response(
+        JSON.stringify({ error: "Missing authorization" }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    console.log("Authenticated user:", user.id);
 
     // Verify user is tenant admin or has permission
     const { data: userRole } = await supabaseAdmin
@@ -46,12 +69,20 @@ serve(async (req) => {
       .single();
 
     if (!userRole || !["tenant_admin", "super_admin"].includes(userRole.role)) {
-      return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403 });
+      console.error("Insufficient permissions. User role:", userRole?.role);
+      return new Response(
+        JSON.stringify({ error: "Insufficient permissions" }), 
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    console.log("User authorized with role:", userRole.role);
 
     // Parse and validate request body
     const body = await req.json();
+    console.log("Request body received:", { ...body, password: "[REDACTED]" });
     const validated = createPortalUserSchema.parse(body);
+    console.log("Validation successful");
 
     // Create user in auth.users
     const { data: authData, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
@@ -67,10 +98,12 @@ serve(async (req) => {
     if (createUserError || !authData.user) {
       console.error("Error creating auth user:", createUserError);
       return new Response(
-        JSON.stringify({ error: sanitizeError(createUserError, "create-auth-user") }),
-        { status: 400 }
+        JSON.stringify({ error: getErrorMessage(createUserError) }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log("Auth user created:", authData.user.id);
 
     // Create portal user record
     const { error: portalError } = await supabaseAdmin
@@ -90,13 +123,15 @@ serve(async (req) => {
 
     if (portalError) {
       // Rollback: delete the auth user
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       console.error("Error creating portal user:", portalError);
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       return new Response(
-        JSON.stringify({ error: sanitizeError(portalError, "create-portal-user") }),
-        { status: 400 }
+        JSON.stringify({ error: getErrorMessage(portalError) }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log("Portal user created");
 
     // Assign customer role
     const { error: roleError } = await supabaseAdmin
@@ -113,6 +148,8 @@ serve(async (req) => {
       // Continue anyway, role can be fixed later
     }
 
+    console.log("Customer portal user created successfully");
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -120,7 +157,7 @@ serve(async (req) => {
         message: "Portal user created successfully",
       }),
       {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
     );
@@ -130,13 +167,13 @@ serve(async (req) => {
     if (error instanceof z.ZodError) {
       return new Response(
         JSON.stringify({ error: "Invalid input", details: error.errors }),
-        { status: 400 }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ error: sanitizeError(error, "create-customer-portal-user") }),
-      { status: 500 }
+      JSON.stringify({ error: getErrorMessage(error) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
