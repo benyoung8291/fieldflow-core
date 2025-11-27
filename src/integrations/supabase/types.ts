@@ -1538,6 +1538,126 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_portal_settings: {
+        Row: {
+          allow_location_viewing: boolean
+          allow_request_creation: boolean
+          allow_request_viewing: boolean
+          created_at: string
+          custom_branding: Json | null
+          customer_id: string
+          id: string
+          is_enabled: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_location_viewing?: boolean
+          allow_request_creation?: boolean
+          allow_request_viewing?: boolean
+          created_at?: string
+          custom_branding?: Json | null
+          customer_id: string
+          id?: string
+          is_enabled?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_location_viewing?: boolean
+          allow_request_creation?: boolean
+          allow_request_viewing?: boolean
+          created_at?: string
+          custom_branding?: Json | null
+          customer_id?: string
+          id?: string
+          is_enabled?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_settings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_portal_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_portal_users: {
+        Row: {
+          created_at: string
+          customer_id: string
+          email: string
+          first_name: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean
+          last_login_at: string | null
+          last_name: string
+          phone: string | null
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          email: string
+          first_name: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          last_login_at?: string | null
+          last_name: string
+          phone?: string | null
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          email?: string
+          first_name?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          last_login_at?: string | null
+          last_name?: string
+          phone?: string | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_users_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_portal_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           abn: string | null
@@ -3673,6 +3793,78 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_floor_plans: {
+        Row: {
+          building_section: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          floor_number: string | null
+          id: string
+          is_primary: boolean | null
+          location_id: string
+          tenant_id: string
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          building_section?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          floor_number?: string | null
+          id?: string
+          is_primary?: boolean | null
+          location_id: string
+          tenant_id: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          building_section?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          floor_number?: string | null
+          id?: string
+          is_primary?: boolean | null
+          location_id?: string
+          tenant_id?: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_floor_plans_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_floor_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
