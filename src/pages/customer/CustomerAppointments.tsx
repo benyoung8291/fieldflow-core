@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Calendar, MapPin, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export default function CustomerAppointments() {
+  const navigate = useNavigate();
   const { data: profile } = useQuery({
     queryKey: ["customer-profile"],
     queryFn: async () => {
@@ -111,8 +113,9 @@ export default function CustomerAppointments() {
           <div className="space-y-3">
             {appointments.map((appointment: any) => (
               <Card 
-                key={appointment.id} 
-                className="border-border/40 hover-lift card-interactive overflow-hidden group"
+                key={appointment.id}
+                onClick={() => navigate(`/customer/appointments/${appointment.id}`)}
+                className="border-border/40 hover-lift card-interactive overflow-hidden group cursor-pointer"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 
