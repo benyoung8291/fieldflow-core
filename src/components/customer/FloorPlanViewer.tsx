@@ -388,6 +388,7 @@ export function FloorPlanViewer({
           <div className="absolute inset-0 pointer-events-none">
             {markups.map((markup, index) => {
               if (markup.type === "pin") {
+                const pinScale = 1 / scale;
                 return (
                   <div
                     key={markup.id}
@@ -395,7 +396,8 @@ export function FloorPlanViewer({
                     style={{
                       left: `${markup.x}%`,
                       top: `${markup.y}%`,
-                      transform: "translate(-50%, -100%)",
+                      transform: `translate(-50%, -100%) scale(${pinScale})`,
+                      transformOrigin: 'bottom center',
                     }}
                   >
                     <div className="relative flex flex-col items-center">
