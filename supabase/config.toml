@@ -102,3 +102,6 @@ verify_jwt = true
 [functions.generate-contract-service-orders]
 verify_jwt = false
 
+[functions.create-customer-portal-user]
+verify_jwt = true
+
