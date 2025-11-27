@@ -116,13 +116,16 @@ export function FloorPlanViewer({
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (mode !== "pin") return;
     
-    // Don't prevent clicks on child elements for pin mode
     const container = containerRef.current;
     if (!container) return;
     
-    const rect = container.getBoundingClientRect();
+    // Get the scaled content element
+    const scaledContent = container.querySelector('div[style*="transform"]') as HTMLElement;
+    if (!scaledContent) return;
     
-    // Calculate position relative to the container
+    const rect = scaledContent.getBoundingClientRect();
+    
+    // Calculate position relative to the scaled content
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
