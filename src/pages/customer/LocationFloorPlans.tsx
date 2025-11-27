@@ -48,7 +48,28 @@ export default function LocationFloorPlans() {
         .eq("customer_location_id", locationId!);
 
       if (error) throw error;
-      return data;
+      
+      // Generate signed URLs for PDFs to avoid CORS issues
+      const plansWithSignedUrls = await Promise.all(
+        (data || []).map(async (plan) => {
+          if (plan.file_path) {
+            const { data: signedUrl, error: signError } = await supabase
+              .storage
+              .from("floor-plans")
+              .createSignedUrl(plan.file_path, 3600); // 1 hour expiry
+            
+            if (signError) {
+              console.error("Error creating signed URL:", signError);
+              return plan;
+            }
+            
+            return { ...plan, signed_url: signedUrl.signedUrl };
+          }
+          return plan;
+        })
+      );
+      
+      return plansWithSignedUrls;
     },
     enabled: !!locationId,
   });
@@ -224,7 +245,7 @@ export default function LocationFloorPlans() {
             </CardHeader>
             <CardContent className="h-[calc(100%-5rem)]">
               <FloorPlanViewer
-                pdfUrl={selectedFloorPlan?.file_url || selectedFloorPlan?.file_path || ""}
+                pdfUrl={(selectedFloorPlan as any)?.signed_url || selectedFloorPlan?.file_url || ""}
                 markups={markups}
                 onMarkupsChange={setMarkups}
                 mode={mode}
