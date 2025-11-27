@@ -224,7 +224,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('click', handleActivity);
     };
-  }, [channel, currentUser, autoAwayMinutes, userStatus, activityTimeout]);
+  }, [channel, currentUser, autoAwayMinutes, userStatus]);
 
   // Update field when it changes
   useEffect(() => {
