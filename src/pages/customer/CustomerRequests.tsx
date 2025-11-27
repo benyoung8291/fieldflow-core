@@ -96,7 +96,7 @@ export default function CustomerRequests() {
               <Card key={task.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
-                    <CardTitle className="text-lg line-clamp-2">{task.task_name}</CardTitle>
+                    <CardTitle className="text-lg line-clamp-2">{task.title}</CardTitle>
                     <div className="flex gap-2 flex-shrink-0">
                       <Badge variant={getStatusColor(task.status)}>
                         {task.status.replace("_", " ")}
