@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { toast } from "sonner";
 import { FloorPlansTab } from "@/components/customer-locations/FloorPlansTab";
+import { FutureServiceOrdersTab } from "@/components/customer-locations/FutureServiceOrdersTab";
 
 export default function CustomerLocationDetails() {
   const { id } = useParams();
@@ -106,7 +107,7 @@ export default function CustomerLocationDetails() {
             end_date
           )
         `)
-        .eq("customer_location_id", id)
+        .eq("location_id", id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -418,6 +419,7 @@ export default function CustomerLocationDetails() {
             <CardHeader>
               <TabsList>
                 <TabsTrigger value="service-orders">Service Orders</TabsTrigger>
+                <TabsTrigger value="future-orders">Future Service Orders</TabsTrigger>
                 <TabsTrigger value="contracts">Contract Line Items</TabsTrigger>
                 <TabsTrigger value="appointments">Scheduled Work</TabsTrigger>
                 <TabsTrigger value="floor-plans">Floor Plans</TabsTrigger>
@@ -469,6 +471,10 @@ export default function CustomerLocationDetails() {
                     </TableBody>
                   </Table>
                 )}
+              </TabsContent>
+
+              <TabsContent value="future-orders" className="mt-0">
+                <FutureServiceOrdersTab contractLineItems={contractLineItems || []} />
               </TabsContent>
 
               <TabsContent value="contracts" className="mt-0">
