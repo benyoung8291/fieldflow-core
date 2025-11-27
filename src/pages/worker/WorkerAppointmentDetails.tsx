@@ -39,6 +39,7 @@ import FieldReportsList from '@/components/field-reports/FieldReportsList';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 import { WorkerAppointmentConfirmation } from '@/components/worker/WorkerAppointmentConfirmation';
+import { AppointmentCompletionReport } from '@/components/worker/AppointmentCompletionReport';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
@@ -1261,6 +1262,17 @@ export default function WorkerAppointmentDetails() {
             <FieldReportsList appointmentId={id!} onReportStateChange={refetchFieldReports} />
           </CardContent>
         </Card>
+
+        {/* Completion Report */}
+        {appointment.requires_completion_report && 
+         !appointment.completion_reported_at && 
+         !timeLog && 
+         !isCompleted && (
+          <AppointmentCompletionReport
+            appointmentId={appointment.id}
+            onComplete={loadAppointmentData}
+          />
+        )}
 
         {/* Complete Job */}
         {timeLog && !timeLog.clock_out && !isCompleted && (

@@ -34,7 +34,14 @@ export default function CustomerRequests() {
         .select(`
           *,
           pipeline:helpdesk_pipelines(name, color),
-          appointment:appointments(id, start_time, end_time, status)
+          appointment:appointments(
+            id, 
+            start_time, 
+            end_time, 
+            status, 
+            completion_reported_at, 
+            completion_notes
+          )
         `)
         .eq("customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
@@ -179,6 +186,21 @@ export default function CustomerRequests() {
                           </div>
                         )}
                       </div>
+
+                      {/* Completion Information */}
+                      {ticket.appointment?.completion_reported_at && (
+                        <div className="mt-3 p-3 bg-success/5 border border-success/20 rounded-lg space-y-2">
+                          <div className="flex items-center gap-2 text-success">
+                            <div className="h-2 w-2 rounded-full bg-success" />
+                            <span className="text-xs font-semibold">Work Completed</span>
+                          </div>
+                          {ticket.appointment.completion_notes && (
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {ticket.appointment.completion_notes}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
