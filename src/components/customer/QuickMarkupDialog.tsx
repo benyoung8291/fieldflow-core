@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,13 @@ export function QuickMarkupDialog({ open, onOpenChange }: QuickMarkupDialogProps
     },
     enabled: !!profile?.customer_id,
   });
+
+  // Auto-select location if there's only one
+  useEffect(() => {
+    if (locations && locations.length === 1 && !selectedLocation) {
+      setSelectedLocation(locations[0].id);
+    }
+  }, [locations, selectedLocation]);
 
   const { data: floorPlans, isLoading: floorPlansLoading } = useQuery({
     queryKey: ["floor-plans", selectedLocation],
@@ -123,7 +130,7 @@ export function QuickMarkupDialog({ open, onOpenChange }: QuickMarkupDialogProps
                 onValueChange={setSelectedFloorPlan}
                 options={
                   floorPlans?.map((plan) => ({
-                    label: plan.name,
+                    label: `Floor ${plan.floor_number} - ${plan.name}`,
                     value: plan.id,
                   })) || []
                 }
