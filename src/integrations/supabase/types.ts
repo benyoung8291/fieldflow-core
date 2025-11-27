@@ -2327,6 +2327,7 @@ export type Database = {
           file_url: string
           floor_number: number | null
           id: string
+          image_url: string | null
           name: string
           tenant_id: string
           updated_at: string | null
@@ -2343,6 +2344,7 @@ export type Database = {
           file_url: string
           floor_number?: number | null
           id?: string
+          image_url?: string | null
           name: string
           tenant_id: string
           updated_at?: string | null
@@ -2359,6 +2361,7 @@ export type Database = {
           file_url?: string
           floor_number?: number | null
           id?: string
+          image_url?: string | null
           name?: string
           tenant_id?: string
           updated_at?: string | null

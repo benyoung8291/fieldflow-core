@@ -217,6 +217,8 @@ export default function LocationFloorPlans() {
   };
 
   const selectedFloorPlan = floorPlans?.find((p) => p.id === selectedPlan);
+  const floorPlanUrl = selectedFloorPlan?.signed_url || selectedFloorPlan?.file_url;
+  const floorPlanImageUrl = selectedFloorPlan?.image_url;
 
   return (
     <CustomerPortalLayout>
@@ -296,7 +298,8 @@ export default function LocationFloorPlans() {
               </CardHeader>
               <CardContent className="h-[calc(100%-5rem)]">
                  <FloorPlanViewer
-                   pdfUrl={selectedFloorPlan?.signed_url || selectedFloorPlan?.file_url || ""}
+                   pdfUrl={floorPlanUrl || ""}
+                   imageUrl={floorPlanImageUrl}
                    markups={markups}
                    onMarkupsChange={setMarkups}
                    mode={mode}

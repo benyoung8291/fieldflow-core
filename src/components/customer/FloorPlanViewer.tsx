@@ -37,6 +37,7 @@ export type Markup = PinMarkup | ZoneMarkup;
 
 interface FloorPlanViewerProps {
   pdfUrl: string;
+  imageUrl?: string; // Optional pre-converted image URL for faster loading
   markups: Markup[];
   onMarkupsChange: (markups: Markup[]) => void;
   mode: MarkupType;
@@ -45,11 +46,15 @@ interface FloorPlanViewerProps {
 
 export function FloorPlanViewer({
   pdfUrl,
+  imageUrl,
   markups,
   onMarkupsChange,
   mode,
   onModeChange,
 }: FloorPlanViewerProps) {
+  // Prefer imageUrl over pdfUrl for better performance
+  const displayUrl = imageUrl || pdfUrl;
+  const isImage = imageUrl || !pdfUrl.toLowerCase().endsWith('.pdf');
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);
@@ -329,7 +334,7 @@ export function FloorPlanViewer({
         )}
       </div>
 
-      {/* PDF Viewer with Markups */}
+      {/* Floor Plan Viewer with Markups */}
       <div
         ref={containerRef}
         className="relative flex-1 overflow-auto bg-gradient-to-br from-muted/20 to-muted/40 rounded-2xl touch-none"
@@ -346,22 +351,47 @@ export function FloorPlanViewer({
         }}
       >
         <div className="relative inline-block" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={(error) => {
-              console.error("PDF load error:", error);
-              toast.error("Failed to load floor plan");
-            }}
-            className="pdf-document"
-          >
-            <Page
-              pageNumber={currentPage}
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-              width={containerDimensions.width || 800}
+          {isImage ? (
+            <img
+              src={displayUrl}
+              alt="Floor plan"
+              onLoad={() => {
+                if (containerRef.current) {
+                  setContainerDimensions({
+                    width: containerRef.current.clientWidth,
+                    height: containerRef.current.clientHeight,
+                  });
+                }
+                setNumPages(1);
+              }}
+              onError={(error) => {
+                console.error("Image load error:", error);
+                toast.error("Failed to load floor plan");
+              }}
+              style={{ 
+                width: containerDimensions.width || 800,
+                height: 'auto',
+                display: 'block'
+              }}
             />
-          </Document>
+          ) : (
+            <Document
+              file={displayUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={(error) => {
+                console.error("PDF load error:", error);
+                toast.error("Failed to load floor plan");
+              }}
+              className="pdf-document"
+            >
+              <Page
+                pageNumber={currentPage}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                width={containerDimensions.width || 800}
+              />
+            </Document>
+          )}
 
           {/* Render Markups - simplified for list-based editing */}
           <div className="absolute inset-0 pointer-events-none">

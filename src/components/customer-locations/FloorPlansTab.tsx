@@ -76,7 +76,7 @@ export function FloorPlansTab({ locationId, tenantId }: FloorPlansTabProps) {
         .getPublicUrl(fileName);
 
       // Create floor plan record
-      const { error: insertError } = await supabase
+      const { data: floorPlanData, error: insertError } = await supabase
         .from("floor_plans")
         .insert({
           tenant_id: tenantId,
@@ -90,11 +90,35 @@ export function FloorPlansTab({ locationId, tenantId }: FloorPlansTabProps) {
           floor_number: floorNumber ? parseInt(floorNumber) : null,
           description: description || null,
           uploaded_by: user.id,
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
 
-      toast.success("Floor plan uploaded successfully");
+      // If it's a PDF, trigger background conversion to image for faster loading
+      const isPdf = selectedFile.type === "application/pdf" || fileExt?.toLowerCase() === "pdf";
+      if (isPdf && floorPlanData) {
+        toast.success("Floor plan uploaded. Converting PDF to image for faster loading...");
+        
+        // Trigger conversion in background - don't await
+        supabase.functions.invoke('convert-pdf-to-image', {
+          body: {
+            floorPlanId: floorPlanData.id,
+            filePath: fileName,
+          }
+        }).then(({ data, error }) => {
+          if (error) {
+            console.error("PDF conversion error:", error);
+          } else {
+            console.log("PDF converted successfully:", data);
+            queryClient.invalidateQueries({ queryKey: ["floor-plans", locationId] });
+          }
+        });
+      } else {
+        toast.success("Floor plan uploaded successfully");
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["floor-plans", locationId] });
       
       // Reset form
