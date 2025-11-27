@@ -98,6 +98,9 @@ const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"
 const CustomerLocations = lazy(() => import("./pages/customer/CustomerLocations"));
 const CustomerRequests = lazy(() => import("./pages/customer/CustomerRequests"));
 const LocationFloorPlans = lazy(() => import("./pages/customer/LocationFloorPlans"));
+const CustomerServiceOrders = lazy(() => import("./pages/customer/CustomerServiceOrders"));
+const CustomerFieldReports = lazy(() => import("./pages/customer/CustomerFieldReports"));
+const CustomerAppointments = lazy(() => import("./pages/customer/CustomerAppointments"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -354,6 +357,9 @@ const App = () => {
             <Route path="/customer/locations" element={isAuthenticated ? <ProtectedRoute><CustomerLocations /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/locations/:locationId/floor-plans" element={isAuthenticated ? <ProtectedRoute><LocationFloorPlans /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/requests" element={isAuthenticated ? <ProtectedRoute><CustomerRequests /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/customer/service-orders" element={isAuthenticated ? <ProtectedRoute><CustomerServiceOrders /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/customer/field-reports" element={isAuthenticated ? <ProtectedRoute><CustomerFieldReports /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/customer/appointments" element={isAuthenticated ? <ProtectedRoute><CustomerAppointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
             <Route path="/worker/dashboard" element={isAuthenticated ? <ProtectedRoute><WorkerDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/profile" element={isAuthenticated ? <ProtectedRoute><WorkerProfile /></ProtectedRoute> : <Navigate to="/auth" replace />} />
