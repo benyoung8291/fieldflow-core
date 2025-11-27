@@ -50,6 +50,7 @@ export default function FieldReportForm({
   const [photoPairs, setPhotoPairs] = useState<PhotoPair[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [draftReportId, setDraftReportId] = useState<string | null>(null);
+  const [isApproved, setIsApproved] = useState(false);
   
   // Generate a unique key for this field report
   const storageKey = `field-report-draft-${appointmentId || 'standalone'}`;
@@ -92,6 +93,7 @@ export default function FieldReportForm({
             
           if (existingReport) {
             setDraftReportId(existingReport.id);
+            setIsApproved(existingReport.status === 'approved');
             setFormData({
               worker_name: existingReport.worker_name,
               service_date: existingReport.service_date,
@@ -761,6 +763,18 @@ export default function FieldReportForm({
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Approved Notice */}
+            {isApproved && (
+              <div className="bg-success/10 border border-success/20 rounded-lg p-4">
+                <p className="text-sm font-semibold text-success">
+                  ✓ This report has been approved and can no longer be edited.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  To make changes, an administrator must unapprove the report first.
+                </p>
+              </div>
+            )}
+            
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -770,6 +784,7 @@ export default function FieldReportForm({
                   value={formData.worker_name}
                   onChange={(e) => setFormData({ ...formData, worker_name: e.target.value })}
                   required
+                  disabled={isApproved}
                 />
               </div>
               <div className="space-y-2">
@@ -780,6 +795,7 @@ export default function FieldReportForm({
                   value={formData.service_date}
                   onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
                   required
+                  disabled={isApproved}
                 />
               </div>
               <div className="space-y-2">
@@ -790,6 +806,7 @@ export default function FieldReportForm({
                   value={formData.arrival_time}
                   onChange={(e) => setFormData({ ...formData, arrival_time: e.target.value })}
                   required
+                  disabled={isApproved}
                 />
               </div>
             </div>
@@ -806,6 +823,7 @@ export default function FieldReportForm({
                     min={1}
                     max={5}
                     step={1}
+                    disabled={isApproved}
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Poor</span>
@@ -820,6 +838,7 @@ export default function FieldReportForm({
                     min={1}
                     max={5}
                     step={1}
+                    disabled={isApproved}
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Poor</span>
@@ -833,6 +852,7 @@ export default function FieldReportForm({
                     value={formData.flooring_state_description}
                     onChange={(e) => setFormData({ ...formData, flooring_state_description: e.target.value })}
                     rows={3}
+                    disabled={isApproved}
                   />
                 </div>
               </div>
@@ -849,6 +869,7 @@ export default function FieldReportForm({
                     checked={formData.has_signed_swms}
                     onChange={(e) => setFormData({ ...formData, has_signed_swms: e.target.checked })}
                     className="rounded"
+                    disabled={isApproved}
                   />
                   <Label htmlFor="swms">Signed SWMS available</Label>
                 </div>
@@ -859,6 +880,7 @@ export default function FieldReportForm({
                     checked={formData.equipment_tested_tagged}
                     onChange={(e) => setFormData({ ...formData, equipment_tested_tagged: e.target.checked })}
                     className="rounded"
+                    disabled={isApproved}
                   />
                   <Label htmlFor="tested">Equipment tested and tagged</Label>
                 </div>
@@ -869,6 +891,7 @@ export default function FieldReportForm({
                     checked={formData.equipment_clean_working}
                     onChange={(e) => setFormData({ ...formData, equipment_clean_working: e.target.checked })}
                     className="rounded"
+                    disabled={isApproved}
                   />
                   <Label htmlFor="clean">Equipment clean and working</Label>
                 </div>
@@ -885,6 +908,7 @@ export default function FieldReportForm({
                   onChange={(e) => setFormData({ ...formData, work_description: e.target.value })}
                   rows={4}
                   required
+                  disabled={isApproved}
                 />
               </div>
               <div className="space-y-2">
@@ -894,6 +918,7 @@ export default function FieldReportForm({
                   value={formData.internal_notes}
                   onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
                   rows={3}
+                  disabled={isApproved}
                 />
               </div>
             </div>
@@ -1001,11 +1026,11 @@ export default function FieldReportForm({
 
             <Button
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || isApproved}
               className="w-full"
               size="lg"
             >
-              {loading ? 'Submitting...' : 'Submit Field Report'}
+              {loading ? 'Submitting...' : isApproved ? 'Report Approved - Cannot Edit' : 'Submit Field Report'}
             </Button>
           </CardContent>
         </Card>
