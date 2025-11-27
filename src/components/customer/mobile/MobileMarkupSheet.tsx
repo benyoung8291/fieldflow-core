@@ -26,8 +26,8 @@ export function MobileMarkupSheet({
     <Drawer>
       <DrawerTrigger asChild>
         <Button
-          variant="secondary"
-          className="fixed bottom-24 right-4 z-20 h-14 rounded-full shadow-2xl bg-background/95 backdrop-blur"
+          variant="default"
+          className="fixed bottom-24 right-4 z-20 h-14 rounded-full shadow-2xl"
         >
           <ChevronUp className="h-5 w-5 mr-2" />
           Markups ({markups.length})
