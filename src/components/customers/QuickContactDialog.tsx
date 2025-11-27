@@ -46,11 +46,15 @@ export default function QuickContactDialog({
         .select("tenant_id")
         .eq("id", user.id)
         .single();
+      
+      if (!profile?.tenant_id) {
+        throw new Error("Unable to determine tenant. Please refresh and try again.");
+      }
 
       const { data, error } = await supabase
         .from("contacts")
         .insert({
-          tenant_id: profile?.tenant_id,
+          tenant_id: profile.tenant_id,
           customer_id: customerId,
           first_name: formData.first_name,
           last_name: formData.last_name,

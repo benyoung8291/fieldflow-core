@@ -126,6 +126,10 @@ export function RecurringInvoiceDialog({
         .select("tenant_id")
         .eq("id", user.id)
         .single();
+      
+      if (!profile?.tenant_id) {
+        throw new Error("Unable to determine tenant. Please refresh and try again.");
+      }
 
       const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
       const tax_amount = subtotal * (values.tax_rate / 100);
@@ -145,7 +149,7 @@ export function RecurringInvoiceDialog({
           tax_rate: values.tax_rate,
           payment_terms: values.payment_terms,
           notes: values.notes || null,
-          tenant_id: profile?.tenant_id!,
+          tenant_id: profile.tenant_id,
           created_by: user.id,
           subtotal,
           tax_amount,
@@ -161,7 +165,7 @@ export function RecurringInvoiceDialog({
         .insert(
           lineItems.map((item, index) => ({
             recurring_invoice_id: recurringInvoice.id,
-            tenant_id: profile?.tenant_id!,
+            tenant_id: profile.tenant_id,
             description: item.description,
             quantity: item.quantity,
             unit_price: item.unit_price,

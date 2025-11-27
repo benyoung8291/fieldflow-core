@@ -145,13 +145,23 @@ export default function ServiceContractDialog({
   };
 
   const onSubmit = async (data: ContractFormData) => {
+    if (!profile?.tenant_id) {
+      toast.error("Unable to determine tenant. Please refresh and try again.");
+      return;
+    }
+    
+    if (!session?.user?.id) {
+      toast.error("Not authenticated. Please log in and try again.");
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       // Generate contract number
       const { data: latestContract } = await supabase
         .from("service_contracts")
         .select("contract_number")
-        .eq("tenant_id", profile?.tenant_id)
+        .eq("tenant_id", profile.tenant_id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -169,7 +179,7 @@ export default function ServiceContractDialog({
       const { data: newContract, error: contractError } = await supabase
         .from("service_contracts")
         .insert({
-          tenant_id: profile?.tenant_id,
+          tenant_id: profile.tenant_id,
           customer_id: data.customer_id,
           contract_number: newContractNumber,
           title: data.title,
@@ -182,7 +192,7 @@ export default function ServiceContractDialog({
           total_contract_value: totalContractValue,
           notes: data.notes,
           quote_id: quoteId || null,
-          created_by: session?.user?.id,
+          created_by: session.user.id,
         })
         .select()
         .single();
@@ -192,7 +202,7 @@ export default function ServiceContractDialog({
       // Create line items
       const lineItemsToInsert = data.line_items.map((item, index) => ({
         contract_id: newContract.id,
-        tenant_id: profile?.tenant_id,
+        tenant_id: profile.tenant_id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -218,7 +228,7 @@ export default function ServiceContractDialog({
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
           const fileExt = file.name.split(".").pop();
-          const fileName = `${profile?.tenant_id}/${newContract.id}/${Date.now()}-${file.name}`;
+          const fileName = `${profile.tenant_id}/${newContract.id}/${Date.now()}-${file.name}`;
 
           const { error: uploadError } = await supabase.storage
             .from("contract-attachments")
@@ -231,13 +241,13 @@ export default function ServiceContractDialog({
             .getPublicUrl(fileName);
 
           await supabase.from("service_contract_attachments").insert({
-            tenant_id: profile?.tenant_id,
+            tenant_id: profile.tenant_id,
             contract_id: newContract.id,
             file_name: file.name,
             file_url: urlData.publicUrl,
             file_type: fileExt,
             file_size: file.size,
-            uploaded_by: session?.user?.id,
+            uploaded_by: session.user.id,
           });
         }
       }
@@ -522,9 +532,9 @@ export default function ServiceContractDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Contract"}
-            </Button>
+          <Button type="submit" disabled={isSubmitting || !profile?.tenant_id}>
+            {isSubmitting ? "Creating..." : "Create Contract"}
+          </Button>
           </div>
         </form>
       </DialogContent>

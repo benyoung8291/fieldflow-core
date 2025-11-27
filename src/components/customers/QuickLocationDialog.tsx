@@ -88,11 +88,15 @@ export default function QuickLocationDialog({
         .select("tenant_id")
         .eq("id", user.id)
         .single();
+      
+      if (!profile?.tenant_id) {
+        throw new Error("Unable to determine tenant. Please refresh and try again.");
+      }
 
       const { data, error } = await supabase
         .from("customer_locations")
         .insert({
-          tenant_id: profile?.tenant_id,
+          tenant_id: profile.tenant_id,
           customer_id: customerId,
           name: formData.name,
           address: formData.address || null,

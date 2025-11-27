@@ -71,6 +71,10 @@ export default function ContactDialog({ open, onOpenChange, contact, customerId 
         .select("tenant_id")
         .eq("id", user.id)
         .single();
+      
+      if (!profile?.tenant_id) {
+        throw new Error("Unable to determine tenant. Please refresh and try again.");
+      }
 
       if (contact) {
         // Update existing contact
@@ -94,7 +98,7 @@ export default function ContactDialog({ open, onOpenChange, contact, customerId 
         const { error } = await supabase
           .from("contacts")
           .insert({
-            tenant_id: profile?.tenant_id,
+            tenant_id: profile.tenant_id,
             customer_id: customerId,
             first_name: formData.firstName,
             last_name: formData.lastName,
