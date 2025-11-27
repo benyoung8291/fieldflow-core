@@ -24,14 +24,18 @@ export default function CustomerRequests() {
     },
   });
 
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ["customer-tasks", profile?.customer_id],
+  const { data: tickets, isLoading } = useQuery({
+    queryKey: ["customer-tickets", profile?.customer_id],
     queryFn: async () => {
       if (!profile?.customer_id) return [];
 
       const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
+        .from("helpdesk_tickets")
+        .select(`
+          *,
+          pipeline:helpdesk_pipelines(name, color),
+          appointment:appointments(id, start_time, end_time, status)
+        `)
         .eq("customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
 
@@ -88,7 +92,7 @@ export default function CustomerRequests() {
           <div className="flex justify-center p-16">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : !tasks || tasks.length === 0 ? (
+        ) : !tickets || tickets.length === 0 ? (
           <Card className="border-border/40 bg-card/50">
             <CardContent className="py-16 text-center space-y-4">
               <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
@@ -104,9 +108,9 @@ export default function CustomerRequests() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {tasks.map((task) => (
+            {tickets.map((ticket: any) => (
               <Card 
-                key={task.id} 
+                key={ticket.id} 
                 className="border-border/40 hover-lift card-interactive overflow-hidden group"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -119,19 +123,24 @@ export default function CustomerRequests() {
                         <Badge 
                           className={cn(
                             "rounded-lg px-3 py-1 text-xs font-semibold border",
-                            getStatusColor(task.status)
+                            getStatusColor(ticket.status)
                           )}
                         >
-                          {formatStatus(task.status)}
+                          {formatStatus(ticket.status)}
                         </Badge>
-                        {task.priority && (
+                        {ticket.priority && (
                           <Badge 
                             className={cn(
                               "rounded-lg px-3 py-1 text-xs font-semibold border",
-                              getPriorityColor(task.priority)
+                              getPriorityColor(ticket.priority)
                             )}
                           >
-                            {task.priority.toUpperCase()}
+                            {ticket.priority.toUpperCase()}
+                          </Badge>
+                        )}
+                        {ticket.appointment && (
+                          <Badge variant="outline" className="rounded-lg">
+                            Scheduled
                           </Badge>
                         )}
                       </div>
@@ -139,13 +148,11 @@ export default function CustomerRequests() {
                       {/* Title & Description */}
                       <div className="space-y-1.5">
                         <h3 className="font-semibold text-base leading-tight line-clamp-2">
-                          {task.title}
+                          {ticket.subject}
                         </h3>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {task.description}
-                          </p>
-                        )}
+                        <p className="text-sm text-muted-foreground">
+                          Request #{ticket.ticket_number}
+                        </p>
                       </div>
 
                       {/* Meta Information */}
@@ -153,18 +160,18 @@ export default function CustomerRequests() {
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5" />
                           <span>
-                            {new Date(task.created_at).toLocaleDateString('en-US', {
+                            {new Date(ticket.created_at).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric'
                             })}
                           </span>
                         </div>
-                        {task.due_date && (
+                        {ticket.appointment?.start_time && (
                           <div className="flex items-center gap-1.5">
                             <Calendar className="h-3.5 w-3.5" />
                             <span>
-                              Due {new Date(task.due_date).toLocaleDateString('en-US', {
+                              Scheduled {new Date(ticket.appointment.start_time).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric'
                               })}

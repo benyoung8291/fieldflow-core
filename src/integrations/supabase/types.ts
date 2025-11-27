@@ -693,6 +693,9 @@ export type Database = {
           check_in_lng: number | null
           check_in_time: string | null
           check_out_time: string | null
+          completion_notes: string | null
+          completion_reported_at: string | null
+          completion_reported_by: string | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -711,6 +714,7 @@ export type Database = {
           recurrence_end_date: string | null
           recurrence_frequency: number | null
           recurrence_pattern: string | null
+          requires_completion_report: boolean | null
           service_order_id: string | null
           start_time: string
           status: Database["public"]["Enums"]["appointment_status"] | null
@@ -725,6 +729,9 @@ export type Database = {
           check_in_lng?: number | null
           check_in_time?: string | null
           check_out_time?: string | null
+          completion_notes?: string | null
+          completion_reported_at?: string | null
+          completion_reported_by?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -743,6 +750,7 @@ export type Database = {
           recurrence_end_date?: string | null
           recurrence_frequency?: number | null
           recurrence_pattern?: string | null
+          requires_completion_report?: boolean | null
           service_order_id?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
@@ -757,6 +765,9 @@ export type Database = {
           check_in_lng?: number | null
           check_in_time?: string | null
           check_out_time?: string | null
+          completion_notes?: string | null
+          completion_reported_at?: string | null
+          completion_reported_by?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
@@ -775,6 +786,7 @@ export type Database = {
           recurrence_end_date?: string | null
           recurrence_frequency?: number | null
           recurrence_pattern?: string | null
+          requires_completion_report?: boolean | null
           service_order_id?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
@@ -783,6 +795,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_completion_reported_by_fkey"
+            columns: ["completion_reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_completion_reported_by_fkey"
+            columns: ["completion_reported_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_parent_appointment_id_fkey"
             columns: ["parent_appointment_id"]
@@ -2753,6 +2779,7 @@ export type Database = {
       }
       helpdesk_tickets: {
         Row: {
+          appointment_id: string | null
           archived_at: string | null
           archived_by: string | null
           assigned_to: string | null
@@ -2782,10 +2809,11 @@ export type Database = {
           supplier_id: string | null
           tags: string[] | null
           tenant_id: string
-          ticket_number: string
+          ticket_number: string | null
           updated_at: string
         }
         Insert: {
+          appointment_id?: string | null
           archived_at?: string | null
           archived_by?: string | null
           assigned_to?: string | null
@@ -2815,10 +2843,11 @@ export type Database = {
           supplier_id?: string | null
           tags?: string[] | null
           tenant_id: string
-          ticket_number: string
+          ticket_number?: string | null
           updated_at?: string
         }
         Update: {
+          appointment_id?: string | null
           archived_at?: string | null
           archived_by?: string | null
           assigned_to?: string | null
@@ -2848,10 +2877,17 @@ export type Database = {
           supplier_id?: string | null
           tags?: string[] | null
           tenant_id?: string
-          ticket_number?: string
+          ticket_number?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "helpdesk_tickets_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "helpdesk_tickets_assigned_to_fkey"
             columns: ["assigned_to"]
@@ -7517,6 +7553,64 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      ticket_markups: {
+        Row: {
+          created_at: string | null
+          floor_plan_id: string
+          id: string
+          markup_data: Json | null
+          pin_x: number
+          pin_y: number
+          tenant_id: string
+          ticket_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          floor_plan_id: string
+          id?: string
+          markup_data?: Json | null
+          pin_x: number
+          pin_y: number
+          tenant_id: string
+          ticket_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          floor_plan_id?: string
+          id?: string
+          markup_data?: Json | null
+          pin_x?: number
+          pin_y?: number
+          tenant_id?: string
+          ticket_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_markups_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_markups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_markups_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_log_edit_history: {
         Row: {

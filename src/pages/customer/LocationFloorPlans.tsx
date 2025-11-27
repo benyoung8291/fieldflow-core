@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FloorPlanViewer, Markup, MarkupType } from "@/components/customer/FloorPlanViewer";
+import { FloorPlanMarkupList } from "@/components/customer/FloorPlanMarkupList";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText, ArrowLeft } from "lucide-react";
@@ -23,6 +24,7 @@ export default function LocationFloorPlans() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
+  const [selectedMarkupId, setSelectedMarkupId] = useState<string | null>(null);
 
   const { data: location } = useQuery({
     queryKey: ["customer-location", locationId],
@@ -91,37 +93,58 @@ export default function LocationFloorPlans() {
     },
   });
 
-  const createTaskMutation = useMutation({
+  // Get Requests pipeline ID
+  const { data: requestsPipeline } = useQuery({
+    queryKey: ["requests-pipeline", profile?.tenant_id],
+    queryFn: async () => {
+      if (!profile?.tenant_id) return null;
+      
+      const { data, error } = await supabase
+        .from("helpdesk_pipelines")
+        .select("id")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("name", "Requests")
+        .single();
+
+      if (error) {
+        console.error("Error fetching Requests pipeline:", error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  const createRequestMutation = useMutation({
     mutationFn: async () => {
-      if (!profile?.customer_id || !profile?.tenant_id) {
-        throw new Error("Missing customer or tenant information");
+      if (!profile?.customer_id || !profile?.tenant_id || !requestsPipeline?.id) {
+        throw new Error("Missing required information");
       }
 
-      // Create task
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: task, error: taskError } = await supabase
-        .from("tasks")
+      // Create helpdesk ticket
+      const { data: ticket, error: ticketError } = await supabase
+        .from("helpdesk_tickets")
         .insert([{
-          title: taskTitle,
-          description: taskDescription,
+          subject: `${taskTitle} - ${location?.name}`,
           customer_id: profile.customer_id,
           tenant_id: profile.tenant_id,
-          status: "pending",
+          pipeline_id: requestsPipeline.id,
+          status: "new",
           priority: "medium",
-          created_by: user.id,
         }])
         .select()
         .single();
 
-      if (taskError) throw taskError;
+      if (ticketError) throw ticketError;
 
       // Create markups
       const markupInserts = markups.map((markup) => {
         if (markup.type === "pin") {
           return {
-            task_id: task.id,
+            ticket_id: ticket.id,
             floor_plan_id: selectedPlan!,
             tenant_id: profile.tenant_id,
             pin_x: markup.x,
@@ -132,11 +155,10 @@ export default function LocationFloorPlans() {
             },
           };
         } else {
-          // For zones, store center point in pin_x/pin_y and full bounds in markup_data
           const centerX = markup.bounds.x + markup.bounds.width / 2;
           const centerY = markup.bounds.y + markup.bounds.height / 2;
           return {
-            task_id: task.id,
+            ticket_id: ticket.id,
             floor_plan_id: selectedPlan!,
             tenant_id: profile.tenant_id,
             pin_x: centerX,
@@ -151,16 +173,16 @@ export default function LocationFloorPlans() {
       });
 
       const { error: markupError } = await supabase
-        .from("task_markups")
+        .from("ticket_markups")
         .insert(markupInserts as any);
 
       if (markupError) throw markupError;
 
-      return task;
+      return ticket;
     },
     onSuccess: () => {
       toast.success("Request created successfully!");
-      queryClient.invalidateQueries({ queryKey: ["customer-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-tickets"] });
       setShowCreateDialog(false);
       setMarkups([]);
       setTaskTitle("");
@@ -172,6 +194,18 @@ export default function LocationFloorPlans() {
       toast.error("Failed to create request");
     },
   });
+
+  const updateMarkupNote = (id: string, notes: string) => {
+    setMarkups((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, notes } : m))
+    );
+  };
+
+  const deleteMarkup = (id: string) => {
+    setMarkups((prev) => prev.filter((m) => m.id !== id));
+    setSelectedMarkupId(null);
+    toast.success("Markup deleted");
+  };
 
   const selectedFloorPlan = floorPlans?.find((p) => p.id === selectedPlan);
 
@@ -222,37 +256,56 @@ export default function LocationFloorPlans() {
             </div>
           )
         ) : (
-          <Card className="h-[calc(100vh-12rem)]">
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle>{selectedFloorPlan?.name}</CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedPlan(null);
-                    setMarkups([]);
-                  }}
-                >
-                  Back to Plans
-                </Button>
-                <Button
-                  onClick={() => setShowCreateDialog(true)}
-                  disabled={markups.length === 0}
-                >
-                  Create Request ({markups.length})
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="h-[calc(100%-5rem)]">
-              <FloorPlanViewer
-                pdfUrl={(selectedFloorPlan as any)?.signed_url || selectedFloorPlan?.file_url || ""}
-                markups={markups}
-                onMarkupsChange={setMarkups}
-                mode={mode}
-                onModeChange={setMode}
-              />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-4">
+            {/* Floor Plan Viewer */}
+            <Card className="h-[calc(100vh-12rem)]">
+              <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
+                <CardTitle>{selectedFloorPlan?.name}</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedPlan(null);
+                      setMarkups([]);
+                    }}
+                  >
+                    Back to Plans
+                  </Button>
+                  <Button
+                    onClick={() => setShowCreateDialog(true)}
+                    disabled={markups.length === 0}
+                  >
+                    Create Request ({markups.length})
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[calc(100%-5rem)]">
+                <FloorPlanViewer
+                  pdfUrl={(selectedFloorPlan as any)?.signed_url || selectedFloorPlan?.file_url || ""}
+                  markups={markups}
+                  onMarkupsChange={setMarkups}
+                  mode={mode}
+                  onModeChange={setMode}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Markup List Sidebar */}
+            <Card className="h-fit lg:h-[calc(100vh-12rem)] overflow-auto">
+              <CardHeader>
+                <CardTitle className="text-lg">Markup List</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FloorPlanMarkupList
+                  markups={markups}
+                  onMarkupUpdate={updateMarkupNote}
+                  onMarkupDelete={deleteMarkup}
+                  selectedMarkupId={selectedMarkupId}
+                  onMarkupSelect={setSelectedMarkupId}
+                />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -289,10 +342,10 @@ export default function LocationFloorPlans() {
                 Cancel
               </Button>
               <Button
-                onClick={() => createTaskMutation.mutate()}
-                disabled={!taskTitle || createTaskMutation.isPending}
+                onClick={() => createRequestMutation.mutate()}
+                disabled={!taskTitle || createRequestMutation.isPending}
               >
-                {createTaskMutation.isPending ? (
+                {createRequestMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
