@@ -515,18 +515,20 @@ export function MobileFloorPlanViewer({
           <div className="absolute inset-0">
             {markups.map((markup, index) => {
               if (markup.type === "pin") {
+                const pinScale = 1 / scale;
+                const baseScale = selectedMarkupId === markup.id ? 1.25 : 1;
                 return (
                   <div
                     key={markup.id}
                     className={cn(
                       "absolute transition-all touch-none",
-                      selectedMarkupId === markup.id && "scale-125",
                       isDragging && draggedMarkupId === markup.id && "z-50"
                     )}
                     style={{
                       left: `${markup.x}%`,
                       top: `${markup.y}%`,
-                      transform: "translate(-50%, -100%)",
+                      transform: `translate(-50%, -100%) scale(${pinScale * baseScale})`,
+                      transformOrigin: 'bottom center',
                       pointerEvents: "auto",
                     }}
                     onTouchStart={(e) => handleMarkupTouchStart(e, markup.id)}
