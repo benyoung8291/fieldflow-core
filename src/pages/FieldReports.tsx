@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Search, Download, Send, Edit, Plus } from 'lucide-react';
+import { FileText, Search, Download, Edit, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,24 +75,48 @@ export default function FieldReports() {
 
       if (error) throw error;
 
-      toast.success('PDF generated successfully');
-      // Refresh report data
+      // Download the PDF if a URL is returned
+      if (data?.pdf_url) {
+        const link = document.createElement('a');
+        link.href = data.pdf_url;
+        link.download = `field-report-${selectedReport?.report_number}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('PDF downloaded successfully');
+      } else {
+        toast.success('PDF generated successfully');
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Failed to generate PDF');
     }
   };
 
-  const handleSendToCustomer = async () => {
+  const handleApproveReport = async () => {
+    if (!selectedReportId) return;
+    
     try {
-      toast.info('Sending report to customer...');
-      
-      // TODO: Implement email sending
-      
-      toast.success('Report sent to customer');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('field_reports')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+        })
+        .eq('id', selectedReportId);
+
+      if (error) throw error;
+
+      toast.success('Report approved successfully');
+      // Refresh reports list
+      window.location.reload();
     } catch (error) {
-      console.error('Error sending report:', error);
-      toast.error('Failed to send report');
+      console.error('Error approving report:', error);
+      toast.error('Failed to approve report');
     }
   };
 
@@ -222,10 +246,11 @@ export default function FieldReports() {
                     <Download className="h-4 w-4 mr-2" />
                     Generate PDF
                   </Button>
-                  <Button size="sm" onClick={handleSendToCustomer}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send to Customer
-                  </Button>
+                  {selectedReport.status !== 'approved' && (
+                    <Button size="sm" onClick={handleApproveReport}>
+                      Approve Report
+                    </Button>
+                  )}
                 </div>
               </div>
 
