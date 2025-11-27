@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import LeadDialog from "@/components/leads/LeadDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
-import QuoteDialog from "@/components/quotes/QuoteDialog";
+import QuoteHeaderDialog from "@/components/quotes/QuoteHeaderDialog";
 import TaskDialog from "@/components/tasks/TaskDialog";
 
 export default function CRMHub() {
@@ -168,7 +168,7 @@ export default function CRMHub() {
         onOpenChange={setIsContactDialogOpen}
         customerId=""
       />
-      <QuoteDialog
+      <QuoteHeaderDialog
         open={isQuoteDialogOpen}
         onOpenChange={setIsQuoteDialogOpen}
       />

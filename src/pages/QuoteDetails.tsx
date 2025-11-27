@@ -51,7 +51,6 @@ import {
   FolderKanban,
 } from "lucide-react";
 import InlineQuoteLineItems from "@/components/quotes/InlineQuoteLineItems";
-import QuoteDialog from "@/components/quotes/QuoteDialog";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
 import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
@@ -84,7 +83,6 @@ export default function QuoteDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [emailMode, setEmailMode] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
@@ -1128,16 +1126,7 @@ export default function QuoteDetails() {
     });
   }
 
-  // Move all file menu actions to header buttons - only show for draft quotes
-  if (isDraft && !isConverted) {
-    actionButtons.push({
-      label: "Edit in Dialog",
-      icon: <Edit className="h-4 w-4" />,
-      onClick: () => setDialogOpen(true),
-      variant: "outline",
-    });
-  }
-
+  // Move all file menu actions to header buttons
   if (isDraft && !isConverted) {
     actionButtons.push({
       label: "Archive Quote",
@@ -1679,9 +1668,7 @@ export default function QuoteDetails() {
 
       {quote && (
         <>
-          <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quoteId={id} />
-
-          <QuotePDFDialog 
+          <QuotePDFDialog
             open={pdfDialogOpen} 
             onOpenChange={(open) => {
               setPdfDialogOpen(open);

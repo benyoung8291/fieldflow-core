@@ -32,14 +32,12 @@ interface SaveAsTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lineItems: LineItem[];
-  quoteType: string;
 }
 
 export default function SaveAsTemplateDialog({
   open,
   onOpenChange,
   lineItems,
-  quoteType,
 }: SaveAsTemplateDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -75,7 +73,6 @@ export default function SaveAsTemplateDialog({
           tenant_id: profile.tenant_id,
           name: formData.name,
           description: formData.description,
-          quote_type: quoteType,
           created_by: user.id,
         })
         .select()
@@ -153,8 +150,7 @@ export default function SaveAsTemplateDialog({
         <DialogHeader>
           <DialogTitle>Save as Template</DialogTitle>
           <DialogDescription>
-            Save current line items as a reusable template. This will include all {lineItems.length} line items
-            {quoteType === 'complex' ? ' and their sub-items' : ''}.
+            Save current line items as a reusable template. This will include all {lineItems.length} line items and any child items.
           </DialogDescription>
         </DialogHeader>
 

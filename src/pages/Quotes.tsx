@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, DollarSign, Calendar, Eye, Copy, Archive, Trash2, Lock } from "lucide-react";
-import QuoteDialog from "@/components/quotes/QuoteDialog";
+import QuoteHeaderDialog from "@/components/quotes/QuoteHeaderDialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
@@ -43,16 +43,15 @@ export default function Quotes() {
   const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedQuoteId, setSelectedQuoteId] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<any>(null);
   const pagination = usePagination({ initialPageSize: 50 });
 
-  // Track presence for currently viewed quote
+  // Track presence for currently viewed quote (none in list view)
   useGenericPresence({
-    recordId: selectedQuoteId || null,
+    recordId: null,
     tableName: "quotes",
     displayField: "title",
     moduleName: "Quotes",
@@ -135,7 +134,6 @@ export default function Quotes() {
   };
 
   const handleCreateQuote = () => {
-    setSelectedQuoteId(undefined);
     setDialogOpen(true);
   };
 
@@ -183,7 +181,6 @@ export default function Quotes() {
         title: `${quote.title} (Copy)`,
         description: quote.description,
         quote_number: `${prefix}-${String(nextNumber).padStart(numberLength, "0")}`,
-        quote_type: quote.quote_type,
         subtotal: quote.subtotal,
         tax_rate: quote.tax_rate,
         tax_amount: quote.tax_amount,
@@ -587,10 +584,9 @@ export default function Quotes() {
         )}
       </div>
 
-      <QuoteDialog
+      <QuoteHeaderDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        quoteId={selectedQuoteId}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
