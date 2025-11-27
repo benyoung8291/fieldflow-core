@@ -61,6 +61,7 @@ export function MobileFloorPlanViewer({
   const [selectedMarkupId, setSelectedMarkupId] = useState<string | null>(null);
   const [history, setHistory] = useState<Markup[][]>([markups]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [markupSheetOpen, setMarkupSheetOpen] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -75,6 +76,12 @@ export function MobileFloorPlanViewer({
   const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
   const [initialScale, setInitialScale] = useState<number>(1);
   const [pinchCenter, setPinchCenter] = useState<{ x: number; y: number } | null>(null);
+  
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedMarkupId, setDraggedMarkupId] = useState<string | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
 
   const updateHistory = (newMarkups: Markup[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -82,24 +89,6 @@ export function MobileFloorPlanViewer({
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     onMarkupsChange(newMarkups);
-  };
-
-  const undo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      onMarkupsChange(history[newIndex]);
-      toast.success("Undone");
-    }
-  };
-
-  const redo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      onMarkupsChange(history[newIndex]);
-      toast.success("Redone");
-    }
   };
 
   useEffect(() => {
@@ -145,6 +134,82 @@ export function MobileFloorPlanViewer({
       x: (touches[0].clientX + touches[1].clientX) / 2,
       y: (touches[0].clientY + touches[1].clientY) / 2,
     };
+  };
+
+  const handleMarkupTouchStart = (e: React.TouchEvent, markupId: string) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const pos = getTouchPosition(touch);
+    
+    setDragStart(pos);
+    setSelectedMarkupId(markupId);
+    
+    // Start long-press timer
+    const timer = setTimeout(() => {
+      setIsDragging(true);
+      setDraggedMarkupId(markupId);
+      toast.success("Hold to drag");
+    }, 1000);
+    
+    setLongPressTimer(timer);
+  };
+
+  const handleMarkupTouchMove = useCallback(
+    throttle((e: React.TouchEvent, markupId: string) => {
+      if (!isDragging || draggedMarkupId !== markupId || !dragStart) return;
+      
+      e.stopPropagation();
+      const touch = e.touches[0];
+      const pos = getTouchPosition(touch);
+      
+      const markup = markups.find(m => m.id === markupId);
+      if (!markup) return;
+      
+      requestAnimationFrame(() => {
+        const newMarkups = markups.map((m) => {
+          if (m.id === markupId) {
+            if (m.type === "pin") {
+              return { ...m, x: pos.x, y: pos.y };
+            } else {
+              const deltaX = pos.x - dragStart.x;
+              const deltaY = pos.y - dragStart.y;
+              return {
+                ...m,
+                bounds: {
+                  x: m.bounds.x + deltaX,
+                  y: m.bounds.y + deltaY,
+                  width: m.bounds.width,
+                  height: m.bounds.height,
+                },
+              };
+            }
+          }
+          return m;
+        });
+        onMarkupsChange(newMarkups);
+      });
+      
+      setDragStart(pos);
+    }, 16),
+    [isDragging, draggedMarkupId, dragStart, markups, onMarkupsChange]
+  );
+
+  const handleMarkupTouchEnd = (e: React.TouchEvent, markupId: string) => {
+    e.stopPropagation();
+    
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    
+    if (isDragging) {
+      updateHistory(markups);
+      toast.success("Markup moved");
+    }
+    
+    setIsDragging(false);
+    setDraggedMarkupId(null);
+    setDragStart(null);
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -302,10 +367,8 @@ export function MobileFloorPlanViewer({
         scale={scale}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
+        markupsCount={markups.length}
+        onOpenMarkups={() => setMarkupSheetOpen(true)}
       />
 
       <div
@@ -363,21 +426,26 @@ export function MobileFloorPlanViewer({
           )}
 
           {/* Markups overlay */}
-          <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0">
             {markups.map((markup, index) => {
               if (markup.type === "pin") {
                 return (
                   <div
                     key={markup.id}
                     className={cn(
-                      "absolute pointer-events-none transition-all",
-                      selectedMarkupId === markup.id && "scale-125"
+                      "absolute transition-all touch-none",
+                      selectedMarkupId === markup.id && "scale-125",
+                      isDragging && draggedMarkupId === markup.id && "z-50"
                     )}
                     style={{
                       left: `${markup.x}%`,
                       top: `${markup.y}%`,
                       transform: "translate(-50%, -100%)",
+                      pointerEvents: "auto",
                     }}
+                    onTouchStart={(e) => handleMarkupTouchStart(e, markup.id)}
+                    onTouchMove={(e) => handleMarkupTouchMove(e, markup.id)}
+                    onTouchEnd={(e) => handleMarkupTouchEnd(e, markup.id)}
                   >
                     <div className="relative flex flex-col items-center">
                       <MapPin 
@@ -397,15 +465,20 @@ export function MobileFloorPlanViewer({
                   <div
                     key={markup.id}
                     className={cn(
-                      "absolute border-4 border-yellow-500 bg-yellow-500/20 pointer-events-none transition-all",
-                      selectedMarkupId === markup.id && "border-yellow-600 bg-yellow-500/30 animate-pulse"
+                      "absolute border-4 border-yellow-500 bg-yellow-500/20 transition-all touch-none",
+                      selectedMarkupId === markup.id && "border-yellow-600 bg-yellow-500/30 animate-pulse",
+                      isDragging && draggedMarkupId === markup.id && "z-50"
                     )}
                     style={{
                       left: `${markup.bounds.x}%`,
                       top: `${markup.bounds.y}%`,
                       width: `${markup.bounds.width}%`,
                       height: `${markup.bounds.height}%`,
+                      pointerEvents: "auto",
                     }}
+                    onTouchStart={(e) => handleMarkupTouchStart(e, markup.id)}
+                    onTouchMove={(e) => handleMarkupTouchMove(e, markup.id)}
+                    onTouchEnd={(e) => handleMarkupTouchEnd(e, markup.id)}
                   >
                     <div className="absolute top-2 left-2 bg-background/95 backdrop-blur px-3 py-1 rounded-full border-2 border-border shadow-xl">
                       <span className="text-sm font-bold">#{index + 1}</span>
@@ -437,6 +510,8 @@ export function MobileFloorPlanViewer({
         onMarkupSelect={setSelectedMarkupId}
         onMarkupUpdate={updateMarkupNote}
         onMarkupDelete={deleteMarkup}
+        open={markupSheetOpen}
+        onOpenChange={setMarkupSheetOpen}
       />
     </div>
   );
