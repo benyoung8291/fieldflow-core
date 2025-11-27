@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FloorPlanViewer, Markup, MarkupType } from "@/components/customer/FloorPlanViewer";
+import { MobileFloorPlanViewer } from "@/components/customer/MobileFloorPlanViewer";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { FloorPlanMarkupList } from "@/components/customer/FloorPlanMarkupList";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +27,7 @@ export default function LocationFloorPlans() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [selectedMarkupId, setSelectedMarkupId] = useState<string | null>(null);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const { data: location } = useQuery({
     queryKey: ["customer-location", locationId],
@@ -268,7 +271,42 @@ export default function LocationFloorPlans() {
               ))}
             </div>
           )
+        ) : isMobile ? (
+          // Mobile optimized full-screen view
+          <div className="fixed inset-0 z-50 bg-background">
+            <div className="absolute top-0 left-0 right-0 z-30 p-4 bg-gradient-to-b from-background to-transparent pointer-events-none">
+              <div className="flex items-center justify-between pointer-events-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedPlan(null);
+                    setMarkups([]);
+                  }}
+                  className="bg-background/95 backdrop-blur shadow-lg"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateDialog(true)}
+                  disabled={markups.length === 0}
+                  className="shadow-lg"
+                >
+                  Create ({markups.length})
+                </Button>
+              </div>
+            </div>
+            <MobileFloorPlanViewer
+              pdfUrl={floorPlanUrl || ""}
+              imageUrl={floorPlanImageUrl}
+              markups={markups}
+              onMarkupsChange={setMarkups}
+            />
+          </div>
         ) : (
+          // Desktop view
           <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-4">
             {/* Floor Plan Viewer */}
             <Card className="h-[calc(100vh-12rem)]">
