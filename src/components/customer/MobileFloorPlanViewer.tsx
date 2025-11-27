@@ -63,12 +63,18 @@ export function MobileFloorPlanViewer({
   const [historyIndex, setHistoryIndex] = useState(0);
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   
   // Pan state
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  
+  // Pinch zoom state
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+  const [initialScale, setInitialScale] = useState<number>(1);
+  const [pinchCenter, setPinchCenter] = useState<{ x: number; y: number } | null>(null);
 
   const updateHistory = (newMarkups: Markup[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -115,57 +121,106 @@ export function MobileFloorPlanViewer({
     setNumPages(numPages);
   };
 
+  const getTouchPosition = (touch: React.Touch): { x: number; y: number } => {
+    if (!contentRef.current) return { x: 0, y: 0 };
+    
+    // Get the bounding rect of the transformed content
+    const rect = contentRef.current.getBoundingClientRect();
+    
+    // Calculate position relative to the content
+    const x = ((touch.clientX - rect.left) / rect.width) * 100;
+    const y = ((touch.clientY - rect.top) / rect.height) * 100;
+    
+    return { x, y };
+  };
+
+  const calculatePinchDistance = (touches: React.TouchList): number => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const calculatePinchCenter = (touches: React.TouchList): { x: number; y: number } => {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  };
+
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Pinch to zoom (2 fingers)
+    if (e.touches.length === 2) {
+      setIsPanning(false);
+      setIsDrawing(false);
+      setInitialPinchDistance(calculatePinchDistance(e.touches));
+      setInitialScale(scale);
+      setPinchCenter(calculatePinchCenter(e.touches));
+      return;
+    }
+
     if (e.touches.length !== 1) return;
     
     const touch = e.touches[0];
-    const container = e.currentTarget;
-    const rect = container.getBoundingClientRect();
     
-    if (mode === "pan") {
-      setIsPanning(true);
-      setPanStart({ x: touch.clientX - offset.x, y: touch.clientY - offset.y });
-    } else if (mode === "pin") {
-      // Calculate position accounting for transformations
-      const containerWidth = rect.width / scale;
-      const containerHeight = rect.height / scale;
-      const adjustedX = (touch.clientX - rect.left - offset.x) / scale;
-      const adjustedY = (touch.clientY - rect.top - offset.y) / scale;
-      const x = (adjustedX / containerWidth) * 100;
-      const y = (adjustedY / containerHeight) * 100;
-      
+    if (mode === "pin") {
+      const pos = getTouchPosition(touch);
       const newMarkup: PinMarkup = {
         id: crypto.randomUUID(),
         type: "pin",
-        x,
-        y,
+        x: pos.x,
+        y: pos.y,
       };
       const newMarkups = [...markups, newMarkup];
       updateHistory(newMarkups);
       toast.success("Pin added");
     } else if (mode === "zone") {
-      // Calculate position accounting for transformations
-      const containerWidth = rect.width / scale;
-      const containerHeight = rect.height / scale;
-      const adjustedX = (touch.clientX - rect.left - offset.x) / scale;
-      const adjustedY = (touch.clientY - rect.top - offset.y) / scale;
-      const x = (adjustedX / containerWidth) * 100;
-      const y = (adjustedY / containerHeight) * 100;
+      const pos = getTouchPosition(touch);
       setIsDrawing(true);
-      setDrawStart({ x, y });
-      setDrawCurrent({ x, y });
+      setDrawStart(pos);
+      setDrawCurrent(pos);
+    } else {
+      // Default: pan mode (always allow panning with single finger)
+      setIsPanning(true);
+      setPanStart({ x: touch.clientX - offset.x, y: touch.clientY - offset.y });
     }
   };
 
   const handleTouchMove = useCallback(
     throttle((e: React.TouchEvent<HTMLDivElement>) => {
+      // Pinch to zoom (2 fingers)
+      if (e.touches.length === 2 && initialPinchDistance && pinchCenter) {
+        e.preventDefault();
+        const currentDistance = calculatePinchDistance(e.touches);
+        const currentCenter = calculatePinchCenter(e.touches);
+        
+        // Calculate new scale
+        const scaleChange = currentDistance / initialPinchDistance;
+        const newScale = Math.max(0.5, Math.min(3, initialScale * scaleChange));
+        
+        // Adjust offset to zoom towards pinch center
+        const scaleDiff = newScale - scale;
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const centerX = pinchCenter.x - rect.left;
+          const centerY = pinchCenter.y - rect.top;
+          
+          requestAnimationFrame(() => {
+            setScale(newScale);
+            setOffset(prev => ({
+              x: prev.x - (centerX - rect.width / 2) * scaleDiff / scale,
+              y: prev.y - (centerY - rect.height / 2) * scaleDiff / scale,
+            }));
+          });
+        }
+        return;
+      }
+
       if (e.touches.length !== 1) return;
       
       const touch = e.touches[0];
-      const container = e.currentTarget;
-      const rect = container.getBoundingClientRect();
 
-      if (mode === "pan" && isPanning && panStart) {
+      // Panning (works for any mode with single finger)
+      if (isPanning && panStart) {
         e.preventDefault();
         requestAnimationFrame(() => {
           setOffset({
@@ -174,26 +229,29 @@ export function MobileFloorPlanViewer({
           });
         });
       } else if (mode === "zone" && isDrawing && drawStart) {
-        // Calculate position accounting for transformations
-        const containerWidth = rect.width / scale;
-        const containerHeight = rect.height / scale;
-        const adjustedX = (touch.clientX - rect.left - offset.x) / scale;
-        const adjustedY = (touch.clientY - rect.top - offset.y) / scale;
-        const x = (adjustedX / containerWidth) * 100;
-        const y = (adjustedY / containerHeight) * 100;
+        const pos = getTouchPosition(touch);
         requestAnimationFrame(() => {
-          setDrawCurrent({ x, y });
+          setDrawCurrent(pos);
         });
       }
     }, 16),
-    [mode, isPanning, panStart, isDrawing, drawStart, offset, scale]
+    [mode, isPanning, panStart, isDrawing, drawStart, scale, initialPinchDistance, pinchCenter, initialScale]
   );
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (mode === "pan") {
+    // Reset pinch state when fingers are lifted
+    if (e.touches.length < 2) {
+      setInitialPinchDistance(null);
+      setPinchCenter(null);
+    }
+
+    // Always reset panning when touch ends
+    if (isPanning) {
       setIsPanning(false);
       setPanStart(null);
-    } else if (mode === "zone" && isDrawing && drawStart && drawCurrent) {
+    }
+    
+    if (mode === "zone" && isDrawing && drawStart && drawCurrent) {
       const x = Math.min(drawStart.x, drawCurrent.x);
       const y = Math.min(drawStart.y, drawCurrent.y);
       const width = Math.abs(drawCurrent.x - drawStart.x);
@@ -257,10 +315,11 @@ export function MobileFloorPlanViewer({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          cursor: mode === "pan" ? "grab" : mode === "pin" ? "crosshair" : "crosshair",
+          cursor: mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : isPanning ? "grabbing" : "grab",
         }}
       >
         <div
+          ref={contentRef}
           className="relative"
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
