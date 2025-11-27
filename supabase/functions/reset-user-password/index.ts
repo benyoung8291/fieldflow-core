@@ -86,6 +86,17 @@ Deno.serve(async (req) => {
 
     if (resetError) throw resetError
 
+    // Mark user as needing password reset on next login
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .update({ needs_password_reset: true })
+      .eq('id', userId)
+
+    if (profileError) {
+      console.error('Error setting password reset flag:', profileError)
+      // Don't fail the request if this fails - password was still reset
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

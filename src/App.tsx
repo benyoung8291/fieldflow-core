@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ViewModeProvider } from "@/contexts/ViewModeContext";
 import { BrandColorsProvider } from "@/components/BrandColorsProvider";
 import Auth from "./pages/Auth";
+import FirstPasswordReset from "./pages/FirstPasswordReset";
 import { useUserAccess } from "./hooks/useUserAccess";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -245,6 +246,7 @@ const App = () => {
                 <Routes>
                   <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/first-password-reset" element={isAuthenticated ? <FirstPasswordReset /> : <Navigate to="/auth" replace />} />
                   <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />
                   <Route path="/dashboard" element={isAuthenticated ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/super-admin" element={isAuthenticated ? <ProtectedRoute><SuperAdmin /></ProtectedRoute> : <Navigate to="/auth" replace />} />
