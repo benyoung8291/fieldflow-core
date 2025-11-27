@@ -39,12 +39,11 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
             description,
             service_order:service_orders(
               id,
-              order_number,
+              work_order_number,
               description,
-              location:customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode)
+              location:customer_locations!service_orders_location_id_fkey(name, address, city, state, postcode)
             )
           ),
-          created_by_profile:profiles(first_name, last_name, email),
           photos:field_report_photos(
             id,
             file_url,
