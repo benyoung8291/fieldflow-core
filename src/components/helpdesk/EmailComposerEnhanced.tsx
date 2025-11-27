@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Paperclip, Send, X, Minus, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import { SnippetInserter } from "./SnippetInserter";
 
 export interface EmailComposerRef {

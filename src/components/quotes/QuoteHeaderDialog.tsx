@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SelectWithSearch } from "@/components/ui/select-with-search";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
