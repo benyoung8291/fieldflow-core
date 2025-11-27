@@ -89,9 +89,11 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
                   <p className="text-sm text-muted-foreground">
                     By {report.profiles?.first_name} {report.profiles?.last_name}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(report.created_at), "MMM d, yyyy 'at' h:mm a")}
-                  </p>
+                  {report.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(report.created_at), "MMM d, yyyy 'at' h:mm a")}
+                    </p>
+                  )}
                   {report.submitted_at && (
                     <p className="text-xs text-muted-foreground">
                       Submitted: {format(new Date(report.submitted_at), "MMM d, yyyy")}
