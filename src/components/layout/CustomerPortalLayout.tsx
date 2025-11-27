@@ -1,9 +1,10 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, MapPin, FileText, LogOut, ClipboardList, Calendar } from "lucide-react";
+import { Home, MapPin, FileText, LogOut, ClipboardList, Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { QuickMarkupDialog } from "@/components/customer/QuickMarkupDialog";
 
 interface CustomerPortalLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ interface CustomerPortalLayoutProps {
 export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [showQuickMarkup, setShowQuickMarkup] = useState(false);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -36,17 +38,30 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
         <div className="flex h-16 items-center justify-between px-6 md:ml-64">
           <h1 className="text-xl font-semibold tracking-tight">Premrest Pulse</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSignOut}
-            className="h-9 w-9 rounded-full hover:bg-muted/60 transition-smooth"
-            aria-label="Sign out"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowQuickMarkup(true)}
+              className="rounded-full h-9 px-4"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Request
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              className="h-9 w-9 rounded-full hover:bg-muted/60 transition-smooth"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
+
+      <QuickMarkupDialog open={showQuickMarkup} onOpenChange={setShowQuickMarkup} />
 
       {/* Desktop Sidebar - refined */}
       <aside className="hidden md:fixed md:left-0 md:top-16 md:bottom-0 md:flex md:w-64 md:flex-col md:border-r md:border-border/40 md:bg-background/50 md:z-40">
