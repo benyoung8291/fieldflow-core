@@ -10,6 +10,7 @@ interface PresenceData {
   current_path: string;
   document_id?: string | null;
   document_type?: string | null;
+  document_name?: string | null;
   online_at: string;
 }
 
@@ -22,6 +23,7 @@ interface UsePresenceSystemOptions {
   pageName?: string;
   documentId?: string | null;
   documentType?: string | null;
+  documentName?: string | null;
 }
 
 /**
@@ -29,7 +31,7 @@ interface UsePresenceSystemOptions {
  * Built from first principles for reliability and consistency
  */
 export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
-  const { trackPresence = true, pageName, documentId, documentType } = options;
+  const { trackPresence = true, pageName, documentId, documentType, documentName } = options;
   const [onlineUsers, setOnlineUsers] = useState<PresenceData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -136,6 +138,7 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
         current_path: currentPath,
         document_id: documentId || null,
         document_type: documentType || null,
+        document_name: documentName || null,
         online_at: new Date().toISOString(),
       };
 
@@ -148,7 +151,7 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     };
 
     updatePresence();
-  }, [currentUser, isConnected, pageName, documentId, documentType, getCurrentPage]);
+  }, [currentUser, isConnected, pageName, documentId, documentType, documentName, getCurrentPage]);
 
   // Main presence effect - runs once on mount
   useEffect(() => {
@@ -231,6 +234,7 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
         current_path: currentPath,
         document_id: documentId || null,
         document_type: documentType || null,
+        document_name: documentName || null,
         online_at: new Date().toISOString(),
       };
 

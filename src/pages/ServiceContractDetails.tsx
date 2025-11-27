@@ -23,6 +23,7 @@ import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import DashboardLayout from "@/components/DashboardLayout";
 import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
 import ImportContractLineItemsDialog from "@/components/contracts/ImportContractLineItemsDialog";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 export default function ServiceContractDetails() {
   const { id } = useParams();
@@ -83,6 +84,13 @@ export default function ServiceContractDetails() {
       
       return data as any;
     },
+  });
+
+  // Track presence with document name
+  usePresenceSystem({
+    documentId: id,
+    documentType: "service-contracts",
+    documentName: contract ? `${contract.contract_number} - ${contract.title}` : undefined,
   });
 
   const { data: serviceOrders } = useQuery({

@@ -11,6 +11,7 @@ interface UserPresence {
   current_path: string;
   document_id?: string;
   document_type?: string;
+  document_name?: string;
   online_at: string;
 }
 
@@ -23,6 +24,7 @@ interface GroupedUserLocation {
   path: string;
   document_id?: string;
   document_type?: string;
+  document_name?: string;
 }
 
 export interface GroupedUser {
@@ -206,6 +208,7 @@ export const useTeamPresence = () => {
           path: user.current_path,
           document_id: user.document_id,
           document_type: user.document_type,
+          document_name: user.document_name,
         });
       }
     } else {
@@ -219,6 +222,7 @@ export const useTeamPresence = () => {
             path: user.current_path,
             document_id: user.document_id,
             document_type: user.document_type,
+            document_name: user.document_name,
           },
         ],
         online_at: user.online_at,

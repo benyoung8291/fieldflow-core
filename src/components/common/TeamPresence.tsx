@@ -23,11 +23,15 @@ const getInitials = (name: string | undefined) => {
 };
 
 const formatDocumentLabel = (location: any) => {
+  if (location.document_name) {
+    return location.document_name;
+  }
+  
   if (!location.document_id) {
     return location.page;
   }
   
-  // Shorten document ID for display
+  // Fallback: Shorten document ID for display
   const shortId = location.document_id.slice(0, 8);
   return `${location.page} #${shortId}`;
 };
