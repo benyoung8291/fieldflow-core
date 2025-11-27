@@ -13,6 +13,8 @@ import CustomerDialog from "@/components/customers/CustomerDialog";
 import ContactDialog from "@/components/customers/ContactDialog";
 import CustomerLocationsTab from "@/components/customers/CustomerLocationsTab";
 import CustomerLinkedDocuments from "@/components/customers/CustomerLinkedDocuments";
+import CustomerPortalSettings from "@/components/customers/CustomerPortalSettings";
+import CustomerPortalUsers from "@/components/customers/CustomerPortalUsers";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
@@ -252,6 +254,7 @@ export default function CustomerDetails() {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="contacts">Contacts</TabsTrigger>
                 <TabsTrigger value="locations">Locations</TabsTrigger>
+                <TabsTrigger value="portal">Portal</TabsTrigger>
                 <TabsTrigger value="linked-documents">Linked Documents</TabsTrigger>
                 <TabsTrigger value="service-history">Service History</TabsTrigger>
                 <TabsTrigger value="sub-accounts">Sub-Accounts</TabsTrigger>
@@ -565,6 +568,17 @@ export default function CustomerDetails() {
 
               <TabsContent value="tasks" className="mt-0">
                 <LinkedTasksList linkedModule="customer" linkedRecordId={id!} />
+              </TabsContent>
+
+              <TabsContent value="portal" className="mt-0 space-y-6">
+                <CustomerPortalSettings 
+                  customerId={id!} 
+                  tenantId={profile?.tenant_id!} 
+                />
+                <CustomerPortalUsers 
+                  customerId={id!} 
+                  tenantId={profile?.tenant_id!} 
+                />
               </TabsContent>
             </CardContent>
           </Tabs>
