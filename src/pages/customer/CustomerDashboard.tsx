@@ -12,9 +12,9 @@ export default function CustomerDashboard() {
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("profiles")
+        .from("customer_portal_users")
         .select("*, customers(*)")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single();
 
       if (error) throw error;

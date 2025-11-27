@@ -14,9 +14,9 @@ export default function CustomerRequests() {
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("profiles")
+        .from("customer_portal_users")
         .select("customer_id")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single();
 
       if (error) throw error;
