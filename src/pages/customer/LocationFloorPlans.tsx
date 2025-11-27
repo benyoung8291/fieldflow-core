@@ -45,7 +45,7 @@ export default function LocationFloorPlans() {
       const { data, error } = await supabase
         .from("floor_plans")
         .select("*")
-        .eq("location_id", locationId!);
+        .eq("customer_location_id", locationId!);
 
       if (error) throw error;
       return data;
@@ -60,9 +60,9 @@ export default function LocationFloorPlans() {
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("profiles")
+        .from("customer_portal_users")
         .select("customer_id, tenant_id")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single();
 
       if (error) throw error;
@@ -189,14 +189,14 @@ export default function LocationFloorPlans() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {floorPlans?.map((plan) => (
-                <Card key={plan.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedPlan(plan.id)}>
-                  <CardHeader>
-                    <CardTitle>{plan.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full">View & Mark Up</Button>
-                  </CardContent>
-                </Card>
+                 <Card key={plan.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedPlan(plan.id)}>
+                   <CardHeader>
+                     <CardTitle>{plan.name}</CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                     <Button className="w-full">View & Mark Up</Button>
+                   </CardContent>
+                 </Card>
               ))}
             </div>
           )
@@ -224,7 +224,7 @@ export default function LocationFloorPlans() {
             </CardHeader>
             <CardContent className="h-[calc(100%-5rem)]">
               <FloorPlanViewer
-                pdfUrl={selectedFloorPlan?.file_url || ""}
+                pdfUrl={selectedFloorPlan?.file_url || selectedFloorPlan?.file_path || ""}
                 markups={markups}
                 onMarkupsChange={setMarkups}
                 mode={mode}

@@ -13,6 +13,7 @@ import { geocodeCustomerLocationsWithProgress } from "@/utils/geocodeCustomerLoc
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { toast } from "sonner";
+import { FloorPlansTab } from "@/components/customer-locations/FloorPlansTab";
 
 export default function CustomerLocationDetails() {
   const { id } = useParams();
@@ -419,6 +420,7 @@ export default function CustomerLocationDetails() {
                 <TabsTrigger value="service-orders">Service Orders</TabsTrigger>
                 <TabsTrigger value="contracts">Contract Line Items</TabsTrigger>
                 <TabsTrigger value="appointments">Scheduled Work</TabsTrigger>
+                <TabsTrigger value="floor-plans">Floor Plans</TabsTrigger>
               </TabsList>
             </CardHeader>
 
@@ -566,6 +568,10 @@ export default function CustomerLocationDetails() {
                     </TableBody>
                   </Table>
                 )}
+              </TabsContent>
+
+              <TabsContent value="floor-plans" className="mt-0">
+                <FloorPlansTab locationId={id!} tenantId={location.tenant_id} />
               </TabsContent>
             </CardContent>
           </Tabs>
