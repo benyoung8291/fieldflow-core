@@ -223,6 +223,96 @@ export default function LocationFloorPlans() {
   const floorPlanUrl = selectedFloorPlan?.signed_url || selectedFloorPlan?.file_url;
   const floorPlanImageUrl = selectedFloorPlan?.image_url;
 
+  // Mobile full-screen view (outside layout to hide footer)
+  if (isMobile && selectedPlan) {
+    return (
+      <>
+        <div className="fixed inset-0 z-50 bg-background">
+          <div className="absolute top-0 left-0 right-0 z-30 p-4 bg-gradient-to-b from-background to-transparent pointer-events-none">
+            <div className="flex items-center justify-between pointer-events-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedPlan(null);
+                  setMarkups([]);
+                }}
+                className="bg-background/95 backdrop-blur shadow-lg"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowCreateDialog(true)}
+                disabled={markups.length === 0}
+                className="shadow-lg"
+              >
+                Create ({markups.length})
+              </Button>
+            </div>
+          </div>
+          <MobileFloorPlanViewer
+            pdfUrl={floorPlanUrl || ""}
+            imageUrl={floorPlanImageUrl}
+            markups={markups}
+            onMarkupsChange={setMarkups}
+          />
+        </div>
+
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Maintenance Request</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  placeholder="Brief description of the issue"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={taskDescription}
+                  onChange={(e) => setTaskDescription(e.target.value)}
+                  placeholder="Detailed description of what needs to be done"
+                  rows={4}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {markups.length} markup(s) will be included with this request
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => createRequestMutation.mutate()}
+                disabled={!taskTitle || createRequestMutation.isPending}
+              >
+                {createRequestMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Request"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
   return (
     <CustomerPortalLayout>
       <div className="space-y-6 pb-20 md:pb-0">
@@ -271,40 +361,6 @@ export default function LocationFloorPlans() {
               ))}
             </div>
           )
-        ) : isMobile ? (
-          // Mobile optimized full-screen view
-          <div className="fixed inset-0 z-50 bg-background">
-            <div className="absolute top-0 left-0 right-0 z-30 p-4 bg-gradient-to-b from-background to-transparent pointer-events-none">
-              <div className="flex items-center justify-between pointer-events-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedPlan(null);
-                    setMarkups([]);
-                  }}
-                  className="bg-background/95 backdrop-blur shadow-lg"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setShowCreateDialog(true)}
-                  disabled={markups.length === 0}
-                  className="shadow-lg"
-                >
-                  Create ({markups.length})
-                </Button>
-              </div>
-            </div>
-            <MobileFloorPlanViewer
-              pdfUrl={floorPlanUrl || ""}
-              imageUrl={floorPlanImageUrl}
-              markups={markups}
-              onMarkupsChange={setMarkups}
-            />
-          </div>
         ) : (
           // Desktop view
           <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-4">
