@@ -36,13 +36,13 @@ export default function CustomerFieldReports() {
         .from("field_reports")
         .select(`
           *,
-          appointment:appointments(
+          appointment:appointments!inner(
             id,
             title,
             start_time,
-            service_order:service_orders(
+            service_order:service_orders!inner(
               id,
-              service_order_number,
+              work_order_number,
               customer_id,
               location:customer_locations(name, address)
             )
@@ -50,14 +50,15 @@ export default function CustomerFieldReports() {
           created_by_profile:profiles(first_name, last_name)
         `)
         .eq("status", "approved")
+        .eq("appointment.service_order.customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching field reports:", error);
+        throw error;
+      }
       
-      // Filter to only approved reports where the service order belongs to this customer
-      return data?.filter((report: any) => 
-        report.appointment?.service_order?.customer_id === profile.customer_id
-      ) || [];
+      return data || [];
     },
     enabled: !!profile?.customer_id,
   });
