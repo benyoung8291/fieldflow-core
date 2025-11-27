@@ -246,7 +246,9 @@ export default function LocationFloorPlans() {
               {floorPlans?.map((plan) => (
                  <Card key={plan.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedPlan(plan.id)}>
                    <CardHeader>
-                     <CardTitle>{plan.name}</CardTitle>
+                     <CardTitle>
+                       {plan.floor_number ? `${plan.floor_number} ${plan.name}` : plan.name}
+                     </CardTitle>
                    </CardHeader>
                    <CardContent>
                      <Button className="w-full">View & Mark Up</Button>
@@ -260,7 +262,11 @@ export default function LocationFloorPlans() {
             {/* Floor Plan Viewer */}
             <Card className="h-[calc(100vh-12rem)]">
               <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle>{selectedFloorPlan?.name}</CardTitle>
+                <CardTitle>
+                  {selectedFloorPlan?.floor_number 
+                    ? `${selectedFloorPlan.floor_number} ${selectedFloorPlan.name}` 
+                    : selectedFloorPlan?.name}
+                </CardTitle>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
