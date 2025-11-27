@@ -9,13 +9,25 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+interface PresenceData {
+  user_id: string;
+  user_name: string;
+  current_page: string;
+  current_path: string;
+  document_id?: string | null;
+  document_type?: string | null;
+  online_at: string;
+}
 
 interface GroupedUser {
   user_id: string;
   user_name: string;
   pages: Array<{ page: string; path: string }>;
   online_at: string;
+}
+
+interface ActivityAndUsersProps {
+  onlineUsers: PresenceData[];
 }
 
 interface AuditLog {
@@ -49,12 +61,9 @@ const getActionColor = (action: string) => {
   return "text-muted-foreground";
 };
 
-export function ActivityAndUsers() {
+export function ActivityAndUsers({ onlineUsers }: ActivityAndUsersProps) {
   const [activities, setActivities] = useState<AuditLog[]>([]);
   const navigate = useNavigate();
-  
-  // Use centralized presence system
-  const { onlineUsers } = usePresenceSystem();
 
   // Fetch initial activity logs
   const { data: initialLogs } = useQuery({

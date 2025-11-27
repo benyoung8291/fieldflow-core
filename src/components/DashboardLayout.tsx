@@ -18,7 +18,6 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import RemoteCursors from "@/components/presence/RemoteCursors";
 import PresencePanel from "@/components/presence/PresencePanel";
 import NotificationCenter from "@/components/notifications/NotificationCenter";
-import { ActivityAndUsers } from "@/components/dashboard/ActivityAndUsers";
 import { IssueReportDialog } from "@/components/common/IssueReportDialog";
 import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
 import { APP_VERSION } from "@/lib/version";
