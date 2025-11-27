@@ -8719,6 +8719,7 @@ export type Database = {
         Args: { target_tenant_id: string; target_user_id: string }
         Returns: boolean
       }
+      can_view_field_report: { Args: { report_id: string }; Returns: boolean }
       can_view_profile: {
         Args: { profile_tenant_id: string }
         Returns: boolean
