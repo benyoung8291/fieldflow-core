@@ -36,9 +36,10 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
   const [showGeocodeDialog, setShowGeocodeDialog] = useState(false);
   const [geocodeComplete, setGeocodeComplete] = useState(false);
 
-  const { data: locations } = useQuery({
+  const { data: locations, error: locationsError } = useQuery({
     queryKey: ["customer-locations", customerId, showArchived],
     queryFn: async () => {
+      console.log("Fetching locations for customer:", customerId);
       let query = supabase
         .from("customer_locations")
         .select("*")
@@ -48,9 +49,17 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
         query = query.eq("archived", false);
       }
       
-      const { data } = await query
+      const { data, error } = await query
         .order("is_primary", { ascending: false })
         .order("name");
+      
+      console.log("Locations query result:", { data, error });
+      
+      if (error) {
+        console.error("Error fetching locations:", error);
+        throw error;
+      }
+      
       return data || [];
     },
   });
@@ -237,6 +246,13 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
           </Button>
         </div>
       </div>
+
+      {locationsError && (
+        <div className="bg-destructive/10 text-destructive border border-destructive rounded-md p-4">
+          <p className="font-medium">Error loading locations</p>
+          <p className="text-sm mt-1">{locationsError.message}</p>
+        </div>
+      )}
 
       {locations && locations.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
