@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { MapPin, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { MobileFloorPlanToolbar } from "./mobile/MobileFloorPlanToolbar";
 import { MobileMarkupSheet } from "./mobile/MobileMarkupSheet";
+import { throttle } from "@/utils/performance";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -146,25 +147,32 @@ export function MobileFloorPlanViewer({
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 1) return;
-    
-    const touch = e.touches[0];
-    const container = e.currentTarget;
-    const rect = container.getBoundingClientRect();
+  const handleTouchMove = useCallback(
+    throttle((e: React.TouchEvent<HTMLDivElement>) => {
+      if (e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const container = e.currentTarget;
+      const rect = container.getBoundingClientRect();
 
-    if (mode === "pan" && isPanning && panStart) {
-      e.preventDefault();
-      setOffset({
-        x: touch.clientX - panStart.x,
-        y: touch.clientY - panStart.y,
-      });
-    } else if (mode === "zone" && isDrawing && drawStart) {
-      const x = ((touch.clientX - rect.left) / rect.width) * 100;
-      const y = ((touch.clientY - rect.top) / rect.height) * 100;
-      setDrawCurrent({ x, y });
-    }
-  };
+      if (mode === "pan" && isPanning && panStart) {
+        e.preventDefault();
+        requestAnimationFrame(() => {
+          setOffset({
+            x: touch.clientX - panStart.x,
+            y: touch.clientY - panStart.y,
+          });
+        });
+      } else if (mode === "zone" && isDrawing && drawStart) {
+        const x = ((touch.clientX - rect.left) / rect.width) * 100;
+        const y = ((touch.clientY - rect.top) / rect.height) * 100;
+        requestAnimationFrame(() => {
+          setDrawCurrent({ x, y });
+        });
+      }
+    }, 16),
+    [mode, isPanning, panStart, isDrawing, drawStart]
+  );
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (mode === "pan") {
@@ -238,10 +246,11 @@ export function MobileFloorPlanViewer({
         }}
       >
         <div
-          className="relative transition-transform duration-100"
+          className="relative"
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
             transformOrigin: "center center",
+            willChange: "transform",
           }}
         >
           {isImage ? (
