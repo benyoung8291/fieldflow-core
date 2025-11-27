@@ -237,7 +237,6 @@ export function MobileFloorPlanViewer({
       };
       const newMarkups = [...markups, newMarkup];
       updateHistory(newMarkups);
-      toast.success("Pin added");
     } else if (mode === "zone") {
       const pos = getTouchPosition(touch);
       setIsDrawing(true);
@@ -330,7 +329,6 @@ export function MobileFloorPlanViewer({
         };
         const newMarkups = [...markups, newMarkup];
         updateHistory(newMarkups);
-        toast.success("Area added");
       }
 
       setIsDrawing(false);
