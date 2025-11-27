@@ -80,6 +80,7 @@ export function MobileFloorPlanViewer({
   const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
   const [initialScale, setInitialScale] = useState<number>(1);
   const [pinchCenter, setPinchCenter] = useState<{ x: number; y: number } | null>(null);
+  const [twoFingerPanStart, setTwoFingerPanStart] = useState<{ x: number; y: number } | null>(null);
   
   // Drag state
   const [isDragging, setIsDragging] = useState(false);
@@ -113,6 +114,36 @@ export function MobileFloorPlanViewer({
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
+
+  // Initial zoom and center on mount
+  useEffect(() => {
+    if (!containerDimensions.width || !containerDimensions.height || !contentRef.current) {
+      return;
+    }
+
+    // Get the natural dimensions of the content
+    const contentWidth = containerDimensions.width;
+    const contentHeight = containerDimensions.height;
+
+    // Calculate scale to fit 80% of screen height
+    const targetHeightScale = (containerDimensions.height * 0.8) / contentHeight;
+    const initialScale = Math.max(0.5, Math.min(3, targetHeightScale));
+
+    // Calculate offset to center the content
+    const scaledWidth = contentWidth * initialScale;
+    const scaledHeight = contentHeight * initialScale;
+    const offsetX = (containerDimensions.width - scaledWidth) / 2;
+    const offsetY = (containerDimensions.height - scaledHeight) / 2;
+
+    console.log("Initial zoom setup:", {
+      containerDimensions,
+      initialScale,
+      offset: { x: offsetX, y: offsetY }
+    });
+
+    setScale(initialScale);
+    setOffset({ x: offsetX, y: offsetY });
+  }, [containerDimensions.width, containerDimensions.height]);
 
   // Auto-zoom to fit markups in read-only mode
   useEffect(() => {
@@ -295,7 +326,7 @@ export function MobileFloorPlanViewer({
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    // Pinch to zoom (2 fingers)
+    // Two-finger gesture (pinch or pan)
     if (e.touches.length === 2) {
       setMultiTouchActive(true);
       setIsPanning(false);
@@ -303,7 +334,9 @@ export function MobileFloorPlanViewer({
       setSingleTouchStart(null);
       setInitialPinchDistance(calculatePinchDistance(e.touches));
       setInitialScale(scale);
-      setPinchCenter(calculatePinchCenter(e.touches));
+      const center = calculatePinchCenter(e.touches);
+      setPinchCenter(center);
+      setTwoFingerPanStart(center);
       return;
     }
 
@@ -338,29 +371,48 @@ export function MobileFloorPlanViewer({
 
   const handleTouchMove = useCallback(
     throttle((e: React.TouchEvent<HTMLDivElement>) => {
-      // Pinch to zoom (2 fingers)
-      if (e.touches.length === 2 && initialPinchDistance && pinchCenter) {
+      // Two-finger gestures (pinch or pan)
+      if (e.touches.length === 2 && initialPinchDistance && twoFingerPanStart) {
         e.preventDefault();
         const currentDistance = calculatePinchDistance(e.touches);
         const currentCenter = calculatePinchCenter(e.touches);
         
-        // Calculate new scale
-        const scaleChange = currentDistance / initialPinchDistance;
-        const newScale = Math.max(0.5, Math.min(3, initialScale * scaleChange));
+        // Calculate distance change to detect pinch vs pan
+        const distanceChange = Math.abs(currentDistance - initialPinchDistance);
+        const distanceChangePercent = distanceChange / initialPinchDistance;
         
-        // Adjust offset to zoom towards pinch center
-        const scaleDiff = newScale - scale;
-        if (containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          const centerX = pinchCenter.x - rect.left;
-          const centerY = pinchCenter.y - rect.top;
+        // If distance changed more than 5%, it's a pinch gesture
+        if (distanceChangePercent > 0.05) {
+          // Pinch to zoom
+          const scaleChange = currentDistance / initialPinchDistance;
+          const newScale = Math.max(0.5, Math.min(3, initialScale * scaleChange));
+          
+          // Adjust offset to zoom towards pinch center
+          const scaleDiff = newScale - scale;
+          if (containerRef.current && pinchCenter) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = pinchCenter.x - rect.left;
+            const centerY = pinchCenter.y - rect.top;
+            
+            requestAnimationFrame(() => {
+              setScale(newScale);
+              setOffset(prev => ({
+                x: prev.x - (centerX - rect.width / 2) * scaleDiff / scale,
+                y: prev.y - (centerY - rect.height / 2) * scaleDiff / scale,
+              }));
+            });
+          }
+        } else {
+          // Two-finger pan
+          const deltaX = currentCenter.x - twoFingerPanStart.x;
+          const deltaY = currentCenter.y - twoFingerPanStart.y;
           
           requestAnimationFrame(() => {
-            setScale(newScale);
             setOffset(prev => ({
-              x: prev.x - (centerX - rect.width / 2) * scaleDiff / scale,
-              y: prev.y - (centerY - rect.height / 2) * scaleDiff / scale,
+              x: prev.x + deltaX,
+              y: prev.y + deltaY,
             }));
+            setTwoFingerPanStart(currentCenter);
           });
         }
         return;
@@ -386,14 +438,15 @@ export function MobileFloorPlanViewer({
         });
       }
     }, 16),
-    [mode, isPanning, panStart, isDrawing, drawStart, scale, initialPinchDistance, pinchCenter, initialScale]
+    [mode, isPanning, panStart, isDrawing, drawStart, scale, initialPinchDistance, pinchCenter, initialScale, twoFingerPanStart]
   );
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    // Reset pinch state when fingers are lifted
+    // Reset pinch/pan state when fingers are lifted
     if (e.touches.length < 2) {
       setInitialPinchDistance(null);
       setPinchCenter(null);
+      setTwoFingerPanStart(null);
     }
 
     // Always reset panning when touch ends
