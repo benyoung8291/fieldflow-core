@@ -133,10 +133,10 @@ export default function ServiceOrderDialog({
   useEffect(() => {
     if (open) {
       fetchCustomers();
+      // Always reset form first to clear any stale data
+      resetForm();
       if (orderId) {
         fetchOrder();
-      } else {
-        resetForm();
       }
     }
   }, [open, orderId]);
@@ -281,29 +281,26 @@ export default function ServiceOrderDialog({
           ready_for_billing: orderData.ready_for_billing || false,
         });
 
-        if (lineItemsData) {
-          setLineItems(
-            lineItemsData.map((item: any) => ({
-              id: item.id,
-              description: item.description,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              line_total: item.line_total,
-              estimated_hours: item.estimated_hours || 0,
-              item_order: item.item_order,
-              notes: item.notes,
-              price_book_item_id: item.price_book_item_id,
-            }))
-          );
-        }
+        // Always set line items, even if empty, to clear any stale data
+        setLineItems(
+          lineItemsData?.map((item: any) => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            line_total: item.line_total,
+            estimated_hours: item.estimated_hours || 0,
+            item_order: item.item_order,
+            notes: item.notes,
+            price_book_item_id: item.price_book_item_id,
+          })) || []
+        );
 
-        if (attachmentsData) {
-          setAttachments(attachmentsData as unknown as Attachment[]);
-        }
+        // Always set attachments, even if empty
+        setAttachments((attachmentsData as unknown as Attachment[]) || []);
 
-        if (appointmentsData) {
-          setAppointments(appointmentsData);
-        }
+        // Always set appointments, even if empty
+        setAppointments(appointmentsData || []);
       }
     } catch (error: any) {
       toast({ title: "Error fetching order", description: error.message, variant: "destructive" });
