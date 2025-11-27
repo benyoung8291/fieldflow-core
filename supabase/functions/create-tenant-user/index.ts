@@ -88,7 +88,7 @@ serve(async (req) => {
     
     const { email, firstName, lastName, role, password } = validatedData;
 
-    // Create the new user with tenant_id in metadata to avoid race condition
+    // Create the new user with tenant_id in metadata - trigger will handle profile creation atomically
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -104,7 +104,7 @@ serve(async (req) => {
       throw createError;
     }
 
-    // tenant_id is now set via trigger function, no need to update
+    // Profile with tenant_id is created atomically by handle_new_user trigger
 
     // Assign initial role if provided
     if (role) {
