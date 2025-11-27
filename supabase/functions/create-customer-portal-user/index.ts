@@ -143,7 +143,6 @@ serve(async (req) => {
         user_id: authData.user.id,
         tenant_id: validated.tenantId,
         role: "customer",
-        customer_id: validated.customerId,
       });
 
     if (roleError) {
