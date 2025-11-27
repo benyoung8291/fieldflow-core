@@ -2169,6 +2169,51 @@ export type Database = {
           },
         ]
       }
+      floor_plans: {
+        Row: {
+          created_at: string | null
+          file_url: string
+          id: string
+          location_id: string | null
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_url: string
+          id?: string
+          location_id?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_url?: string
+          id?: string
+          location_id?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_plans_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       general_settings: {
         Row: {
           created_at: string | null
@@ -4081,6 +4126,7 @@ export type Database = {
           auto_away_minutes: number | null
           avatar_url: string | null
           created_at: string | null
+          customer_id: string | null
           default_pipeline_id: string | null
           default_stage_id: string | null
           email: string | null
@@ -4115,6 +4161,7 @@ export type Database = {
           auto_away_minutes?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          customer_id?: string | null
           default_pipeline_id?: string | null
           default_stage_id?: string | null
           email?: string | null
@@ -4149,6 +4196,7 @@ export type Database = {
           auto_away_minutes?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          customer_id?: string | null
           default_pipeline_id?: string | null
           default_stage_id?: string | null
           email?: string | null
@@ -4179,6 +4227,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_default_pipeline_id_fkey"
             columns: ["default_pipeline_id"]
@@ -6719,6 +6774,61 @@ export type Database = {
           },
         ]
       }
+      task_markups: {
+        Row: {
+          created_at: string | null
+          data: Json
+          floor_plan_id: string
+          id: string
+          markup_type: string
+          notes: string | null
+          task_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data: Json
+          floor_plan_id: string
+          id?: string
+          markup_type: string
+          notes?: string | null
+          task_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json
+          floor_plan_id?: string
+          id?: string
+          markup_type?: string
+          notes?: string | null
+          task_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_markups_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_markups_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_markups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_template_checklist_items: {
         Row: {
           created_at: string
@@ -6821,6 +6931,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           created_by: string
+          customer_id: string | null
           depth_level: number | null
           description: string | null
           due_date: string | null
@@ -6846,6 +6957,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by: string
+          customer_id?: string | null
           depth_level?: number | null
           description?: string | null
           due_date?: string | null
@@ -6871,6 +6983,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string
+          customer_id?: string | null
           depth_level?: number | null
           description?: string | null
           due_date?: string | null
@@ -6891,6 +7004,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_parent_task_id_fkey"
             columns: ["parent_task_id"]
@@ -8436,6 +8556,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_customer_id: { Args: { _user_id: string }; Returns: string }
       get_user_permissions: {
         Args: { user_id_input: string }
         Returns: {
@@ -8616,6 +8737,7 @@ export type Database = {
         | "warehouse_manager"
         | "subcontractor"
         | "management"
+        | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -8795,6 +8917,7 @@ export const Constants = {
         "warehouse_manager",
         "subcontractor",
         "management",
+        "customer",
       ],
     },
   },
