@@ -12,6 +12,7 @@ interface MobileFloorPlanToolbarProps {
   onZoomOut: () => void;
   markupsCount: number;
   onOpenMarkups: () => void;
+  readOnly?: boolean;
 }
 
 export function MobileFloorPlanToolbar({
@@ -22,6 +23,7 @@ export function MobileFloorPlanToolbar({
   onZoomOut,
   markupsCount,
   onOpenMarkups,
+  readOnly = false,
 }: MobileFloorPlanToolbarProps) {
   return (
     <>
@@ -53,60 +55,62 @@ export function MobileFloorPlanToolbar({
         </Button>
       </div>
 
-      {/* Bottom Tool Selection */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
-        <Button
-          variant="default"
-          onClick={onOpenMarkups}
-          className="h-14 rounded-full shadow-2xl px-4"
-        >
-          <ChevronUp className="h-5 w-5 mr-2" />
-          Markups ({markupsCount})
-        </Button>
-        
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-background shadow-2xl border-2 border-border">
+      {/* Bottom Tool Selection - Only show in edit mode */}
+      {!readOnly && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
           <Button
-            size="icon"
-            variant={mode === "pan" ? "default" : "secondary"}
-            onClick={() => onModeChange("pan")}
-            className={cn(
-              "h-11 w-11 rounded-full transition-all",
-              mode === "pan" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
-            )}
-            title="Pan"
+            variant="default"
+            onClick={onOpenMarkups}
+            className="h-14 rounded-full shadow-2xl px-4"
           >
-            <Hand className="h-5 w-5" />
+            <ChevronUp className="h-5 w-5 mr-2" />
+            Markups ({markupsCount})
           </Button>
           
-          <div className="w-px h-6 bg-border" />
-          
-          <Button
-            size="icon"
-            variant={mode === "pin" ? "default" : "secondary"}
-            onClick={() => onModeChange("pin")}
-            className={cn(
-              "h-11 w-11 rounded-full transition-all",
-              mode === "pin" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
-            )}
-            title="Add Pin"
-          >
-            <MapPin className="h-5 w-5" />
-          </Button>
-          
-          <Button
-            size="icon"
-            variant={mode === "zone" ? "default" : "secondary"}
-            onClick={() => onModeChange("zone")}
-            className={cn(
-              "h-11 w-11 rounded-full transition-all",
-              mode === "zone" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
-            )}
-            title="Draw Area"
-          >
-            <Square className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-background shadow-2xl border-2 border-border">
+            <Button
+              size="icon"
+              variant={mode === "pan" ? "default" : "secondary"}
+              onClick={() => onModeChange("pan")}
+              className={cn(
+                "h-11 w-11 rounded-full transition-all",
+                mode === "pan" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
+              )}
+              title="Pan"
+            >
+              <Hand className="h-5 w-5" />
+            </Button>
+            
+            <div className="w-px h-6 bg-border" />
+            
+            <Button
+              size="icon"
+              variant={mode === "pin" ? "default" : "secondary"}
+              onClick={() => onModeChange("pin")}
+              className={cn(
+                "h-11 w-11 rounded-full transition-all",
+                mode === "pin" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
+              )}
+              title="Add Pin"
+            >
+              <MapPin className="h-5 w-5" />
+            </Button>
+            
+            <Button
+              size="icon"
+              variant={mode === "zone" ? "default" : "secondary"}
+              onClick={() => onModeChange("zone")}
+              className={cn(
+                "h-11 w-11 rounded-full transition-all",
+                mode === "zone" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
+              )}
+              title="Draw Area"
+            >
+              <Square className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

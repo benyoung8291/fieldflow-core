@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import { MapPin, Square } from "lucide-react";
+import { MapPin, Square, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -8,6 +8,8 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { MobileFloorPlanToolbar } from "./mobile/MobileFloorPlanToolbar";
 import { MobileMarkupSheet } from "./mobile/MobileMarkupSheet";
 import { throttle } from "@/utils/performance";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -229,6 +231,13 @@ export function MobileFloorPlanViewer({
     
     const touch = e.touches[0];
     
+    // In read-only mode, only allow panning
+    if (readOnly) {
+      setIsPanning(true);
+      setPanStart({ x: touch.clientX - offset.x, y: touch.clientY - offset.y });
+      return;
+    }
+    
     if (mode === "pin") {
       const pos = getTouchPosition(touch);
       const newMarkup: PinMarkup = {
@@ -370,17 +379,47 @@ export function MobileFloorPlanViewer({
           onZoomOut={zoomOut}
           markupsCount={markups.length}
           onOpenMarkups={() => setMarkupSheetOpen(true)}
+          readOnly={readOnly}
         />
+      )}
+      
+      {readOnly && (
+        <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
+          <Button
+            size="icon"
+            variant="default"
+            onClick={zoomIn}
+            disabled={scale >= 3}
+            className="h-12 w-12 rounded-full shadow-lg"
+          >
+            <ZoomIn className="h-5 w-5" />
+          </Button>
+          <Badge 
+            variant="default" 
+            className="rounded-full px-3 py-2 font-semibold text-sm shadow-lg"
+          >
+            {Math.round(scale * 100)}%
+          </Badge>
+          <Button
+            size="icon"
+            variant="default"
+            onClick={zoomOut}
+            disabled={scale <= 0.5}
+            className="h-12 w-12 rounded-full shadow-lg"
+          >
+            <ZoomOut className="h-5 w-5" />
+          </Button>
+        </div>
       )}
 
       <div
         ref={containerRef}
         className="w-full h-full overflow-hidden touch-none"
-        onTouchStart={readOnly ? undefined : handleTouchStart}
-        onTouchMove={readOnly ? undefined : handleTouchMove}
-        onTouchEnd={readOnly ? undefined : handleTouchEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
-          cursor: readOnly ? "default" : mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : isPanning ? "grabbing" : "grab",
+          cursor: readOnly ? "grab" : mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : isPanning ? "grabbing" : "grab",
         }}
       >
         <div

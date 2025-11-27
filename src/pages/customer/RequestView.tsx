@@ -90,7 +90,36 @@ export default function RequestView() {
         .eq("ticket_id", requestId);
 
       if (error) throw error;
-      return data;
+
+      // Reconstruct full markup objects from stored data
+      const reconstructedMarkups = data?.map((m: any) => {
+        const markupData = m.markup_data || {};
+        
+        if (markupData.type === "pin") {
+          return {
+            ...m,
+            markup_data: {
+              id: m.id,
+              type: "pin" as const,
+              x: m.pin_x,
+              y: m.pin_y,
+              notes: markupData.notes,
+            }
+          };
+        } else {
+          return {
+            ...m,
+            markup_data: {
+              id: m.id,
+              type: "zone" as const,
+              bounds: markupData.bounds,
+              notes: markupData.notes,
+            }
+          };
+        }
+      }) || [];
+
+      return reconstructedMarkups;
     },
     enabled: !!requestId,
   });
