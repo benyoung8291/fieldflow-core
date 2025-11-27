@@ -22,6 +22,7 @@ interface UserFormData {
   last_name: string;
   email: string;
   phone: string;
+  password?: string;
 }
 
 export default function CustomerPortalUserDialog({
@@ -71,57 +72,50 @@ export default function CustomerPortalUserDialog({
         if (error) throw error;
         toast.success("Portal user updated successfully");
       } else {
-        // Create new user account in auth.users first
-        const tempPassword = Math.random().toString(36).slice(-12) + "Aa1!";
-        
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: data.email,
-          password: tempPassword,
-          options: {
-            data: {
-              first_name: data.first_name,
-              last_name: data.last_name,
+        // Create new user via edge function
+        if (!data.password) {
+          toast.error("Password is required");
+          return;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast.error("You must be logged in");
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-customer-portal-user`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${session.access_token}`,
+              "Content-Type": "application/json",
             },
-          },
-        });
+            body: JSON.stringify({
+              tenantId,
+              customerId,
+              firstName: data.first_name,
+              lastName: data.last_name,
+              email: data.email,
+              phone: data.phone,
+              password: data.password,
+            }),
+          }
+        );
 
-        if (authError) throw authError;
-        if (!authData.user) throw new Error("Failed to create user account");
+        const result = await response.json();
 
-        // Create portal user record
-        const { error: portalError } = await supabase
-          .from("customer_portal_users")
-          .insert({
-            tenant_id: tenantId,
-            customer_id: customerId,
-            user_id: authData.user.id,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            email: data.email,
-            phone: data.phone,
-            is_active: true,
-            invited_at: new Date().toISOString(),
-          });
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to create portal user");
+        }
 
-        if (portalError) throw portalError;
-
-        // Assign customer role
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: authData.user.id,
-            tenant_id: tenantId,
-            role: "customer",
-            customer_id: customerId,
-          });
-
-        if (roleError) throw roleError;
-
-        toast.success("Portal user created successfully. They will receive an invitation email.");
+        toast.success("Portal user created successfully");
       }
 
       queryClient.invalidateQueries({ queryKey: ["customer-portal-users", customerId] });
       onOpenChange(false);
+      reset();
     } catch (error: any) {
       console.error("Error saving portal user:", error);
       toast.error(error.message || "Failed to save portal user");
@@ -190,6 +184,29 @@ export default function CustomerPortalUserDialog({
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" type="tel" {...register("phone")} />
           </div>
+
+          {!user && (
+            <div>
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                {...register("password", {
+                  required: !user ? "Password is required" : false,
+                  minLength: {
+                    value: 8,
+                    message: "Password must be at least 8 characters",
+                  },
+                })}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                User will use this password to log in
+              </p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
