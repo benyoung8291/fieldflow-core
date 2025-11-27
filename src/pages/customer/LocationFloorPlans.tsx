@@ -111,17 +111,21 @@ export default function LocationFloorPlans() {
     queryFn: async () => {
       if (!profile?.tenant_id) return null;
       
+      console.log("Fetching Requests pipeline for tenant:", profile.tenant_id);
+      
       const { data, error } = await supabase
         .from("helpdesk_pipelines")
         .select("id")
         .eq("tenant_id", profile.tenant_id)
         .eq("name", "Requests")
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching Requests pipeline:", error);
-        return null;
+        throw error;
       }
+      
+      console.log("Requests pipeline found:", data);
       return data;
     },
     enabled: !!profile?.tenant_id,
