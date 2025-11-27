@@ -220,14 +220,14 @@ export default function QuickLocationDialog({
             <div className="space-y-2">
               <Label>Site Contact</Label>
               <Select
-                value={formData.site_contact_id}
-                onValueChange={(value) => setFormData({ ...formData, site_contact_id: value })}
+                value={formData.site_contact_id || "none"}
+                onValueChange={(value) => setFormData({ ...formData, site_contact_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select site contact" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {contacts.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.first_name} {contact.last_name}
@@ -240,14 +240,14 @@ export default function QuickLocationDialog({
             <div className="space-y-2">
               <Label>Facility Manager</Label>
               <Select
-                value={formData.facility_manager_contact_id}
-                onValueChange={(value) => setFormData({ ...formData, facility_manager_contact_id: value })}
+                value={formData.facility_manager_contact_id || "none"}
+                onValueChange={(value) => setFormData({ ...formData, facility_manager_contact_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select facility manager" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {contacts.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.first_name} {contact.last_name}
