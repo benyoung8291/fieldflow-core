@@ -39,7 +39,7 @@ export default function CustomerAppointments() {
             id,
             service_order_number,
             customer_id,
-            location:customer_locations(name, address)
+            location:customer_locations!service_orders_location_id_fkey(name, address)
           )
         `)
         .order("start_time", { ascending: false });

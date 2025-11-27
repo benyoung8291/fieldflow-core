@@ -46,8 +46,7 @@ export default function CustomerFieldReports() {
               customer_id,
               location:customer_locations!service_orders_location_id_fkey(name, address)
             )
-          ),
-          created_by_profile:profiles(first_name, last_name)
+          )
         `)
         .eq("status", "approved")
         .eq("appointment.service_order.customer_id", profile.customer_id)
@@ -165,11 +164,6 @@ export default function CustomerFieldReports() {
                             })}
                           </span>
                         </div>
-                        {report.created_by_profile && (
-                          <div className="text-xs">
-                            By {report.created_by_profile.first_name} {report.created_by_profile.last_name}
-                          </div>
-                        )}
                       </div>
 
                       {report.pdf_url && (
