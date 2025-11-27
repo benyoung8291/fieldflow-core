@@ -130,7 +130,7 @@ export function QuickMarkupDialog({ open, onOpenChange }: QuickMarkupDialogProps
                 onValueChange={setSelectedFloorPlan}
                 options={
                   floorPlans?.map((plan) => ({
-                    label: `Floor ${plan.floor_number} - ${plan.name}`,
+                    label: `Level ${plan.floor_number} - ${plan.name}`,
                     value: plan.id,
                   })) || []
                 }
