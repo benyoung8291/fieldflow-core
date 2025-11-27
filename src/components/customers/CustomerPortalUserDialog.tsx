@@ -78,7 +78,12 @@ export default function CustomerPortalUserDialog({
           return;
         }
 
-        console.log("Invoking create-customer-portal-user function...");
+        console.log("Invoking create-customer-portal-user function with:", {
+          tenantId,
+          customerId,
+          email: data.email,
+        });
+        
         const { data: result, error: functionError } = await supabase.functions.invoke(
           "create-customer-portal-user",
           {
@@ -94,16 +99,25 @@ export default function CustomerPortalUserDialog({
           }
         );
 
-        console.log("Function response:", { result, functionError });
+        console.log("Function response received:", { 
+          hasResult: !!result, 
+          hasError: !!functionError,
+          resultData: result,
+          errorDetails: functionError 
+        });
 
         if (functionError) {
-          console.error("Function error:", functionError);
-          throw new Error(functionError.message || "Failed to create portal user");
+          console.error("Function invocation error:", functionError);
+          const errorMsg = functionError.message || "Failed to invoke function";
+          toast.error(`Failed to create portal user: ${errorMsg}`);
+          throw new Error(errorMsg);
         }
 
         if (result?.error) {
-          console.error("Result error:", result.error);
-          throw new Error(result.error || "Failed to create portal user");
+          console.error("Function returned error:", result.error);
+          const errorMsg = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
+          toast.error(`Failed to create portal user: ${errorMsg}`);
+          throw new Error(errorMsg);
         }
 
         toast.success("Portal user created successfully");
