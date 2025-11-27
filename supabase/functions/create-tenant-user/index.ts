@@ -88,7 +88,7 @@ serve(async (req) => {
     
     const { email, firstName, lastName, role, password } = validatedData;
 
-    // Create the new user
+    // Create the new user with tenant_id in metadata to avoid race condition
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -96,6 +96,7 @@ serve(async (req) => {
       user_metadata: {
         first_name: firstName,
         last_name: lastName || "",
+        tenant_id: profile.tenant_id,
       },
     });
 
@@ -103,15 +104,7 @@ serve(async (req) => {
       throw createError;
     }
 
-    // Update the new user's tenant
-    const { error: updateError } = await supabaseAdmin
-      .from("profiles")
-      .update({ tenant_id: profile.tenant_id })
-      .eq("id", newUser.user.id);
-
-    if (updateError) {
-      throw updateError;
-    }
+    // tenant_id is now set via trigger function, no need to update
 
     // Assign initial role if provided
     if (role) {
