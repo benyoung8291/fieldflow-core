@@ -410,7 +410,11 @@ const UserManagement = () => {
                     <TableRow 
                       key={user.id} 
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => {
+                      onClick={(e) => {
+                        // Only open dialog if clicking the row itself, not interactive elements
+                        if ((e.target as HTMLElement).closest('button, .badge-interactive')) {
+                          return;
+                        }
                         setSelectedUser(user);
                         setIsUserDialogOpen(true);
                       }}
@@ -431,14 +435,15 @@ const UserManagement = () => {
                               <Badge
                                 key={idx}
                                 variant={getRoleBadgeVariant(ur.role)}
-                                className="cursor-pointer hover:opacity-80"
-                                onClick={() =>
+                                className="cursor-pointer hover:opacity-80 badge-interactive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleRemoveRoleClick(
                                     user.id,
                                     ur.role,
                                     `${user.first_name} ${user.last_name}`
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 <Shield className="h-3 w-3 mr-1" />
                                 {ur.role}
@@ -456,13 +461,14 @@ const UserManagement = () => {
                               <Badge
                                 key={team.id}
                                 variant="secondary"
-                                className="cursor-pointer hover:opacity-80"
-                                onClick={() =>
+                                className="cursor-pointer hover:opacity-80 badge-interactive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   removeTeamMutation.mutate({
                                     userId: user.id,
                                     teamId: team.id,
-                                  })
-                                }
+                                  });
+                                }}
                               >
                                 {team.name}
                               </Badge>
@@ -474,7 +480,8 @@ const UserManagement = () => {
                             size="sm"
                             variant="ghost"
                             className="h-6"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedUserId(user.id);
                               setShowTeamDialog(true);
                             }}
@@ -484,7 +491,7 @@ const UserManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-3" onClick={(e) => e.stopPropagation()}>
                           <Switch
                             id={`status-${user.id}`}
                             checked={user.is_active}

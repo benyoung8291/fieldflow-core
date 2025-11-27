@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, X } from "lucide-react";
+import { Save, X, Trash2 } from "lucide-react";
+import { DeleteConfirmDialog } from "@/components/purchase-orders/DeleteConfirmDialog";
 
 interface UserDetailsDialogProps {
   user: any;
@@ -20,6 +21,7 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
   const [email, setEmail] = useState(user.email);
   const [firstName, setFirstName] = useState(user.first_name);
   const [lastName, setLastName] = useState(user.last_name);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const updateUserMutation = useMutation({
     mutationFn: async (updates: any) => {
@@ -85,8 +87,48 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
     });
   };
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete user');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-management"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User deleted successfully");
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete user");
+    },
+  });
+
+  const handleDeleteUser = () => {
+    deleteUserMutation.mutate();
+    setShowDeleteConfirm(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>User Details</DialogTitle>
@@ -164,17 +206,35 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <X className="h-4 w-4 mr-2" />
-            Cancel
+        <div className="flex justify-between gap-2">
+          <Button 
+            variant="destructive" 
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={updateUserMutation.isPending || deleteUserMutation.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete User
           </Button>
-          <Button onClick={handleSave} disabled={updateUserMutation.isPending}>
-            <Save className="h-4 w-4 mr-2" />
-            {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={updateUserMutation.isPending}>
+              <Save className="h-4 w-4 mr-2" />
+              {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    <DeleteConfirmDialog
+      open={showDeleteConfirm}
+      onOpenChange={setShowDeleteConfirm}
+      onConfirm={handleDeleteUser}
+      itemName={`${user.first_name} ${user.last_name}`}
+    />
+    </>
   );
 };
