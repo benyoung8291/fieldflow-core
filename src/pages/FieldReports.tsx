@@ -120,6 +120,30 @@ export default function FieldReports() {
     }
   };
 
+  const handleUnapproveReport = async () => {
+    if (!selectedReportId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('field_reports')
+        .update({
+          status: 'submitted',
+          approved_at: null,
+          approved_by: null,
+        })
+        .eq('id', selectedReportId);
+
+      if (error) throw error;
+
+      toast.success('Report unapproved - now editable and hidden from customer portal');
+      // Refresh reports list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error unapproving report:', error);
+      toast.error('Failed to unapprove report');
+    }
+  };
+
   const filteredReports = reports?.filter(report => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -238,15 +262,21 @@ export default function FieldReports() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    {editMode ? 'View' : 'Edit'}
-                  </Button>
+                  {selectedReport.status !== 'approved' && (
+                    <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      {editMode ? 'View' : 'Edit'}
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={handleGeneratePDF}>
                     <Download className="h-4 w-4 mr-2" />
                     Generate PDF
                   </Button>
-                  {selectedReport.status !== 'approved' && (
+                  {selectedReport.status === 'approved' ? (
+                    <Button variant="outline" size="sm" onClick={handleUnapproveReport}>
+                      Unapprove Report
+                    </Button>
+                  ) : (
                     <Button size="sm" onClick={handleApproveReport}>
                       Approve Report
                     </Button>
