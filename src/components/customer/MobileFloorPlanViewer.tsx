@@ -387,35 +387,6 @@ export function MobileFloorPlanViewer({
           readOnly={readOnly}
         />
       )}
-      
-      {readOnly && (
-        <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
-          <Button
-            size="icon"
-            variant="default"
-            onClick={zoomIn}
-            disabled={scale >= 3}
-            className="h-12 w-12 rounded-full shadow-lg"
-          >
-            <ZoomIn className="h-5 w-5" />
-          </Button>
-          <Badge 
-            variant="default" 
-            className="rounded-full px-3 py-2 font-semibold text-sm shadow-lg"
-          >
-            {Math.round(scale * 100)}%
-          </Badge>
-          <Button
-            size="icon"
-            variant="default"
-            onClick={zoomOut}
-            disabled={scale <= 0.5}
-            className="h-12 w-12 rounded-full shadow-lg"
-          >
-            <ZoomOut className="h-5 w-5" />
-          </Button>
-        </div>
-      )}
 
       <div
         ref={containerRef}
