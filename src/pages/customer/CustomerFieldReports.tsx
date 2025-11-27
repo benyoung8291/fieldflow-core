@@ -47,11 +47,12 @@ export default function CustomerFieldReports() {
           ),
           created_by_profile:profiles(first_name, last_name)
         `)
+        .eq("status", "approved")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Filter to only reports where the service order belongs to this customer
+      // Filter to only approved reports where the service order belongs to this customer
       return data?.filter((report: any) => 
         report.appointment?.service_order?.customer_id === profile.customer_id
       ) || [];
