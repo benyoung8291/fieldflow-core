@@ -32,14 +32,26 @@ export default function CustomerLocations() {
       const { data, error } = await supabase
         .from("customer_locations")
         .select(`
-          *,
-          floor_plans:floor_plans(count)
+          *
         `)
         .eq("customer_id", profile.customer_id)
         .eq("archived", false);
 
       if (error) throw error;
-      return data;
+
+      // Get floor plan counts for each location
+      const locationsWithCounts = await Promise.all(
+        (data || []).map(async (location) => {
+          const { count } = await supabase
+            .from("floor_plans")
+            .select("*", { count: "exact", head: true })
+            .eq("customer_location_id", location.id);
+          
+          return { ...location, floor_plans_count: count || 0 };
+        })
+      );
+
+      return locationsWithCounts as Array<typeof data[0] & { floor_plans_count: number }>;
     },
     enabled: !!profile?.customer_id,
   });
@@ -112,7 +124,7 @@ export default function CustomerLocations() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/40">
                     <FileText className="h-4 w-4" />
                     <span className="font-medium">
-                      {location.floor_plans?.[0]?.count || 0} floor plan{location.floor_plans?.[0]?.count !== 1 ? 's' : ''}
+                      {location.floor_plans_count || 0} floor plan{location.floor_plans_count !== 1 ? 's' : ''}
                     </span>
                   </div>
 

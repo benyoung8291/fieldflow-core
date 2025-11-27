@@ -33,8 +33,7 @@ export default function CustomerServiceOrders() {
         .from("service_orders")
         .select(`
           *,
-          location:customer_locations(name, address),
-          appointments(id, start_time, end_time, status)
+          location:customer_locations(name, address)
         `)
         .eq("customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
@@ -111,16 +110,11 @@ export default function CustomerServiceOrders() {
                         >
                           {formatStatus(order.status)}
                         </Badge>
-                        {order.appointments && order.appointments.length > 0 && (
-                          <Badge variant="outline" className="rounded-lg">
-                            {order.appointments.length} Appointment{order.appointments.length > 1 ? 's' : ''}
-                          </Badge>
-                        )}
                       </div>
 
                       <div className="space-y-1.5">
                         <h3 className="font-semibold text-base leading-tight">
-                          Order #{order.service_order_number}
+                          Order #{order.order_number}
                         </h3>
                         {order.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2">
