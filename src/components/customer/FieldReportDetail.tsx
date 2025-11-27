@@ -38,6 +38,13 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
         .from("field_reports")
         .select(`
           *,
+          location:customer_locations!field_reports_location_id_fkey(
+            name,
+            address, 
+            city,
+            state,
+            postcode
+          ),
           appointment:appointments(
             id,
             title,
@@ -170,11 +177,17 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">Arrival Time</p>
                   <p className="text-base font-semibold">
-                    {new Date(report.arrival_time).toLocaleTimeString('en-US', {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
+                    {(() => {
+                      // Combine service_date and arrival_time to create a valid Date
+                      const dateStr = report.service_date;
+                      const timeStr = report.arrival_time;
+                      const dateTime = new Date(`${dateStr}T${timeStr}`);
+                      return dateTime.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                    })()}
                   </p>
                 </div>
               </div>
@@ -186,11 +199,14 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">Service Location</p>
                   <p className="text-base font-semibold">
-                    {report.appointment?.service_order?.location?.name || 'N/A'}
+                    {report.location?.name || report.appointment?.service_order?.location?.name || 'N/A'}
                   </p>
-                  {report.appointment?.service_order?.location?.address && (
+                  {(report.location?.address || report.appointment?.service_order?.location?.address) && (
                     <p className="text-sm text-muted-foreground">
-                      {report.appointment.service_order.location.address}
+                      {report.location?.address || report.appointment.service_order.location.address}
+                      {(report.location?.city || report.appointment?.service_order?.location?.city) && (
+                        <>, {report.location?.city || report.appointment.service_order.location.city} {report.location?.state || report.appointment.service_order.location.state} {report.location?.postcode || report.appointment.service_order.location.postcode}</>
+                      )}
                     </p>
                   )}
                 </div>
@@ -487,11 +503,11 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
           </Card>
         )}
 
-        {/* Customer Signature */}
+        {/* Technician Signature */}
         {report.customer_signature_data && (
           <Card className="border-border/40">
             <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-xl font-semibold">Customer Approval & Sign-Off</CardTitle>
+              <CardTitle className="text-xl font-semibold">Technician Sign-Off</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -524,7 +540,7 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
                   )}
                   <div className="pt-4 border-t">
                     <p className="text-sm text-muted-foreground italic">
-                      This signature confirms that the work has been completed to the customer's satisfaction.
+                      This signature confirms the technician has completed the service work as described.
                     </p>
                   </div>
                 </div>
