@@ -22,14 +22,6 @@ export default function LocationFloorPlans() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-
-  // Auto-select floor plan from URL params if present
-  useEffect(() => {
-    const floorPlanId = searchParams.get("floorPlan");
-    if (floorPlanId) {
-      setSelectedPlan(floorPlanId);
-    }
-  }, [searchParams]);
   const [markups, setMarkups] = useState<Markup[]>([]);
   const [mode, setMode] = useState<MarkupType>("pin");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -74,6 +66,22 @@ export default function LocationFloorPlans() {
     },
     enabled: !!locationId,
   });
+
+  // Auto-select floor plan from URL params if present
+  useEffect(() => {
+    const floorPlanId = searchParams.get("floorPlan");
+    if (floorPlanId && floorPlans && !isLoading) {
+      console.log("Auto-selecting floor plan from URL:", floorPlanId);
+      const planExists = floorPlans.find(p => p.id === floorPlanId);
+      if (planExists) {
+        console.log("Floor plan found, selecting:", planExists);
+        setSelectedPlan(floorPlanId);
+      } else {
+        console.error("Floor plan not found in available plans:", floorPlanId);
+        toast.error("The selected floor plan could not be found");
+      }
+    }
+  }, [searchParams, floorPlans, isLoading]);
 
   const { data: profile } = useQuery({
     queryKey: ["customer-profile"],
@@ -249,13 +257,26 @@ export default function LocationFloorPlans() {
   const floorPlanUrl = selectedFloorPlan?.file_url;
   const floorPlanImageUrl = selectedFloorPlan?.image_url;
   
-  console.log("Selected floor plan:", {
-    id: selectedFloorPlan?.id,
-    name: selectedFloorPlan?.name,
-    file_url: floorPlanUrl,
-    image_url: floorPlanImageUrl,
-    file_path: selectedFloorPlan?.file_path
+  console.log("Floor plan viewer state:", {
+    selectedPlanId: selectedPlan,
+    floorPlansCount: floorPlans?.length || 0,
+    selectedFloorPlan: selectedFloorPlan ? {
+      id: selectedFloorPlan.id,
+      name: selectedFloorPlan.name,
+      floor_number: selectedFloorPlan.floor_number,
+      file_url: floorPlanUrl,
+      image_url: floorPlanImageUrl,
+      file_path: selectedFloorPlan.file_path
+    } : null
   });
+
+  // Show error if floor plan is selected but has no file URL
+  useEffect(() => {
+    if (selectedPlan && selectedFloorPlan && !floorPlanUrl && !floorPlanImageUrl) {
+      console.error("Selected floor plan has no file_url or image_url:", selectedFloorPlan);
+      toast.error("This floor plan has no file attached. Please contact support.");
+    }
+  }, [selectedPlan, selectedFloorPlan, floorPlanUrl, floorPlanImageUrl]);
 
   // Mobile full-screen view (outside layout to hide footer)
   if (isMobile && selectedPlan) {
