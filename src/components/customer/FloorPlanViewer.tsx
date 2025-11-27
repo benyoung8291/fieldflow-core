@@ -349,6 +349,10 @@ export function FloorPlanViewer({
           <Document
             file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={(error) => {
+              console.error("PDF load error:", error);
+              toast.error("Failed to load floor plan");
+            }}
             className="pdf-document"
           >
             <Page

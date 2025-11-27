@@ -71,7 +71,7 @@ export default function LocationFloorPlans() {
         })
       );
       
-      return plansWithSignedUrls;
+      return plansWithSignedUrls as Array<typeof data[0] & { signed_url?: string }>;
     },
     enabled: !!locationId,
   });
@@ -286,13 +286,13 @@ export default function LocationFloorPlans() {
                 </div>
               </CardHeader>
               <CardContent className="h-[calc(100%-5rem)]">
-                <FloorPlanViewer
-                  pdfUrl={(selectedFloorPlan as any)?.signed_url || selectedFloorPlan?.file_url || ""}
-                  markups={markups}
-                  onMarkupsChange={setMarkups}
-                  mode={mode}
-                  onModeChange={setMode}
-                />
+                 <FloorPlanViewer
+                   pdfUrl={selectedFloorPlan?.signed_url || selectedFloorPlan?.file_url || ""}
+                   markups={markups}
+                   onMarkupsChange={setMarkups}
+                   mode={mode}
+                   onModeChange={setMode}
+                 />
               </CardContent>
             </Card>
 
