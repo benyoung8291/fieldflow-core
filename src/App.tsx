@@ -132,6 +132,29 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" replace />;
   }
 
+  // CRITICAL SECURITY: Customer portal users can ONLY access /customer routes
+  if (access.isCustomer && !access.canAccessOffice && !access.canAccessWorker) {
+    if (!location.startsWith("/customer")) {
+      return <Navigate to="/customer" replace />;
+    }
+    return <>{children}</>;
+  }
+
+  // Customer portal routes - require customer access
+  if (location.startsWith("/customer")) {
+    if (!access.canAccessCustomerPortal) {
+      // User is authenticated but doesn't have customer portal access
+      if (access.canAccessOffice) {
+        return <Navigate to="/dashboard" replace />;
+      }
+      if (access.canAccessWorker) {
+        return <Navigate to="/worker/dashboard" replace />;
+      }
+      return <Navigate to="/auth" replace />;
+    }
+    return <>{children}</>;
+  }
+
   // Worker-only routes - require worker access
   if (location.startsWith("/worker")) {
     if (!access.canAccessWorker) {
@@ -140,22 +163,38 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       if (access.canAccessOffice) {
         return <Navigate to="/dashboard" replace />;
       }
+      if (access.canAccessCustomerPortal) {
+        return <Navigate to="/customer" replace />;
+      }
       return <Navigate to="/auth" replace />;
     }
   } 
-  // Office routes - require role
+  // Office routes - require office role
   else {
     if (!access.canAccessOffice) {
       // User is authenticated but doesn't have office access
-      // Redirect to worker dashboard if they have worker access, otherwise to auth
       if (access.canAccessWorker) {
         return <Navigate to="/worker/dashboard" replace />;
+      }
+      if (access.canAccessCustomerPortal) {
+        return <Navigate to="/customer" replace />;
       }
       return <Navigate to="/auth" replace />;
     }
   }
 
   return <>{children}</>;
+};
+
+// Component to redirect authenticated users to their default route
+const RedirectToDefaultRoute = () => {
+  const { data: access, isLoading } = useUserAccess();
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+  
+  return <Navigate to={access?.defaultRoute || "/dashboard"} replace />;
 };
 
 const App = () => {
@@ -248,7 +287,7 @@ const App = () => {
               <WorkerMobileBottomNav />
               <Suspense fallback={<RouteLoader />}>
                 <Routes>
-                  <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
+                  <Route path="/" element={isAuthenticated ? <RedirectToDefaultRoute /> : <Navigate to="/auth" replace />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/first-password-reset" element={isAuthenticated ? <FirstPasswordReset /> : <Navigate to="/auth" replace />} />
                   <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />

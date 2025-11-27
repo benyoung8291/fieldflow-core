@@ -29,8 +29,11 @@ export function useUserAccess() {
         userId: accessData.user_id,
         hasRole: accessData.has_role,
         isWorker: accessData.is_worker,
+        isCustomer: accessData.is_customer,
+        customerId: accessData.customer_id,
         canAccessOffice: accessData.can_access_office,
         canAccessWorker: accessData.can_access_worker,
+        canAccessCustomerPortal: accessData.can_access_customer_portal,
         showToggle: accessData.show_toggle,
         defaultRoute: accessData.default_route
       };
