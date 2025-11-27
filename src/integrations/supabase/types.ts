@@ -4145,6 +4145,7 @@ export type Database = {
           projects_enabled: boolean | null
           service_orders_enabled: boolean | null
           standard_work_hours: number | null
+          state: string | null
           status: string | null
           status_updated_at: string | null
           super_fund_name: string | null
@@ -4180,6 +4181,7 @@ export type Database = {
           projects_enabled?: boolean | null
           service_orders_enabled?: boolean | null
           standard_work_hours?: number | null
+          state?: string | null
           status?: string | null
           status_updated_at?: string | null
           super_fund_name?: string | null
@@ -4215,6 +4217,7 @@ export type Database = {
           projects_enabled?: boolean | null
           service_orders_enabled?: boolean | null
           standard_work_hours?: number | null
+          state?: string | null
           status?: string | null
           status_updated_at?: string | null
           super_fund_name?: string | null

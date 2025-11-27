@@ -199,7 +199,7 @@ export default function Scheduler() {
 
   // Fetch all active workers from workers view
   const { data: workers = [] } = useQuery({
-    queryKey: ["workers"],
+    queryKey: ["workers", stateFilter],
     queryFn: async () => {
       // First, get all user IDs with worker role
       const { data: workerRoles, error: rolesError } = await supabase
@@ -227,10 +227,10 @@ export default function Scheduler() {
       
       if (workerIds.length === 0) return [];
 
-      // Fetch additional profile data for capacity planning
+      // Fetch additional profile data for capacity planning and state filtering
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, standard_work_hours, employment_type")
+        .select("id, standard_work_hours, employment_type, state")
         .in("id", workerIds);
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
@@ -247,12 +247,13 @@ export default function Scheduler() {
         .in("worker_id", workerIds);
 
       // Combine workers with their skills and profile data
-      const workersWithSkills = (workersData || []).map(worker => {
+      let workersWithSkills = (workersData || []).map(worker => {
         const profile = profileMap.get(worker.id);
         return {
           ...worker,
           standard_work_hours: profile?.standard_work_hours,
           employment_type: profile?.employment_type,
+          state: profile?.state,
           worker_skills: (workerSkills || [])
             .filter(ws => ws.worker_id === worker.id)
             .map(ws => ({
@@ -262,6 +263,11 @@ export default function Scheduler() {
             }))
         };
       });
+
+      // Filter by state if filter is applied
+      if (stateFilter !== "all") {
+        workersWithSkills = workersWithSkills.filter(worker => worker.state === stateFilter);
+      }
 
       return workersWithSkills;
     },
@@ -1414,6 +1420,17 @@ export default function Scheduler() {
                   <ChevronRight className="h-3 w-3" />
                 </Button>
                 <h3 className="text-xs font-semibold ml-1">{getDateRangeLabel()}</h3>
+                <Select value={stateFilter} onValueChange={setStateFilter}>
+                  <SelectTrigger className="h-7 w-[120px] text-[10px]">
+                    <SelectValue placeholder="Filter by state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-[10px]">All States</SelectItem>
+                    {states.map((state) => (
+                      <SelectItem key={state} value={state} className="text-[10px]">{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center gap-1.5">
                 <Button
@@ -1603,7 +1620,10 @@ export default function Scheduler() {
               <>
                 {!showServiceOrderView ? (
                   <div className="flex flex-col min-h-0">
-                    <ServiceOrdersSidebar onSelectWorkerForOrder={handleSelectWorkerForOrder} />
+                    <ServiceOrdersSidebar 
+                      onSelectWorkerForOrder={handleSelectWorkerForOrder}
+                      stateFilter={stateFilter}
+                    />
                   </div>
                 ) : (
                   <Card className="h-full flex flex-col min-h-0">
