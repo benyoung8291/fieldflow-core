@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Save, X } from "lucide-react";
-import { AUSTRALIAN_STATES } from "@/lib/constants/australianStates";
 
 interface UserDetailsDialogProps {
   user: any;
@@ -22,8 +20,6 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
   const [email, setEmail] = useState(user.email);
   const [firstName, setFirstName] = useState(user.first_name);
   const [lastName, setLastName] = useState(user.last_name);
-  const [phone, setPhone] = useState(user.worker_phone || "");
-  const [state, setState] = useState(user.worker_state || "");
 
   const updateUserMutation = useMutation({
     mutationFn: async (updates: any) => {
@@ -55,8 +51,6 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
       const profileUpdates: any = {};
       if (updates.first_name !== user.first_name) profileUpdates.first_name = updates.first_name;
       if (updates.last_name !== user.last_name) profileUpdates.last_name = updates.last_name;
-      if (updates.worker_phone !== user.worker_phone) profileUpdates.worker_phone = updates.worker_phone;
-      if (updates.worker_state !== user.worker_state) profileUpdates.worker_state = updates.worker_state;
 
       if (Object.keys(profileUpdates).length > 0) {
         const { error } = await supabase
@@ -88,8 +82,6 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
       email,
       first_name: firstName,
       last_name: lastName,
-      worker_phone: phone,
-      worker_state: state,
     });
   };
 
@@ -133,31 +125,6 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">Worker Phone</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+61 XXX XXX XXX"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="state">Worker State</Label>
-            <Select value={state} onValueChange={setState}>
-              <SelectTrigger id="state">
-                <SelectValue placeholder="Select state" />
-              </SelectTrigger>
-              <SelectContent>
-                {AUSTRALIAN_STATES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-2">
             <Label>Roles</Label>

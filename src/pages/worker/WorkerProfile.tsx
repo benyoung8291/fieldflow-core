@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AUSTRALIAN_STATES } from '@/lib/constants/australianStates';
 import { ChevronLeft, User, Briefcase, Mail, Phone, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -18,6 +20,8 @@ interface ProfileData {
   last_name: string;
   email: string;
   phone: string | null;
+  worker_phone: string | null;
+  worker_state: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
 }
@@ -95,6 +99,8 @@ export default function WorkerProfile() {
           first_name: profile.first_name,
           last_name: profile.last_name,
           phone: profile.phone,
+          worker_phone: profile.worker_phone,
+          worker_state: profile.worker_state,
           emergency_contact_name: profile.emergency_contact_name,
           emergency_contact_phone: profile.emergency_contact_phone,
         })
@@ -209,6 +215,39 @@ export default function WorkerProfile() {
                   placeholder="Enter phone number"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="worker_phone" className="text-sm font-medium">Worker Phone</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="worker_phone"
+                  value={profile.worker_phone || ''}
+                  onChange={(e) => setProfile({ ...profile, worker_phone: e.target.value })}
+                  className="h-10 pl-10"
+                  placeholder="+61 XXX XXX XXX"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="worker_state" className="text-sm font-medium">Worker State</Label>
+              <Select 
+                value={profile.worker_state || ''} 
+                onValueChange={(value) => setProfile({ ...profile, worker_state: value })}
+              >
+                <SelectTrigger id="worker_state" className="h-10">
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AUSTRALIAN_STATES.map((state) => (
+                    <SelectItem key={state.value} value={state.value}>
+                      {state.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
