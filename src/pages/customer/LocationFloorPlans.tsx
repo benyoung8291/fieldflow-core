@@ -60,30 +60,8 @@ export default function LocationFloorPlans() {
       
       console.log("Customer portal: Floor plans loaded", data?.length || 0);
       
-      // Generate signed URLs for PDFs to avoid CORS issues
-      const plansWithSignedUrls = await Promise.all(
-        (data || []).map(async (plan) => {
-          if (plan.file_path) {
-            console.log("Customer portal: Creating signed URL for", plan.file_path);
-            const { data: signedUrl, error: signError } = await supabase
-              .storage
-              .from("floor-plans")
-              .createSignedUrl(plan.file_path, 3600); // 1 hour expiry
-            
-            if (signError) {
-              console.error("Customer portal: Error creating signed URL:", signError);
-              toast.error(`Failed to load floor plan: ${plan.name}`);
-              return plan;
-            }
-            
-            console.log("Customer portal: Signed URL created successfully");
-            return { ...plan, signed_url: signedUrl.signedUrl };
-          }
-          return plan;
-        })
-      );
-      
-      return plansWithSignedUrls as Array<typeof data[0] & { signed_url?: string }>;
+      // Since bucket is public, use file_url directly
+      return data || [];
     },
     enabled: !!locationId,
   });
@@ -259,8 +237,16 @@ export default function LocationFloorPlans() {
   };
 
   const selectedFloorPlan = floorPlans?.find((p) => p.id === selectedPlan);
-  const floorPlanUrl = selectedFloorPlan?.signed_url || selectedFloorPlan?.file_url;
+  const floorPlanUrl = selectedFloorPlan?.file_url;
   const floorPlanImageUrl = selectedFloorPlan?.image_url;
+  
+  console.log("Selected floor plan:", {
+    id: selectedFloorPlan?.id,
+    name: selectedFloorPlan?.name,
+    file_url: floorPlanUrl,
+    image_url: floorPlanImageUrl,
+    file_path: selectedFloorPlan?.file_path
+  });
 
   // Mobile full-screen view (outside layout to hide footer)
   if (isMobile && selectedPlan) {
