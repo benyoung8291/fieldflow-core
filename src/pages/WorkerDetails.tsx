@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, DollarSign, Mail, Phone, User, Shield } from "lucide-react";
+import { Calendar, Clock, DollarSign, Mail, Phone, User, Shield, MapPin } from "lucide-react";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import WorkerAvailability from "@/components/workers/WorkerAvailability";
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { AUSTRALIAN_STATES } from "@/lib/constants/australianStates";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -76,6 +77,7 @@ export default function WorkerDetails() {
           first_name: data.first_name,
           last_name: data.last_name,
           phone: data.phone,
+          worker_state: data.worker_state,
           tax_file_number: data.tax_file_number,
           abn: data.abn,
           super_fund_name: data.super_fund_name,
@@ -110,6 +112,7 @@ export default function WorkerDetails() {
       first_name: worker?.first_name || "",
       last_name: worker?.last_name || "",
       phone: worker?.phone || "",
+      worker_state: worker?.worker_state || "",
       emergency_contact_name: worker?.emergency_contact_name || "",
       emergency_contact_phone: worker?.emergency_contact_phone || "",
       pay_rate_category_id: worker?.pay_rate_category_id || "",
@@ -236,20 +239,48 @@ export default function WorkerDetails() {
                     <span>{worker.email}</span>
                   </div>
                   {isEditing ? (
-                    <div className="space-y-2">
-                      <Label>Phone</Label>
-                      <Input
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      />
-                    </div>
-                  ) : (
-                    worker.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{worker.phone}</span>
+                    <>
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        />
                       </div>
-                    )
+                      <div className="space-y-2">
+                        <Label>Worker State</Label>
+                        <Select
+                          value={formData.worker_state}
+                          onValueChange={(value) => setFormData({ ...formData, worker_state: value })}
+                        >
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            {AUSTRALIAN_STATES.map((state) => (
+                              <SelectItem key={state.value} value={state.value}>
+                                {state.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {worker.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span>{worker.phone}</span>
+                        </div>
+                      )}
+                      {worker.worker_state && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{AUSTRALIAN_STATES.find(s => s.value === worker.worker_state)?.label || worker.worker_state}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
