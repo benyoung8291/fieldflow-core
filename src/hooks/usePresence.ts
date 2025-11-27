@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -51,7 +51,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, PresenceUser>>({});
   const [currentUser, setCurrentUser] = useState<PresenceUser | null>(null);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [activityTimeout, setActivityTimeout] = useState<NodeJS.Timeout | null>(null);
+  const activityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [userStatus, setUserStatus] = useState<'available' | 'busy' | 'away'>('available');
   const [autoAwayMinutes, setAutoAwayMinutes] = useState<number>(5);
 
@@ -158,8 +158,8 @@ export function usePresence({ page, field }: UsePresenceOptions) {
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
-      if (activityTimeout) {
-        clearTimeout(activityTimeout);
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
       }
     };
   }, [page]);
@@ -170,8 +170,8 @@ export function usePresence({ page, field }: UsePresenceOptions) {
 
     // Start activity tracking for auto-away
     const resetActivityTimer = () => {
-      if (activityTimeout) {
-        clearTimeout(activityTimeout);
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
       }
       
       // Only set auto-away if current status is not manually set to busy
@@ -197,7 +197,7 @@ export function usePresence({ page, field }: UsePresenceOptions) {
           }
         }, autoAwayMinutes * 60 * 1000);
         
-        setActivityTimeout(timeout);
+        activityTimeoutRef.current = timeout;
       }
     };
 
@@ -217,8 +217,8 @@ export function usePresence({ page, field }: UsePresenceOptions) {
     resetActivityTimer();
 
     return () => {
-      if (activityTimeout) {
-        clearTimeout(activityTimeout);
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
       }
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
