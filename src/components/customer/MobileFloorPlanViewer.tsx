@@ -86,6 +86,10 @@ export function MobileFloorPlanViewer({
   const [draggedMarkupId, setDraggedMarkupId] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  
+  // Track if multi-touch gesture occurred
+  const [multiTouchActive, setMultiTouchActive] = useState(false);
+  const [singleTouchStart, setSingleTouchStart] = useState<{ x: number; y: number } | null>(null);
 
   const updateHistory = (newMarkups: Markup[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -293,8 +297,10 @@ export function MobileFloorPlanViewer({
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     // Pinch to zoom (2 fingers)
     if (e.touches.length === 2) {
+      setMultiTouchActive(true);
       setIsPanning(false);
       setIsDrawing(false);
+      setSingleTouchStart(null);
       setInitialPinchDistance(calculatePinchDistance(e.touches));
       setInitialScale(scale);
       setPinchCenter(calculatePinchCenter(e.touches));
@@ -304,6 +310,10 @@ export function MobileFloorPlanViewer({
     if (e.touches.length !== 1) return;
     
     const touch = e.touches[0];
+    const pos = getTouchPosition(touch);
+    
+    // Reset multi-touch flag for new single-touch interaction
+    setMultiTouchActive(false);
     
     // In read-only mode, only allow panning
     if (readOnly) {
@@ -313,17 +323,9 @@ export function MobileFloorPlanViewer({
     }
     
     if (mode === "pin") {
-      const pos = getTouchPosition(touch);
-      const newMarkup: PinMarkup = {
-        id: crypto.randomUUID(),
-        type: "pin",
-        x: pos.x,
-        y: pos.y,
-      };
-      const newMarkups = [...markups, newMarkup];
-      updateHistory(newMarkups);
+      // Store touch position but don't place pin yet - wait to see if second finger arrives
+      setSingleTouchStart(pos);
     } else if (mode === "zone") {
-      const pos = getTouchPosition(touch);
       setIsDrawing(true);
       setDrawStart(pos);
       setDrawCurrent(pos);
@@ -400,6 +402,20 @@ export function MobileFloorPlanViewer({
       setPanStart(null);
     }
     
+    // Place pin only if it was a single-touch tap (no multi-touch gesture occurred)
+    if (mode === "pin" && singleTouchStart && !multiTouchActive && !isPanning) {
+      const newMarkup: PinMarkup = {
+        id: crypto.randomUUID(),
+        type: "pin",
+        x: singleTouchStart.x,
+        y: singleTouchStart.y,
+      };
+      const newMarkups = [...markups, newMarkup];
+      updateHistory(newMarkups);
+    }
+    
+    setSingleTouchStart(null);
+    
     if (mode === "zone" && isDrawing && drawStart && drawCurrent) {
       const x = Math.min(drawStart.x, drawCurrent.x);
       const y = Math.min(drawStart.y, drawCurrent.y);
@@ -419,6 +435,11 @@ export function MobileFloorPlanViewer({
       setIsDrawing(false);
       setDrawStart(null);
       setDrawCurrent(null);
+    }
+    
+    // Reset multi-touch flag when all touches are lifted
+    if (e.touches.length === 0) {
+      setMultiTouchActive(false);
     }
   };
 
