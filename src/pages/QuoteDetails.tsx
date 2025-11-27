@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import {
   Select,
   SelectContent,

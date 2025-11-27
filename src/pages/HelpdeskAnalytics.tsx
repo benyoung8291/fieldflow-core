@@ -8,9 +8,9 @@ import { format, subDays } from "date-fns";
 import { CalendarIcon, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OverviewMetrics } from "@/components/helpdesk/analytics/OverviewMetrics";
-import { ResponseTimeChart } from "@/components/helpdesk/analytics/ResponseTimeChart";
-import { TeamPerformance } from "@/components/helpdesk/analytics/TeamPerformance";
-import { PipelineMetrics } from "@/components/helpdesk/analytics/PipelineMetrics";
+import { ResponseTimeChartLazy } from "@/components/helpdesk/analytics/ResponseTimeChartLazy";
+import { TeamPerformanceLazy } from "@/components/helpdesk/analytics/TeamPerformanceLazy";
+import { PipelineMetricsLazy } from "@/components/helpdesk/analytics/PipelineMetricsLazy";
 import { CustomerMetrics } from "@/components/helpdesk/analytics/CustomerMetrics";
 import { AtRiskTickets } from "@/components/helpdesk/analytics/AtRiskTickets";
 import { DateRange } from "react-day-picker";
@@ -90,15 +90,15 @@ export default function HelpdeskAnalytics() {
             <TabsContent value="overview" className="space-y-6">
               <OverviewMetrics dateRange={dateRange} />
               <AtRiskTickets />
-              <ResponseTimeChart dateRange={dateRange} />
+              <ResponseTimeChartLazy dateRange={dateRange} />
             </TabsContent>
 
             <TabsContent value="team" className="space-y-6">
-              <TeamPerformance dateRange={dateRange} />
+              <TeamPerformanceLazy dateRange={dateRange} />
             </TabsContent>
 
             <TabsContent value="pipelines" className="space-y-6">
-              <PipelineMetrics dateRange={dateRange} />
+              <PipelineMetricsLazy dateRange={dateRange} />
             </TabsContent>
 
             <TabsContent value="customers" className="space-y-6">

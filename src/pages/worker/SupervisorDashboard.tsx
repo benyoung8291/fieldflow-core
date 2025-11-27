@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Users, Calendar, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { WorkerLocationMap } from '@/components/worker/WorkerLocationMap';
+import { WorkerLocationMapLazy } from '@/components/worker/WorkerLocationMapLazy';
 
 export default function SupervisorDashboard() {
   const navigate = useNavigate();
@@ -250,7 +250,7 @@ export default function SupervisorDashboard() {
 
           {/* Map Tab */}
           <TabsContent value="map">
-            <WorkerLocationMap activeWorkers={activeWorkers} />
+            <WorkerLocationMapLazy activeWorkers={activeWorkers} />
           </TabsContent>
         </Tabs>
       </div>

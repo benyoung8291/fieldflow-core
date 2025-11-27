@@ -29,7 +29,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, DragCancelEvent } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
 import DraggableWorker from "@/components/scheduler/DraggableWorker";
-import { CapacityPlanningView } from "@/components/scheduler/CapacityPlanningView";
+import { CapacityPlanningViewLazy } from "@/components/scheduler/CapacityPlanningViewLazy";
 import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -1474,7 +1474,7 @@ export default function Scheduler() {
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading appointments...</div>
             ) : viewType === "capacity" ? (
-              <CapacityPlanningView
+              <CapacityPlanningViewLazy
                 workers={workers.map(w => ({
                   ...w,
                   full_name: `${w.first_name} ${w.last_name}`

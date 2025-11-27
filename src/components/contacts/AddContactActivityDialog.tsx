@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 

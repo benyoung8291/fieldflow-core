@@ -1,11 +1,29 @@
+import { lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, TrendingUp, Target, Clock, Users, FileText, Wrench, FileCheck, CalendarDays } from 'lucide-react';
 import { formatDistanceToNow, format, subMonths, startOfMonth, endOfMonth, isFuture, isAfter, isBefore } from 'date-fns';
+
+// Lazy load recharts components
+const BarChart = lazy(() => import('recharts').then(m => ({ default: m.BarChart })));
+const Bar = lazy(() => import('recharts').then(m => ({ default: m.Bar })));
+const LineChart = lazy(() => import('recharts').then(m => ({ default: m.LineChart })));
+const Line = lazy(() => import('recharts').then(m => ({ default: m.Line })));
+const PieChart = lazy(() => import('recharts').then(m => ({ default: m.PieChart })));
+const Pie = lazy(() => import('recharts').then(m => ({ default: m.Pie })));
+const Cell = lazy(() => import('recharts').then(m => ({ default: m.Cell })));
+const XAxis = lazy(() => import('recharts').then(m => ({ default: m.XAxis })));
+const YAxis = lazy(() => import('recharts').then(m => ({ default: m.YAxis })));
+const CartesianGrid = lazy(() => import('recharts').then(m => ({ default: m.CartesianGrid })));
+const Tooltip = lazy(() => import('recharts').then(m => ({ default: m.Tooltip })));
+const Legend = lazy(() => import('recharts').then(m => ({ default: m.Legend })));
+const ResponsiveContainer = lazy(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })));
+
+const ChartFallback = () => <Skeleton className="h-[300px] w-full" />;
 
 const COLORS = ['#0891B2', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#3B82F6'];
 
@@ -343,17 +361,19 @@ export default function Analytics() {
                 <CardDescription>Monthly quote creation and win rates</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="quotes" stroke="#0891B2" name="Total Quotes" />
-                    <Line type="monotone" dataKey="won" stroke="#10B981" name="Won" />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="quotes" stroke="#0891B2" name="Total Quotes" />
+                      <Line type="monotone" dataKey="won" stroke="#10B981" name="Won" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Suspense>
               </CardContent>
             </Card>
 
@@ -363,16 +383,18 @@ export default function Analytics() {
                 <CardDescription>Total value of quotes created per month</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
-                    <Legend />
-                    <Bar dataKey="value" fill="#0891B2" name="Quote Value" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
+                      <Legend />
+                      <Bar dataKey="value" fill="#0891B2" name="Quote Value" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
@@ -384,17 +406,19 @@ export default function Analytics() {
                 <CardDescription>Conversion performance by lead origin</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={leadSourceChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="source" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="won" fill="#10B981" name="Won" />
-                    <Bar dataKey="lost" fill="#EF4444" name="Lost" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={leadSourceChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="source" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="won" fill="#10B981" name="Won" />
+                      <Bar dataKey="lost" fill="#EF4444" name="Lost" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
@@ -406,25 +430,27 @@ export default function Analytics() {
                 <CardDescription>Quotes by CRM status</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={statusDistribution}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Suspense>
               </CardContent>
             </Card>
 
@@ -463,15 +489,17 @@ export default function Analytics() {
               </CardHeader>
               <CardContent>
                 {topPerformers.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={topPerformers} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="owner" type="category" width={100} />
-                      <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
-                      <Bar dataKey="value" fill="#0891B2" name="Total Value" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Suspense fallback={<ChartFallback />}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={topPerformers} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis dataKey="owner" type="category" width={100} />
+                        <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
+                        <Bar dataKey="value" fill="#0891B2" name="Total Value" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Suspense>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="mx-auto h-12 w-12 mb-2" />
@@ -603,16 +631,18 @@ export default function Analytics() {
                   <CardDescription>Completed order revenue by month</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={monthlyOrderData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
-                      <Legend />
-                      <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Suspense fallback={<ChartFallback />}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={monthlyOrderData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Suspense>
                 </CardContent>
               </Card>
             </div>
@@ -623,25 +653,27 @@ export default function Analytics() {
                 <CardDescription>Current state of all service orders</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={orderStatusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {orderStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={orderStatusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {orderStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
@@ -709,25 +741,27 @@ export default function Analytics() {
                   <CardDescription>Overview of all service contracts</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={contractStatusData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {contractStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <Suspense fallback={<ChartFallback />}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={contractStatusData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {contractStatusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Suspense>
                 </CardContent>
               </Card>
 
