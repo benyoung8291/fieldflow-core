@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { MapPin, Square, ZoomIn, ZoomOut, Trash2, Undo, Redo, Move } from "lucide-react";
+import { MapPin, Square, ZoomIn, ZoomOut, Undo, Redo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -60,67 +59,35 @@ export function FloorPlanViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [touchStart, setTouchStart] = useState<{ distance: number } | null>(null);
-  const [selectedMarkup, setSelectedMarkup] = useState<string | null>(null);
-  const [editingNote, setEditingNote] = useState<string | null>(null);
   const [history, setHistory] = useState<Markup[][]>([markups]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
   // Update history when markups change
-  const updateHistory = useCallback((newMarkups: Markup[]) => {
+  const updateHistory = (newMarkups: Markup[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newMarkups);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     onMarkupsChange(newMarkups);
-  }, [history, historyIndex, onMarkupsChange]);
+  };
 
-  const undo = useCallback(() => {
+  const undo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
       onMarkupsChange(history[newIndex]);
       toast.success("Undone");
     }
-  }, [historyIndex, history, onMarkupsChange]);
+  };
 
-  const redo = useCallback(() => {
+  const redo = () => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
       onMarkupsChange(history[newIndex]);
       toast.success("Redone");
     }
-  }, [historyIndex, history, onMarkupsChange]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
-        e.preventDefault();
-        redo();
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedMarkup && !editingNote) {
-          e.preventDefault();
-          deleteMarkup(selectedMarkup);
-        }
-      } else if (e.key === 'Escape') {
-        setSelectedMarkup(null);
-        setEditingNote(null);
-      } else if (e.key === 'p' || e.key === 'P') {
-        e.preventDefault();
-        onModeChange('pin');
-      } else if (e.key === 'a' || e.key === 'A') {
-        e.preventDefault();
-        onModeChange('zone');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedMarkup, editingNote, undo, redo, onModeChange]);
+  };
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -141,85 +108,67 @@ export function FloorPlanViewer({
     setNumPages(numPages);
   };
 
-  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target !== e.currentTarget) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const scaledRect = {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width * scale,
-      height: rect.height * scale,
-    };
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (mode !== "pin") return;
     
-    const x = ((e.clientX - scaledRect.left) / scaledRect.width) * 100;
-    const y = ((e.clientY - scaledRect.top) / scaledRect.height) * 100;
-
-    if (mode === "pin") {
-      const newMarkup: PinMarkup = {
-        id: crypto.randomUUID(),
-        type: "pin",
-        x,
-        y,
-      };
-      const newMarkups = [...markups, newMarkup];
-      updateHistory(newMarkups);
-      setSelectedMarkup(newMarkup.id);
-      toast.success("Pin added - Click to edit note");
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    
+    // Get touch or mouse coordinates
+    let clientX: number, clientY: number;
+    if ('touches' in e) {
+      if (e.touches.length !== 1) return;
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
     } else {
-      setSelectedMarkup(null);
+      if (e.target !== e.currentTarget) return;
+      clientX = e.clientX;
+      clientY = e.clientY;
     }
+    
+    // Calculate position relative to the PDF page
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+
+    const newMarkup: PinMarkup = {
+      id: crypto.randomUUID(),
+      type: "pin",
+      x,
+      y,
+    };
+    const newMarkups = [...markups, newMarkup];
+    updateHistory(newMarkups);
+    toast.success("Pin added");
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (mode !== "zone") return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const scaledRect = {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width * scale,
-      height: rect.height * scale,
-    };
-    
-    const x = ((e.clientX - scaledRect.left) / scaledRect.width) * 100;
-    const y = ((e.clientY - scaledRect.top) / scaledRect.height) * 100;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     setIsDrawing(true);
     setDrawStart({ x, y });
     setDrawCurrent({ x, y });
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDrawing || !drawStart || mode !== "zone") return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const scaledRect = {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width * scale,
-      height: rect.height * scale,
-    };
-    
-    const x = ((e.clientX - scaledRect.left) / scaledRect.width) * 100;
-    const y = ((e.clientY - scaledRect.top) / scaledRect.height) * 100;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     setDrawCurrent({ x, y });
   };
 
-  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDrawing || !drawStart || mode !== "zone") return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const scaledRect = {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width * scale,
-      height: rect.height * scale,
-    };
-    
-    const endX = ((e.clientX - scaledRect.left) / scaledRect.width) * 100;
-    const endY = ((e.clientY - scaledRect.top) / scaledRect.height) * 100;
+    const endX = ((e.clientX - rect.left) / rect.width) * 100;
+    const endY = ((e.clientY - rect.top) / rect.height) * 100;
 
     const x = Math.min(drawStart.x, endX);
     const y = Math.min(drawStart.y, endY);
@@ -235,27 +184,12 @@ export function FloorPlanViewer({
       };
       const newMarkups = [...markups, newMarkup];
       updateHistory(newMarkups);
-      setSelectedMarkup(newMarkup.id);
-      toast.success("Area added - Click to edit note");
+      toast.success("Area added");
     }
 
     setIsDrawing(false);
     setDrawStart(null);
     setDrawCurrent(null);
-  };
-
-  const deleteMarkup = (id: string) => {
-    const newMarkups = markups.filter((m) => m.id !== id);
-    updateHistory(newMarkups);
-    setSelectedMarkup(null);
-    toast.success("Markup deleted");
-  };
-
-  const updateMarkupNote = (id: string, notes: string) => {
-    const newMarkups = markups.map((m) => 
-      m.id === id ? { ...m, notes } : m
-    );
-    updateHistory(newMarkups);
   };
 
   const zoomIn = () => setScale((prev) => Math.min(prev + 0.25, 3));
@@ -294,33 +228,29 @@ export function FloorPlanViewer({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 border border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-2xl shadow-sm">
         {/* Mode Selection with keyboard shortcuts */}
         <div className="flex gap-2 flex-1">
-          <Button
+            <Button
             variant={mode === "pin" ? "default" : "outline"}
             size="sm"
             onClick={() => onModeChange("pin")}
             className={cn(
-              "flex-1 sm:flex-none rounded-xl transition-all hover:scale-105",
+              "flex-1 sm:flex-none rounded-xl transition-all",
               mode === "pin" && "shadow-md"
             )}
-            title="Pin tool (P)"
           >
             <MapPin className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Pin</span>
-            <kbd className="hidden lg:inline ml-2 px-1.5 py-0.5 text-xs bg-muted rounded">P</kbd>
           </Button>
           <Button
             variant={mode === "zone" ? "default" : "outline"}
             size="sm"
             onClick={() => onModeChange("zone")}
             className={cn(
-              "flex-1 sm:flex-none rounded-xl transition-all hover:scale-105",
+              "flex-1 sm:flex-none rounded-xl transition-all",
               mode === "zone" && "shadow-md"
             )}
-            title="Area tool (A)"
           >
             <Square className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Area</span>
-            <kbd className="hidden lg:inline ml-2 px-1.5 py-0.5 text-xs bg-muted rounded">A</kbd>
           </Button>
         </div>
 
@@ -331,8 +261,7 @@ export function FloorPlanViewer({
             size="icon" 
             onClick={undo}
             disabled={historyIndex === 0}
-            className="rounded-xl h-9 w-9 hover:scale-105 transition-all"
-            title="Undo (Ctrl+Z)"
+            className="rounded-xl h-9 w-9"
           >
             <Undo className="h-4 w-4" />
           </Button>
@@ -341,8 +270,7 @@ export function FloorPlanViewer({
             size="icon" 
             onClick={redo}
             disabled={historyIndex === history.length - 1}
-            className="rounded-xl h-9 w-9 hover:scale-105 transition-all"
-            title="Redo (Ctrl+Y)"
+            className="rounded-xl h-9 w-9"
           >
             <Redo className="h-4 w-4" />
           </Button>
@@ -355,8 +283,7 @@ export function FloorPlanViewer({
             size="icon" 
             onClick={zoomOut}
             disabled={scale <= 0.5}
-            className="rounded-xl h-9 w-9 hover:scale-105 transition-all"
-            title="Zoom out"
+            className="rounded-xl h-9 w-9"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
@@ -368,8 +295,7 @@ export function FloorPlanViewer({
             size="icon" 
             onClick={zoomIn}
             disabled={scale >= 3}
-            className="rounded-xl h-9 w-9 hover:scale-105 transition-all"
-            title="Zoom in"
+            className="rounded-xl h-9 w-9"
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
@@ -406,16 +332,16 @@ export function FloorPlanViewer({
       {/* PDF Viewer with Markups */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto bg-gradient-to-br from-muted/20 to-muted/40 rounded-2xl touch-pan-x touch-pan-y"
+        className="relative flex-1 overflow-auto bg-gradient-to-br from-muted/20 to-muted/40 rounded-2xl touch-none"
         onClick={handleContainerClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ 
-          cursor: mode === "pin" ? "copy" : mode === "zone" ? "crosshair" : "default",
+          cursor: mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : "default",
           boxShadow: 'inset 0 0 0 1px hsl(var(--border) / 0.3)'
         }}
       >
@@ -433,90 +359,27 @@ export function FloorPlanViewer({
             />
           </Document>
 
-          {/* Render Markups with enhanced interactivity */}
+          {/* Render Markups - simplified for list-based editing */}
           <div className="absolute inset-0 pointer-events-none">
-            {markups.map((markup) => {
-              const isSelected = selectedMarkup === markup.id;
-              const isEditing = editingNote === markup.id;
-              
+            {markups.map((markup, index) => {
               if (markup.type === "pin") {
                 return (
                   <div
                     key={markup.id}
-                    className="absolute pointer-events-auto group"
+                    className="absolute pointer-events-none"
                     style={{
                       left: `${markup.x}%`,
                       top: `${markup.y}%`,
                       transform: "translate(-50%, -100%)",
                     }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedMarkup(markup.id);
-                    }}
                   >
-                    <div className="relative">
+                    <div className="relative flex flex-col items-center">
                       <MapPin 
-                        className={cn(
-                          "h-10 w-10 transition-all duration-200 cursor-pointer",
-                          isSelected 
-                            ? "text-primary fill-primary/60 drop-shadow-[0_0_8px_rgba(var(--primary),0.5)] scale-110" 
-                            : "text-destructive fill-destructive/50 drop-shadow-lg hover:scale-110"
-                        )}
+                        className="h-8 w-8 text-destructive fill-destructive/60 drop-shadow-lg"
                       />
-                      
-                      {/* Controls - show on hover or selection */}
-                      <div className={cn(
-                        "absolute -top-3 -right-3 flex gap-1 transition-opacity",
-                        isSelected || "opacity-0 group-hover:opacity-100"
-                      )}>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-6 w-6 rounded-full shadow-lg hover:scale-110 transition-transform"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteMarkup(markup.id);
-                          }}
-                          title="Delete (Del)"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                      <div className="absolute -bottom-6 bg-background/95 backdrop-blur px-2 py-0.5 rounded-full border border-border shadow-md">
+                        <span className="text-xs font-semibold">#{index + 1}</span>
                       </div>
-
-                      {/* Note display/edit */}
-                      {(isSelected || markup.notes) && (
-                        <div 
-                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[200px] max-w-[300px]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {isEditing ? (
-                            <Input
-                              autoFocus
-                              value={markup.notes || ""}
-                              onChange={(e) => updateMarkupNote(markup.id, e.target.value)}
-                              onBlur={() => setEditingNote(null)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') setEditingNote(null);
-                                if (e.key === 'Escape') setEditingNote(null);
-                              }}
-                              placeholder="Add note..."
-                              className="text-sm shadow-lg"
-                            />
-                          ) : (
-                            <div
-                              onClick={() => setEditingNote(markup.id)}
-                              className={cn(
-                                "px-3 py-2 rounded-lg shadow-lg cursor-text transition-all",
-                                "bg-background/95 backdrop-blur border border-border",
-                                "hover:bg-accent hover:border-accent-foreground/20",
-                                !markup.notes && "text-muted-foreground italic"
-                              )}
-                            >
-                              {markup.notes || "Click to add note..."}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -524,76 +387,17 @@ export function FloorPlanViewer({
                 return (
                   <div
                     key={markup.id}
-                    className={cn(
-                      "absolute border-2 transition-all duration-200 cursor-pointer pointer-events-auto group",
-                      isSelected 
-                        ? "border-primary bg-primary/20 shadow-[0_0_12px_rgba(var(--primary),0.4)]" 
-                        : "border-yellow-500 bg-yellow-500/20 hover:bg-yellow-500/30 hover:border-yellow-400"
-                    )}
+                    className="absolute border-2 border-yellow-500 bg-yellow-500/20 pointer-events-none"
                     style={{
                       left: `${markup.bounds.x}%`,
                       top: `${markup.bounds.y}%`,
                       width: `${markup.bounds.width}%`,
                       height: `${markup.bounds.height}%`,
                     }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedMarkup(markup.id);
-                    }}
                   >
-                    {/* Controls */}
-                    <div className={cn(
-                      "absolute -top-3 -right-3 flex gap-1 transition-opacity",
-                      isSelected || "opacity-0 group-hover:opacity-100"
-                    )}>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="h-6 w-6 rounded-full shadow-lg hover:scale-110 transition-transform"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteMarkup(markup.id);
-                        }}
-                        title="Delete (Del)"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                    <div className="absolute top-1 left-1 bg-background/95 backdrop-blur px-2 py-0.5 rounded-full border border-border shadow-md">
+                      <span className="text-xs font-semibold">#{index + 1}</span>
                     </div>
-
-                    {/* Note display/edit */}
-                    {(isSelected || markup.notes) && (
-                      <div 
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[200px] max-w-[300px] z-10"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {isEditing ? (
-                          <Input
-                            autoFocus
-                            value={markup.notes || ""}
-                            onChange={(e) => updateMarkupNote(markup.id, e.target.value)}
-                            onBlur={() => setEditingNote(null)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') setEditingNote(null);
-                              if (e.key === 'Escape') setEditingNote(null);
-                            }}
-                            placeholder="Add note..."
-                            className="text-sm shadow-lg"
-                          />
-                        ) : (
-                          <div
-                            onClick={() => setEditingNote(markup.id)}
-                            className={cn(
-                              "px-3 py-2 rounded-lg shadow-lg cursor-text transition-all",
-                              "bg-background/95 backdrop-blur border border-border",
-                              "hover:bg-accent hover:border-accent-foreground/20",
-                              !markup.notes && "text-muted-foreground italic"
-                            )}
-                          >
-                            {markup.notes || "Click to add note..."}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               }
