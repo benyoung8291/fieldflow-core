@@ -97,20 +97,41 @@ export default function LocationFloorPlans() {
       if (taskError) throw taskError;
 
       // Create markups
-      const markupInserts = markups.map((markup) => ({
-        task_id: task.id,
-        floor_plan_id: selectedPlan!,
-        tenant_id: profile.tenant_id,
-        markup_type: markup.type,
-        data: markup.type === "pin" 
-          ? { x: markup.x, y: markup.y }
-          : { bounds: markup.bounds },
-        notes: markup.notes,
-      }));
+      const markupInserts = markups.map((markup) => {
+        if (markup.type === "pin") {
+          return {
+            task_id: task.id,
+            floor_plan_id: selectedPlan!,
+            tenant_id: profile.tenant_id,
+            pin_x: markup.x,
+            pin_y: markup.y,
+            markup_data: {
+              type: "pin",
+              notes: markup.notes,
+            },
+          };
+        } else {
+          // For zones, store center point in pin_x/pin_y and full bounds in markup_data
+          const centerX = markup.bounds.x + markup.bounds.width / 2;
+          const centerY = markup.bounds.y + markup.bounds.height / 2;
+          return {
+            task_id: task.id,
+            floor_plan_id: selectedPlan!,
+            tenant_id: profile.tenant_id,
+            pin_x: centerX,
+            pin_y: centerY,
+            markup_data: {
+              type: "zone",
+              bounds: markup.bounds,
+              notes: markup.notes,
+            },
+          };
+        }
+      });
 
       const { error: markupError } = await supabase
         .from("task_markups")
-        .insert(markupInserts);
+        .insert(markupInserts as any);
 
       if (markupError) throw markupError;
 

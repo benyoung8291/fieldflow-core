@@ -56,6 +56,7 @@ export function FloorPlanViewer({
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [touchStart, setTouchStart] = useState<{ distance: number } | null>(null);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -144,6 +145,33 @@ export function FloorPlanViewer({
   const zoomIn = () => setScale((prev) => Math.min(prev + 0.25, 3));
   const zoomOut = () => setScale((prev) => Math.max(prev - 0.25, 0.5));
 
+  // Touch handlers for pinch-to-zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setTouchStart({ distance });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchStart) {
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleChange = distance / touchStart.distance;
+      setScale((prev) => Math.min(Math.max(prev * scaleChange, 0.5), 3));
+      setTouchStart({ distance });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+  };
+
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Toolbar */}
@@ -205,11 +233,14 @@ export function FloorPlanViewer({
       {/* PDF Viewer with Markups */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto bg-muted/20 rounded-lg"
+        className="relative flex-1 overflow-auto bg-muted/20 rounded-lg touch-pan-x touch-pan-y"
         onClick={handleContainerClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{ cursor: mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : "default" }}
       >
         <div className="relative inline-block" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
