@@ -47,7 +47,7 @@ export default function WorkerFieldReport() {
         customerId={appointment?.service_order?.customer_id}
         locationId={appointment?.service_order?.location_id}
         serviceOrderId={appointment?.service_order?.id}
-        onSave={() => navigate(-1)}
+        onSave={() => navigate(`/worker/appointments/${id}`)}
       />
     </div>
   );

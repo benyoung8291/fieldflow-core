@@ -734,12 +734,8 @@ export default function FieldReportForm({
       console.log('Field report submission completed successfully');
       toast.success('Field report submitted successfully');
       
-      // Navigate back to appointment if we came from one
-      if (appointmentId) {
-        window.location.href = `/appointments/${appointmentId}`;
-      } else {
-        onSave?.();
-      }
+      // Call onSave callback to let parent handle navigation
+      onSave?.();
     } catch (error: any) {
       console.error('Error submitting report:', error);
       const errorMessage = error?.message || 'Failed to submit field report. Please try again.';
