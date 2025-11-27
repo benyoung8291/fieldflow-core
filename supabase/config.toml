@@ -105,3 +105,9 @@ verify_jwt = false
 [functions.create-customer-portal-user]
 verify_jwt = true
 
+[functions.convert-pdf-to-image]
+verify_jwt = true
+
+[functions.generate-field-report-pdf]
+verify_jwt = true
+
