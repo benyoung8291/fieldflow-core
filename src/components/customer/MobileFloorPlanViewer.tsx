@@ -126,11 +126,13 @@ export function MobileFloorPlanViewer({
       setIsPanning(true);
       setPanStart({ x: touch.clientX - offset.x, y: touch.clientY - offset.y });
     } else if (mode === "pin") {
-      // Account for pan offset and scale when calculating position
+      // Calculate position accounting for transformations
+      const containerWidth = rect.width / scale;
+      const containerHeight = rect.height / scale;
       const adjustedX = (touch.clientX - rect.left - offset.x) / scale;
       const adjustedY = (touch.clientY - rect.top - offset.y) / scale;
-      const x = (adjustedX / rect.width) * 100;
-      const y = (adjustedY / rect.height) * 100;
+      const x = (adjustedX / containerWidth) * 100;
+      const y = (adjustedY / containerHeight) * 100;
       
       const newMarkup: PinMarkup = {
         id: crypto.randomUUID(),
@@ -140,14 +142,15 @@ export function MobileFloorPlanViewer({
       };
       const newMarkups = [...markups, newMarkup];
       updateHistory(newMarkups);
-      setMode("pan"); // Switch back to pan mode after adding pin
       toast.success("Pin added");
     } else if (mode === "zone") {
-      // Account for pan offset and scale when calculating position
+      // Calculate position accounting for transformations
+      const containerWidth = rect.width / scale;
+      const containerHeight = rect.height / scale;
       const adjustedX = (touch.clientX - rect.left - offset.x) / scale;
       const adjustedY = (touch.clientY - rect.top - offset.y) / scale;
-      const x = (adjustedX / rect.width) * 100;
-      const y = (adjustedY / rect.height) * 100;
+      const x = (adjustedX / containerWidth) * 100;
+      const y = (adjustedY / containerHeight) * 100;
       setIsDrawing(true);
       setDrawStart({ x, y });
       setDrawCurrent({ x, y });
@@ -171,11 +174,13 @@ export function MobileFloorPlanViewer({
           });
         });
       } else if (mode === "zone" && isDrawing && drawStart) {
-        // Account for pan offset and scale when calculating position
+        // Calculate position accounting for transformations
+        const containerWidth = rect.width / scale;
+        const containerHeight = rect.height / scale;
         const adjustedX = (touch.clientX - rect.left - offset.x) / scale;
         const adjustedY = (touch.clientY - rect.top - offset.y) / scale;
-        const x = (adjustedX / rect.width) * 100;
-        const y = (adjustedY / rect.height) * 100;
+        const x = (adjustedX / containerWidth) * 100;
+        const y = (adjustedY / containerHeight) * 100;
         requestAnimationFrame(() => {
           setDrawCurrent({ x, y });
         });
@@ -202,7 +207,6 @@ export function MobileFloorPlanViewer({
         };
         const newMarkups = [...markups, newMarkup];
         updateHistory(newMarkups);
-        setMode("pan"); // Switch back to pan mode after adding zone
         toast.success("Area added");
       }
 
