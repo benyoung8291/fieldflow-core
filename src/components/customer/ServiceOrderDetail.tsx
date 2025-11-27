@@ -152,23 +152,6 @@ export function ServiceOrderDetail({ orderId }: ServiceOrderDetailProps) {
           </Card>
         )}
 
-        {order.total_amount !== null && order.total_amount !== undefined && (
-          <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-start gap-3">
-                <div className="rounded-full bg-success/10 p-2">
-                  <DollarSign className="h-4 w-4 text-success" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Total Amount</p>
-                  <p className="text-sm font-semibold">
-                    ${order.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
           <CardContent className="p-4 md:p-6">
