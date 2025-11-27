@@ -26,9 +26,9 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
     { path: "/customer", icon: Home, label: "Dashboard" },
     { path: "/customer/locations", icon: MapPin, label: "Locations" },
     { path: "/customer/requests", icon: FileText, label: "Requests" },
-    { path: "/customer/service-orders", icon: ClipboardList, label: "Service Orders" },
-    { path: "/customer/appointments", icon: Calendar, label: "Appointments" },
-    { path: "/customer/field-reports", icon: FileText, label: "Field Reports" },
+    { path: "/customer/service-orders", icon: ClipboardList, label: "Services" },
+    { path: "/customer/appointments", icon: Calendar, label: "Shifts" },
+    { path: "/customer/field-reports", icon: FileText, label: "Reports" },
   ];
 
   return (
