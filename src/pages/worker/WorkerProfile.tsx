@@ -90,7 +90,10 @@ export default function WorkerProfile() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast.error('Not authenticated');
+        return;
+      }
 
       // Update profile
       const { error: profileError } = await supabase
@@ -106,12 +109,17 @@ export default function WorkerProfile() {
         })
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw profileError;
+      }
 
+      // Reload data to confirm changes were saved
+      await loadData();
       toast.success('Profile updated successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving profile:', error);
-      toast.error('Failed to save profile');
+      toast.error(error?.message || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
