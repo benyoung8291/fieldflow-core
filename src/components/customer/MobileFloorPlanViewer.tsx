@@ -55,11 +55,6 @@ export function MobileFloorPlanViewer({
   const displayUrl = imageUrl || pdfUrl;
   const isImage = imageUrl || !pdfUrl.toLowerCase().endsWith('.pdf');
   
-  console.log("MobileFloorPlanViewer: Received markups:", markups);
-  console.log("MobileFloorPlanViewer: PDF URL:", pdfUrl);
-  console.log("MobileFloorPlanViewer: Image URL:", imageUrl);
-  console.log("MobileFloorPlanViewer: Read-only mode:", readOnly);
-  
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);
@@ -114,6 +109,80 @@ export function MobileFloorPlanViewer({
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
+
+  // Auto-zoom to fit markups in read-only mode
+  useEffect(() => {
+    if (!readOnly || markups.length === 0 || !containerDimensions.width || !contentRef.current) {
+      return;
+    }
+
+    // Calculate bounding box of all markups
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+
+    markups.forEach((markup) => {
+      if (markup.type === "pin") {
+        minX = Math.min(minX, markup.x);
+        maxX = Math.max(maxX, markup.x);
+        minY = Math.min(minY, markup.y);
+        maxY = Math.max(maxY, markup.y);
+      } else {
+        minX = Math.min(minX, markup.bounds.x);
+        maxX = Math.max(maxX, markup.bounds.x + markup.bounds.width);
+        minY = Math.min(minY, markup.bounds.y);
+        maxY = Math.max(maxY, markup.bounds.y + markup.bounds.height);
+      }
+    });
+
+    // Add padding (20% on each side)
+    const paddingPercent = 20;
+    const widthRange = maxX - minX;
+    const heightRange = maxY - minY;
+    
+    minX = Math.max(0, minX - paddingPercent);
+    maxX = Math.min(100, maxX + paddingPercent);
+    minY = Math.max(0, minY - paddingPercent);
+    maxY = Math.min(100, maxY + paddingPercent);
+
+    // Calculate the center point of all markups
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    // Calculate scale needed to fit markups
+    // We want the markups to fill about 70% of the viewport
+    const markupWidthPercent = maxX - minX;
+    const markupHeightPercent = maxY - minY;
+    
+    const scaleForWidth = markupWidthPercent > 0 ? (70 / markupWidthPercent) : 1;
+    const scaleForHeight = markupHeightPercent > 0 ? (70 / markupHeightPercent) : 1;
+    
+    // Use the smaller scale to ensure everything fits
+    const calculatedScale = Math.min(scaleForWidth, scaleForHeight, 3); // Cap at 3x
+    const finalScale = Math.max(1.5, calculatedScale); // Minimum 1.5x zoom
+
+    // Calculate offset to center the markups
+    const contentWidth = containerDimensions.width;
+    const contentHeight = containerDimensions.height;
+    
+    // Convert center percentage to pixels at the calculated scale
+    const centerXPixels = (centerX / 100) * contentWidth * finalScale;
+    const centerYPixels = (centerY / 100) * contentHeight * finalScale;
+    
+    // Calculate offset to center this point in the viewport
+    const offsetX = (contentWidth / 2) - centerXPixels;
+    const offsetY = (contentHeight / 2) - centerYPixels;
+
+    console.log("Auto-zoom calculations:", {
+      markups: markups.length,
+      bounds: { minX, maxX, minY, maxY },
+      center: { centerX, centerY },
+      scale: finalScale,
+      offset: { offsetX, offsetY }
+    });
+
+    setScale(finalScale);
+    setOffset({ x: offsetX, y: offsetY });
+  }, [readOnly, markups, containerDimensions.width, containerDimensions.height]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
