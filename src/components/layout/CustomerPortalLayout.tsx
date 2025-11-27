@@ -32,7 +32,7 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Apple-inspired Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-        <div className="container flex h-16 items-center justify-between px-6">
+        <div className="flex h-16 items-center justify-between px-6 md:ml-64">
           <h1 className="text-xl font-semibold tracking-tight">Portal</h1>
           <Button
             variant="ghost"
@@ -46,8 +46,33 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
         </div>
       </header>
 
+      {/* Desktop Sidebar - refined */}
+      <aside className="hidden md:fixed md:left-0 md:top-16 md:bottom-0 md:flex md:w-64 md:flex-col md:border-r md:border-border/40 md:bg-background/50 md:z-40">
+        <nav className="flex-1 space-y-2 p-4">
+          {navItems.map(({ path, icon: Icon, label }) => {
+            const isActive = location.pathname === path ||
+              (path !== "/customer" && location.pathname.startsWith(path));
+            
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
       {/* Main Content with breathing room */}
-      <main className="container px-6 py-8 pb-24 md:pb-8 max-w-7xl mx-auto">
+      <main className="px-6 py-8 pb-24 md:pb-8 md:ml-64 max-w-7xl">
         {children}
       </main>
 
@@ -79,34 +104,6 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
           })}
         </div>
       </nav>
-
-      {/* Desktop Sidebar - refined */}
-      <aside className="hidden md:fixed md:left-0 md:top-16 md:bottom-0 md:flex md:w-64 md:flex-col md:border-r md:border-border/40 md:bg-background/50">
-        <nav className="flex-1 space-y-2 p-4">
-          {navItems.map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path ||
-              (path !== "/customer" && location.pathname.startsWith(path));
-            
-            return (
-              <Link
-                key={path}
-                to={path}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Add padding for desktop sidebar */}
-      <div className="hidden md:block md:ml-64" />
     </div>
   );
 }
