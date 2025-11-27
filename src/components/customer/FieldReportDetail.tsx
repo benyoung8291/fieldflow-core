@@ -93,8 +93,19 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
     );
   }
 
+  // Group photos into before/after pairs
+  const photoPairs: Array<{ before?: any; after?: any }> = [];
   const beforePhotos = report.photos?.filter((p: any) => p.photo_type === 'before').sort((a: any, b: any) => a.display_order - b.display_order) || [];
   const afterPhotos = report.photos?.filter((p: any) => p.photo_type === 'after').sort((a: any, b: any) => a.display_order - b.display_order) || [];
+  
+  // Create pairs based on display_order
+  const maxLength = Math.max(beforePhotos.length, afterPhotos.length);
+  for (let i = 0; i < maxLength; i++) {
+    photoPairs.push({
+      before: beforePhotos[i],
+      after: afterPhotos[i]
+    });
+  }
 
   const openLightbox = (photos: any[], index: number) => {
     setLightboxPhotos(photos);
@@ -410,7 +421,7 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
         )}
 
         {/* Photos */}
-        {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
+        {photoPairs.length > 0 && (
           <Card className="border-border/40">
             <CardHeader className="border-b bg-muted/30">
               <div className="flex items-center gap-3">
@@ -418,87 +429,94 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
                 <CardTitle className="text-xl font-semibold">Service Photos</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Click on any photo to view in full size with zoom
+                Before and after comparison - Click on any photo to view in full size with zoom
               </p>
             </CardHeader>
-            <CardContent className="p-6 space-y-8">
-              {beforePhotos.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-px flex-1 bg-gradient-to-r from-info/50 to-transparent" />
-                    <h4 className="text-lg font-semibold flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-info shadow-sm" />
-                      Before Service
-                    </h4>
-                    <div className="h-px flex-1 bg-gradient-to-l from-info/50 to-transparent" />
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {beforePhotos.map((photo: any, index: number) => (
-                      <button
-                        key={photo.id}
-                        onClick={() => openLightbox(beforePhotos, index)}
-                        className="group relative aspect-square rounded-xl overflow-hidden border-2 border-border/40 hover:border-info/50 transition-all hover:scale-[1.02] hover:shadow-lg"
-                      >
-                        <img
-                          src={photo.file_url}
-                          alt={`Before ${index + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
-                            <ImageIcon className="h-5 w-5 text-foreground" />
-                          </div>
+            <CardContent className="p-6 space-y-6">
+              {photoPairs.map((pair, pairIndex) => (
+                <div key={pairIndex} className="space-y-4">
+                  {pairIndex > 0 && <Separator className="my-6" />}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Before Photo */}
+                    {pair.before ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="h-px flex-1 bg-gradient-to-r from-info/50 to-transparent" />
+                          <h4 className="text-base font-semibold flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-info shadow-sm" />
+                            Before Service
+                          </h4>
+                          <div className="h-px flex-1 bg-gradient-to-l from-info/50 to-transparent" />
                         </div>
-                        {photo.notes && (
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
-                            <p className="text-xs text-white line-clamp-2 font-medium">{photo.notes}</p>
+                        <button
+                          onClick={() => openLightbox([pair.before], 0)}
+                          className="group relative aspect-square rounded-xl overflow-hidden border-2 border-border/40 hover:border-info/50 transition-all hover:scale-[1.02] hover:shadow-lg w-full"
+                        >
+                          <img
+                            src={pair.before.file_url}
+                            alt="Before service"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
+                              <ImageIcon className="h-5 w-5 text-foreground" />
+                            </div>
                           </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                          {pair.before.notes && (
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
+                              <p className="text-xs text-white line-clamp-2 font-medium">{pair.before.notes}</p>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center aspect-square rounded-xl border-2 border-dashed border-border/40 bg-muted/20">
+                        <p className="text-sm text-muted-foreground">No before photo</p>
+                      </div>
+                    )}
 
-              {afterPhotos.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-px flex-1 bg-gradient-to-r from-success/50 to-transparent" />
-                    <h4 className="text-lg font-semibold flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-success shadow-sm" />
-                      After Service
-                    </h4>
-                    <div className="h-px flex-1 bg-gradient-to-l from-success/50 to-transparent" />
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {afterPhotos.map((photo: any, index: number) => (
-                      <button
-                        key={photo.id}
-                        onClick={() => openLightbox(afterPhotos, index)}
-                        className="group relative aspect-square rounded-xl overflow-hidden border-2 border-border/40 hover:border-success/50 transition-all hover:scale-[1.02] hover:shadow-lg"
-                      >
-                        <img
-                          src={photo.file_url}
-                          alt={`After ${index + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
-                            <ImageIcon className="h-5 w-5 text-foreground" />
-                          </div>
+                    {/* After Photo */}
+                    {pair.after ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="h-px flex-1 bg-gradient-to-r from-success/50 to-transparent" />
+                          <h4 className="text-base font-semibold flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-success shadow-sm" />
+                            After Service
+                          </h4>
+                          <div className="h-px flex-1 bg-gradient-to-l from-success/50 to-transparent" />
                         </div>
-                        {photo.notes && (
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
-                            <p className="text-xs text-white line-clamp-2 font-medium">{photo.notes}</p>
+                        <button
+                          onClick={() => openLightbox([pair.after], 0)}
+                          className="group relative aspect-square rounded-xl overflow-hidden border-2 border-border/40 hover:border-success/50 transition-all hover:scale-[1.02] hover:shadow-lg w-full"
+                        >
+                          <img
+                            src={pair.after.file_url}
+                            alt="After service"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
+                              <ImageIcon className="h-5 w-5 text-foreground" />
+                            </div>
                           </div>
-                        )}
-                      </button>
-                    ))}
+                          {pair.after.notes && (
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
+                              <p className="text-xs text-white line-clamp-2 font-medium">{pair.after.notes}</p>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center aspect-square rounded-xl border-2 border-dashed border-border/40 bg-muted/20">
+                        <p className="text-sm text-muted-foreground">No after photo</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              ))}
             </CardContent>
           </Card>
         )}
