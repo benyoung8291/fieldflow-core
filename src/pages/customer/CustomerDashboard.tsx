@@ -136,23 +136,23 @@ export default function CustomerDashboard() {
           </p>
         </div>
 
-        {/* Stats Cards - Apple-inspired with subtle shadows */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Stats Cards - Compact for mobile, full-featured for desktop */}
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="border-border/40 bg-card/50 backdrop-blur-sm hover-lift overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-primary/5 rounded-full blur-3xl" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Locations
               </CardTitle>
-              <div className="rounded-full bg-primary/10 p-2">
-                <MapPin className="h-4 w-4 text-primary" />
+              <div className="rounded-full bg-primary/10 p-1.5 md:p-2">
+                <MapPin className="h-3 w-3 md:h-4 md:w-4 text-primary" />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
               {locationsLoading ? (
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <Loader2 className="h-5 w-5 md:h-7 md:w-7 animate-spin text-primary" />
               ) : (
-                <div className="text-3xl font-bold tracking-tight">
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">
                   {locations?.length || 0}
                 </div>
               )}
@@ -160,20 +160,20 @@ export default function CustomerDashboard() {
           </Card>
 
           <Card className="border-border/40 bg-card/50 backdrop-blur-sm hover-lift overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-warning/5 rounded-full blur-3xl" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Open Requests
+            <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-warning/5 rounded-full blur-3xl" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Requests
               </CardTitle>
-              <div className="rounded-full bg-warning/10 p-2">
-                <FileText className="h-4 w-4 text-warning" />
+              <div className="rounded-full bg-warning/10 p-1.5 md:p-2">
+                <FileText className="h-3 w-3 md:h-4 md:w-4 text-warning" />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
               {requestsLoading ? (
-                <Loader2 className="h-7 w-7 animate-spin text-warning" />
+                <Loader2 className="h-5 w-5 md:h-7 md:w-7 animate-spin text-warning" />
               ) : (
-                <div className="text-3xl font-bold tracking-tight">
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">
                   {openRequests.length}
                 </div>
               )}
@@ -181,20 +181,20 @@ export default function CustomerDashboard() {
           </Card>
 
           <Card className="border-border/40 bg-card/50 backdrop-blur-sm hover-lift overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-info/5 rounded-full blur-3xl" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Orders
+            <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-info/5 rounded-full blur-3xl" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Orders
               </CardTitle>
-              <div className="rounded-full bg-info/10 p-2">
-                <ClipboardList className="h-4 w-4 text-info" />
+              <div className="rounded-full bg-info/10 p-1.5 md:p-2">
+                <ClipboardList className="h-3 w-3 md:h-4 md:w-4 text-info" />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
               {serviceOrdersLoading ? (
-                <Loader2 className="h-7 w-7 animate-spin text-info" />
+                <Loader2 className="h-5 w-5 md:h-7 md:w-7 animate-spin text-info" />
               ) : (
-                <div className="text-3xl font-bold tracking-tight">
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">
                   {activeServiceOrders.length}
                 </div>
               )}
@@ -202,20 +202,20 @@ export default function CustomerDashboard() {
           </Card>
 
           <Card className="border-border/40 bg-card/50 backdrop-blur-sm hover-lift overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-success/5 rounded-full blur-3xl" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-success/5 rounded-full blur-3xl" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Upcoming
               </CardTitle>
-              <div className="rounded-full bg-success/10 p-2">
-                <Calendar className="h-4 w-4 text-success" />
+              <div className="rounded-full bg-success/10 p-1.5 md:p-2">
+                <Calendar className="h-3 w-3 md:h-4 md:w-4 text-success" />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
               {appointmentsLoading ? (
-                <Loader2 className="h-7 w-7 animate-spin text-success" />
+                <Loader2 className="h-5 w-5 md:h-7 md:w-7 animate-spin text-success" />
               ) : (
-                <div className="text-3xl font-bold tracking-tight">
+                <div className="text-2xl md:text-3xl font-bold tracking-tight">
                   {upcomingAppointments.length}
                 </div>
               )}
@@ -225,37 +225,37 @@ export default function CustomerDashboard() {
 
         {/* Recent Activity */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">Recent Requests</h2>
+          <div className="space-y-3 md:space-y-4">
+            <h2 className="text-lg md:text-xl font-semibold tracking-tight">Recent Requests</h2>
             {requestsLoading ? (
               <Card className="border-border/40">
-                <CardContent className="flex justify-center p-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <CardContent className="flex justify-center p-8 md:p-12">
+                  <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-primary" />
                 </CardContent>
               </Card>
             ) : recentRequests.length === 0 ? (
               <Card className="border-border/40 bg-card/50">
-                <CardContent className="text-center py-12 space-y-3">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
+                <CardContent className="text-center py-8 md:py-12 space-y-2 md:space-y-3 px-4">
+                  <div className="mx-auto w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                    <FileText className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  <p className="text-xs md:text-sm text-muted-foreground max-w-sm mx-auto">
                     No requests yet. Visit a location's floor plan to create your first request.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {recentRequests.map((request: any) => (
                   <Card 
                     key={request.id} 
                     className="border-border/40 hover-lift cursor-pointer card-interactive"
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-start justify-between gap-3 md:gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">Request #{request.id.slice(0, 8)}</p>
-                          <time className="text-xs text-muted-foreground">
+                          <p className="text-xs md:text-sm font-medium">Request #{request.id.slice(0, 8)}</p>
+                          <time className="text-[10px] md:text-xs text-muted-foreground">
                             {new Date(request.created_at).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric'
@@ -270,37 +270,37 @@ export default function CustomerDashboard() {
             )}
           </div>
 
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">Recent Field Reports</h2>
+          <div className="space-y-3 md:space-y-4">
+            <h2 className="text-lg md:text-xl font-semibold tracking-tight">Recent Field Reports</h2>
             {fieldReportsLoading ? (
               <Card className="border-border/40">
-                <CardContent className="flex justify-center p-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <CardContent className="flex justify-center p-8 md:p-12">
+                  <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-primary" />
                 </CardContent>
               </Card>
             ) : recentReports.length === 0 ? (
               <Card className="border-border/40 bg-card/50">
-                <CardContent className="text-center py-12 space-y-3">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
+                <CardContent className="text-center py-8 md:py-12 space-y-2 md:space-y-3 px-4">
+                  <div className="mx-auto w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                    <FileText className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  <p className="text-xs md:text-sm text-muted-foreground max-w-sm mx-auto">
                     No reports yet
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {recentReports.map((report: any) => (
                   <Card 
                     key={report.id} 
                     className="border-border/40 hover-lift cursor-pointer card-interactive"
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-start justify-between gap-3 md:gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">Report #{report.id.slice(0, 8)}</p>
-                          <p className="text-xs text-muted-foreground capitalize">
+                          <p className="text-xs md:text-sm font-medium">Report #{report.id.slice(0, 8)}</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground capitalize">
                             {report.status?.replace('_', ' ')}
                           </p>
                         </div>
