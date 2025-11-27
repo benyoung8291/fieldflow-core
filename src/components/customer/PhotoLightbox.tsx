@@ -22,7 +22,19 @@ export function PhotoLightbox({ photos, initialIndex, open, onClose }: PhotoLigh
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
 
+  // Reset currentIndex when dialog opens or initialIndex changes
+  useState(() => {
+    if (open && initialIndex >= 0 && initialIndex < photos.length) {
+      setCurrentIndex(initialIndex);
+    }
+  });
+
   const currentPhoto = photos[currentIndex];
+
+  // Don't render if no photos or invalid index
+  if (!photos.length || !currentPhoto) {
+    return null;
+  }
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
