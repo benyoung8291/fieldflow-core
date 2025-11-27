@@ -103,7 +103,7 @@ export default function Auth() {
       }
 
       // Check if user has any access
-      if (!access.can_access_office && !access.can_access_worker) {
+      if (!access.can_access_office && !access.can_access_worker && !access.can_access_customer_portal) {
         toast.error("Access denied. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
