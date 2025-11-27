@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { UserPlus, Shield, KeyRound, UserRoundPlus, Eye, EyeOff, Pencil, ExternalLink } from "lucide-react";
+import { UserPlus, Shield, KeyRound, UserRoundPlus, Eye, EyeOff, ExternalLink } from "lucide-react";
+import { UserDetailsDialog } from "@/components/settings/UserDetailsDialog";
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -35,8 +36,8 @@ export const UserManagementTab = () => {
   const [showTeamDialog, setShowTeamDialog] = useState(false);
   const [roleToRemove, setRoleToRemove] = useState<{ userId: string; role: string; userName: string } | null>(null);
   const [removeRoleConfirmation, setRemoveRoleConfirmation] = useState("");
-  const [editEmailUserId, setEditEmailUserId] = useState<string | null>(null);
-  const [editEmailValue, setEditEmailValue] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -375,39 +376,6 @@ export const UserManagementTab = () => {
     },
   });
 
-  const updateEmailMutation = useMutation({
-    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) throw new Error("Not authenticated");
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-email`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, email }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update email');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users-management"] });
-      toast.success("Email updated successfully");
-      setEditEmailUserId(null);
-      setEditEmailValue("");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to update email");
-    },
-  });
 
   const handleAssignRole = () => {
     if (!selectedUserId || !selectedRole) {
@@ -679,8 +647,15 @@ export const UserManagementTab = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users?.map((user) => (
-              <TableRow key={user.id}>
+             {users?.map((user) => (
+              <TableRow 
+                key={user.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => {
+                  setSelectedUser(user);
+                  setIsUserDialogOpen(true);
+                }}
+              >
                 <TableCell>
                   <div>
                     <div className="font-medium">{user.first_name} {user.last_name}</div>
@@ -688,51 +663,7 @@ export const UserManagementTab = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    {editEmailUserId === user.id ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="email"
-                          value={editEmailValue}
-                          onChange={(e) => setEditEmailValue(e.target.value)}
-                          className="h-8 w-64"
-                          placeholder="Enter new email"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => updateEmailMutation.mutate({ userId: user.id, email: editEmailValue })}
-                          disabled={!editEmailValue || updateEmailMutation.isPending}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditEmailUserId(null);
-                            setEditEmailValue("");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm">{user.email}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                          onClick={() => {
-                            setEditEmailUserId(user.id);
-                            setEditEmailValue(user.email);
-                          }}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  <span className="text-sm">{user.email}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2 flex-wrap">
@@ -980,6 +911,14 @@ export const UserManagementTab = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {selectedUser && (
+        <UserDetailsDialog
+          user={selectedUser}
+          open={isUserDialogOpen}
+          onOpenChange={setIsUserDialogOpen}
+        />
+      )}
     </div>
   );
 };
