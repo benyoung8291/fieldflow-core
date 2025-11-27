@@ -62,11 +62,11 @@ export function MobileFloorPlanToolbar({
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-background shadow-2xl border-2 border-border">
           <Button
             size="icon"
-            variant={mode === "pan" ? "default" : "ghost"}
+            variant={mode === "pan" ? "default" : "secondary"}
             onClick={() => onModeChange("pan")}
             className={cn(
               "h-11 w-11 rounded-full transition-all",
-              mode === "pan" ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted"
+              mode === "pan" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
             )}
             title="Pan"
           >
@@ -77,11 +77,11 @@ export function MobileFloorPlanToolbar({
           
           <Button
             size="icon"
-            variant={mode === "pin" ? "default" : "ghost"}
+            variant={mode === "pin" ? "default" : "secondary"}
             onClick={() => onModeChange("pin")}
             className={cn(
               "h-11 w-11 rounded-full transition-all",
-              mode === "pin" ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted"
+              mode === "pin" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
             )}
             title="Add Pin"
           >
@@ -90,11 +90,11 @@ export function MobileFloorPlanToolbar({
           
           <Button
             size="icon"
-            variant={mode === "zone" ? "default" : "ghost"}
+            variant={mode === "zone" ? "default" : "secondary"}
             onClick={() => onModeChange("zone")}
             className={cn(
               "h-11 w-11 rounded-full transition-all",
-              mode === "zone" ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted"
+              mode === "zone" ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-secondary/80 text-secondary-foreground hover:bg-secondary"
             )}
             title="Draw Area"
           >
@@ -105,11 +105,11 @@ export function MobileFloorPlanToolbar({
           
           <Button
             size="icon"
-            variant="ghost"
+            variant="secondary"
             onClick={onUndo}
             disabled={!canUndo}
             className={cn(
-              "h-11 w-11 rounded-full",
+              "h-11 w-11 rounded-full bg-secondary/80 text-secondary-foreground hover:bg-secondary",
               !canUndo && "opacity-40"
             )}
             title="Undo"
@@ -119,11 +119,11 @@ export function MobileFloorPlanToolbar({
           
           <Button
             size="icon"
-            variant="ghost"
+            variant="secondary"
             onClick={onRedo}
             disabled={!canRedo}
             className={cn(
-              "h-11 w-11 rounded-full",
+              "h-11 w-11 rounded-full bg-secondary/80 text-secondary-foreground hover:bg-secondary",
               !canRedo && "opacity-40"
             )}
             title="Redo"
