@@ -3,8 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, MapPin, FileText, Clock, ClipboardList, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function CustomerDashboard() {
+  const navigate = useNavigate();
+  
   const { data: profile } = useQuery({
     queryKey: ["customer-profile"],
     queryFn: async () => {
@@ -46,7 +49,7 @@ export default function CustomerDashboard() {
 
       const { data, error } = await supabase
         .from("helpdesk_tickets")
-        .select("id, status, created_at")
+        .select("id, status, subject, created_at")
         .eq("customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
 
@@ -250,11 +253,14 @@ export default function CustomerDashboard() {
                   <Card 
                     key={request.id} 
                     className="border-border/40 hover-lift cursor-pointer card-interactive"
+                    onClick={() => navigate(`/customer/requests/${request.id}`)}
                   >
                     <CardContent className="p-3 md:p-4">
                       <div className="flex items-start justify-between gap-3 md:gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs md:text-sm font-medium">Request #{request.id.slice(0, 8)}</p>
+                          <p className="text-xs md:text-sm font-medium">
+                            Request {request.subject || `#${request.id.slice(0, 8)}`}
+                          </p>
                           <time className="text-[10px] md:text-xs text-muted-foreground">
                             {new Date(request.created_at).toLocaleDateString('en-US', {
                               month: 'short',
@@ -295,6 +301,7 @@ export default function CustomerDashboard() {
                   <Card 
                     key={report.id} 
                     className="border-border/40 hover-lift cursor-pointer card-interactive"
+                    onClick={() => navigate(`/customer/field-reports/${report.id}`)}
                   >
                     <CardContent className="p-3 md:p-4">
                       <div className="flex items-start justify-between gap-3 md:gap-4">
