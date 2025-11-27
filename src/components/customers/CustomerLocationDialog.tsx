@@ -90,10 +90,17 @@ export default function CustomerLocationDialog({
   const onSubmit = async (data: LocationFormData) => {
     setIsSubmitting(true);
     try {
+      // Convert empty strings to null for UUID fields
+      const cleanedData = {
+        ...data,
+        facility_manager_contact_id: data.facility_manager_contact_id || null,
+        site_contact_id: data.site_contact_id || null,
+      };
+
       if (location) {
         const { error } = await supabase
           .from("customer_locations")
-          .update(data)
+          .update(cleanedData)
           .eq("id", location.id);
 
         if (error) throw error;
@@ -102,7 +109,7 @@ export default function CustomerLocationDialog({
         const { error } = await supabase
           .from("customer_locations")
           .insert({
-            ...data,
+            ...cleanedData,
             customer_id: customerId,
             tenant_id: tenantId,
           });

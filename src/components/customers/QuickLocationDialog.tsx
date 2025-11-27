@@ -103,8 +103,8 @@ export default function QuickLocationDialog({
           customer_location_id: formData.customer_location_id || null,
           latitude: formData.latitude,
           longitude: formData.longitude,
-          facility_manager_contact_id: formData.facility_manager_contact_id || null,
-          site_contact_id: formData.site_contact_id || null,
+          facility_manager_contact_id: formData.facility_manager_contact_id?.trim() || null,
+          site_contact_id: formData.site_contact_id?.trim() || null,
         })
         .select()
         .single();
