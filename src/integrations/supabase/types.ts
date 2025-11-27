@@ -4156,6 +4156,8 @@ export type Database = {
           tenant_id: string | null
           theme_preference: string | null
           updated_at: string | null
+          worker_phone: string | null
+          worker_state: string | null
         }
         Insert: {
           abn?: string | null
@@ -4192,6 +4194,8 @@ export type Database = {
           tenant_id?: string | null
           theme_preference?: string | null
           updated_at?: string | null
+          worker_phone?: string | null
+          worker_state?: string | null
         }
         Update: {
           abn?: string | null
@@ -4228,6 +4232,8 @@ export type Database = {
           tenant_id?: string | null
           theme_preference?: string | null
           updated_at?: string | null
+          worker_phone?: string | null
+          worker_state?: string | null
         }
         Relationships: [
           {

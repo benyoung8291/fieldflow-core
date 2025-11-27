@@ -1,3 +1,4 @@
+import { AUSTRALIAN_STATES } from "@/lib/constants/australianStates";
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -83,21 +84,6 @@ export default function Scheduler() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undoStack]);
 
-  // Fetch unique states for filtering
-  const { data: states = [] } = useQuery({
-    queryKey: ["customer-states"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customer_locations")
-        .select("state")
-        .not("state", "is", null);
-      
-      if (error) throw error;
-      
-      const uniqueStates = [...new Set(data.map(loc => loc.state))].filter(Boolean).sort();
-      return uniqueStates as string[];
-    },
-  });
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments", stateFilter],
@@ -230,7 +216,7 @@ export default function Scheduler() {
       // Fetch additional profile data for capacity planning and state filtering
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, standard_work_hours, employment_type, state")
+        .select("id, standard_work_hours, employment_type, worker_state")
         .in("id", workerIds);
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
@@ -253,7 +239,7 @@ export default function Scheduler() {
           ...worker,
           standard_work_hours: profile?.standard_work_hours,
           employment_type: profile?.employment_type,
-          state: profile?.state,
+          worker_state: profile?.worker_state,
           worker_skills: (workerSkills || [])
             .filter(ws => ws.worker_id === worker.id)
             .map(ws => ({
@@ -266,7 +252,7 @@ export default function Scheduler() {
 
       // Filter by state if filter is applied
       if (stateFilter !== "all") {
-        workersWithSkills = workersWithSkills.filter(worker => worker.state === stateFilter);
+        workersWithSkills = workersWithSkills.filter(worker => worker.worker_state === stateFilter);
       }
 
       return workersWithSkills;
@@ -1421,13 +1407,15 @@ export default function Scheduler() {
                 </Button>
                 <h3 className="text-xs font-semibold ml-1">{getDateRangeLabel()}</h3>
                 <Select value={stateFilter} onValueChange={setStateFilter}>
-                  <SelectTrigger className="h-7 w-[120px] text-[10px]">
+                  <SelectTrigger className="h-7 w-[160px] text-[10px]">
                     <SelectValue placeholder="Filter by state" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all" className="text-[10px]">All States</SelectItem>
-                    {states.map((state) => (
-                      <SelectItem key={state} value={state} className="text-[10px]">{state}</SelectItem>
+                    {AUSTRALIAN_STATES.map((state) => (
+                      <SelectItem key={state.value} value={state.value} className="text-[10px]">
+                        {state.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

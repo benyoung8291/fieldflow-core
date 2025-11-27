@@ -659,7 +659,7 @@ export const UserManagementTab = () => {
                 <TableCell>
                   <div>
                     <div className="font-medium">{user.first_name} {user.last_name}</div>
-                    <div className="text-xs text-muted-foreground">{user.phone || "No phone"}</div>
+                    <div className="text-xs text-muted-foreground">{user.worker_phone || "No phone"}</div>
                   </div>
                 </TableCell>
                 <TableCell>
