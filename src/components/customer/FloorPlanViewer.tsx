@@ -174,55 +174,80 @@ export function FloorPlanViewer({
 
   return (
     <div className="flex flex-col h-full gap-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 p-4 border-b">
-        <div className="flex gap-2">
+      {/* Apple-inspired Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 border-b border-border/40 bg-muted/30 rounded-t-2xl">
+        {/* Mode Selection */}
+        <div className="flex gap-2 flex-1">
           <Button
             variant={mode === "pin" ? "default" : "outline"}
             size="sm"
             onClick={() => onModeChange("pin")}
+            className={cn(
+              "flex-1 sm:flex-none rounded-xl transition-all",
+              mode === "pin" && "shadow-sm"
+            )}
           >
-            <MapPin className="h-4 w-4 mr-2" />
-            Pin
+            <MapPin className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Pin</span>
           </Button>
           <Button
             variant={mode === "zone" ? "default" : "outline"}
             size="sm"
             onClick={() => onModeChange("zone")}
+            className={cn(
+              "flex-1 sm:flex-none rounded-xl transition-all",
+              mode === "zone" && "shadow-sm"
+            )}
           >
-            <Square className="h-4 w-4 mr-2" />
-            Highlight
+            <Square className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Area</span>
           </Button>
         </div>
 
-        <div className="flex gap-2 ml-auto">
-          <Button variant="outline" size="icon" onClick={zoomOut}>
+        {/* Zoom Controls */}
+        <div className="flex gap-2 items-center justify-center">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={zoomOut}
+            className="rounded-xl h-9 w-9"
+          >
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <Badge variant="secondary">{Math.round(scale * 100)}%</Badge>
-          <Button variant="outline" size="icon" onClick={zoomIn}>
+          <Badge variant="secondary" className="rounded-lg px-3 py-1.5 font-semibold min-w-[4rem] text-center">
+            {Math.round(scale * 100)}%
+          </Badge>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={zoomIn}
+            className="rounded-xl h-9 w-9"
+          >
             <ZoomIn className="h-4 w-4" />
           </Button>
         </div>
 
+        {/* Page Navigation */}
         {numPages > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-center sm:justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              className="rounded-xl"
             >
               Previous
             </Button>
-            <span className="text-sm">
-              Page {currentPage} of {numPages}
+            <span className="text-sm font-medium px-2 whitespace-nowrap">
+              {currentPage} of {numPages}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
               disabled={currentPage === numPages}
+              className="rounded-xl"
             >
               Next
             </Button>
@@ -230,10 +255,10 @@ export function FloorPlanViewer({
         )}
       </div>
 
-      {/* PDF Viewer with Markups */}
+      {/* PDF Viewer with Markups - refined container */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto bg-muted/20 rounded-lg touch-pan-x touch-pan-y"
+        className="relative flex-1 overflow-auto bg-muted/30 rounded-2xl touch-pan-x touch-pan-y"
         onClick={handleContainerClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -241,7 +266,10 @@ export function FloorPlanViewer({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ cursor: mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : "default" }}
+        style={{ 
+          cursor: mode === "pin" ? "crosshair" : mode === "zone" ? "crosshair" : "default",
+          boxShadow: 'inset 0 0 0 1px hsl(var(--border) / 0.4)'
+        }}
       >
         <div className="relative inline-block" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <Document

@@ -24,69 +24,84 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
 
   const navItems = [
     { path: "/customer", icon: Home, label: "Dashboard" },
-    { path: "/customer/locations", icon: MapPin, label: "My Locations" },
-    { path: "/customer/requests", icon: FileText, label: "My Requests" },
+    { path: "/customer/locations", icon: MapPin, label: "Locations" },
+    { path: "/customer/requests", icon: FileText, label: "Requests" },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile-first Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center justify-between px-4">
-          <h1 className="text-lg font-semibold">Customer Portal</h1>
+      {/* Apple-inspired Header */}
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+        <div className="container flex h-16 items-center justify-between px-6">
+          <h1 className="text-xl font-semibold tracking-tight">Portal</h1>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleSignOut}
+            className="h-9 w-9 rounded-full hover:bg-muted/60 transition-smooth"
             aria-label="Sign out"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container px-4 py-6">
+      {/* Main Content with breathing room */}
+      <main className="container px-6 py-8 pb-24 md:pb-8 max-w-7xl mx-auto">
         {children}
       </main>
 
-      {/* Bottom Navigation (Mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:hidden">
-        <div className="flex items-center justify-around h-16">
-          {navItems.map(({ path, icon: Icon, label }) => (
-            <Link
-              key={path}
-              to={path}
-              className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
-                location.pathname === path
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs">{label}</span>
-            </Link>
-          ))}
+      {/* iOS-inspired Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 pb-safe md:hidden">
+        <div className="flex items-center justify-around h-20 px-4">
+          {navItems.map(({ path, icon: Icon, label }) => {
+            const isActive = location.pathname === path || 
+              (path !== "/customer" && location.pathname.startsWith(path));
+            
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`flex flex-col items-center justify-center flex-1 gap-1 py-2 px-3 rounded-xl transition-all duration-200 touch-target ${
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground active:scale-95"
+                }`}
+              >
+                <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
+                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span className={`text-[11px] font-medium ${isActive ? 'font-semibold' : ''}`}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:fixed md:left-0 md:top-14 md:bottom-0 md:flex md:w-64 md:flex-col md:border-r md:bg-background">
-        <nav className="flex-1 space-y-1 p-4">
-          {navItems.map(({ path, icon: Icon, label }) => (
-            <Link
-              key={path}
-              to={path}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                location.pathname === path
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </Link>
-          ))}
+      {/* Desktop Sidebar - refined */}
+      <aside className="hidden md:fixed md:left-0 md:top-16 md:bottom-0 md:flex md:w-64 md:flex-col md:border-r md:border-border/40 md:bg-background/50">
+        <nav className="flex-1 space-y-2 p-4">
+          {navItems.map(({ path, icon: Icon, label }) => {
+            const isActive = location.pathname === path ||
+              (path !== "/customer" && location.pathname.startsWith(path));
+            
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
