@@ -42,9 +42,10 @@ export default function ServiceOrdersSidebar({ onSelectWorkerForOrder, stateFilt
       // Filter by state if filter is applied
       let filteredOrders = orders || [];
       if (stateFilter !== "all") {
-        filteredOrders = filteredOrders.filter((order: any) => 
-          order.customer_locations?.state === stateFilter
-        );
+        filteredOrders = filteredOrders.filter((order: any) => {
+          const locationState = order.customer_locations?.state;
+          return locationState && locationState.toUpperCase() === stateFilter.toUpperCase();
+        });
       }
 
       // Calculate remaining hours and generate summary for each service order
