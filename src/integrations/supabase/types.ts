@@ -4137,6 +4137,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_name: string | null
+          needs_password_reset: boolean | null
           pay_rate_category_id: string | null
           phone: string | null
           preferred_days: string[] | null
@@ -4175,6 +4176,7 @@ export type Database = {
           id: string
           is_active?: boolean | null
           last_name?: string | null
+          needs_password_reset?: boolean | null
           pay_rate_category_id?: string | null
           phone?: string | null
           preferred_days?: string[] | null
@@ -4213,6 +4215,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_name?: string | null
+          needs_password_reset?: boolean | null
           pay_rate_category_id?: string | null
           phone?: string | null
           preferred_days?: string[] | null

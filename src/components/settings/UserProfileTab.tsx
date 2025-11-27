@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import PasswordChangeSection from './PasswordChangeSection';
 
 interface Pipeline {
   id: string;
@@ -239,6 +240,8 @@ export default function UserProfileTab() {
           </div>
         </CardContent>
       </Card>
+
+      <PasswordChangeSection />
     </div>
   );
 }

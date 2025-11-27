@@ -110,6 +110,23 @@ export default function Auth() {
         return;
       }
 
+      // Check if user needs to reset password
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('needs_password_reset')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (profileData?.needs_password_reset) {
+          toast.info("Please reset your password to continue");
+          navigate("/first-password-reset", { replace: true });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Show success and redirect to appropriate dashboard
       toast.success("Welcome back!");
       navigate(access.default_route, { replace: true });
