@@ -30,13 +30,13 @@ export function MobileFloorPlanToolbar({
   return (
     <>
       {/* Top Zoom Controls */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+      <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
         <Button
           size="icon"
           variant="secondary"
           onClick={onZoomIn}
           disabled={scale >= 3}
-          className="h-12 w-12 rounded-full shadow-lg bg-background/95 backdrop-blur"
+          className="h-12 w-12 rounded-full shadow-lg bg-background/95 backdrop-blur hover:bg-background"
         >
           <ZoomIn className="h-5 w-5" />
         </Button>
@@ -51,37 +51,39 @@ export function MobileFloorPlanToolbar({
           variant="secondary"
           onClick={onZoomOut}
           disabled={scale <= 0.5}
-          className="h-12 w-12 rounded-full shadow-lg bg-background/95 backdrop-blur"
+          className="h-12 w-12 rounded-full shadow-lg bg-background/95 backdrop-blur hover:bg-background"
         >
           <ZoomOut className="h-5 w-5" />
         </Button>
       </div>
 
       {/* Bottom Tool Selection */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-full bg-background/95 backdrop-blur shadow-2xl border border-border/50">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-background shadow-2xl border-2 border-border">
           <Button
             size="icon"
             variant={mode === "pan" ? "default" : "ghost"}
             onClick={() => onModeChange("pan")}
             className={cn(
-              "h-12 w-12 rounded-full transition-all",
-              mode === "pan" && "shadow-md scale-110"
+              "h-11 w-11 rounded-full transition-all",
+              mode === "pan" ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted"
             )}
+            title="Pan"
           >
             <Hand className="h-5 w-5" />
           </Button>
           
-          <div className="w-px h-8 bg-border/50" />
+          <div className="w-px h-6 bg-border" />
           
           <Button
             size="icon"
             variant={mode === "pin" ? "default" : "ghost"}
             onClick={() => onModeChange("pin")}
             className={cn(
-              "h-12 w-12 rounded-full transition-all",
-              mode === "pin" && "shadow-md scale-110"
+              "h-11 w-11 rounded-full transition-all",
+              mode === "pin" ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted"
             )}
+            title="Add Pin"
           >
             <MapPin className="h-5 w-5" />
           </Button>
@@ -91,21 +93,26 @@ export function MobileFloorPlanToolbar({
             variant={mode === "zone" ? "default" : "ghost"}
             onClick={() => onModeChange("zone")}
             className={cn(
-              "h-12 w-12 rounded-full transition-all",
-              mode === "zone" && "shadow-md scale-110"
+              "h-11 w-11 rounded-full transition-all",
+              mode === "zone" ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted"
             )}
+            title="Draw Area"
           >
             <Square className="h-5 w-5" />
           </Button>
           
-          <div className="w-px h-8 bg-border/50" />
+          <div className="w-px h-6 bg-border" />
           
           <Button
             size="icon"
             variant="ghost"
             onClick={onUndo}
             disabled={!canUndo}
-            className="h-12 w-12 rounded-full"
+            className={cn(
+              "h-11 w-11 rounded-full",
+              !canUndo && "opacity-40"
+            )}
+            title="Undo"
           >
             <Undo className="h-5 w-5" />
           </Button>
@@ -115,7 +122,11 @@ export function MobileFloorPlanToolbar({
             variant="ghost"
             onClick={onRedo}
             disabled={!canRedo}
-            className="h-12 w-12 rounded-full"
+            className={cn(
+              "h-11 w-11 rounded-full",
+              !canRedo && "opacity-40"
+            )}
+            title="Redo"
           >
             <Redo className="h-5 w-5" />
           </Button>
