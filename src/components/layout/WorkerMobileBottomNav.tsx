@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import {
   Sheet,
   SheetContent,
@@ -41,6 +42,7 @@ export const WorkerMobileBottomNav = () => {
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const { data: access, isLoading } = useUserAccess();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -87,6 +89,12 @@ export const WorkerMobileBottomNav = () => {
 
   // Only show on worker app routes (not on auth page)
   if (!location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
+
+  // Wait for access check to complete to prevent flash of wrong menu
+  if (isLoading) return null;
+  
+  // Only show for users with worker access
+  if (!access?.canAccessWorker) return null;
 
   const isActivePath = (path: string) => location.pathname === path;
 
