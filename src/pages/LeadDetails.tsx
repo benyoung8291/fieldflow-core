@@ -7,7 +7,7 @@ import { Mail, Phone, MapPin, Building2, User, FileText, TrendingUp, Edit, Trash
 import { toast } from "sonner";
 import LeadDialog from "@/components/leads/LeadDialog";
 import CustomerDialog from "@/components/customers/CustomerDialog";
-import QuoteDialog from "@/components/quotes/QuoteDialog";
+import QuoteHeaderDialog from "@/components/quotes/QuoteHeaderDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { useState, useEffect } from "react";
@@ -597,7 +597,7 @@ export default function LeadDetails() {
         leadId={id}
       />
 
-      <QuoteDialog
+      <QuoteHeaderDialog
         open={quoteDialogOpen}
         onOpenChange={setQuoteDialogOpen}
         leadId={id}

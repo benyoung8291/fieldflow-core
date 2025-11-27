@@ -35,7 +35,6 @@ interface QuoteItemTemplate {
   id: string;
   name: string;
   description: string;
-  quote_type: string;
   is_active: boolean;
 }
 
@@ -57,7 +56,6 @@ export default function QuoteItemTemplatesDialog({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    quote_type: 'simple',
   });
 
   // Fetch templates
@@ -108,7 +106,6 @@ export default function QuoteItemTemplatesDialog({
     setFormData({
       name: template.name,
       description: template.description || '',
-      quote_type: template.quote_type,
     });
     setShowForm(true);
   };
@@ -120,7 +117,7 @@ export default function QuoteItemTemplatesDialog({
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', quote_type: 'simple' });
+    setFormData({ name: '', description: '' });
     setEditingTemplate(null);
     setShowForm(false);
   };
@@ -161,7 +158,6 @@ export default function QuoteItemTemplatesDialog({
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -170,11 +166,6 @@ export default function QuoteItemTemplatesDialog({
                     <TableRow key={template.id}>
                       <TableCell className="font-medium">{template.name}</TableCell>
                       <TableCell>{template.description || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={template.quote_type === 'complex' ? 'default' : 'secondary'}>
-                          {template.quote_type}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
                           size="sm"
@@ -224,22 +215,6 @@ export default function QuoteItemTemplatesDialog({
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe what this template is for..."
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="quote_type">Quote Type</Label>
-              <Select
-                value={formData.quote_type}
-                onValueChange={(value) => setFormData({ ...formData, quote_type: value })}
-              >
-                <SelectTrigger id="quote_type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="simple">Simple</SelectItem>
-                  <SelectItem value="complex">Complex</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

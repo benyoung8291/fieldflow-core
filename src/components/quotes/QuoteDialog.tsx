@@ -1750,7 +1750,6 @@ export default function QuoteDialog({ open, onOpenChange, quoteId, leadId }: Quo
         open={saveTemplateOpen}
         onOpenChange={setSaveTemplateOpen}
         lineItems={lineItems}
-        quoteType={isComplexQuote ? 'complex' : 'simple'}
       />
 
       <QuoteDescriptionTemplateDialog
