@@ -132,10 +132,10 @@ export default function CustomerDashboard() {
               <div className="space-y-4">
                 {recentTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">{task.task_name}</h3>
-                      <p className="text-sm text-muted-foreground">{task.description}</p>
-                    </div>
+                  <div>
+                    <h3 className="font-medium">{task.title}</h3>
+                    <p className="text-sm text-muted-foreground">{task.description}</p>
+                  </div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(task.created_at).toLocaleDateString()}
                     </div>

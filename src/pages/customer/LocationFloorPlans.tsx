@@ -82,15 +82,15 @@ export default function LocationFloorPlans() {
 
       const { data: task, error: taskError } = await supabase
         .from("tasks")
-        .insert({
-          task_name: taskTitle,
+        .insert([{
+          title: taskTitle,
           description: taskDescription,
           customer_id: profile.customer_id,
           tenant_id: profile.tenant_id,
-          status: "todo",
+          status: "pending",
           priority: "medium",
           created_by: user.id,
-        })
+        }])
         .select()
         .single();
 
