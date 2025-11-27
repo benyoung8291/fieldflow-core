@@ -46,59 +46,83 @@ export default function CustomerLocations() {
 
   return (
     <CustomerPortalLayout>
-      <div className="space-y-6 pb-20 md:pb-0">
-        <div>
-          <h1 className="text-2xl font-bold">My Locations</h1>
-          <p className="text-muted-foreground">
+      <div className="space-y-8">
+        {/* Header Section */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Locations</h1>
+          <p className="text-base text-muted-foreground">
             View and manage your facility locations
           </p>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="flex justify-center p-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : locations && locations.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Locations Found</h3>
-              <p className="text-muted-foreground">
-                Contact support to add locations to your account
-              </p>
+          <Card className="border-border/40 bg-card/50">
+            <CardContent className="py-16 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                <MapPin className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">No Locations Found</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  Contact support to add locations to your account
+                </p>
+              </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {locations?.map((location) => (
-              <Card key={location.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-start gap-2">
-                    <MapPin className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <span className="line-clamp-2">{location.name}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    {location.address && <p>{location.address}</p>}
-                    {(location.city || location.state || location.postcode) && (
-                      <p>
-                        {[location.city, location.state, location.postcode]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </p>
-                    )}
+              <Card 
+                key={location.id} 
+                className="border-border/40 bg-card/50 hover-lift card-interactive overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <CardHeader className="space-y-3 pb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-primary/10 p-2.5 flex-shrink-0">
+                      <MapPin className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-base font-semibold leading-snug line-clamp-2 flex-1">
+                      {location.name}
+                    </CardTitle>
                   </div>
+                </CardHeader>
 
-                  <div className="flex items-center gap-2 text-sm">
+                <CardContent className="space-y-4 pt-0">
+                  {(location.address || location.city || location.state || location.postcode) && (
+                    <div className="text-sm text-muted-foreground space-y-1 min-h-[3rem]">
+                      {location.address && (
+                        <p className="line-clamp-1">{location.address}</p>
+                      )}
+                      {(location.city || location.state || location.postcode) && (
+                        <p className="line-clamp-1">
+                          {[location.city, location.state, location.postcode]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/40">
                     <FileText className="h-4 w-4" />
-                    <span>
-                      {location.floor_plans?.[0]?.count || 0} floor plan(s)
+                    <span className="font-medium">
+                      {location.floor_plans?.[0]?.count || 0} floor plan{location.floor_plans?.[0]?.count !== 1 ? 's' : ''}
                     </span>
                   </div>
 
-                  <Link to={`/customer/locations/${location.id}/floor-plans`}>
-                    <Button className="w-full">View Floor Plans</Button>
+                  <Link to={`/customer/locations/${location.id}/floor-plans`} className="block">
+                    <Button 
+                      className="w-full rounded-xl shadow-sm hover:shadow transition-all"
+                      size="lg"
+                    >
+                      View Floor Plans
+                    </Button>
                   </Link>
                 </CardContent>
               </Card>
