@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { SelectWithSearch } from "@/components/ui/select-with-search";
+import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin, FileText, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface QuickMarkupDialogProps {
   open: boolean;
@@ -79,7 +79,7 @@ export function QuickMarkupDialog({ open, onOpenChange }: QuickMarkupDialogProps
 
   const handleContinue = () => {
     if (selectedLocation && selectedFloorPlan) {
-      navigate(`/customer/locations/${selectedLocation}?floorPlan=${selectedFloorPlan}`);
+      navigate(`/customer/locations/${selectedLocation}/floor-plans?floorPlan=${selectedFloorPlan}`);
       onOpenChange(false);
       // Reset selections
       setSelectedLocation("");
@@ -89,72 +89,146 @@ export function QuickMarkupDialog({ open, onOpenChange }: QuickMarkupDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Markup Request</DialogTitle>
+          <DialogTitle className="text-xl">Create Markup Request</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Select a location and floor plan to start marking up
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="location">Select Location</Label>
+        <div className="space-y-6 py-4">
+          {/* Locations */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Select Location</h3>
+            </div>
             {locationsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : locations && locations.length > 0 ? (
+              <div className="grid gap-3">
+                {locations.map((location) => (
+                  <Card
+                    key={location.id}
+                    className={cn(
+                      "cursor-pointer transition-all hover:shadow-md",
+                      selectedLocation === location.id
+                        ? "ring-2 ring-primary shadow-sm"
+                        : "hover:border-primary/50"
+                    )}
+                    onClick={() => {
+                      setSelectedLocation(location.id);
+                      setSelectedFloorPlan(""); // Reset floor plan when location changes
+                    }}
+                  >
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          selectedLocation === location.id
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        )}>
+                          <MapPin className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{location.name}</p>
+                          {location.address && (
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {location.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {selectedLocation === location.id && (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : (
-              <SelectWithSearch
-                value={selectedLocation}
-                onValueChange={setSelectedLocation}
-                options={
-                  locations?.map((loc) => ({
-                    label: loc.name,
-                    value: loc.id,
-                  })) || []
-                }
-                placeholder="Choose a location"
-                searchPlaceholder="Search locations..."
-                emptyText="No locations found"
-              />
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <MapPin className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">No locations available</p>
+                </CardContent>
+              </Card>
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="floor-plan">Select Floor Plan</Label>
-            {floorPlansLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          {/* Floor Plans */}
+          {selectedLocation && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">Select Floor Plan</h3>
               </div>
-            ) : (
-              <SelectWithSearch
-                value={selectedFloorPlan}
-                onValueChange={setSelectedFloorPlan}
-                options={
-                  floorPlans?.map((plan) => ({
-                    label: `Level ${plan.floor_number} - ${plan.name}`,
-                    value: plan.id,
-                  })) || []
-                }
-                placeholder="Choose a floor plan"
-                searchPlaceholder="Search floor plans..."
-                emptyText={
-                  selectedLocation
-                    ? "No floor plans found for this location"
-                    : "Please select a location first"
-                }
-              />
-            )}
-          </div>
+              {floorPlansLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : floorPlans && floorPlans.length > 0 ? (
+                <div className="grid gap-3">
+                  {floorPlans.map((plan) => (
+                    <Card
+                      key={plan.id}
+                      className={cn(
+                        "cursor-pointer transition-all hover:shadow-md",
+                        selectedFloorPlan === plan.id
+                          ? "ring-2 ring-primary shadow-sm"
+                          : "hover:border-primary/50"
+                      )}
+                      onClick={() => setSelectedFloorPlan(plan.id)}
+                    >
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            selectedFloorPlan === plan.id
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          )}>
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium">
+                              Level {plan.floor_number} - {plan.name}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedFloorPlan === plan.id && (
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-muted-foreground">No floor plans available for this location</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex gap-3 justify-end border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={handleContinue}
             disabled={!selectedLocation || !selectedFloorPlan}
+            size="lg"
           >
-            Continue
+            Continue to Markup
           </Button>
         </div>
       </DialogContent>
