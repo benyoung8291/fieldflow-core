@@ -1,11 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Edit, Eye } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { FileText, Edit, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface FieldReportsListProps {
   appointmentId: string;
@@ -14,6 +26,10 @@ interface FieldReportsListProps {
 
 export default function FieldReportsList({ appointmentId, onReportStateChange }: FieldReportsListProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -51,6 +67,47 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
     );
   }
 
+  const handleDeleteClick = (report: any) => {
+    setReportToDelete(report);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!reportToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      // Delete field report photos first
+      const { error: photosError } = await supabase
+        .from('field_report_photos')
+        .delete()
+        .eq('field_report_id', reportToDelete.id);
+
+      if (photosError) throw photosError;
+
+      // Delete the field report
+      const { error: reportError } = await supabase
+        .from('field_reports')
+        .delete()
+        .eq('id', reportToDelete.id);
+
+      if (reportError) throw reportError;
+
+      toast.success('Draft deleted successfully');
+      
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['field-reports', appointmentId] });
+      onReportStateChange?.();
+    } catch (error: any) {
+      console.error('Error deleting draft:', error);
+      toast.error(error.message || 'Failed to delete draft');
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
+    }
+  };
+
   if (fieldReports.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -61,11 +118,39 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
   }
 
   return (
+    <>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this draft field report? This action cannot be undone.
+              {reportToDelete && (
+                <div className="mt-2 font-medium text-foreground">
+                  Report: {reportToDelete.report_number}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Draft'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     <div className="space-y-3">
       {fieldReports.map((report: any) => {
         const isCreator = currentUser?.id === report.created_by;
         const isLocked = report.approved_at && report.pdf_url;
         const canEdit = isCreator && !isLocked;
+        const isDraft = report.status === 'draft';
+        const canDelete = isCreator && isDraft;
 
         return (
           <Card key={report.id} className="hover:bg-muted/50 transition-colors">
@@ -102,14 +187,26 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
                 </div>
                 <div className="flex items-center gap-2">
                   {canEdit ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/worker/field-report/${appointmentId}/edit/${report.id}`)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/worker/field-report/${appointmentId}/edit/${report.id}`)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteClick(report)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </>
                   ) : (
                     <Button
                       variant="outline"
@@ -127,5 +224,6 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
         );
       })}
     </div>
+    </>
   );
 }
