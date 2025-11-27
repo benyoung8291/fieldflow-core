@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,15 +16,21 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 interface FieldReportDetailProps {
   reportId: string;
 }
 
 export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxPhotos, setLightboxPhotos] = useState<any[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   const { data: report, isLoading } = useQuery({
     queryKey: ["field-report-detail", reportId],
     queryFn: async () => {
@@ -82,358 +89,450 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
   const beforePhotos = report.photos?.filter((p: any) => p.photo_type === 'before').sort((a: any, b: any) => a.display_order - b.display_order) || [];
   const afterPhotos = report.photos?.filter((p: any) => p.photo_type === 'after').sort((a: any, b: any) => a.display_order - b.display_order) || [];
 
+  const openLightbox = (photos: any[], index: number) => {
+    setLightboxPhotos(photos);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header Card */}
-      <Card className="border-border/40 bg-gradient-to-br from-card/80 to-card/50 backdrop-blur-xl overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-        <CardHeader className="relative">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="text-2xl md:text-3xl">Report #{report.report_number}</CardTitle>
-                <Badge className="rounded-full px-3 py-1 bg-success/10 text-success border-success/20">
-                  Approved
+    <>
+      <PhotoLightbox
+        photos={lightboxPhotos}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
+
+      <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
+        {/* Report Header */}
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-l-4 border-primary rounded-lg p-8">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Field Service Report
+                </h1>
+                <Badge className="rounded-full px-4 py-1.5 bg-success text-success-foreground border-success shadow-sm">
+                  ✓ Approved
                 </Badge>
               </div>
-              {report.appointment?.title && (
-                <p className="text-muted-foreground">{report.appointment.title}</p>
-              )}
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-foreground">
+                  Report #{report.report_number}
+                </p>
+                {report.appointment?.title && (
+                  <p className="text-base text-muted-foreground">{report.appointment.title}</p>
+                )}
+              </div>
             </div>
             {report.pdf_url && (
               <Button
                 onClick={() => window.open(report.pdf_url, '_blank')}
-                className="rounded-xl shadow-lg hover:shadow-xl transition-all"
+                size="lg"
+                className="rounded-xl shadow-md hover:shadow-lg transition-all"
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </Button>
             )}
           </div>
-        </CardHeader>
-      </Card>
+        </div>
 
-      {/* Key Information */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Calendar className="h-4 w-4 text-primary" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Service Date</p>
-                <p className="text-sm font-semibold">
-                  {new Date(report.service_date).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-info/10 p-2">
-                <Clock className="h-4 w-4 text-info" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Arrival Time</p>
-                <p className="text-sm font-semibold">
-                  {new Date(report.arrival_time).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-warning/10 p-2">
-                <MapPin className="h-4 w-4 text-warning" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Location</p>
-                <p className="text-sm font-semibold line-clamp-2">
-                  {report.appointment?.service_order?.location?.name || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-success/10 p-2">
-                <User className="h-4 w-4 text-success" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Technician</p>
-                <p className="text-sm font-semibold">{report.worker_name}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Work Description */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Work Performed</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-foreground whitespace-pre-wrap">{report.work_description}</p>
-          </div>
-          
-          {report.methods_attempted && (
-            <div className="pt-4 border-t border-border/40">
-              <h4 className="text-sm font-semibold mb-2">Methods Applied</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{report.methods_attempted}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Condition Ratings */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Condition Assessment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
-            {report.carpet_condition_arrival !== null && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Carpet Condition</span>
-                  <Badge variant="outline" className="rounded-full">
-                    {report.carpet_condition_arrival}/10
-                  </Badge>
-                </div>
-                <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
-                  <div 
-                    className={cn(
-                      "h-full transition-all rounded-full",
-                      report.carpet_condition_arrival >= 7 ? "bg-success" :
-                      report.carpet_condition_arrival >= 4 ? "bg-warning" : "bg-destructive"
-                    )}
-                    style={{ width: `${(report.carpet_condition_arrival / 10) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {report.hard_floor_condition_arrival !== null && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Hard Floor Condition</span>
-                  <Badge variant="outline" className="rounded-full">
-                    {report.hard_floor_condition_arrival}/10
-                  </Badge>
-                </div>
-                <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
-                  <div 
-                    className={cn(
-                      "h-full transition-all rounded-full",
-                      report.hard_floor_condition_arrival >= 7 ? "bg-success" :
-                      report.hard_floor_condition_arrival >= 4 ? "bg-warning" : "bg-destructive"
-                    )}
-                    style={{ width: `${(report.hard_floor_condition_arrival / 10) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {report.flooring_state_description && (
-            <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">{report.flooring_state_description}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Safety & Equipment */}
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Safety & Equipment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-              {report.has_signed_swms ? (
-                <CheckCircle2 className="h-5 w-5 text-success" />
-              ) : (
-                <XCircle className="h-5 w-5 text-destructive" />
-              )}
-              <span className="text-sm">SWMS Signed</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-              {report.equipment_tested_tagged ? (
-                <CheckCircle2 className="h-5 w-5 text-success" />
-              ) : (
-                <XCircle className="h-5 w-5 text-destructive" />
-              )}
-              <span className="text-sm">Equipment Tagged</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-              {report.equipment_clean_working ? (
-                <CheckCircle2 className="h-5 w-5 text-success" />
-              ) : (
-                <XCircle className="h-5 w-5 text-destructive" />
-              )}
-              <span className="text-sm">Equipment Clean</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Issues */}
-      {(report.had_problem_areas || report.had_incident) && (
-        <Card className="border-border/40 bg-warning/5 border-warning/20">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-warning" />
-              <CardTitle className="text-lg">Reported Issues</CardTitle>
-            </div>
+        {/* Service Information Grid */}
+        <Card className="border-border/40">
+          <CardHeader className="border-b bg-muted/30">
+            <CardTitle className="text-xl font-semibold">Service Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {report.had_problem_areas && report.problem_areas_description && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Problem Areas</h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {report.problem_areas_description}
-                </p>
+          <CardContent className="p-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Service Date</p>
+                  <p className="text-base font-semibold">
+                    {new Date(report.service_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
               </div>
-            )}
 
-            {report.had_incident && report.incident_description && (
-              <div className="pt-4 border-t border-warning/20">
-                <h4 className="text-sm font-semibold mb-2 text-warning">Incident Report</h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {report.incident_description}
-                </p>
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-info/10 p-3">
+                  <Clock className="h-5 w-5 text-info" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Arrival Time</p>
+                  <p className="text-base font-semibold">
+                    {new Date(report.arrival_time).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </p>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Photos */}
-      {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Photos</CardTitle>
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-warning/10 p-3">
+                  <MapPin className="h-5 w-5 text-warning" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Service Location</p>
+                  <p className="text-base font-semibold">
+                    {report.appointment?.service_order?.location?.name || 'N/A'}
+                  </p>
+                  {report.appointment?.service_order?.location?.address && (
+                    <p className="text-sm text-muted-foreground">
+                      {report.appointment.service_order.location.address}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-success/10 p-3">
+                  <User className="h-5 w-5 text-success" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Service Technician</p>
+                  <p className="text-base font-semibold">{report.worker_name}</p>
+                </div>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {beforePhotos.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-info" />
-                  Before Photos
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {beforePhotos.map((photo: any) => (
-                    <div key={photo.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border/40 hover-lift">
-                      <img
-                        src={photo.file_url}
-                        alt="Before"
-                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      {photo.notes && (
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                          <p className="text-xs text-white line-clamp-2">{photo.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          </CardContent>
+        </Card>
 
-            {afterPhotos.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-success" />
-                  After Photos
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {afterPhotos.map((photo: any) => (
-                    <div key={photo.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border/40 hover-lift">
-                      <img
-                        src={photo.file_url}
-                        alt="After"
-                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      {photo.notes && (
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                          <p className="text-xs text-white line-clamp-2">{photo.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+        {/* Work Description */}
+        <Card className="border-border/40">
+          <CardHeader className="border-b bg-muted/30">
+            <CardTitle className="text-xl font-semibold">Work Performed</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="prose prose-sm max-w-none">
+              <p className="text-base leading-relaxed whitespace-pre-wrap">{report.work_description}</p>
+            </div>
+            
+            {report.methods_attempted && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-base font-semibold mb-3">Methods & Techniques Applied</h4>
+                  <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                    {report.methods_attempted}
+                  </p>
                 </div>
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
-      )}
 
-      {/* Customer Signature */}
-      {report.customer_signature_data && (
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Customer Approval</CardTitle>
+        {/* Condition Ratings */}
+        <Card className="border-border/40">
+          <CardHeader className="border-b bg-muted/30">
+            <CardTitle className="text-xl font-semibold">Condition Assessment</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="border border-border/40 rounded-lg p-4 bg-background/50">
-                <img
-                  src={report.customer_signature_data}
-                  alt="Customer Signature"
-                  className="max-h-32"
-                />
-              </div>
-              <div className="flex-1 space-y-2">
-                {report.customer_signature_name && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Signed by</p>
-                    <p className="text-sm font-semibold">{report.customer_signature_name}</p>
+          <CardContent className="p-6">
+            <div className="grid gap-8 md:grid-cols-2">
+              {report.carpet_condition_arrival !== null && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-medium">Carpet Condition</span>
+                    <Badge variant="outline" className="rounded-full text-base px-3 py-1">
+                      {report.carpet_condition_arrival}/10
+                    </Badge>
                   </div>
+                  <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all rounded-full shadow-sm",
+                        report.carpet_condition_arrival >= 7 ? "bg-success" :
+                        report.carpet_condition_arrival >= 4 ? "bg-warning" : "bg-destructive"
+                      )}
+                      style={{ width: `${(report.carpet_condition_arrival / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {report.hard_floor_condition_arrival !== null && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-medium">Hard Floor Condition</span>
+                    <Badge variant="outline" className="rounded-full text-base px-3 py-1">
+                      {report.hard_floor_condition_arrival}/10
+                    </Badge>
+                  </div>
+                  <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all rounded-full shadow-sm",
+                        report.hard_floor_condition_arrival >= 7 ? "bg-success" :
+                        report.hard_floor_condition_arrival >= 4 ? "bg-warning" : "bg-destructive"
+                      )}
+                      style={{ width: `${(report.hard_floor_condition_arrival / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+          </div>
+
+            {report.flooring_state_description && (
+              <div className="md:col-span-2 mt-2">
+                <Separator className="mb-4" />
+                <h4 className="text-base font-semibold mb-3">Additional Notes</h4>
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-base leading-relaxed text-muted-foreground">
+                    {report.flooring_state_description}
+                  </p>
+                </div>
+              </div>
+            )}
+        </CardContent>
+      </Card>
+
+        {/* Safety & Equipment */}
+        <Card className="border-border/40">
+          <CardHeader className="border-b bg-muted/30">
+            <CardTitle className="text-xl font-semibold">Safety & Equipment Compliance</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className={cn(
+                "flex items-center gap-4 p-4 rounded-xl border-2 transition-all",
+                report.has_signed_swms 
+                  ? "bg-success/5 border-success/20" 
+                  : "bg-destructive/5 border-destructive/20"
+              )}>
+                {report.has_signed_swms ? (
+                  <CheckCircle2 className="h-6 w-6 text-success flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-destructive flex-shrink-0" />
                 )}
-                {report.customer_signature_date && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
-                    <p className="text-sm">
-                      {new Date(report.customer_signature_date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                <span className="text-base font-medium">SWMS Signed</span>
+              </div>
+
+              <div className={cn(
+                "flex items-center gap-4 p-4 rounded-xl border-2 transition-all",
+                report.equipment_tested_tagged 
+                  ? "bg-success/5 border-success/20" 
+                  : "bg-destructive/5 border-destructive/20"
+              )}>
+                {report.equipment_tested_tagged ? (
+                  <CheckCircle2 className="h-6 w-6 text-success flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-destructive flex-shrink-0" />
+                )}
+                <span className="text-base font-medium">Equipment Tagged</span>
+              </div>
+
+              <div className={cn(
+                "flex items-center gap-4 p-4 rounded-xl border-2 transition-all",
+                report.equipment_clean_working 
+                  ? "bg-success/5 border-success/20" 
+                  : "bg-destructive/5 border-destructive/20"
+              )}>
+                {report.equipment_clean_working ? (
+                  <CheckCircle2 className="h-6 w-6 text-success flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-destructive flex-shrink-0" />
+                )}
+                <span className="text-base font-medium">Equipment Clean</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Issues */}
+        {(report.had_problem_areas || report.had_incident) && (
+          <Card className="border-2 border-warning/40 bg-warning/5">
+            <CardHeader className="border-b border-warning/20 bg-warning/10">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-warning/20 p-2">
+                  <AlertCircle className="h-6 w-6 text-warning" />
+                </div>
+                <CardTitle className="text-xl font-semibold">Reported Issues</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {report.had_problem_areas && report.problem_areas_description && (
+                <div>
+                  <h4 className="text-base font-semibold mb-3 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-warning" />
+                    Problem Areas Identified
+                  </h4>
+                  <div className="p-4 bg-background/50 rounded-lg border border-warning/20">
+                    <p className="text-base leading-relaxed whitespace-pre-wrap">
+                      {report.problem_areas_description}
                     </p>
                   </div>
-                )}
+                </div>
+              )}
+
+              {report.had_incident && report.incident_description && (
+                <div>
+                  <Separator className="bg-warning/20" />
+                  <h4 className="text-base font-semibold mb-3 text-destructive flex items-center gap-2 mt-6">
+                    <div className="h-2 w-2 rounded-full bg-destructive" />
+                    Incident Report
+                  </h4>
+                  <div className="p-4 bg-destructive/5 rounded-lg border-2 border-destructive/20">
+                    <p className="text-base leading-relaxed whitespace-pre-wrap">
+                      {report.incident_description}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Photos */}
+        {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
+          <Card className="border-border/40">
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex items-center gap-3">
+                <ImageIcon className="h-6 w-6 text-primary" />
+                <CardTitle className="text-xl font-semibold">Service Photos</CardTitle>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Click on any photo to view in full size with zoom
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-8">
+              {beforePhotos.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-gradient-to-r from-info/50 to-transparent" />
+                    <h4 className="text-lg font-semibold flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-info shadow-sm" />
+                      Before Service
+                    </h4>
+                    <div className="h-px flex-1 bg-gradient-to-l from-info/50 to-transparent" />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {beforePhotos.map((photo: any, index: number) => (
+                      <button
+                        key={photo.id}
+                        onClick={() => openLightbox(beforePhotos, index)}
+                        className="group relative aspect-square rounded-xl overflow-hidden border-2 border-border/40 hover:border-info/50 transition-all hover:scale-[1.02] hover:shadow-lg"
+                      >
+                        <img
+                          src={photo.file_url}
+                          alt={`Before ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
+                            <ImageIcon className="h-5 w-5 text-foreground" />
+                          </div>
+                        </div>
+                        {photo.notes && (
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
+                            <p className="text-xs text-white line-clamp-2 font-medium">{photo.notes}</p>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {afterPhotos.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-gradient-to-r from-success/50 to-transparent" />
+                    <h4 className="text-lg font-semibold flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-success shadow-sm" />
+                      After Service
+                    </h4>
+                    <div className="h-px flex-1 bg-gradient-to-l from-success/50 to-transparent" />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {afterPhotos.map((photo: any, index: number) => (
+                      <button
+                        key={photo.id}
+                        onClick={() => openLightbox(afterPhotos, index)}
+                        className="group relative aspect-square rounded-xl overflow-hidden border-2 border-border/40 hover:border-success/50 transition-all hover:scale-[1.02] hover:shadow-lg"
+                      >
+                        <img
+                          src={photo.file_url}
+                          alt={`After ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
+                            <ImageIcon className="h-5 w-5 text-foreground" />
+                          </div>
+                        </div>
+                        {photo.notes && (
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
+                            <p className="text-xs text-white line-clamp-2 font-medium">{photo.notes}</p>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Customer Signature */}
+        {report.customer_signature_data && (
+          <Card className="border-border/40">
+            <CardHeader className="border-b bg-muted/30">
+              <CardTitle className="text-xl font-semibold">Customer Approval & Sign-Off</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-8 items-start">
+                <div className="border-2 border-border/40 rounded-xl p-6 bg-background shadow-sm">
+                  <img
+                    src={report.customer_signature_data}
+                    alt="Customer Signature"
+                    className="max-h-32 w-auto"
+                  />
+                </div>
+                <div className="flex-1 space-y-4">
+                  {report.customer_signature_name && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Signed by</p>
+                      <p className="text-lg font-semibold">{report.customer_signature_name}</p>
+                    </div>
+                  )}
+                  {report.customer_signature_date && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Date signed</p>
+                      <p className="text-base">
+                        {new Date(report.customer_signature_date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  )}
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground italic">
+                      This signature confirms that the work has been completed to the customer's satisfaction.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
   );
 }
