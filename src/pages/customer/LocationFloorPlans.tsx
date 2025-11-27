@@ -44,27 +44,36 @@ export default function LocationFloorPlans() {
   const { data: floorPlans, isLoading } = useQuery({
     queryKey: ["floor-plans", locationId],
     queryFn: async () => {
+      console.log("Customer portal: Fetching floor plans for location", locationId);
       const { data, error } = await supabase
         .from("floor_plans")
         .select("*")
         .eq("customer_location_id", locationId!);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Customer portal: Error fetching floor plans", error);
+        throw error;
+      }
+      
+      console.log("Customer portal: Floor plans loaded", data?.length || 0);
       
       // Generate signed URLs for PDFs to avoid CORS issues
       const plansWithSignedUrls = await Promise.all(
         (data || []).map(async (plan) => {
           if (plan.file_path) {
+            console.log("Customer portal: Creating signed URL for", plan.file_path);
             const { data: signedUrl, error: signError } = await supabase
               .storage
               .from("floor-plans")
               .createSignedUrl(plan.file_path, 3600); // 1 hour expiry
             
             if (signError) {
-              console.error("Error creating signed URL:", signError);
+              console.error("Customer portal: Error creating signed URL:", signError);
+              toast.error(`Failed to load floor plan: ${plan.name}`);
               return plan;
             }
             
+            console.log("Customer portal: Signed URL created successfully");
             return { ...plan, signed_url: signedUrl.signedUrl };
           }
           return plan;

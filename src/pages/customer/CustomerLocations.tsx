@@ -27,8 +27,12 @@ export default function CustomerLocations() {
   const { data: locations, isLoading } = useQuery({
     queryKey: ["customer-locations", profile?.customer_id],
     queryFn: async () => {
-      if (!profile?.customer_id) return [];
+      if (!profile?.customer_id) {
+        console.log("Customer portal: No customer_id for locations");
+        return [];
+      }
 
+      console.log("Customer portal: Fetching locations for customer", profile.customer_id);
       const { data, error } = await supabase
         .from("customer_locations")
         .select(`
@@ -37,16 +41,26 @@ export default function CustomerLocations() {
         .eq("customer_id", profile.customer_id)
         .eq("archived", false);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Customer portal: Error fetching locations", error);
+        throw error;
+      }
+
+      console.log("Customer portal: Locations loaded", data?.length || 0);
 
       // Get floor plan counts for each location
       const locationsWithCounts = await Promise.all(
         (data || []).map(async (location) => {
-          const { count } = await supabase
+          const { count, error: countError } = await supabase
             .from("floor_plans")
             .select("*", { count: "exact", head: true })
             .eq("customer_location_id", location.id);
           
+          if (countError) {
+            console.error("Customer portal: Error counting floor plans", countError);
+          }
+          
+          console.log(`Customer portal: Location ${location.name} has ${count || 0} floor plans`);
           return { ...location, floor_plans_count: count || 0 };
         })
       );

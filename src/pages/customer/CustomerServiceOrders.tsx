@@ -11,15 +11,23 @@ export default function CustomerServiceOrders() {
     queryKey: ["customer-profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) {
+        console.error("Customer portal: User not authenticated");
+        throw new Error("Not authenticated");
+      }
 
+      console.log("Customer portal: Fetching profile for user", user.id);
       const { data, error } = await supabase
         .from("customer_portal_users")
         .select("customer_id")
         .eq("user_id", user.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Customer portal: Error fetching profile", error);
+        throw error;
+      }
+      console.log("Customer portal: Profile loaded", data);
       return data;
     },
   });
@@ -27,18 +35,26 @@ export default function CustomerServiceOrders() {
   const { data: serviceOrders, isLoading } = useQuery({
     queryKey: ["customer-service-orders", profile?.customer_id],
     queryFn: async () => {
-      if (!profile?.customer_id) return [];
+      if (!profile?.customer_id) {
+        console.log("Customer portal: No customer_id, returning empty array");
+        return [];
+      }
 
+      console.log("Customer portal: Fetching service orders for customer", profile.customer_id);
       const { data, error } = await supabase
         .from("service_orders")
         .select(`
           *,
-          location:customer_locations(name, address)
+          location:customer_locations!service_orders_customer_location_id_fkey(name, address)
         `)
         .eq("customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Customer portal: Error fetching service orders", error);
+        throw error;
+      }
+      console.log("Customer portal: Service orders loaded", data);
       return data;
     },
     enabled: !!profile?.customer_id,
