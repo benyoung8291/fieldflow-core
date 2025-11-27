@@ -79,6 +79,14 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError
 
+    // Also update email in profiles table
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .update({ email: email })
+      .eq('id', userId)
+
+    if (profileError) throw profileError
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
