@@ -62,21 +62,24 @@ serve(async (req) => {
     console.log("Authenticated user:", user.id);
 
     // Verify user is tenant admin or has permission
-    const { data: userRole } = await supabaseAdmin
+    const { data: userRoles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id)
-      .single();
+      .eq("user_id", user.id);
 
-    if (!userRole || !["tenant_admin", "super_admin"].includes(userRole.role)) {
-      console.error("Insufficient permissions. User role:", userRole?.role);
+    const hasPermission = userRoles?.some(r => 
+      ["tenant_admin", "super_admin"].includes(r.role)
+    );
+
+    if (!hasPermission) {
+      console.error("Insufficient permissions. User roles:", userRoles?.map(r => r.role));
       return new Response(
         JSON.stringify({ error: "Insufficient permissions" }), 
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log("User authorized with role:", userRole.role);
+    console.log("User authorized with roles:", userRoles?.map(r => r.role));
 
     // Parse and validate request body
     const body = await req.json();
