@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, X } from "lucide-react";
+import { Plus, Trash2, Upload, X, Copy } from "lucide-react";
 import { format } from "date-fns";
 
 interface ServiceContractDialogProps {
@@ -383,16 +383,30 @@ export default function ServiceContractDialog({
                 <div key={field.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-sm">Item {index + 1}</h4>
-                    {fields.length > 1 && (
+                    <div className="flex items-center gap-1">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => remove(index)}
+                        onClick={() => {
+                          const currentItem = watch(`line_items.${index}`);
+                          append(currentItem);
+                          toast.success("Line item duplicated");
+                        }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Copy className="h-4 w-4" />
                       </Button>
-                    )}
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
