@@ -24,8 +24,9 @@ export default function DroppableAppointmentCard({
   onClick,
 }: DroppableAppointmentCardProps) {
   const [isDragIntent, setIsDragIntent] = useState(false);
-  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
-  const dragThreshold = 5; // pixels to move before considering it a drag
+  const pointerDownPos = useRef<{ x: number; y: number; timestamp: number } | null>(null);
+  const dragThreshold = 8; // pixels to move before considering it a drag
+  const dragDelay = 150; // milliseconds to hold before drag starts
 
   // Make card droppable for workers
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -61,7 +62,7 @@ export default function DroppableAppointmentCard({
     if ((e.target as HTMLElement).closest('[data-no-click]')) {
       return;
     }
-    pointerDownPos.current = { x: e.clientX, y: e.clientY };
+    pointerDownPos.current = { x: e.clientX, y: e.clientY, timestamp: Date.now() };
     setIsDragIntent(false);
   };
 
@@ -70,9 +71,10 @@ export default function DroppableAppointmentCard({
     
     const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
     const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
+    const timeSinceDown = Date.now() - pointerDownPos.current.timestamp;
     
-    // If moved more than threshold, it's a drag intent
-    if (deltaX > dragThreshold || deltaY > dragThreshold) {
+    // If moved more than threshold OR held for delay time, it's a drag intent
+    if ((deltaX > dragThreshold || deltaY > dragThreshold) || timeSinceDown > dragDelay) {
       setIsDragIntent(true);
     }
   };
@@ -101,10 +103,10 @@ export default function DroppableAppointmentCard({
         {...attributes}
         {...(isDragIntent ? listeners : {})}
         className={cn(
-          "p-2 cursor-pointer hover:shadow-md transition-all group relative hover:border-primary/50",
+          "p-2 hover:shadow-md transition-all group relative hover:border-primary/50",
           isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
           isDragging && "opacity-50 cursor-grabbing",
-          isDragIntent && "cursor-grab"
+          isDragIntent ? "cursor-grab" : "cursor-pointer"
         )}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

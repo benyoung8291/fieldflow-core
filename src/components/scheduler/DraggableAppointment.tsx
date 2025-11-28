@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useState, useRef } from "react";
 
 interface DraggableAppointmentProps {
   appointment: any;
@@ -27,6 +28,11 @@ export default function DraggableAppointment({
   onDelete,
   showFullDetails = false,
 }: DraggableAppointmentProps) {
+  const [isDragIntent, setIsDragIntent] = useState(false);
+  const pointerDownPos = useRef<{ x: number; y: number; timestamp: number } | null>(null);
+  const dragThreshold = 8;
+  const dragDelay = 150;
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `appointment-${appointment.id}`,
     data: {
@@ -34,6 +40,7 @@ export default function DraggableAppointment({
       appointment,
       appointmentId: appointment.id,
     },
+    disabled: !isDragIntent,
   });
 
   const baseStyle = {
@@ -50,27 +57,53 @@ export default function DraggableAppointment({
     return "hsl(var(--border))";
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    // Don't trigger click if user is interacting with dropdown menu
-    if ((e.target as HTMLElement).closest('[role="menuitem"]') || 
-        (e.target as HTMLElement).closest('button')) {
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button') || 
+        (e.target as HTMLElement).closest('[role="menuitem"]')) {
       return;
     }
+    pointerDownPos.current = { x: e.clientX, y: e.clientY, timestamp: Date.now() };
+    setIsDragIntent(false);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointerDownPos.current) return;
     
-    // Check for Cmd (Mac) or Ctrl (Windows) key
-    if (e.metaKey || e.ctrlKey) {
-      e.preventDefault();
-      e.stopPropagation();
-      // Open appointment in new tab
-      const url = `/scheduler?appointment=${appointment.id}`;
-      window.open(url, '_blank');
-      return;
+    const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
+    const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
+    const timeSinceDown = Date.now() - pointerDownPos.current.timestamp;
+    
+    if ((deltaX > dragThreshold || deltaY > dragThreshold) || timeSinceDown > dragDelay) {
+      setIsDragIntent(true);
     }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!pointerDownPos.current) return;
     
-    // Only trigger if not currently dragging
-    if (!isDragging) {
+    const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
+    const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
+    
+    if (deltaX <= dragThreshold && deltaY <= dragThreshold) {
+      if ((e.target as HTMLElement).closest('button') || 
+          (e.target as HTMLElement).closest('[role="menuitem"]')) {
+        return;
+      }
+      
+      // Check for Cmd (Mac) or Ctrl (Windows) key
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        const url = `/scheduler?appointment=${appointment.id}`;
+        window.open(url, '_blank');
+        return;
+      }
+      
       onViewHistory();
     }
+    
+    pointerDownPos.current = null;
+    setIsDragIntent(false);
   };
 
   return (
@@ -81,12 +114,19 @@ export default function DraggableAppointment({
         borderLeftColor: getBorderColor(),
       }}
       className={cn(
-        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none cursor-grab active:cursor-grabbing pointer-events-auto",
-        isDragging && "opacity-50"
+        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none pointer-events-auto",
+        isDragging && "opacity-50 cursor-grabbing",
+        isDragIntent ? "cursor-grab" : "cursor-pointer"
       )}
-      {...listeners}
-      {...attributes}
-      onClick={handleClick}
+      {...(isDragIntent ? listeners : {})}
+      {...(isDragIntent ? attributes : {})}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={() => {
+        pointerDownPos.current = null;
+        setIsDragIntent(false);
+      }}
     >
       {/* Duration badge - top right */}
       <div className="absolute top-0.5 right-0.5 bg-muted/70 backdrop-blur-sm text-[9px] font-medium px-1 py-0.5 rounded text-muted-foreground z-10 group-hover:opacity-0 transition-opacity">
