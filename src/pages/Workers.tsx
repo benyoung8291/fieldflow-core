@@ -9,11 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, MoreVertical, Users, UserCheck, UserX, DollarSign, Settings as SettingsIcon } from "lucide-react";
+import { Search, MoreVertical, Users, UserCheck, UserX, DollarSign, Settings as SettingsIcon, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import { usePresence } from "@/hooks/usePresence";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import CreateWorkerDialog from "@/components/workers/CreateWorkerDialog";
 
 interface Worker {
   id: string;
@@ -30,6 +31,7 @@ interface Worker {
 
 export default function Workers() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "workers-page" });
@@ -99,6 +101,10 @@ export default function Workers() {
           </div>
           <div className="flex items-center gap-2">
             <PresenceIndicator users={onlineUsers} />
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Create New Worker
+            </Button>
             <Button onClick={() => navigate("/settings")} variant="outline">
               <SettingsIcon className="h-4 w-4 mr-2" />
               Manage Users
@@ -263,6 +269,8 @@ export default function Workers() {
           </CardContent>
         </Card>
       </div>
+      
+      <CreateWorkerDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} />
     </DashboardLayout>
   );
 }
