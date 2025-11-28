@@ -53,7 +53,6 @@ export function SelectWithSearch({
                 <CommandItem
                   key={option.value}
                   value={option.label}
-                  keywords={[option.label, option.value]}
                   onSelect={() => {
                     onValueChange(value === option.value ? "" : option.value);
                     setOpen(false);
