@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
-import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1489,7 +1488,6 @@ export default function Scheduler() {
                 {/* View Controls Group */}
                 <div className="flex items-center gap-1.5">
                   <ViewToggleButton />
-                  <ViewModeToggle />
                 </div>
                 
                 <div className="h-5 w-px bg-border" /> {/* Divider */}
