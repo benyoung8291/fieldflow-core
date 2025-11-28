@@ -27,6 +27,7 @@ interface LineItemFormData {
   recurrence_frequency: string;
   first_generation_date: string;
   location_id: string;
+  estimated_hours: number;
   notes: string;
 }
 
@@ -95,7 +96,7 @@ export default function ServiceContractDialog({
       end_date: "",
       billing_frequency: "monthly",
       status: "active",
-      auto_generate: true,
+      auto_generate: false,
       notes: "",
       line_items: [
         {
@@ -105,6 +106,7 @@ export default function ServiceContractDialog({
           recurrence_frequency: "monthly",
           first_generation_date: format(new Date(), "yyyy-MM-dd"),
           location_id: "",
+          estimated_hours: 0,
           notes: "",
         },
       ],
@@ -118,6 +120,12 @@ export default function ServiceContractDialog({
 
   const selectedCustomerId = watch("customer_id");
   const autoGenerate = watch("auto_generate");
+  const lineItems = watch("line_items");
+
+  // Check if all line items have location and estimated hours
+  const canEnableAutoGenerate = lineItems.every(
+    (item) => item.location_id && item.estimated_hours && item.estimated_hours > 0
+  );
 
   const { data: locations } = useQuery({
     queryKey: ["customer-locations", selectedCustomerId],
@@ -212,7 +220,7 @@ export default function ServiceContractDialog({
         first_generation_date: item.first_generation_date,
         next_generation_date: data.auto_generate ? item.first_generation_date : null,
         location_id: item.location_id || null,
-        estimated_hours: null,
+        estimated_hours: item.estimated_hours || 0,
         notes: item.notes,
         item_order: index,
         is_active: true,
@@ -348,9 +356,23 @@ export default function ServiceContractDialog({
               <Switch
                 id="auto_generate"
                 checked={autoGenerate}
-                onCheckedChange={(checked) => setValue("auto_generate", checked)}
+                disabled={!canEnableAutoGenerate}
+                onCheckedChange={(checked) => {
+                  if (checked && !canEnableAutoGenerate) {
+                    toast.error("All line items must have a location and estimated hours to enable auto-generation");
+                    return;
+                  }
+                  setValue("auto_generate", checked);
+                }}
               />
-              <Label htmlFor="auto_generate">Automatically generate service orders</Label>
+              <Label htmlFor="auto_generate" className={!canEnableAutoGenerate ? "text-muted-foreground" : ""}>
+                Automatically generate service orders
+                {!canEnableAutoGenerate && (
+                  <span className="text-xs block text-muted-foreground">
+                    (Requires location and estimated hours on all line items)
+                  </span>
+                )}
+              </Label>
             </div>
           </div>
 
@@ -369,6 +391,7 @@ export default function ServiceContractDialog({
                     recurrence_frequency: "monthly",
                     first_generation_date: format(new Date(), "yyyy-MM-dd"),
                     location_id: "",
+                    estimated_hours: 0,
                     notes: "",
                   })
                 }
@@ -468,7 +491,7 @@ export default function ServiceContractDialog({
                     </div>
 
                     <div className="col-span-2">
-                      <Label>Location</Label>
+                      <Label>Location {autoGenerate && <span className="text-destructive">*</span>}</Label>
                       <Select
                         value={watch(`line_items.${index}.location_id`)}
                         onValueChange={(value) => setValue(`line_items.${index}.location_id`, value)}
@@ -486,7 +509,16 @@ export default function ServiceContractDialog({
                       </Select>
                     </div>
 
-                    <div className="col-span-2">
+                    <div>
+                      <Label>Estimated Hours {autoGenerate && <span className="text-destructive">*</span>}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...register(`line_items.${index}.estimated_hours`, { valueAsNumber: true })}
+                      />
+                    </div>
+
+                    <div>
                       <Label>Notes</Label>
                       <Textarea {...register(`line_items.${index}.notes`)} rows={2} />
                     </div>

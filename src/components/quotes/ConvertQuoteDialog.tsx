@@ -100,6 +100,23 @@ export default function ConvertQuoteDialog({
     enabled: !!quote?.lead_id && open,
   });
 
+  // Fetch customer locations for contract conversion
+  const contractCustomerId = createdCustomerId || quote?.customer_id || leadData?.converted_to_customer_id;
+  const { data: customerLocations } = useQuery({
+    queryKey: ['customer-locations', contractCustomerId],
+    queryFn: async () => {
+      if (!contractCustomerId) return [];
+      const { data } = await supabase
+        .from('customer_locations')
+        .select('*')
+        .eq('customer_id', contractCustomerId)
+        .eq('is_active', true)
+        .order('name');
+      return data || [];
+    },
+    enabled: !!contractCustomerId && conversionType === 'contract' && open,
+  });
+
   // Fetch primary contact from lead or customer
   const { data: primaryContact } = useQuery({
     queryKey: ['primary-contact', quote?.lead_id, quote?.customer_id, createdCustomerId],
@@ -160,6 +177,8 @@ export default function ConvertQuoteDialog({
       ...item,
       recurrence_frequency: 'monthly' as const,
       first_generation_date: format(new Date(), 'yyyy-MM-dd'),
+      location_id: null,
+      estimated_hours: (item as any).estimated_hours || 0,
       is_active: true,
       item_order: index,
     }))
@@ -664,7 +683,7 @@ export default function ConvertQuoteDialog({
           billing_frequency: contractData.billing_frequency,
           total_contract_value: totalValue,
           status: 'active',
-          auto_generate: true,
+          auto_generate: false,
           created_by: user.id,
           quote_id: quote.id,
         })
@@ -685,7 +704,8 @@ export default function ConvertQuoteDialog({
         estimated_hours: parseFloat((item as any).estimated_hours) || 0,
         recurrence_frequency: item.recurrence_frequency,
         first_generation_date: item.first_generation_date,
-        next_generation_date: item.first_generation_date,
+        next_generation_date: null,
+        location_id: (item as any).location_id || null,
         is_active: item.is_active,
         item_order: item.item_order,
       }));
@@ -1177,6 +1197,39 @@ export default function ConvertQuoteDialog({
                               type="number"
                               value={item.line_total}
                               disabled
+                              className="h-8"
+                            />
+                          </div>
+                         </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor={`location-${index}`} className="text-xs">Location</Label>
+                            <Select
+                              value={(item as any).location_id || ''}
+                              onValueChange={(value) => updateContractLineItem(index, 'location_id', value)}
+                            >
+                              <SelectTrigger id={`location-${index}`} className="h-8">
+                                <SelectValue placeholder="Select location" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {customerLocations?.map((location: any) => (
+                                  <SelectItem key={location.id} value={location.id}>
+                                    {location.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label htmlFor={`hours-${index}`} className="text-xs">Estimated Hours</Label>
+                            <Input
+                              id={`hours-${index}`}
+                              type="number"
+                              step="0.01"
+                              value={(item as any).estimated_hours || 0}
+                              onChange={(e) => updateContractLineItem(index, 'estimated_hours', parseFloat(e.target.value) || 0)}
                               className="h-8"
                             />
                           </div>

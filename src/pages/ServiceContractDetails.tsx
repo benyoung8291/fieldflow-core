@@ -251,6 +251,17 @@ export default function ServiceContractDetails() {
 
   const toggleAutoGenerateMutation = useMutation({
     mutationFn: async (autoGenerate: boolean) => {
+      // Validate that all line items have location and estimated hours if enabling
+      if (autoGenerate) {
+        const missingData = lineItems.some((item: any) => 
+          !item.location_id || !item.estimated_hours || item.estimated_hours <= 0
+        );
+        
+        if (missingData) {
+          throw new Error('All line items must have a location and estimated hours (greater than 0) to enable auto-generation');
+        }
+      }
+      
       const { error } = await supabase
         .from("service_contracts" as any)
         .update({ auto_generate: autoGenerate })
@@ -261,6 +272,9 @@ export default function ServiceContractDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
       toast.success("Auto-generation updated");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update auto-generation");
     },
   });
 
@@ -451,9 +465,20 @@ export default function ServiceContractDetails() {
               <CardTitle className="text-sm font-medium">Auto-Generation</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <Switch checked={contract.auto_generate} onCheckedChange={(checked) => toggleAutoGenerateMutation.mutate(checked)} />
-                <span className="text-sm">{contract.auto_generate ? "Enabled" : "Disabled"}</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    checked={contract.auto_generate} 
+                    onCheckedChange={(checked) => toggleAutoGenerateMutation.mutate(checked)}
+                    disabled={toggleAutoGenerateMutation.isPending}
+                  />
+                  <span className="text-sm">{contract.auto_generate ? "Enabled" : "Disabled"}</span>
+                </div>
+                {!contract.auto_generate && lineItems.some((item: any) => !item.location_id || !item.estimated_hours || item.estimated_hours <= 0) && (
+                  <p className="text-xs text-muted-foreground">
+                    Some line items missing location or estimated hours
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
