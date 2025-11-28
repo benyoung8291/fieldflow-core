@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import Docxtemplater from 'https://esm.sh/docxtemplater@3.47.2';
+import PizZip from 'https://esm.sh/pizzip@3.1.7';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -216,10 +218,41 @@ Deno.serve(async (req) => {
       throw new Error('Failed to download template file');
     }
 
-    // For now, return the template file as-is along with the data
-    // TODO: Implement docxtemplater to merge data into template
+    // Load the docx file as a binary
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const zip = new PizZip(arrayBuffer);
+    
+    // Initialize docxtemplater
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+    });
+
+    // Prepare data for template
+    const templateData = {
+      ...replacementData,
+      line_items: lineItemsData,
+    };
+
+    // Set the data
+    doc.setData(templateData);
+
+    // Render the document
+    try {
+      doc.render();
+    } catch (error: any) {
+      console.error('Error rendering document:', error);
+      throw new Error('Failed to render template: ' + (error?.message || 'Unknown error'));
+    }
+
+    // Generate the filled document
+    const filledDoc = doc.getZip().generate({
+      type: 'uint8array',
+      compression: 'DEFLATE',
+    });
+
+    // Convert to base64 for transmission
+    const base64 = btoa(String.fromCharCode(...filledDoc));
 
     return new Response(
       JSON.stringify({
@@ -227,11 +260,8 @@ Deno.serve(async (req) => {
         message: 'Document generated successfully',
         data: {
           file: base64,
-          filename: template.original_filename,
-          replacementData,
-          lineItems: lineItemsData,
+          filename: template.original_filename.replace('.docx', '-filled.docx'),
           template_name: template.name,
-          include_sub_items: shouldIncludeSubItems,
         },
       }),
       {
