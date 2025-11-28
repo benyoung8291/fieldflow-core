@@ -76,18 +76,29 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
         throw new Error(data.error || 'Failed to generate document');
       }
 
-      // Create a JSON file with the processed template data
-      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `quote-${data.data.template_name || 'template'}-data.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Download the Word document
+      if (data.data.file) {
+        const binary = atob(data.data.file);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { 
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = data.data.filename || `quote-${quoteId}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
 
-      toast.success("Document data generated successfully. Upload to Word template for final PDF.");
+        toast.success("Word document downloaded successfully. Open in Word to generate PDF.");
+      } else {
+        throw new Error('No file data received');
+      }
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error generating PDF:", error);
