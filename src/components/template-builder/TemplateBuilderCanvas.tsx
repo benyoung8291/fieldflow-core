@@ -10,7 +10,9 @@ import { AdvancedPropertiesPanel } from "./AdvancedPropertiesPanel";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { TemplateNameDialog } from "./TemplateNameDialog";
 import { GradientBackground } from "./craft/GradientBackground";
+import { TemplateLoader } from "./TemplateLoader";
 import { useState, useEffect } from "react";
+import { getDefaultTemplate } from "@/lib/defaultTemplates";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -51,6 +53,15 @@ export const TemplateBuilderCanvas = ({
   const [templateName, setTemplateName] = useState<string>("Untitled Template");
   const [pageMargins, setPageMargins] = useState({ top: 20, right: 20, bottom: 20, left: 20 }); // in mm
   const navigate = useNavigate();
+  const [loadedTemplate, setLoadedTemplate] = useState<string | null>(null);
+
+  // Load default template when document type changes (only for new templates)
+  useEffect(() => {
+    if (!templateId) {
+      const defaultTemplate = getDefaultTemplate(documentType);
+      setLoadedTemplate(JSON.stringify(defaultTemplate));
+    }
+  }, [documentType, templateId]);
 
   const handleSave = async (query: any, name: string, docType: string) => {
     setSaving(true);
@@ -116,9 +127,13 @@ export const TemplateBuilderCanvas = ({
             success: "hsl(var(--primary))",
             error: "hsl(var(--destructive))",
           }}
+          enabled={true}
         >
           {/* Toolbox */}
           <EnhancedToolbox documentType={documentType} />
+
+          {/* Template Loader - loads default templates */}
+          <TemplateLoader templateJson={loadedTemplate} />
 
           {/* Canvas */}
           <div className="flex-1 overflow-auto bg-muted/30 p-8 relative">
@@ -141,13 +156,7 @@ export const TemplateBuilderCanvas = ({
               }}
             >
               <Frame>
-                <Element is={Container} canvas>
-                  <ImageBlock width={150} height={60} />
-                  <RichTextBlock text="QUOTATION" fontSize={32} fontWeight={700} textAlign="center" />
-                  <DataField field="quote_number" label="Quote Number" />
-                  <DataField field="customer.name" label="Customer Name" />
-                  <LineItemsTable />
-                </Element>
+                <Element is={Container} canvas />
               </Frame>
             </div>
             <div className="mt-6 flex justify-center">
