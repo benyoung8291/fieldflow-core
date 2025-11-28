@@ -43,14 +43,26 @@ Deno.serve(async (req) => {
         .from('quotes')
         .select(`
           *,
-          customer:customers(*),
-          profile:profiles(first_name, last_name, email)
+          customer:customers(*)
         `)
         .eq('id', document_id)
         .single();
 
       if (quoteError) throw quoteError;
       documentData = quote;
+
+      // Fetch profile if quote has a created_by
+      if (quote.created_by) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('id', quote.created_by)
+          .single();
+        
+        if (!profileError && profile) {
+          documentData.profile = profile;
+        }
+      }
 
       // Fetch contact if quote has a contact_id
       if (quote.contact_id) {
