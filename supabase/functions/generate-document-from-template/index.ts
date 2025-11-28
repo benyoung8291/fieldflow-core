@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     console.log('Extracted file path:', filePath);
     
     const { data: fileData, error: fileError } = await supabase.storage
-      .from('document_templates')
+      .from('document-templates')
       .download(filePath);
 
     if (fileError || !fileData) {
