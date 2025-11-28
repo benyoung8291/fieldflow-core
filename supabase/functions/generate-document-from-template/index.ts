@@ -207,13 +207,27 @@ Deno.serve(async (req) => {
       return itemData;
     });
 
-    // For now, return the data as JSON (later we'll implement docxtemplater)
-    // This allows the frontend to verify the data is being collected correctly
+    // Download the template file from Supabase storage
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('document_templates')
+      .download(template.template_file_url.replace('document_templates/', ''));
+
+    if (fileError || !fileData) {
+      throw new Error('Failed to download template file');
+    }
+
+    // For now, return the template file as-is along with the data
+    // TODO: Implement docxtemplater to merge data into template
+    const arrayBuffer = await fileData.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Document generation in progress. Full implementation with docxtemplater coming soon.',
+        message: 'Document generated successfully',
         data: {
+          file: base64,
+          filename: template.original_filename,
           replacementData,
           lineItems: lineItemsData,
           template_name: template.name,
