@@ -44,12 +44,27 @@ Deno.serve(async (req) => {
         .select(`
           *,
           customer:customers(*),
-          location:customer_locations(*),
           contact:contacts(*),
           profile:profiles(first_name, last_name, email)
         `)
         .eq('id', document_id)
         .single();
+
+      if (quoteError) throw quoteError;
+      documentData = quote;
+
+      // Fetch location if quote has a location_id
+      if (quote.location_id) {
+        const { data: location, error: locationError } = await supabase
+          .from('customer_locations')
+          .select('*')
+          .eq('id', quote.location_id)
+          .single();
+        
+        if (!locationError && location) {
+          documentData.location = location;
+        }
+      }
 
       if (quoteError) throw quoteError;
       documentData = quote;
