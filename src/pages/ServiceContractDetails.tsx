@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp, Copy } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { formatCurrency, getMelbourneNow, toMelbourneTime } from "@/lib/utils";
@@ -184,7 +184,7 @@ export default function ServiceContractDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-contract", id] });
-      toast.success("Line item added");
+      toast.success(addingLineItem ? "Line item added" : "Line item duplicated");
       setAddingLineItem(false);
       setEditingLineItem(null);
     },
@@ -774,6 +774,27 @@ export default function ServiceContractDetails() {
                             <Button 
                               variant="ghost" 
                               size="icon" 
+                              onClick={() => {
+                                addLineItemMutation.mutate({
+                                  description: item.description,
+                                  quantity: item.quantity,
+                                  unit_price: item.unit_price,
+                                  line_total: item.line_total,
+                                  estimated_hours: item.estimated_hours,
+                                  location_id: item.location_id,
+                                  first_generation_date: item.first_generation_date,
+                                  recurrence_frequency: item.recurrence_frequency,
+                                  key_number: item.key_number,
+                                  notes: item.notes,
+                                });
+                              }}
+                              disabled={isEditingLocked}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
                               onClick={() => { if (confirm("Delete this line item?")) deleteLineItemMutation.mutate(item.id); }}
                               disabled={isEditingLocked}
                             >
@@ -1239,6 +1260,28 @@ export default function ServiceContractDetails() {
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => { setEditingLineItem(null); setAddingLineItem(false); }}>Cancel</Button>
+              {!addingLineItem && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    addLineItemMutation.mutate({
+                      description: editingLineItem.description,
+                      quantity: editingLineItem.quantity,
+                      unit_price: editingLineItem.unit_price,
+                      line_total: editingLineItem.line_total,
+                      estimated_hours: editingLineItem.estimated_hours,
+                      location_id: editingLineItem.location_id,
+                      first_generation_date: editingLineItem.first_generation_date,
+                      recurrence_frequency: editingLineItem.recurrence_frequency,
+                      key_number: editingLineItem.key_number,
+                      notes: editingLineItem.notes,
+                    });
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate
+                </Button>
+              )}
               <Button onClick={() => { if (addingLineItem) addLineItemMutation.mutate(editingLineItem); else updateLineItemMutation.mutate(editingLineItem); }}>{addingLineItem ? "Add" : "Save"}</Button>
             </DialogFooter>
           </DialogContent>
