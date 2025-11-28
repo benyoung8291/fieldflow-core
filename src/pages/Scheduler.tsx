@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
+import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1425,60 +1427,77 @@ export default function Scheduler() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-                >
-                  {sidebarCollapsed ? <PanelRightOpen className="h-3 w-3" /> : <PanelRightClose className="h-3 w-3" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-[10px] px-2"
-                  onClick={handleUndo}
-                  disabled={undoStack.length === 0}
-                >
-                  <Undo2 className="h-3 w-3 mr-1" />
-                  Undo
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-7 text-[10px] px-2"
-                  onClick={handlePublishAllDraft}
-                  disabled={!appointments.some(apt => apt.status === "draft")}
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  Publish
-                </Button>
-                <div className="flex items-center gap-1">
-                  <Switch 
-                    id="service-order-view" 
-                    checked={showServiceOrderView}
-                    onCheckedChange={setShowServiceOrderView}
-                    className="scale-75"
-                  />
-                  <Label htmlFor="service-order-view" className="text-[10px] cursor-pointer">
-                    <List className="h-3 w-3 inline mr-0.5" />
-                    SO
-                  </Label>
+              <div className="flex items-center gap-2">
+                {/* View Controls Group */}
+                <div className="flex items-center gap-1.5">
+                  <ViewToggleButton />
+                  <ViewModeToggle />
                 </div>
-                {!showServiceOrderView && (
-                  <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
-                    <TabsList className="h-7">
-                      <TabsTrigger value="day" className="text-[10px] px-2 py-0">Day</TabsTrigger>
-                      <TabsTrigger value="week" className="text-[10px] px-2 py-0">Week</TabsTrigger>
-                      <TabsTrigger value="timegrid" className="text-[10px] px-2 py-0">Grid</TabsTrigger>
-                      <TabsTrigger value="month" className="text-[10px] px-2 py-0">Month</TabsTrigger>
-                      <TabsTrigger value="kanban" className="text-[10px] px-2 py-0">Kanban</TabsTrigger>
-                      <TabsTrigger value="capacity" className="text-[10px] px-2 py-0">Capacity</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                )}
+                
+                <div className="h-5 w-px bg-border" /> {/* Divider */}
+                
+                {/* Action Controls Group */}
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                  >
+                    {sidebarCollapsed ? <PanelRightOpen className="h-3 w-3" /> : <PanelRightClose className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] px-2"
+                    onClick={handleUndo}
+                    disabled={undoStack.length === 0}
+                  >
+                    <Undo2 className="h-3 w-3 mr-1" />
+                    Undo
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-7 text-[10px] px-2"
+                    onClick={handlePublishAllDraft}
+                    disabled={!appointments.some(apt => apt.status === "draft")}
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Publish
+                  </Button>
+                </div>
+                
+                <div className="h-5 w-px bg-border" /> {/* Divider */}
+                
+                {/* View Type Controls Group */}
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
+                    <Switch 
+                      id="service-order-view" 
+                      checked={showServiceOrderView}
+                      onCheckedChange={setShowServiceOrderView}
+                      className="scale-75"
+                    />
+                    <Label htmlFor="service-order-view" className="text-[10px] cursor-pointer">
+                      <List className="h-3 w-3 inline mr-0.5" />
+                      SO
+                    </Label>
+                  </div>
+                  {!showServiceOrderView && (
+                    <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
+                      <TabsList className="h-7">
+                        <TabsTrigger value="day" className="text-[10px] px-2 py-0">Day</TabsTrigger>
+                        <TabsTrigger value="week" className="text-[10px] px-2 py-0">Week</TabsTrigger>
+                        <TabsTrigger value="timegrid" className="text-[10px] px-2 py-0">Grid</TabsTrigger>
+                        <TabsTrigger value="month" className="text-[10px] px-2 py-0">Month</TabsTrigger>
+                        <TabsTrigger value="kanban" className="text-[10px] px-2 py-0">Kanban</TabsTrigger>
+                        <TabsTrigger value="capacity" className="text-[10px] px-2 py-0">Capacity</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
