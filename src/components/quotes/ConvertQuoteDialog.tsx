@@ -278,26 +278,27 @@ export default function ConvertQuoteDialog({
       const parentItems = lineItems.filter(item => !item.id || !(item as any).parent_line_item_id);
       for (let i = 0; i < parentItems.length; i++) {
         const item = parentItems[i];
-        const { data: insertedItem, error: lineError } = await supabase
-          .from('project_line_items')
-          .insert({
-            project_id: project.id,
-            tenant_id: profile.tenant_id,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            line_total: item.line_total,
-            cost_price: (item as any).cost_price || null,
-            sell_price: (item as any).sell_price || null,
-            margin_percentage: (item as any).margin_percentage || null,
-            is_gst_free: (item as any).is_gst_free || false,
-            notes: (item as any).notes || null,
-            is_from_price_book: (item as any).is_from_price_book || false,
-            price_book_item_id: (item as any).price_book_item_id || null,
-            item_order: i,
-          })
-          .select()
-          .single();
+          const { data: insertedItem, error: lineError } = await supabase
+            .from('project_line_items')
+            .insert({
+              project_id: project.id,
+              tenant_id: profile.tenant_id,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              line_total: item.line_total,
+              cost_price: (item as any).cost_price || null,
+              sell_price: (item as any).sell_price || null,
+              margin_percentage: (item as any).margin_percentage || null,
+              estimated_hours: parseFloat((item as any).estimated_hours) || 0,
+              is_gst_free: (item as any).is_gst_free || false,
+              notes: (item as any).notes || null,
+              is_from_price_book: (item as any).is_from_price_book || false,
+              price_book_item_id: (item as any).price_book_item_id || null,
+              item_order: i,
+            })
+            .select()
+            .single();
 
         if (lineError) throw lineError;
 
@@ -318,6 +319,7 @@ export default function ConvertQuoteDialog({
                 cost_price: subItem.cost_price || null,
                 sell_price: subItem.sell_price || null,
                 margin_percentage: subItem.margin_percentage || null,
+                estimated_hours: parseFloat(subItem.estimated_hours) || 0,
                 is_gst_free: subItem.is_gst_free || false,
                 notes: subItem.notes || null,
                 is_from_price_book: subItem.is_from_price_book || false,
@@ -487,6 +489,7 @@ export default function ConvertQuoteDialog({
             quantity: item.quantity,
             unit_price: item.unit_price,
             line_total: item.line_total,
+            estimated_hours: parseFloat((item as any).estimated_hours) || 0,
             is_gst_free: (item as any).is_gst_free || false,
             notes: (item as any).notes || null,
             is_from_price_book: (item as any).is_from_price_book || false,
@@ -512,6 +515,7 @@ export default function ConvertQuoteDialog({
                 quantity: subItem.quantity,
                 unit_price: subItem.unit_price || subItem.sell_price,
                 line_total: subItem.line_total,
+                estimated_hours: parseFloat(subItem.estimated_hours) || 0,
                 is_gst_free: subItem.is_gst_free || false,
                 notes: subItem.notes || null,
                 is_from_price_book: subItem.is_from_price_book || false,
@@ -678,6 +682,7 @@ export default function ConvertQuoteDialog({
         quantity: item.quantity,
         unit_price: item.unit_price,
         line_total: item.line_total,
+        estimated_hours: parseFloat((item as any).estimated_hours) || 0,
         recurrence_frequency: item.recurrence_frequency,
         first_generation_date: item.first_generation_date,
         next_generation_date: item.first_generation_date,
