@@ -19,6 +19,7 @@ export interface PinMarkup {
   x: number; // percentage 0-100
   y: number; // percentage 0-100
   notes?: string;
+  photo?: File | string; // File during upload, string URL after upload
 }
 
 export interface ZoneMarkup {
@@ -31,6 +32,7 @@ export interface ZoneMarkup {
     height: number; // percentage 0-100
   };
   notes?: string;
+  photo?: File | string; // File during upload, string URL after upload
 }
 
 export type Markup = PinMarkup | ZoneMarkup;

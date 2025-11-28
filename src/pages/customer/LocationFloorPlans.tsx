@@ -187,8 +187,33 @@ export default function LocationFloorPlans() {
         }
       }
 
-      // Create markups
-      const markupInserts = markups.map((markup) => {
+      // Upload photos and create markups
+      const markupInserts = await Promise.all(markups.map(async (markup, index) => {
+        let photoUrl: string | undefined;
+
+        // Upload photo if present and is a File
+        if (markup.photo && markup.photo instanceof File) {
+          const fileExt = markup.photo.name.split('.').pop();
+          const fileName = `${ticket.id}/${index}-${Date.now()}.${fileExt}`;
+          
+          const { error: uploadError, data: uploadData } = await supabase.storage
+            .from('ticket-markups')
+            .upload(fileName, markup.photo, {
+              contentType: markup.photo.type,
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error("Error uploading photo:", uploadError);
+            // Continue without photo rather than failing the whole request
+          } else {
+            const { data: { publicUrl } } = supabase.storage
+              .from('ticket-markups')
+              .getPublicUrl(fileName);
+            photoUrl = publicUrl;
+          }
+        }
+
         if (markup.type === "pin") {
           return {
             ticket_id: ticket.id,
@@ -199,6 +224,7 @@ export default function LocationFloorPlans() {
             markup_data: {
               type: "pin",
               notes: markup.notes,
+              photo_url: photoUrl,
             },
           };
         } else {
@@ -214,10 +240,11 @@ export default function LocationFloorPlans() {
               type: "zone",
               bounds: markup.bounds,
               notes: markup.notes,
+              photo_url: photoUrl,
             },
           };
         }
-      });
+      }));
 
       const { error: markupError } = await supabase
         .from("ticket_markups")
@@ -246,6 +273,12 @@ export default function LocationFloorPlans() {
   const updateMarkupNote = (id: string, notes: string) => {
     setMarkups((prev) =>
       prev.map((m) => (m.id === id ? { ...m, notes } : m))
+    );
+  };
+
+  const updateMarkupPhoto = (id: string, photo: File | null) => {
+    setMarkups((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, photo: photo || undefined } : m))
     );
   };
 
@@ -302,6 +335,18 @@ export default function LocationFloorPlans() {
               <Button
                 size="sm"
                 onClick={() => {
+                  // Validate markups before opening dialog
+                  const incompleteMarkups = markups.filter(m => !m.notes?.trim());
+                  if (incompleteMarkups.length > 0) {
+                    toast.error("Please add a description to all markups before creating a request");
+                    return;
+                  }
+                  
+                  const markupsWithoutPhotos = markups.filter(m => !m.photo);
+                  if (markupsWithoutPhotos.length > 0) {
+                    toast.info("Consider adding photos to your markups for faster resolution");
+                  }
+                  
                   setTaskTitle("Add to next service");
                   setTaskDescription("");
                   setShowCreateDialog(true);
@@ -445,6 +490,18 @@ export default function LocationFloorPlans() {
                   </Button>
                   <Button
                     onClick={() => {
+                      // Validate markups before opening dialog
+                      const incompleteMarkups = markups.filter(m => !m.notes?.trim());
+                      if (incompleteMarkups.length > 0) {
+                        toast.error("Please add a description to all markups before creating a request");
+                        return;
+                      }
+                      
+                      const markupsWithoutPhotos = markups.filter(m => !m.photo);
+                      if (markupsWithoutPhotos.length > 0) {
+                        toast.info("Consider adding photos to your markups for faster resolution");
+                      }
+                      
                       setTaskTitle("Add to next service");
                       setTaskDescription("");
                       setShowCreateDialog(true);
@@ -476,6 +533,7 @@ export default function LocationFloorPlans() {
                 <FloorPlanMarkupList
                   markups={markups}
                   onMarkupUpdate={updateMarkupNote}
+                  onMarkupPhotoUpdate={updateMarkupPhoto}
                   onMarkupDelete={deleteMarkup}
                   selectedMarkupId={selectedMarkupId}
                   onMarkupSelect={setSelectedMarkupId}

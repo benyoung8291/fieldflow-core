@@ -515,6 +515,11 @@ export function MobileFloorPlanViewer({
     onMarkupsChange(newMarkups);
   };
 
+  const updateMarkupPhoto = (id: string, photo: File | null) => {
+    const newMarkups = markups.map((m) => (m.id === id ? { ...m, photo: photo || undefined } : m));
+    onMarkupsChange(newMarkups);
+  };
+
   const deleteMarkup = (id: string) => {
     const newMarkups = markups.filter((m) => m.id !== id);
     updateHistory(newMarkups);
@@ -702,6 +707,7 @@ export function MobileFloorPlanViewer({
           selectedMarkupId={selectedMarkupId}
           onMarkupSelect={setSelectedMarkupId}
           onMarkupUpdate={updateMarkupNote}
+          onMarkupPhotoUpdate={updateMarkupPhoto}
           onMarkupDelete={deleteMarkup}
           open={markupSheetOpen}
           onOpenChange={setMarkupSheetOpen}
