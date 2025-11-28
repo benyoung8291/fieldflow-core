@@ -172,7 +172,17 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
 
   const validateForm = () => {
     try {
-      quoteSchema.parse(formData);
+      // Clean up form data before validation - convert empty strings to undefined
+      const cleanedData = {
+        ...formData,
+        customer_id: formData.customer_id || undefined,
+        lead_id: formData.lead_id || undefined,
+        description: formData.description || undefined,
+        valid_until: formData.valid_until || undefined,
+        tax_rate: formData.tax_rate || undefined,
+      };
+      
+      quoteSchema.parse(cleanedData);
       setErrors({});
       return true;
     } catch (error) {
@@ -183,7 +193,16 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
           newErrors[path] = err.message;
         });
         setErrors(newErrors);
-        toast({ title: "Please fix validation errors", variant: "destructive" });
+        
+        // Show specific error message
+        const firstError = error.errors[0];
+        toast({ 
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive" 
+        });
+        
+        console.error("[QuoteHeaderDialog] Validation failed:", error.errors);
       }
       return false;
     }
@@ -192,16 +211,33 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    console.log("[QuoteHeaderDialog] Form submitted", { 
+      isForLead, 
+      customer_id: formData.customer_id, 
+      lead_id: formData.lead_id 
+    });
+    
+    if (!validateForm()) {
+      console.error("[QuoteHeaderDialog] Validation failed");
+      return;
+    }
     
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: "Not authenticated", variant: "destructive" });
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error("[QuoteHeaderDialog] Auth error:", userError);
+        toast({ 
+          title: "Authentication Error", 
+          description: "You must be logged in to create a quote",
+          variant: "destructive" 
+        });
+        setLoading(false);
         return;
       }
+
+      console.log("[QuoteHeaderDialog] User authenticated:", user.id);
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -209,11 +245,16 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
         .eq("id", user.id)
         .maybeSingle();
 
+      console.log("[QuoteHeaderDialog] Profile fetched:", profile, profileError);
+
       if (profileError || !profile?.tenant_id) {
+        console.error("[QuoteHeaderDialog] Profile error:", profileError);
         toast({ 
-          title: "Error fetching profile", 
+          title: "Profile Error", 
+          description: profileError?.message || "Could not fetch your tenant information",
           variant: "destructive" 
         });
+        setLoading(false);
         return;
       }
 
@@ -240,11 +281,11 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
 
       const quoteData: any = {
         tenant_id: profile.tenant_id,
-        customer_id: isForLead ? null : formData.customer_id || null,
-        lead_id: isForLead ? formData.lead_id || null : null,
+        customer_id: isForLead ? null : (formData.customer_id || null),
+        lead_id: isForLead ? (formData.lead_id || null) : null,
         is_for_lead: isForLead,
-        title: formData.title,
-        description: formData.description || null,
+        title: formData.title.trim(),
+        description: formData.description?.trim() || null,
         valid_until: formData.valid_until || null,
         quote_number: quoteNumber,
         subtotal: 0,
@@ -260,13 +301,20 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
         status: "draft",
       };
 
+      console.log("[QuoteHeaderDialog] Inserting quote:", quoteData);
+
       const { data: newQuote, error } = await supabase
         .from("quotes")
         .insert([quoteData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[QuoteHeaderDialog] Insert error:", error);
+        throw error;
+      }
+      
+      console.log("[QuoteHeaderDialog] Quote created:", newQuote);
 
       // Update sequential number
       if (sequentialSetting) {
@@ -299,11 +347,13 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
       onOpenChange(false);
       
       // Navigate to quote details to add line items
+      console.log("[QuoteHeaderDialog] Navigating to quote:", newQuote.id);
       navigate(`/quotes/${newQuote.id}`);
     } catch (error: any) {
+      console.error("[QuoteHeaderDialog] Error creating quote:", error);
       toast({
         title: "Error creating quote",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
