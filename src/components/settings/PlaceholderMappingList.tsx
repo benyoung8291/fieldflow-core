@@ -154,35 +154,55 @@ export default function PlaceholderMappingList({
   return (
     <ScrollArea className="h-[400px] border rounded-md p-4">
       <div className="space-y-4">
-        {placeholders.map((placeholder) => (
-          <div key={placeholder} className="grid grid-cols-2 gap-4 items-center">
-            <div>
-              <Label className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                {`{{${placeholder}}}`}
-              </Label>
+        {placeholders.map((placeholder) => {
+          // Handle loop sections specially
+          if (placeholder.startsWith('LOOP:')) {
+            const loopName = placeholder.replace('LOOP:', '');
+            return (
+              <div key={placeholder} className="p-3 bg-primary/5 border border-primary/20 rounded-md">
+                <div className="flex items-start gap-2">
+                  <div className="text-primary font-medium">
+                    Repeating Section: {loopName}
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This section will repeat for each line item. Use placeholders inside the [[SG:{loopName}]] and [[EG:{loopName}]] markers with line_item.* fields.
+                </p>
+              </div>
+            );
+          }
+
+          // Regular placeholder mapping
+          return (
+            <div key={placeholder} className="grid grid-cols-2 gap-4 items-center">
+              <div>
+                <Label className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                  {`{{${placeholder}}}`}
+                </Label>
+              </div>
+              <Select
+                value={mappings[placeholder] || ""}
+                onValueChange={(value) => handleMappingChange(placeholder, value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select field..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(fieldOptions).map(([category, fields]) => (
+                    <SelectGroup key={category}>
+                      <SelectLabel>{category}</SelectLabel>
+                      {fields.map((field) => (
+                        <SelectItem key={field.value} value={field.value}>
+                          {field.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select
-              value={mappings[placeholder] || ""}
-              onValueChange={(value) => handleMappingChange(placeholder, value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select field..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(fieldOptions).map(([category, fields]) => (
-                  <SelectGroup key={category}>
-                    <SelectLabel>{category}</SelectLabel>
-                    {fields.map((field) => (
-                      <SelectItem key={field.value} value={field.value}>
-                        {field.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </ScrollArea>
   );

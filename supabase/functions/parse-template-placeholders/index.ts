@@ -49,15 +49,28 @@ Deno.serve(async (req) => {
 
     // Extract all {{placeholder}} patterns from the XML
     const placeholderRegex = /\{\{([^}]+)\}\}/g;
-    const matches = documentXml.matchAll(placeholderRegex);
     const placeholders = new Set<string>();
-
-    for (const match of matches) {
+    
+    for (const match of documentXml.matchAll(placeholderRegex)) {
       const placeholder = match[1].trim();
       // Filter out XML or formatting artifacts
       if (placeholder && !placeholder.includes('<') && !placeholder.includes('>')) {
         placeholders.add(placeholder);
       }
+    }
+
+    // Also extract loop markers like [[SG:ItemDetails]] and [[EG:ItemDetails]]
+    const loopMarkerRegex = /\[\[(SG|EG):([^\]]+)\]\]/g;
+    const loopSections = new Set<string>();
+    
+    for (const match of documentXml.matchAll(loopMarkerRegex)) {
+      const sectionName = match[2].trim();
+      loopSections.add(sectionName);
+    }
+
+    // Add loop section info to placeholders with special prefix
+    for (const section of loopSections) {
+      placeholders.add(`LOOP:${section}`);
     }
 
     console.log('Found placeholders:', Array.from(placeholders));
