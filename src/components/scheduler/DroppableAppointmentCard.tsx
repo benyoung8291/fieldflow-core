@@ -158,12 +158,14 @@ export default function DroppableAppointmentCard({
             </div>
             <div className="flex flex-wrap gap-1">
               {workers.map((w: any) => (
-                <Badge key={w.worker_id} variant="secondary" className="text-xs pr-1">
-                  {w.profiles?.first_name} {w.profiles?.last_name}
+                <Badge key={w.worker_id} variant="secondary" className="text-xs pr-1 flex items-center gap-1 max-w-[200px]">
+                  <span className="truncate">
+                    {w.profiles?.first_name} {w.profiles?.last_name}
+                  </span>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-3 w-3 p-0 ml-1 hover:bg-destructive/20"
+                    className="h-3 w-3 p-0 hover:bg-destructive/20 flex-shrink-0"
                     data-no-click
                     onClick={(e) => {
                       e.stopPropagation();
