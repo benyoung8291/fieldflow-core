@@ -144,7 +144,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Check for exact /customer path match (not /customers or other paths)
   const isCustomerPortalRoute = location === "/customer" || location.startsWith("/customer/");
   
-  if (access.isCustomer && !access.canAccessOffice && !access.canAccessWorker) {
+  // CRITICAL: If user is marked as customer, they can ONLY access customer portal
+  // This blocks even if they somehow have other access flags set
+  if (access.isCustomer) {
     if (!isCustomerPortalRoute) {
       return <Navigate to="/customer" replace />;
     }
