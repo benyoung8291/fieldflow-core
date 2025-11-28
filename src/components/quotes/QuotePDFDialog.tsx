@@ -42,11 +42,12 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
   }, [open, initialEmailMode]);
 
   const { data: templates = [] } = useQuery({
-    queryKey: ["quote-templates"],
+    queryKey: ["document-templates-quote"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("quote_templates")
+        .from("document_templates")
         .select("*")
+        .eq("document_type", "quote")
         .order("is_default", { ascending: false });
       if (error) throw error;
       return data;
@@ -60,35 +61,33 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase.functions.invoke('generate-quote-pdf', {
+      const { data, error } = await supabase.functions.invoke('generate-document-from-template', {
         body: {
-          quote_id: quoteId,
+          document_type: 'quote',
+          document_id: quoteId,
           template_id: selectedTemplate === "default" ? null : selectedTemplate,
-          show_sub_items: showSubItems,
+          include_sub_items: showSubItems,
         },
       });
 
       if (error) throw error;
 
-      // Create a blob from the HTML and trigger download
-      const blob = new Blob([data.html], { type: 'text/html' });
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate document');
+      }
+
+      // Create a JSON file with the processed template data
+      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `quote-${quoteId}.html`;
+      link.download = `quote-${data.data.template_name || 'template'}-data.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      // Also open in new tab for preview
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(data.html);
-        newWindow.document.close();
-      }
-
-      toast.success("PDF generated and downloaded successfully");
+      toast.success("Document data generated successfully. Upload to Word template for final PDF.");
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error generating PDF:", error);
