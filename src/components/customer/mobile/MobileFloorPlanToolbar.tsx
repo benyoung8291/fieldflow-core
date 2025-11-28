@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MapPin, Square, Hand, ZoomIn, ZoomOut, ChevronUp } from "lucide-react";
+import { MapPin, Square, Hand, ZoomIn, ZoomOut, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarkupType } from "../FloorPlanViewer";
@@ -27,8 +27,27 @@ export function MobileFloorPlanToolbar({
 }: MobileFloorPlanToolbarProps) {
   return (
     <>
-      {/* Top Zoom Controls */}
-      <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
+      {/* Top Left Markups Button */}
+      {!readOnly && (
+        <div className="absolute top-4 left-4 z-20">
+          <Button
+            variant="default"
+            onClick={onOpenMarkups}
+            className="h-12 rounded-full shadow-lg px-4 gap-2"
+          >
+            <List className="h-5 w-5" />
+            <span className="font-semibold">Markups</span>
+            {markupsCount > 0 && (
+              <Badge variant="secondary" className="ml-1 rounded-full px-2 py-0.5">
+                {markupsCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Top Right Zoom Controls */}
+      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
         <Button
           size="icon"
           variant="default"
@@ -57,16 +76,7 @@ export function MobileFloorPlanToolbar({
 
       {/* Bottom Tool Selection - Only show in edit mode */}
       {!readOnly && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
-          <Button
-            variant="default"
-            onClick={onOpenMarkups}
-            className="h-14 rounded-full shadow-2xl px-4"
-          >
-            <ChevronUp className="h-5 w-5 mr-2" />
-            Markups ({markupsCount})
-          </Button>
-          
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-background shadow-2xl border-2 border-border">
             <Button
               size="icon"
