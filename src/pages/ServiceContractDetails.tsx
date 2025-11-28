@@ -658,13 +658,14 @@ export default function ServiceContractDetails() {
                         <TableCell>
                           {editingCell?.id === item.id && editingCell?.field === "location_id" ? (
                             <Select 
-                              value={cellValue || ""} 
+                              value={cellValue || "NONE"} 
                               onValueChange={(value) => { 
-                                setCellValue(value); 
+                                const locationId = value === "NONE" ? null : value;
+                                setCellValue(locationId); 
                                 updateCellMutation.mutate({ 
                                   itemId: item.id, 
                                   field: "location_id", 
-                                  value: value || null 
+                                  value: locationId 
                                 }); 
                                 setEditingCell(null); 
                               }}
@@ -673,7 +674,7 @@ export default function ServiceContractDetails() {
                                 <SelectValue placeholder="Select location" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">No location</SelectItem>
+                                <SelectItem value="NONE">No location</SelectItem>
                                 {customerLocations?.map((loc: any) => (
                                   <SelectItem key={loc.id} value={loc.id}>
                                     {loc.name}
