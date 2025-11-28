@@ -1631,6 +1631,7 @@ export type Database = {
           last_login_at: string | null
           last_name: string
           phone: string | null
+          portal_role: Database["public"]["Enums"]["customer_portal_role"]
           tenant_id: string
           updated_at: string
           user_id: string
@@ -1647,6 +1648,7 @@ export type Database = {
           last_login_at?: string | null
           last_name: string
           phone?: string | null
+          portal_role?: Database["public"]["Enums"]["customer_portal_role"]
           tenant_id: string
           updated_at?: string
           user_id: string
@@ -1663,6 +1665,7 @@ export type Database = {
           last_login_at?: string | null
           last_name?: string
           phone?: string | null
+          portal_role?: Database["public"]["Enums"]["customer_portal_role"]
           tenant_id?: string
           updated_at?: string
           user_id?: string
@@ -9145,6 +9148,10 @@ export type Database = {
           refresh_token: string
         }[]
       }
+      has_customer_portal_permission: {
+        Args: { p_permission_type: string; p_user_id: string }
+        Returns: boolean
+      }
       has_permission: {
         Args: {
           _module: Database["public"]["Enums"]["app_module"]
@@ -9271,6 +9278,7 @@ export type Database = {
         | "completed"
         | "cancelled"
       billing_status: "not_billed" | "partially_billed" | "billed"
+      customer_portal_role: "full_access" | "supervisor" | "basic"
       permission_type: "view" | "create" | "edit" | "delete"
       recurrence_frequency:
         | "daily"
@@ -9449,6 +9457,7 @@ export const Constants = {
         "cancelled",
       ],
       billing_status: ["not_billed", "partially_billed", "billed"],
+      customer_portal_role: ["full_access", "supervisor", "basic"],
       permission_type: ["view", "create", "edit", "delete"],
       recurrence_frequency: [
         "daily",
