@@ -46,8 +46,15 @@ export default function GenerateServiceOrdersDialog({ open, onOpenChange }: Gene
 
       if (error) throw error;
 
+      // Check if there are errors in the response
+      if (data && data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+        const errorMessages = data.errors.map((e: any) => e.error).join(", ");
+        throw new Error(`Database errors: ${errorMessages}`);
+      }
+
       if (!data || !data.summary) {
-        throw new Error("Invalid response from server");
+        console.error("Invalid response:", data);
+        throw new Error("Invalid response from server - missing summary data");
       }
 
       toast.success(
