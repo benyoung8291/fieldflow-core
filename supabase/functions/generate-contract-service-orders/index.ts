@@ -87,7 +87,8 @@ serve(async (req) => {
               error: error.message
             });
           } else {
-            console.log(`✅ Tenant ${tenant.name}: ${data.summary.orders_created} orders created`);
+            const ordersCreated = data?.summary?.orders_created || 0;
+            console.log(`✅ Tenant ${tenant.name}: ${ordersCreated} orders created`);
             results.push({
               tenant_id: tenant.id,
               tenant_name: tenant.name,
@@ -197,10 +198,13 @@ serve(async (req) => {
     }
 
     console.log("✅ Generation complete");
-    console.log(`📊 Results: ${data.summary.orders_created} orders created, ${data.summary.total_line_items} items processed`);
+    
+    const ordersCreated = data?.summary?.orders_created || 0;
+    const totalItems = data?.summary?.total_line_items || 0;
+    console.log(`📊 Results: ${ordersCreated} orders created, ${totalItems} items processed`);
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(data || { summary: { orders_created: 0, total_line_items: 0 }, orders: [] }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
