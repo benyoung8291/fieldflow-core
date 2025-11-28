@@ -3995,6 +3995,64 @@ export type Database = {
           },
         ]
       }
+      marketing_pages: {
+        Row: {
+          content_json: Json
+          created_at: string | null
+          created_by: string
+          file_url: string | null
+          id: string
+          name: string
+          page_order: number | null
+          page_type: string
+          tenant_id: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string | null
+          created_by: string
+          file_url?: string | null
+          id?: string
+          name: string
+          page_order?: number | null
+          page_type: string
+          tenant_id: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string | null
+          created_by?: string
+          file_url?: string | null
+          id?: string
+          name?: string
+          page_order?: number | null
+          page_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_pages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_pages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           color: string | null
@@ -4224,6 +4282,73 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pay_rate_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdf_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          document_type: string
+          id: string
+          include_sub_items: boolean | null
+          is_default: boolean | null
+          name: string
+          page_settings: Json
+          template_json: Json
+          tenant_id: string
+          thumbnail_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          document_type: string
+          id?: string
+          include_sub_items?: boolean | null
+          is_default?: boolean | null
+          name: string
+          page_settings?: Json
+          template_json?: Json
+          tenant_id: string
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          document_type?: string
+          id?: string
+          include_sub_items?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          page_settings?: Json
+          template_json?: Json
+          tenant_id?: string
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7450,6 +7575,48 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_marketing_pages: {
+        Row: {
+          created_at: string | null
+          id: string
+          marketing_page_id: string
+          page_order: number | null
+          position: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          marketing_page_id: string
+          page_order?: number | null
+          position: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          marketing_page_id?: string
+          page_order?: number | null
+          position?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_marketing_pages_marketing_page_id_fkey"
+            columns: ["marketing_page_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_marketing_pages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
             referencedColumns: ["id"]
           },
         ]
