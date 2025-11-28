@@ -63,6 +63,7 @@ interface DocumentDetailLayoutProps {
   primaryActions?: DocumentAction[];
   secondaryActions?: DocumentAction[];
   fileMenuActions?: FileMenuAction[];
+  customActions?: ReactNode;
   
   // Audit (kept for backward compatibility but not used for drawer)
   auditTableName?: string;
@@ -88,6 +89,7 @@ export default function DocumentDetailLayout({
   primaryActions = [],
   secondaryActions = [],
   fileMenuActions = [],
+  customActions,
   auditTableName,
   auditRecordId,
   keyInfoSection,
@@ -290,6 +292,9 @@ export default function DocumentDetailLayout({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Custom Actions */}
+            {customActions}
+            
             {/* File Menu */}
             {fileMenuActions.length > 0 && (
               <DropdownMenu>

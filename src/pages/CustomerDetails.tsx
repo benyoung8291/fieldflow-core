@@ -21,6 +21,7 @@ import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialog";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
+import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -177,6 +178,7 @@ export default function CustomerDetails() {
               </p>
             </div>
             <div className="flex gap-2">
+              <QuickActionsMenu customerId={id!} variant="outline" />
               <CreateTaskButton
                 linkedModule="customer"
                 linkedRecordId={id!}

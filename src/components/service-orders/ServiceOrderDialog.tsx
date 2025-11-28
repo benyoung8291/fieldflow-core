@@ -48,12 +48,16 @@ interface ServiceOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId?: string;
+  customerId?: string;
+  leadId?: string;
 }
 
 export default function ServiceOrderDialog({ 
   open, 
   onOpenChange, 
   orderId,
+  customerId,
+  leadId,
 }: ServiceOrderDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -137,9 +141,14 @@ export default function ServiceOrderDialog({
       resetForm();
       if (orderId) {
         fetchOrder();
+      } else if (customerId) {
+        // Pre-fill customer if provided
+        setFormData(prev => ({ ...prev, customer_id: customerId }));
       }
+      // Note: leadId is not directly used as service orders are linked to customers
+      // If we have a leadId, we'd need to fetch the converted customer or handle differently
     }
-  }, [open, orderId]);
+  }, [open, orderId, customerId, leadId]);
 
   useEffect(() => {
     if (formData.customer_id) {
