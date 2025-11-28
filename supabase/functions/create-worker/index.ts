@@ -49,11 +49,39 @@ serve(async (req) => {
       throw new Error(`Failed to check existing users: ${checkError.message}`);
     }
 
-    const userExists = existingUsers?.users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
+    const existingAuthUser = existingUsers?.users?.find(user => user.email?.toLowerCase() === email.toLowerCase());
     
-    if (userExists) {
-      console.log("⚠️ User with this email already exists");
-      throw new Error(`A user with the email ${email} already exists. Please use a different email address.`);
+    if (existingAuthUser) {
+      console.log("⚠️ User found in auth.users, checking if profile exists...");
+      
+      // Check if this user has a profile (complete registration)
+      const { data: profile, error: profileCheckError } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("email", email.toLowerCase())
+        .single();
+      
+      if (profileCheckError && profileCheckError.code !== "PGRST116") { // PGRST116 = no rows returned
+        console.error("❌ Error checking profile:", profileCheckError);
+        throw new Error(`Failed to check user profile: ${profileCheckError.message}`);
+      }
+      
+      if (profile) {
+        // User exists with complete profile
+        console.log("⚠️ User with complete profile already exists");
+        throw new Error(`A user with the email ${email} already exists. Please use a different email address.`);
+      } else {
+        // Orphaned auth user - exists in auth.users but no profile
+        console.log("🧹 Orphaned auth user detected, cleaning up...");
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
+        
+        if (deleteError) {
+          console.error("❌ Error deleting orphaned user:", deleteError);
+          throw new Error(`Failed to clean up orphaned user: ${deleteError.message}`);
+        }
+        
+        console.log("✅ Orphaned user cleaned up, proceeding with creation");
+      }
     }
 
     // Create user in auth
