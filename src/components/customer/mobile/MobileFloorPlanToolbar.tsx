@@ -27,18 +27,21 @@ export function MobileFloorPlanToolbar({
 }: MobileFloorPlanToolbarProps) {
   return (
     <>
-      {/* Top Left Markups Button */}
+      {/* Left Side Markups Button - Below header */}
       {!readOnly && (
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-20 left-4 z-20">
           <Button
             variant="default"
+            size="icon"
             onClick={onOpenMarkups}
-            className="h-12 rounded-full shadow-lg px-4 gap-2"
+            className="h-12 w-12 rounded-full shadow-lg relative"
           >
             <List className="h-5 w-5" />
-            <span className="font-semibold">Markups</span>
             {markupsCount > 0 && (
-              <Badge variant="secondary" className="ml-1 rounded-full px-2 py-0.5">
+              <Badge 
+                variant="secondary" 
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+              >
                 {markupsCount}
               </Badge>
             )}
@@ -46,8 +49,8 @@ export function MobileFloorPlanToolbar({
         </div>
       )}
 
-      {/* Top Right Zoom Controls */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+      {/* Top Right Zoom Controls - Below header */}
+      <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
         <Button
           size="icon"
           variant="default"
