@@ -49,7 +49,6 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
     title: "",
     description: "",
     valid_until: "",
-    tax_rate: "10",
     pipeline_id: "",
     stage_id: "",
   });
@@ -115,7 +114,6 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
           title: "",
           description: "",
           valid_until: defaultDate.toISOString().split('T')[0],
-          tax_rate: "10",
           pipeline_id: "",
           stage_id: "",
         });
@@ -179,7 +177,6 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
         lead_id: formData.lead_id || undefined,
         description: formData.description || undefined,
         valid_until: formData.valid_until || undefined,
-        tax_rate: formData.tax_rate || undefined,
       };
       
       quoteSchema.parse(cleanedData);
@@ -289,7 +286,7 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
         valid_until: formData.valid_until || null,
         quote_number: quoteNumber,
         subtotal: 0,
-        tax_rate: parseFloat(formData.tax_rate) || 10,
+        tax_rate: 10, // Fixed GST rate
         tax_amount: 0,
         total_amount: 0,
         notes: null,
@@ -520,27 +517,14 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
               {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="valid_until">Valid Until</Label>
-                <Input
-                  id="valid_until"
-                  type="date"
-                  value={formData.valid_until}
-                  onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tax_rate">Tax Rate (%)</Label>
-                <Input
-                  id="tax_rate"
-                  type="number"
-                  step="0.01"
-                  value={formData.tax_rate}
-                  onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="valid_until">Valid Until</Label>
+              <Input
+                id="valid_until"
+                type="date"
+                value={formData.valid_until}
+                onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">
