@@ -1510,8 +1510,6 @@ export default function Scheduler() {
                   });
                 }}
                 onRemoveWorker={handleRemoveWorker}
-                selectedAppointmentIds={selectedAppointmentIds}
-                onSelectionChange={handleSelectionChange}
               />
             ) : (
               <>
