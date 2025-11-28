@@ -17,11 +17,11 @@ export default function AppointmentView() {
       <div className="space-y-6">
         <Button
           variant="ghost"
-          onClick={() => navigate("/customer/appointments")}
+          onClick={() => navigate("/customer/service-orders")}
           className="rounded-xl"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Shifts
+          Back to Service Orders
         </Button>
         <AppointmentDetail appointmentId={appointmentId} />
       </div>
