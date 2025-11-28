@@ -134,6 +134,7 @@ export default function Quotes() {
   };
 
   const handleCreateQuote = () => {
+    console.log("[Quotes] Opening create quote dialog");
     setDialogOpen(true);
   };
 
