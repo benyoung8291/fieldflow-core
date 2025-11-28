@@ -3,6 +3,12 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface FloorPlanCardProps {
   floorPlan: {
@@ -29,8 +35,12 @@ export function FloorPlanCard({ floorPlan, markups }: FloorPlanCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [numPages, setNumPages] = useState<number>(1);
+  const [pageWidth, setPageWidth] = useState<number>(0);
 
-  const imageUrl = floorPlan.image_url || floorPlan.file_url;
+  const fileUrl = floorPlan.file_url || "";
+  const isPDF = fileUrl.toLowerCase().endsWith('.pdf');
+  const imageUrl = floorPlan.image_url || (!isPDF ? floorPlan.file_url : "");
 
   // Reset zoom and position when image loads
   useEffect(() => {
@@ -99,6 +109,20 @@ export function FloorPlanCard({ floorPlan, markups }: FloorPlanCardProps) {
     setScale(prev => Math.min(Math.max(prev + delta, 0.1), 3));
   };
 
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setImageLoaded(true);
+  };
+
+  const onPageLoadSuccess = (page: any) => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.clientWidth;
+      setPageWidth(containerWidth);
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
       <div className="p-4 border-b bg-muted/30">
@@ -163,21 +187,38 @@ export function FloorPlanCard({ floorPlan, markups }: FloorPlanCardProps) {
             }}
             className="relative"
           >
-            <img
-              ref={imageRef}
-              src={imageUrl}
-              alt={floorPlan.name}
-              className="max-w-none block"
-              onLoad={() => setImageLoaded(true)}
-              draggable={false}
-              style={{
-                width: "auto",
-                height: "auto",
-              }}
-            />
+            {isPDF ? (
+              <Document
+                file={fileUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                className="flex flex-col items-center"
+              >
+                <Page
+                  pageNumber={1}
+                  width={pageWidth || undefined}
+                  onLoadSuccess={onPageLoadSuccess}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  className="relative"
+                />
+              </Document>
+            ) : (
+              <img
+                ref={imageRef}
+                src={imageUrl}
+                alt={floorPlan.name}
+                className="max-w-none block"
+                onLoad={() => setImageLoaded(true)}
+                draggable={false}
+                style={{
+                  width: "auto",
+                  height: "auto",
+                }}
+              />
+            )}
             
             {/* Render markup pins */}
-            {markups.map((markup) => (
+            {imageLoaded && markups.map((markup) => (
               <div
                 key={markup.id}
                 className="absolute"
