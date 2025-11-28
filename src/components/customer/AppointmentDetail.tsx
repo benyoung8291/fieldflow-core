@@ -43,7 +43,7 @@ export function AppointmentDetail({ appointmentId }: AppointmentDetailProps) {
             )
           ),
           workers:appointment_workers(
-            worker:profiles(first_name, last_name, email, phone)
+            worker:profiles(first_name, last_name)
           )
         `)
         .eq("id", appointmentId)
@@ -274,9 +274,6 @@ export function AppointmentDetail({ appointmentId }: AppointmentDetailProps) {
                     <p className="text-sm font-semibold">
                       {w.worker.first_name} {w.worker.last_name}
                     </p>
-                    {w.worker.email && (
-                      <p className="text-xs text-muted-foreground">{w.worker.email}</p>
-                    )}
                   </div>
                 </div>
               ))}

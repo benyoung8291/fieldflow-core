@@ -96,6 +96,8 @@ export default function LocationFloorPlans() {
         .single();
 
       if (error) throw error;
+      
+      console.log("Customer portal: Profile data loaded", data);
       return data;
     },
   });
@@ -304,7 +306,7 @@ export default function LocationFloorPlans() {
                   setTaskDescription("");
                   setShowCreateDialog(true);
                 }}
-                disabled={markups.length === 0}
+                disabled={markups.length === 0 || !profile?.tenant_id || !profile?.customer_id}
                 className="shadow-lg"
               >
                 Create ({markups.length})
@@ -354,7 +356,7 @@ export default function LocationFloorPlans() {
               </Button>
               <Button
                 onClick={() => createRequestMutation.mutate()}
-                disabled={!taskTitle || createRequestMutation.isPending}
+                disabled={!taskTitle || createRequestMutation.isPending || !profile?.tenant_id || !profile?.customer_id}
               >
                 {createRequestMutation.isPending ? (
                   <>
@@ -447,7 +449,7 @@ export default function LocationFloorPlans() {
                       setTaskDescription("");
                       setShowCreateDialog(true);
                     }}
-                    disabled={markups.length === 0}
+                    disabled={markups.length === 0 || !profile?.tenant_id || !profile?.customer_id}
                   >
                     Create Request ({markups.length})
                   </Button>
