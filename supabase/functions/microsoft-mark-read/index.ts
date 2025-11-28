@@ -20,24 +20,33 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get the ticket and email account
+    // Get the ticket
     const { data: ticket, error: ticketError } = await supabase
       .from("helpdesk_tickets")
-      .select(`
-        *,
-        email_account:helpdesk_email_accounts(
-          id,
-          email_address,
-          microsoft_access_token,
-          microsoft_refresh_token,
-          microsoft_token_expires_at
-        )
-      `)
+      .select("*")
       .eq("id", ticketId)
       .single();
 
-    if (ticketError || !ticket || !ticket.email_account) {
-      throw new Error("Ticket or email account not found");
+    if (ticketError || !ticket) {
+      console.error("Ticket not found:", ticketError);
+      throw new Error("Ticket not found");
+    }
+
+    // Get the email account if ticket has an email_account_id
+    if (!ticket.email_account_id) {
+      console.log("Ticket has no email account associated");
+      throw new Error("Ticket has no email account");
+    }
+
+    const { data: emailAccount, error: emailError } = await supabase
+      .from("helpdesk_email_accounts")
+      .select("id, email_address, microsoft_access_token, microsoft_refresh_token, microsoft_token_expires_at")
+      .eq("id", ticket.email_account_id)
+      .single();
+
+    if (emailError || !emailAccount) {
+      console.error("Email account not found:", emailError);
+      throw new Error("Email account not found");
     }
 
     // Check if ticket has a Microsoft message ID
@@ -49,7 +58,7 @@ serve(async (req) => {
       );
     }
 
-    const emailAccount = ticket.email_account;
+    // emailAccount is already defined above
 
     // Get credentials from vault
     const credentials = await getMicrosoftCredentials(supabase, emailAccount.id);
