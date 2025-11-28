@@ -652,7 +652,6 @@ export default function ConvertQuoteDialog({
         .insert({
           tenant_id: profile.tenant_id,
           customer_id: customerId,
-          contact_id: primaryContact?.id || null,
           contract_number: contractNumber,
           title: contractData.title,
           description: contractData.description,
@@ -674,6 +673,7 @@ export default function ConvertQuoteDialog({
       // Create contract line items
       const lineItemsToInsert = contractLineItems.map((item) => ({
         contract_id: (contract as any).id,
+        tenant_id: profile.tenant_id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
