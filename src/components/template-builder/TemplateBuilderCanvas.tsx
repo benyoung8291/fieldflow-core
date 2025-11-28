@@ -1,10 +1,15 @@
 import { Editor, Frame, Element, useEditor } from "@craftjs/core";
 import { Container } from "./craft/Container";
-import { TextBlock } from "./craft/TextBlock";
+import { RichTextBlock } from "./craft/RichTextBlock";
 import { DataField } from "./craft/DataField";
 import { LineItemsTable } from "./craft/LineItemsTable";
-import { TemplateToolbox } from "./TemplateToolbox";
-import { TemplateSettings } from "./TemplateSettings";
+import { ImageBlock } from "./craft/ImageBlock";
+import { ShapeBlock } from "./craft/ShapeBlock";
+import { EnhancedToolbox } from "./EnhancedToolbox";
+import { AdvancedPropertiesPanel } from "./AdvancedPropertiesPanel";
+import { CanvasToolbar } from "./CanvasToolbar";
+import { TemplateNameDialog } from "./TemplateNameDialog";
+import { GradientBackground } from "./craft/GradientBackground";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -18,12 +23,24 @@ interface TemplateBuilderCanvasProps {
 
 const SaveButton = ({ onSave, saving }: { onSave: (query: any) => void; saving: boolean }) => {
   const { query } = useEditor();
+  const [showDialog, setShowDialog] = useState(false);
   
   return (
-    <Button onClick={() => onSave(query)} disabled={saving}>
-      <Save className="mr-2 h-4 w-4" />
-      {saving ? "Saving..." : "Save Template"}
-    </Button>
+    <>
+      <Button onClick={() => setShowDialog(true)} disabled={saving} size="lg">
+        <Save className="mr-2 h-4 w-4" />
+        {saving ? "Saving..." : "Save Template"}
+      </Button>
+      <TemplateNameDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={(name, type) => {
+          onSave(query);
+          setShowDialog(false);
+        }}
+        saving={saving}
+      />
+    </>
   );
 };
 
@@ -61,15 +78,28 @@ export const TemplateBuilderCanvas = ({
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         <Editor
-          resolver={{ Container, TextBlock, DataField, LineItemsTable }}
+          resolver={{ 
+            Container, 
+            RichTextBlock, 
+            DataField, 
+            LineItemsTable,
+            ImageBlock,
+            ShapeBlock,
+            GradientBackground
+          }}
         >
           {/* Toolbox */}
-          <TemplateToolbox />
+          <EnhancedToolbox />
 
           {/* Canvas */}
-          <div className="flex-1 overflow-auto bg-muted p-8">
+          <div className="flex-1 overflow-auto bg-muted/30 p-8 relative">
+            <CanvasToolbar 
+              onPreview={() => console.log("Preview")} 
+              onExport={() => console.log("Export")} 
+            />
+            
             <div 
-              className="max-w-[210mm] mx-auto bg-background shadow-lg"
+              className="max-w-[210mm] mx-auto bg-background shadow-2xl relative"
               style={{ 
                 minHeight: "297mm", // A4 height
                 padding: "20mm"
@@ -77,20 +107,21 @@ export const TemplateBuilderCanvas = ({
             >
               <Frame>
                 <Element is={Container} canvas>
-                  <TextBlock text="Your Company Name" fontSize={24} fontWeight={700} />
+                  <ImageBlock width={150} height={60} />
+                  <RichTextBlock text="QUOTATION" fontSize={32} fontWeight={700} textAlign="center" />
                   <DataField field="quote_number" label="Quote Number" />
                   <DataField field="customer.name" label="Customer Name" />
                   <LineItemsTable />
                 </Element>
               </Frame>
             </div>
-            <div className="mt-4 flex justify-center">
+            <div className="mt-6 flex justify-center">
               <SaveButton onSave={handleSave} saving={saving} />
             </div>
           </div>
 
           {/* Properties Panel */}
-          <TemplateSettings />
+          <AdvancedPropertiesPanel />
         </Editor>
       </div>
     </div>
