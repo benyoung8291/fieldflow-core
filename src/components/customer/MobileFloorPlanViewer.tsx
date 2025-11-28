@@ -7,7 +7,6 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { MobileFloorPlanToolbar } from "./mobile/MobileFloorPlanToolbar";
 import { MobileMarkupSheet } from "./mobile/MobileMarkupSheet";
-import { throttle } from "@/utils/performance";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -96,6 +95,9 @@ export function MobileFloorPlanViewer({
   // Track if multi-touch gesture occurred
   const [multiTouchActive, setMultiTouchActive] = useState(false);
   const [singleTouchStart, setSingleTouchStart] = useState<{ x: number; y: number } | null>(null);
+  
+  // Animation frame ref to prevent multiple simultaneous updates
+  const animationFrameRef = useRef<number | null>(null);
 
   const updateHistory = (newMarkups: Markup[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -117,7 +119,14 @@ export function MobileFloorPlanViewer({
 
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
-    return () => window.removeEventListener("resize", updateDimensions);
+    
+    return () => {
+      window.removeEventListener("resize", updateDimensions);
+      // Clean up any pending animation frames
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, []);
 
   // Initial zoom and center when content loads
@@ -130,20 +139,19 @@ export function MobileFloorPlanViewer({
     const targetHeight = containerDimensions.height * 0.8;
     const scaleForHeight = targetHeight / contentDimensions.height;
     
-    // Also check if it fits width-wise
+    // Also check if it fits width-wise (with 5% padding)
     const scaleForWidth = (containerDimensions.width * 0.95) / contentDimensions.width;
     
     // Use the smaller scale to ensure content fits within bounds
+    // Don't clamp to minimum - allow it to be as small as needed to fit
     const calculatedScale = Math.min(scaleForHeight, scaleForWidth);
-    const clampedScale = Math.max(0.5, Math.min(3, calculatedScale));
+    const clampedScale = Math.min(3, calculatedScale); // Only clamp maximum, not minimum
 
     // Calculate the dimensions after scaling
     const finalScaledWidth = contentDimensions.width * clampedScale;
     const finalScaledHeight = contentDimensions.height * clampedScale;
 
     // Calculate offset to center the scaled content
-    // Since transform-origin is top-left, we position the top-left corner
-    // so that the center of the scaled content aligns with container center
     const offsetX = (containerDimensions.width - finalScaledWidth) / 2;
     const offsetY = (containerDimensions.height - finalScaledHeight) / 2;
 
@@ -156,16 +164,9 @@ export function MobileFloorPlanViewer({
       calculatedScale,
       clampedScale,
       scaledDimensions: { width: finalScaledWidth, height: finalScaledHeight },
-      offset: { x: offsetX, y: offsetY },
-      centerCheck: {
-        contentCenterX: offsetX + finalScaledWidth / 2,
-        containerCenterX: containerDimensions.width / 2,
-        contentCenterY: offsetY + finalScaledHeight / 2,
-        containerCenterY: containerDimensions.height / 2
-      }
+      offset: { x: offsetX, y: offsetY }
     });
 
-    // Apply the scale and offset immediately
     setScale(clampedScale);
     setOffset({ x: offsetX, y: offsetY });
     setIsInitialZoomSet(true);
@@ -293,45 +294,46 @@ export function MobileFloorPlanViewer({
     setLongPressTimer(timer);
   };
 
-  const handleMarkupTouchMove = useCallback(
-    throttle((e: React.TouchEvent, markupId: string) => {
-      if (!isDragging || draggedMarkupId !== markupId || !dragStart) return;
-      
-      e.stopPropagation();
-      const touch = e.touches[0];
-      const pos = getTouchPosition(touch);
-      
-      const markup = markups.find(m => m.id === markupId);
-      if (!markup) return;
-      
-      requestAnimationFrame(() => {
-        const newMarkups = markups.map((m) => {
-          if (m.id === markupId) {
-            if (m.type === "pin") {
-              return { ...m, x: pos.x, y: pos.y };
-            } else {
-              const deltaX = pos.x - dragStart.x;
-              const deltaY = pos.y - dragStart.y;
-              return {
-                ...m,
-                bounds: {
-                  x: m.bounds.x + deltaX,
-                  y: m.bounds.y + deltaY,
-                  width: m.bounds.width,
-                  height: m.bounds.height,
-                },
-              };
-            }
+  const handleMarkupTouchMove = (e: React.TouchEvent, markupId: string) => {
+    if (!isDragging || draggedMarkupId !== markupId || !dragStart) return;
+    
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const pos = getTouchPosition(touch);
+    
+    const markup = markups.find(m => m.id === markupId);
+    if (!markup) return;
+    
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    animationFrameRef.current = requestAnimationFrame(() => {
+      const newMarkups = markups.map((m) => {
+        if (m.id === markupId) {
+          if (m.type === "pin") {
+            return { ...m, x: pos.x, y: pos.y };
+          } else {
+            const deltaX = pos.x - dragStart.x;
+            const deltaY = pos.y - dragStart.y;
+            return {
+              ...m,
+              bounds: {
+                x: m.bounds.x + deltaX,
+                y: m.bounds.y + deltaY,
+                width: m.bounds.width,
+                height: m.bounds.height,
+              },
+            };
           }
-          return m;
-        });
-        onMarkupsChange(newMarkups);
+        }
+        return m;
       });
-      
-      setDragStart(pos);
-    }, 16),
-    [isDragging, draggedMarkupId, dragStart, markups, onMarkupsChange]
-  );
+      onMarkupsChange(newMarkups);
+    });
+    
+    setDragStart(pos);
+  };
 
   const handleMarkupTouchEnd = (e: React.TouchEvent, markupId: string) => {
     e.stopPropagation();
@@ -395,77 +397,92 @@ export function MobileFloorPlanViewer({
     }
   };
 
-  const handleTouchMove = useCallback(
-    throttle((e: React.TouchEvent<HTMLDivElement>) => {
-      // Two-finger gestures (pinch or pan)
-      if (e.touches.length === 2 && initialPinchDistance && twoFingerPanStart) {
-        e.preventDefault();
-        const currentDistance = calculatePinchDistance(e.touches);
-        const currentCenter = calculatePinchCenter(e.touches);
-        
-        // Calculate distance change to detect pinch vs pan
-        const distanceChange = Math.abs(currentDistance - initialPinchDistance);
-        const distanceChangePercent = distanceChange / initialPinchDistance;
-        
-        // If distance changed more than 5%, it's a pinch gesture
-        if (distanceChangePercent > 0.05) {
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Two-finger gestures (pinch or pan)
+    if (e.touches.length === 2 && initialPinchDistance && twoFingerPanStart) {
+      e.preventDefault();
+      
+      // Cancel any pending animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      
+      const currentDistance = calculatePinchDistance(e.touches);
+      const currentCenter = calculatePinchCenter(e.touches);
+      
+      // Calculate distance change to detect pinch vs pan
+      const distanceChange = Math.abs(currentDistance - initialPinchDistance);
+      const distanceChangePercent = distanceChange / initialPinchDistance;
+      
+      // Schedule update in animation frame for smooth performance
+      animationFrameRef.current = requestAnimationFrame(() => {
+        // If distance changed more than 3%, it's a pinch gesture (reduced from 5% for better responsiveness)
+        if (distanceChangePercent > 0.03) {
           // Pinch to zoom
           const scaleChange = currentDistance / initialPinchDistance;
-          const newScale = Math.max(0.5, Math.min(3, initialScale * scaleChange));
+          const newScale = Math.max(0.1, Math.min(5, initialScale * scaleChange));
           
           // Adjust offset to zoom towards pinch center
-          const scaleDiff = newScale - scale;
           if (containerRef.current && pinchCenter) {
             const rect = containerRef.current.getBoundingClientRect();
             const centerX = pinchCenter.x - rect.left;
             const centerY = pinchCenter.y - rect.top;
+            const scaleDiff = newScale - scale;
             
-            requestAnimationFrame(() => {
-              setScale(newScale);
-              setOffset(prev => ({
-                x: prev.x - (centerX - rect.width / 2) * scaleDiff / scale,
-                y: prev.y - (centerY - rect.height / 2) * scaleDiff / scale,
-              }));
-            });
+            setScale(newScale);
+            setOffset(prev => ({
+              x: prev.x - (centerX - rect.width / 2) * scaleDiff / scale,
+              y: prev.y - (centerY - rect.height / 2) * scaleDiff / scale,
+            }));
+          } else {
+            setScale(newScale);
           }
         } else {
           // Two-finger pan
           const deltaX = currentCenter.x - twoFingerPanStart.x;
           const deltaY = currentCenter.y - twoFingerPanStart.y;
           
-          requestAnimationFrame(() => {
-            setOffset(prev => ({
-              x: prev.x + deltaX,
-              y: prev.y + deltaY,
-            }));
-            setTwoFingerPanStart(currentCenter);
-          });
+          setOffset(prev => ({
+            x: prev.x + deltaX,
+            y: prev.y + deltaY,
+          }));
+          setTwoFingerPanStart(currentCenter);
         }
-        return;
-      }
+      });
+      return;
+    }
 
-      if (e.touches.length !== 1) return;
+    if (e.touches.length !== 1) return;
+    
+    const touch = e.touches[0];
+
+    // Panning (works for any mode with single finger)
+    if (isPanning && panStart) {
+      e.preventDefault();
       
-      const touch = e.touches[0];
-
-      // Panning (works for any mode with single finger)
-      if (isPanning && panStart) {
-        e.preventDefault();
-        requestAnimationFrame(() => {
-          setOffset({
-            x: touch.clientX - panStart.x,
-            y: touch.clientY - panStart.y,
-          });
-        });
-      } else if (mode === "zone" && isDrawing && drawStart) {
-        const pos = getTouchPosition(touch);
-        requestAnimationFrame(() => {
-          setDrawCurrent(pos);
-        });
+      // Cancel any pending animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
-    }, 16),
-    [mode, isPanning, panStart, isDrawing, drawStart, scale, initialPinchDistance, pinchCenter, initialScale, twoFingerPanStart]
-  );
+      
+      animationFrameRef.current = requestAnimationFrame(() => {
+        setOffset({
+          x: touch.clientX - panStart.x,
+          y: touch.clientY - panStart.y,
+        });
+      });
+    } else if (mode === "zone" && isDrawing && drawStart) {
+      const pos = getTouchPosition(touch);
+      
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      
+      animationFrameRef.current = requestAnimationFrame(() => {
+        setDrawCurrent(pos);
+      });
+    }
+  };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     // Reset pinch/pan state when fingers are lifted
@@ -522,13 +539,16 @@ export function MobileFloorPlanViewer({
     }
   };
 
-  const zoomIn = () => setScale((prev) => Math.min(prev + 0.25, 3));
+  const zoomIn = () => {
+    setScale((prev) => Math.min(prev * 1.25, 5));
+  };
+  
   const zoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.25, 0.5));
-    // Reset pan when zooming out to fit
-    if (scale <= 0.75) {
-      setOffset({ x: 0, y: 0 });
-    }
+    setScale((prev) => {
+      const newScale = prev * 0.8;
+      // Don't go below 0.1x
+      return Math.max(newScale, 0.1);
+    });
   };
 
   const updateMarkupNote = (id: string, notes: string) => {
