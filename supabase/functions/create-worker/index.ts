@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail, getValidAccessToken } from "../_shared/microsoft-graph.ts";
+import { sanitizeError, sanitizeAuthError, sanitizeDatabaseError } from "../_shared/errorHandler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,8 +16,16 @@ serve(async (req) => {
   try {
     const { email, password, firstName, lastName, phone, tenantId } = await req.json();
 
+    console.log("📝 Creating worker with:", { email, firstName, lastName, tenantId });
+
     if (!email || !password || !firstName || !lastName || !tenantId) {
-      throw new Error("Missing required fields");
+      const missingFields = [];
+      if (!email) missingFields.push("email");
+      if (!password) missingFields.push("password");
+      if (!firstName) missingFields.push("firstName");
+      if (!lastName) missingFields.push("lastName");
+      if (!tenantId) missingFields.push("tenantId");
+      throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
     }
 
     // Create Supabase admin client
@@ -32,6 +41,7 @@ serve(async (req) => {
     );
 
     // Create user in auth
+    console.log("🔐 Creating auth user...");
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -42,12 +52,20 @@ serve(async (req) => {
       },
     });
 
-    if (authError) throw authError;
-    if (!authData.user) throw new Error("User creation failed");
+    if (authError) {
+      console.error("❌ Auth error:", authError);
+      throw new Error(`Auth error: ${authError.message}`);
+    }
+    if (!authData.user) {
+      console.error("❌ No user returned from auth");
+      throw new Error("User creation failed");
+    }
 
     const userId = authData.user.id;
+    console.log("✅ Auth user created:", userId);
 
     // Create profile
+    console.log("👤 Creating profile...");
     const { error: profileError } = await supabaseAdmin.from("profiles").insert({
       id: userId,
       tenant_id: tenantId,
@@ -58,16 +76,25 @@ serve(async (req) => {
       is_active: true,
     });
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("❌ Profile error:", profileError);
+      throw new Error(`Profile creation error: ${profileError.message}`);
+    }
+    console.log("✅ Profile created");
 
     // Add worker role
+    console.log("🏷️ Adding worker role...");
     const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
       user_id: userId,
       tenant_id: tenantId,
       role: "worker",
     });
 
-    if (roleError) throw roleError;
+    if (roleError) {
+      console.error("❌ Role error:", roleError);
+      throw new Error(`Role assignment error: ${roleError.message}`);
+    }
+    console.log("✅ Worker role added");
 
     // Send welcome email via Microsoft Graph
     try {
@@ -123,9 +150,15 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error("❌ Error in create-worker:", error);
     const errorMessage = error instanceof Error ? error.message : "An error occurred";
+    const sanitizedError = sanitizeError(error, "create-worker");
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        details: sanitizedError 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
