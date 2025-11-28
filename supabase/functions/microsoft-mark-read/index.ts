@@ -34,8 +34,11 @@ serve(async (req) => {
 
     // Get the email account if ticket has an email_account_id
     if (!ticket.email_account_id) {
-      console.log("Ticket has no email account associated");
-      throw new Error("Ticket has no email account");
+      console.log("Ticket has no email account associated, skipping mark-as-read");
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "No email account" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const { data: emailAccount, error: emailError } = await supabase
