@@ -70,9 +70,37 @@ serve(async (req) => {
       const authUserId = existingAuthUser.id;
       
       // Delete profile and user_roles FIRST (before deleting auth user)
-      console.log("🧹 Deleting orphaned profile and roles...");
-      await supabaseAdmin.from("user_roles").delete().eq("user_id", authUserId);
-      await supabaseAdmin.from("profiles").delete().eq("id", authUserId);
+      // Use service role to bypass RLS
+      console.log("🧹 Deleting orphaned profile and roles with ID:", authUserId);
+      const { error: deleteRolesError } = await supabaseAdmin
+        .from("user_roles")
+        .delete()
+        .eq("user_id", authUserId);
+      
+      if (deleteRolesError) {
+        console.error("⚠️ Error deleting user_roles:", deleteRolesError);
+      }
+      
+      const { error: deleteProfileError } = await supabaseAdmin
+        .from("profiles")
+        .delete()
+        .eq("id", authUserId);
+      
+      if (deleteProfileError) {
+        console.error("⚠️ Error deleting profile:", deleteProfileError);
+      }
+      
+      // Verify profile is actually deleted
+      const { data: checkProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("id", authUserId)
+        .maybeSingle();
+      
+      if (checkProfile) {
+        console.error("❌ Profile still exists after delete attempt!");
+        throw new Error("Failed to delete orphaned profile. Please contact support.");
+      }
       
       // Now delete the auth user
       const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
