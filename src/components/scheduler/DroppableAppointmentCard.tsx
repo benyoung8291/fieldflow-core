@@ -5,8 +5,8 @@ import { Clock, Users, FileText, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import AppointmentHoverCard from "./AppointmentHoverCard";
+import { useState, useRef } from "react";
 
 interface DroppableAppointmentCardProps {
   appointment: any;
@@ -14,9 +14,6 @@ interface DroppableAppointmentCardProps {
   estimatedHours?: number;
   onRemoveWorker: (workerId: string) => void;
   onClick: () => void;
-  isSelected?: boolean;
-  onSelectionChange?: (selected: boolean) => void;
-  selectedCount?: number;
 }
 
 export default function DroppableAppointmentCard({
@@ -25,10 +22,11 @@ export default function DroppableAppointmentCard({
   estimatedHours,
   onRemoveWorker,
   onClick,
-  isSelected = false,
-  onSelectionChange,
-  selectedCount = 0,
 }: DroppableAppointmentCardProps) {
+  const [isDragIntent, setIsDragIntent] = useState(false);
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const dragThreshold = 5; // pixels to move before considering it a drag
+
   // Make card droppable for workers
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `appointment-drop-${appointment.id}`,
@@ -38,15 +36,14 @@ export default function DroppableAppointmentCard({
     },
   });
 
-  // Make card draggable for moving between dates
+  // Make card draggable for moving between dates - but only when drag intent is detected
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: `appointment-drag-${appointment.id}`,
     data: {
       type: "appointment",
       appointment: appointment,
-      isSelected,
-      selectedCount,
     },
+    disabled: !isDragIntent,
   });
 
   const setNodeRef = (node: HTMLElement | null) => {
@@ -58,12 +55,42 @@ export default function DroppableAppointmentCard({
   const totalWorkerHours = workers.length * calculateAppointmentHours(appointment);
   const remainingHours = (estimatedHours || 0) - totalWorkerHours;
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't trigger onClick if clicking checkbox or worker remove button
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Don't handle if clicking on interactive elements
     if ((e.target as HTMLElement).closest('[data-no-click]')) {
       return;
     }
-    onClick();
+    pointerDownPos.current = { x: e.clientX, y: e.clientY };
+    setIsDragIntent(false);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointerDownPos.current) return;
+    
+    const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
+    const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
+    
+    // If moved more than threshold, it's a drag intent
+    if (deltaX > dragThreshold || deltaY > dragThreshold) {
+      setIsDragIntent(true);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!pointerDownPos.current) return;
+    
+    const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
+    const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
+    
+    // If didn't move much, treat as a click
+    if (deltaX <= dragThreshold && deltaY <= dragThreshold) {
+      if (!(e.target as HTMLElement).closest('[data-no-click]')) {
+        onClick();
+      }
+    }
+    
+    pointerDownPos.current = null;
+    setIsDragIntent(false);
   };
 
   return (
@@ -71,27 +98,26 @@ export default function DroppableAppointmentCard({
       <Card
         ref={setNodeRef}
         {...attributes}
-        {...listeners}
+        {...(isDragIntent ? listeners : {})}
         className={cn(
-          "p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
+          "p-2 cursor-pointer hover:shadow-md transition-all group relative hover:border-primary/50",
           isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
-          isDragging && "opacity-50",
-          isSelected && "ring-2 ring-primary bg-primary/5"
+          isDragging && "opacity-50 cursor-grabbing",
+          isDragIntent && "cursor-grab"
         )}
-        onClick={handleCardClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={() => {
+          pointerDownPos.current = null;
+          setIsDragIntent(false);
+        }}
       >
       {isOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
           <span className="text-xs font-semibold text-primary bg-background px-2 py-1 rounded">
             Drop to assign worker
           </span>
-        </div>
-      )}
-      
-      {/* Bulk selection indicator */}
-      {isSelected && selectedCount > 1 && (
-        <div className="absolute top-1 right-1 bg-primary text-primary-foreground px-2 py-0.5 rounded-full text-xs font-semibold z-10">
-          {selectedCount} selected
         </div>
       )}
 
@@ -101,17 +127,6 @@ export default function DroppableAppointmentCard({
           {calculateAppointmentHours(appointment)}h
         </div>
 
-        {/* Selection checkbox */}
-        {onSelectionChange && (
-          <div className="flex items-center gap-2" data-no-click>
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onSelectionChange}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <span className="text-xs text-muted-foreground">Select for bulk move</span>
-          </div>
-        )}
         {/* Time */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />

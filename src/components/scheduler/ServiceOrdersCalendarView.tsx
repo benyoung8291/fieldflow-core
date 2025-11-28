@@ -15,8 +15,6 @@ interface ServiceOrdersCalendarViewProps {
   onAppointmentClick: (id: string) => void;
   onCreateAppointment: (serviceOrderId: string, date: Date, startTime: string, endTime: string) => void;
   onRemoveWorker: (appointmentId: string, workerId: string) => void;
-  selectedAppointmentIds: Set<string>;
-  onSelectionChange: (appointmentId: string, selected: boolean) => void;
 }
 
 export default function ServiceOrdersCalendarView({
@@ -26,8 +24,6 @@ export default function ServiceOrdersCalendarView({
   onAppointmentClick,
   onCreateAppointment,
   onRemoveWorker,
-  selectedAppointmentIds,
-  onSelectionChange,
 }: ServiceOrdersCalendarViewProps) {
   // Fetch service orders with appointments and line items
   const { data: serviceOrders = [] } = useQuery({
@@ -174,9 +170,6 @@ export default function ServiceOrdersCalendarView({
                             estimatedHours={order.estimated_hours}
                             onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
                             onClick={() => onAppointmentClick(apt.id)}
-                            isSelected={selectedAppointmentIds.has(apt.id)}
-                            onSelectionChange={(selected) => onSelectionChange(apt.id, selected)}
-                            selectedCount={selectedAppointmentIds.size}
                           />
                         ))
                       ) : (
