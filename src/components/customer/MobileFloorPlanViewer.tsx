@@ -128,25 +128,49 @@ export function MobileFloorPlanViewer({
 
     // Calculate scale to fit 80% of screen height
     const targetHeight = containerDimensions.height * 0.8;
-    const initialScale = targetHeight / contentDimensions.height;
-    const clampedScale = Math.max(0.5, Math.min(3, initialScale));
+    const scaleForHeight = targetHeight / contentDimensions.height;
+    
+    // Also check if it fits width-wise
+    const scaleForWidth = containerDimensions.width / contentDimensions.width;
+    
+    // Use the smaller scale to ensure content fits, but still try to achieve 80% height
+    let calculatedScale = scaleForHeight;
+    
+    // If content would be too wide, scale it down to fit
+    const scaledWidth = contentDimensions.width * calculatedScale;
+    if (scaledWidth > containerDimensions.width) {
+      calculatedScale = scaleForWidth * 0.95; // Use 95% of width to add some padding
+    }
+    
+    const clampedScale = Math.max(0.5, Math.min(3, calculatedScale));
 
-    // Calculate offset to center the content with top-left origin
-    const scaledWidth = contentDimensions.width * clampedScale;
-    const scaledHeight = contentDimensions.height * clampedScale;
-    const offsetX = (containerDimensions.width - scaledWidth) / 2;
-    const offsetY = (containerDimensions.height - scaledHeight) / 2;
+    // Calculate the dimensions after scaling
+    const finalScaledWidth = contentDimensions.width * clampedScale;
+    const finalScaledHeight = contentDimensions.height * clampedScale;
+
+    // Calculate offset to center the scaled content
+    // Position the content so its center aligns with the container center
+    const contentCenterX = finalScaledWidth / 2;
+    const contentCenterY = finalScaledHeight / 2;
+    const containerCenterX = containerDimensions.width / 2;
+    const containerCenterY = containerDimensions.height / 2;
+    
+    const offsetX = containerCenterX - contentCenterX;
+    const offsetY = containerCenterY - contentCenterY;
 
     console.log("Initial zoom setup:", {
       containerDimensions,
       contentDimensions,
       targetHeight,
-      initialScale,
+      scaleForHeight,
+      scaleForWidth,
+      calculatedScale,
       clampedScale,
-      scaledDimensions: { width: scaledWidth, height: scaledHeight },
+      scaledDimensions: { width: finalScaledWidth, height: finalScaledHeight },
       offset: { x: offsetX, y: offsetY }
     });
 
+    // Apply the scale and offset immediately
     setScale(clampedScale);
     setOffset({ x: offsetX, y: offsetY });
     setIsInitialZoomSet(true);
@@ -606,16 +630,25 @@ export function MobileFloorPlanViewer({
                 pageNumber={currentPage}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
-                width={containerDimensions.width || window.innerWidth}
+                width={contentDimensions.width || containerDimensions.width || window.innerWidth}
                 onLoadSuccess={(page) => {
                   const viewport = page.getViewport({ scale: 1 });
+                  if (containerRef.current) {
+                    setContainerDimensions({
+                      width: containerRef.current.clientWidth,
+                      height: containerRef.current.clientHeight,
+                    });
+                  }
                   setContentDimensions({
                     width: viewport.width,
                     height: viewport.height,
                   });
                   console.log("PDF page loaded:", {
-                    width: viewport.width,
-                    height: viewport.height
+                    viewport: { width: viewport.width, height: viewport.height },
+                    container: { 
+                      width: containerRef.current?.clientWidth, 
+                      height: containerRef.current?.clientHeight 
+                    }
                   });
                 }}
               />
