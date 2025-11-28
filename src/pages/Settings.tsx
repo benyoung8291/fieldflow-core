@@ -105,7 +105,7 @@ const settingsNavigation: SettingsNavGroup[] = [
   {
     group: "Team",
     items: [
-      { title: "Members", value: "users", icon: Users },
+      { title: "Users", value: "users", icon: Users },
       { title: "Teams", value: "teams", icon: Users },
       { title: "Roles & Permissions", value: "permissions", icon: Shield },
       { title: "Pay Rates", value: "pay-rates", icon: DollarSign },
