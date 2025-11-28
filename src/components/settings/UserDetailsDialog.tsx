@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +22,13 @@ export const UserDetailsDialog = ({ user, open, onOpenChange }: UserDetailsDialo
   const [firstName, setFirstName] = useState(user.first_name);
   const [lastName, setLastName] = useState(user.last_name);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Update state when user prop changes
+  useEffect(() => {
+    setEmail(user.email);
+    setFirstName(user.first_name);
+    setLastName(user.last_name);
+  }, [user.email, user.first_name, user.last_name]);
 
   const updateUserMutation = useMutation({
     mutationFn: async (updates: any) => {
