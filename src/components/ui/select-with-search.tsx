@@ -52,9 +52,10 @@ export function SelectWithSearch({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue);
+                  value={option.label}
+                  keywords={[option.label, option.value]}
+                  onSelect={() => {
+                    onValueChange(value === option.value ? "" : option.value);
                     setOpen(false);
                   }}
                   className="text-xs"
