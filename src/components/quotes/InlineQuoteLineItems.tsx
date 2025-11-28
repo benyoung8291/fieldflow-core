@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ChevronDown, ChevronRight, Package } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Package, Copy } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -234,6 +234,38 @@ export default function InlineQuoteLineItems({
     const newItems = [...lineItems];
     newItems[parentIndex].subItems = newItems[parentIndex].subItems!.filter((_, i) => i !== subIndex);
     newItems[parentIndex].line_total = calculateLineTotal(newItems[parentIndex]);
+    onChange(newItems);
+  };
+
+  const duplicateLineItem = (index: number) => {
+    const newItems = [...lineItems];
+    const itemToDuplicate = newItems[index];
+    
+    // Clone the line item without the id
+    const duplicatedItem: LineItem = {
+      description: itemToDuplicate.description,
+      quantity: itemToDuplicate.quantity,
+      cost_price: itemToDuplicate.cost_price,
+      margin_percentage: itemToDuplicate.margin_percentage,
+      sell_price: itemToDuplicate.sell_price,
+      line_total: itemToDuplicate.line_total,
+      expanded: itemToDuplicate.subItems && itemToDuplicate.subItems.length > 0,
+    };
+
+    // If the item has sub-items, duplicate them too
+    if (itemToDuplicate.subItems && itemToDuplicate.subItems.length > 0) {
+      duplicatedItem.subItems = itemToDuplicate.subItems.map(subItem => ({
+        description: subItem.description,
+        quantity: subItem.quantity,
+        cost_price: subItem.cost_price,
+        margin_percentage: subItem.margin_percentage,
+        sell_price: subItem.sell_price,
+        line_total: subItem.line_total,
+      }));
+    }
+
+    // Insert the duplicated item right after the original
+    newItems.splice(index + 1, 0, duplicatedItem);
     onChange(newItems);
   };
 
@@ -499,6 +531,16 @@ export default function InlineQuoteLineItems({
                           title="Add sub-item"
                         >
                           <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-accent/10 hover:text-accent-foreground"
+                          onClick={() => duplicateLineItem(index)}
+                          title="Duplicate item"
+                        >
+                          <Copy className="h-4 w-4" />
                         </Button>
                         <Button
                           type="button"
