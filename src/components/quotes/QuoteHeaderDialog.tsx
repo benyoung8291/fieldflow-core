@@ -30,9 +30,10 @@ interface QuoteHeaderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   leadId?: string;
+  customerId?: string;
 }
 
-export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteHeaderDialogProps) {
+export default function QuoteHeaderDialog({ open, onOpenChange, leadId, customerId }: QuoteHeaderDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -93,10 +94,11 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
       fetchCustomersAndLeads();
       fetchDefaultSettings();
       
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 30);
+      
       if (leadId) {
         // Initialize for lead
-        const defaultDate = new Date();
-        defaultDate.setDate(defaultDate.getDate() + 30);
         setIsForLead(true);
         setFormData(prev => ({
           ...prev,
@@ -104,10 +106,17 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
           customer_id: "",
           valid_until: defaultDate.toISOString().split('T')[0],
         }));
+      } else if (customerId) {
+        // Initialize for customer
+        setIsForLead(false);
+        setFormData(prev => ({
+          ...prev,
+          customer_id: customerId,
+          lead_id: "",
+          valid_until: defaultDate.toISOString().split('T')[0],
+        }));
       } else {
         // Reset form for new quote
-        const defaultDate = new Date();
-        defaultDate.setDate(defaultDate.getDate() + 30);
         setFormData({
           customer_id: "",
           lead_id: "",
@@ -120,7 +129,7 @@ export default function QuoteHeaderDialog({ open, onOpenChange, leadId }: QuoteH
         setIsForLead(false);
       }
     }
-  }, [open, leadId]);
+  }, [open, leadId, customerId]);
 
   const fetchDefaultSettings = async () => {
     const { data: { user } } = await supabase.auth.getUser();

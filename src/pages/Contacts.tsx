@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
+import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 
 export default function Contacts() {
   const navigate = useNavigate();

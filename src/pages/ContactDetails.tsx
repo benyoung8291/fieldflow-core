@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, MapPin, Building2, Globe, Linkedin, Calendar, User, FileText, Briefcase, ArrowRight, Edit, Archive, Trash2, Activity, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
+import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -484,6 +485,13 @@ export default function ContactDetails() {
           },
         ]}
         primaryActions={primaryActions}
+        customActions={
+          <QuickActionsMenu 
+            customerId={contact.customer?.id} 
+            leadId={contact.lead?.id}
+            variant="outline"
+          />
+        }
         keyInfoSection={
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3">
             {keyInfoItems.map((item, index) => (

@@ -10,6 +10,7 @@ import CustomerDialog from "@/components/customers/CustomerDialog";
 import QuoteHeaderDialog from "@/components/quotes/QuoteHeaderDialog";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
+import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -586,6 +587,7 @@ export default function LeadDetails() {
         subtitle={lead?.company_name}
         backPath="/leads"
         primaryActions={primaryActions}
+        customActions={<QuickActionsMenu leadId={id!} variant="outline" />}
         keyInfoSection={keyInfoSection}
         tabs={tabs}
         isLoading={isLoading}
