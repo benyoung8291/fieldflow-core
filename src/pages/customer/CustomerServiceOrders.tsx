@@ -364,12 +364,6 @@ export default function CustomerServiceOrders() {
                                   })}
                                 </span>
                               </div>
-                              {group.totalHours > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="h-3.5 w-3.5" />
-                                  <span>{group.totalHours.toFixed(1)} hours</span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -386,21 +380,15 @@ export default function CustomerServiceOrders() {
                                   <p className="text-xs text-muted-foreground">
                                     {item.contract?.contract_number} - {item.contract?.title}
                                   </p>
-                                  {item.recurrence_frequency && (
-                                    <Badge 
-                                      variant="outline" 
-                                      className="mt-1 text-xs"
-                                    >
-                                      {item.recurrence_frequency}
-                                    </Badge>
-                                  )}
                                 </div>
-                                <div className="text-right text-sm shrink-0">
-                                  <p className="font-semibold">${item.line_total?.toFixed(2) || '0.00'}</p>
-                                  {item.estimated_hours > 0 && (
-                                    <p className="text-xs text-muted-foreground">{item.estimated_hours}h</p>
-                                  )}
-                                </div>
+                                {item.recurrence_frequency && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs shrink-0"
+                                  >
+                                    {item.recurrence_frequency}
+                                  </Badge>
+                                )}
                               </div>
                               {itemIndex < displayedItems.length - 1 && (
                                 <div className="h-px bg-border/40 my-2" />
@@ -430,14 +418,6 @@ export default function CustomerServiceOrders() {
                             </Button>
                           )}
                         </div>
-
-                        {/* Total */}
-                        {group.items.length > 1 && (
-                          <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                            <span className="text-sm font-semibold">Total</span>
-                            <span className="text-base font-bold">${group.totalAmount.toFixed(2)}</span>
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
