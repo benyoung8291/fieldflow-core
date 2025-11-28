@@ -3,7 +3,8 @@ import QuoteTemplatesTab from "./QuoteTemplatesTab";
 import MessageTemplatesTab from "./MessageTemplatesTab";
 import TermsTemplatesTab from "./TermsTemplatesTab";
 import TaskTemplatesTab from "./TaskTemplatesTab";
-import { FileText, MessageSquare, CheckSquare, FileCheck } from "lucide-react";
+import DocumentTemplatesTab from "./DocumentTemplatesTab";
+import { FileText, MessageSquare, CheckSquare, FileCheck, FileType } from "lucide-react";
 
 export const TemplatesTab = () => {
   return (
@@ -16,7 +17,7 @@ export const TemplatesTab = () => {
       </div>
 
       <Tabs defaultValue="quotes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="quotes" className="gap-2">
             <FileText className="h-4 w-4" />
             Quotes
@@ -32,6 +33,10 @@ export const TemplatesTab = () => {
           <TabsTrigger value="tasks" className="gap-2">
             <CheckSquare className="h-4 w-4" />
             Tasks
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="gap-2">
+            <FileType className="h-4 w-4" />
+            Documents
           </TabsTrigger>
         </TabsList>
 
@@ -49,6 +54,10 @@ export const TemplatesTab = () => {
 
         <TabsContent value="tasks">
           <TaskTemplatesTab />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <DocumentTemplatesTab />
         </TabsContent>
       </Tabs>
     </div>

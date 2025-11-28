@@ -1863,6 +1863,65 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          document_type: string
+          extracted_placeholders: Json | null
+          field_mappings: Json | null
+          id: string
+          include_sub_items: boolean | null
+          is_default: boolean | null
+          name: string
+          original_filename: string
+          template_file_url: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          document_type: string
+          extracted_placeholders?: Json | null
+          field_mappings?: Json | null
+          id?: string
+          include_sub_items?: boolean | null
+          is_default?: boolean | null
+          name: string
+          original_filename: string
+          template_file_url: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          document_type?: string
+          extracted_placeholders?: Json | null
+          field_mappings?: Json | null
+          id?: string
+          include_sub_items?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          original_filename?: string
+          template_file_url?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_attachments: {
         Row: {
           expense_id: string
