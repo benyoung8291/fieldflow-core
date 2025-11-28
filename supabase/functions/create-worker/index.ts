@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendEmail, getValidAccessToken } from "../_shared/microsoft-graph.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -67,6 +68,52 @@ serve(async (req) => {
     });
 
     if (roleError) throw roleError;
+
+    // Send welcome email via Microsoft Graph
+    try {
+      // Get the clientservices email account
+      const { data: emailAccount } = await supabaseAdmin
+        .from("helpdesk_email_accounts")
+        .select("id")
+        .eq("email_address", "clientservices@premrest.com.au")
+        .eq("is_active", true)
+        .single();
+
+      if (emailAccount) {
+        const graphConfig = {
+          emailAccountId: emailAccount.id,
+          supabaseClient: supabaseAdmin,
+        };
+
+        const welcomeEmailBody = `
+          <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <h2 style="color: #d1703c;">Welcome to Premrest!</h2>
+              <p>Hi ${firstName},</p>
+              <p>Your worker account has been created successfully.</p>
+              <p><strong>Login Details:</strong></p>
+              <ul>
+                <li>Email: ${email}</li>
+                <li>Temporary Password: ${password}</li>
+              </ul>
+              <p>Please log in and change your password immediately.</p>
+              <p>Best regards,<br/>The Premrest Team</p>
+            </body>
+          </html>
+        `;
+
+        await sendEmail(graphConfig, "clientservices@premrest.com.au", {
+          subject: "Welcome to Premrest - Your Worker Account",
+          body: welcomeEmailBody,
+          to: [email],
+        });
+
+        console.log("✅ Welcome email sent via Microsoft Graph");
+      }
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail the entire operation if email fails
+    }
 
     return new Response(
       JSON.stringify({ success: true, userId }),
