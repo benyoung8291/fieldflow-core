@@ -1,10 +1,11 @@
 import { Group, Rect, Textbox, Line } from "fabric";
 
-export const addLineItemsTable = (canvas: any) => {
+export const addLineItemsTable = (canvas: any, includeSubItems: boolean = false) => {
+  if (!canvas) return;
   const tableWidth = 500;
   const rowHeight = 30;
   const headerHeight = 35;
-  const numRows = 5;
+  const numRows = includeSubItems ? 8 : 5; // More rows for sub-items
 
   // Background
   const background = new Rect({
@@ -79,60 +80,183 @@ export const addLineItemsTable = (canvas: any) => {
     })
   );
 
-  // Placeholder data
+  // Placeholder data with sub-items support
   const rowTexts: any[] = [];
-  for (let i = 0; i < numRows; i++) {
-    const y = headerHeight + rowHeight * i + rowHeight / 2;
-    rowTexts.push(
-      new Textbox(`{{line_items[${i}].description}}`, {
-        left: descWidth / 2,
-        top: y,
-        width: descWidth - 10,
-        fontSize: 11,
-        fontFamily: "monospace",
-        fill: "hsl(var(--muted-foreground))",
-        textAlign: "left",
-        originX: "center",
-        originY: "center",
-        editable: false,
-      }),
-      new Textbox(`{{line_items[${i}].quantity}}`, {
-        left: descWidth + qtyWidth / 2,
-        top: y,
-        width: qtyWidth - 10,
-        fontSize: 11,
-        fontFamily: "monospace",
-        fill: "hsl(var(--muted-foreground))",
-        textAlign: "center",
-        originX: "center",
-        originY: "center",
-        editable: false,
-      }),
-      new Textbox(`{{line_items[${i}].unit_price}}`, {
-        left: descWidth + qtyWidth + priceWidth / 2,
-        top: y,
-        width: priceWidth - 10,
-        fontSize: 11,
-        fontFamily: "monospace",
-        fill: "hsl(var(--muted-foreground))",
-        textAlign: "center",
-        originX: "center",
-        originY: "center",
-        editable: false,
-      }),
-      new Textbox(`{{line_items[${i}].line_total}}`, {
-        left: descWidth + qtyWidth + priceWidth + totalWidth / 2,
-        top: y,
-        width: totalWidth - 10,
-        fontSize: 11,
-        fontFamily: "monospace",
-        fill: "hsl(var(--muted-foreground))",
-        textAlign: "center",
-        originX: "center",
-        originY: "center",
-        editable: false,
-      })
-    );
+  let rowIndex = 0;
+  
+  if (includeSubItems) {
+    // Create parent items with sub-items
+    for (let i = 0; i < 3; i++) {
+      const y = headerHeight + rowHeight * rowIndex + rowHeight / 2;
+      
+      // Parent item row
+      rowTexts.push(
+        new Textbox(`{{line_items[${i}].description}}`, {
+          left: descWidth / 2,
+          top: y,
+          width: descWidth - 10,
+          fontSize: 11,
+          fontWeight: "bold",
+          fontFamily: "monospace",
+          fill: "hsl(var(--foreground))",
+          textAlign: "left",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        }),
+        new Textbox(`{{line_items[${i}].quantity}}`, {
+          left: descWidth + qtyWidth / 2,
+          top: y,
+          width: qtyWidth - 10,
+          fontSize: 11,
+          fontWeight: "bold",
+          fontFamily: "monospace",
+          fill: "hsl(var(--foreground))",
+          textAlign: "center",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        }),
+        new Textbox(`{{line_items[${i}].unit_price}}`, {
+          left: descWidth + qtyWidth + priceWidth / 2,
+          top: y,
+          width: priceWidth - 10,
+          fontSize: 11,
+          fontWeight: "bold",
+          fontFamily: "monospace",
+          fill: "hsl(var(--foreground))",
+          textAlign: "center",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        }),
+        new Textbox(`{{line_items[${i}].line_total}}`, {
+          left: descWidth + qtyWidth + priceWidth + totalWidth / 2,
+          top: y,
+          width: totalWidth - 10,
+          fontSize: 11,
+          fontWeight: "bold",
+          fontFamily: "monospace",
+          fill: "hsl(var(--foreground))",
+          textAlign: "center",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        })
+      );
+      rowIndex++;
+      
+      // Sub-item rows (indented)
+      for (let j = 0; j < 2; j++) {
+        const subY = headerHeight + rowHeight * rowIndex + rowHeight / 2;
+        rowTexts.push(
+          new Textbox(`    {{line_items[${i}].sub_items[${j}].description}}`, {
+            left: descWidth / 2,
+            top: subY,
+            width: descWidth - 10,
+            fontSize: 10,
+            fontFamily: "monospace",
+            fill: "hsl(var(--muted-foreground))",
+            textAlign: "left",
+            originX: "center",
+            originY: "center",
+            editable: false,
+          }),
+          new Textbox(`{{line_items[${i}].sub_items[${j}].quantity}}`, {
+            left: descWidth + qtyWidth / 2,
+            top: subY,
+            width: qtyWidth - 10,
+            fontSize: 10,
+            fontFamily: "monospace",
+            fill: "hsl(var(--muted-foreground))",
+            textAlign: "center",
+            originX: "center",
+            originY: "center",
+            editable: false,
+          }),
+          new Textbox(`{{line_items[${i}].sub_items[${j}].unit_price}}`, {
+            left: descWidth + qtyWidth + priceWidth / 2,
+            top: subY,
+            width: priceWidth - 10,
+            fontSize: 10,
+            fontFamily: "monospace",
+            fill: "hsl(var(--muted-foreground))",
+            textAlign: "center",
+            originX: "center",
+            originY: "center",
+            editable: false,
+          }),
+          new Textbox(`{{line_items[${i}].sub_items[${j}].line_total}}`, {
+            left: descWidth + qtyWidth + priceWidth + totalWidth / 2,
+            top: subY,
+            width: totalWidth - 10,
+            fontSize: 10,
+            fontFamily: "monospace",
+            fill: "hsl(var(--muted-foreground))",
+            textAlign: "center",
+            originX: "center",
+            originY: "center",
+            editable: false,
+          })
+        );
+        rowIndex++;
+      }
+    }
+  } else {
+    // Standard rows without sub-items
+    for (let i = 0; i < numRows; i++) {
+      const y = headerHeight + rowHeight * i + rowHeight / 2;
+      rowTexts.push(
+        new Textbox(`{{line_items[${i}].description}}`, {
+          left: descWidth / 2,
+          top: y,
+          width: descWidth - 10,
+          fontSize: 11,
+          fontFamily: "monospace",
+          fill: "hsl(var(--muted-foreground))",
+          textAlign: "left",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        }),
+        new Textbox(`{{line_items[${i}].quantity}}`, {
+          left: descWidth + qtyWidth / 2,
+          top: y,
+          width: qtyWidth - 10,
+          fontSize: 11,
+          fontFamily: "monospace",
+          fill: "hsl(var(--muted-foreground))",
+          textAlign: "center",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        }),
+        new Textbox(`{{line_items[${i}].unit_price}}`, {
+          left: descWidth + qtyWidth + priceWidth / 2,
+          top: y,
+          width: priceWidth - 10,
+          fontSize: 11,
+          fontFamily: "monospace",
+          fill: "hsl(var(--muted-foreground))",
+          textAlign: "center",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        }),
+        new Textbox(`{{line_items[${i}].line_total}}`, {
+          left: descWidth + qtyWidth + priceWidth + totalWidth / 2,
+          top: y,
+          width: totalWidth - 10,
+          fontSize: 11,
+          fontFamily: "monospace",
+          fill: "hsl(var(--muted-foreground))",
+          textAlign: "center",
+          originX: "center",
+          originY: "center",
+          editable: false,
+        })
+      );
+    }
   }
 
   const group = new Group([
