@@ -7,6 +7,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Delete user request received')
+    
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -20,37 +22,62 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('❌ No authorization header')
       throw new Error('No authorization header')
     }
 
     const token = authHeader.replace('Bearer ', '')
+    console.log('🔐 Validating user token')
+    
     const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token)
 
     if (userError || !requestingUser) {
+      console.error('❌ User validation failed:', userError)
       throw new Error('Unauthorized')
     }
 
+    console.log('✅ User validated:', requestingUser.id)
+
     // Check if requesting user is admin
-    const { data: requestingProfile } = await supabaseAdmin
+    console.log('📋 Fetching user profile')
+    const { data: requestingProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('tenant_id')
       .eq('id', requestingUser.id)
       .single()
 
-    if (!requestingProfile) {
+    if (profileError || !requestingProfile) {
+      console.error('❌ Profile fetch failed:', profileError)
       throw new Error('Profile not found')
     }
 
-    const { data: adminRoles } = await supabaseAdmin
+    console.log('✅ Profile found, tenant_id:', requestingProfile.tenant_id)
+    console.log('🔍 Checking admin roles')
+
+    const { data: adminRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
       .eq('tenant_id', requestingProfile.tenant_id)
       .in('role', ['tenant_admin', 'super_admin'])
 
+    console.log('📊 Admin roles query result:', { 
+      adminRoles, 
+      rolesError,
+      count: adminRoles?.length || 0 
+    })
+
+    if (rolesError) {
+      console.error('❌ Roles query failed:', rolesError)
+      throw new Error('Failed to verify permissions')
+    }
+
     if (!adminRoles || adminRoles.length === 0) {
+      console.error('❌ No admin roles found for user:', requestingUser.id)
       throw new Error('Insufficient permissions')
     }
+
+    console.log('✅ User has admin role(s):', adminRoles.map(r => r.role))
 
     const { userId } = await req.json()
 
@@ -104,6 +131,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
+    console.error('❌ Error in delete-user:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error details:', JSON.stringify(error, null, 2))
+    
     const errorMessage = error instanceof Error ? error.message : 'An error occurred'
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 400,
