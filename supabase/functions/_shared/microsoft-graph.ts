@@ -235,13 +235,35 @@ export async function graphAPIRequest<T>(
         );
       }
 
-      // Handle empty responses (204 No Content)
-      if (response.status === 204) {
+      // Handle empty responses (204 No Content, 202 Accepted with no body)
+      if (response.status === 204 || response.status === 202) {
         return null as T;
       }
 
-      const data = await response.json();
-      return data as T;
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        // No JSON content, return null for successful responses
+        return null as T;
+      }
+
+      const text = await response.text();
+      if (!text || text.trim().length === 0) {
+        return null as T;
+      }
+
+      try {
+        const data = JSON.parse(text);
+        return data as T;
+      } catch (parseError) {
+        console.error("Failed to parse JSON response:", text);
+        // Don't retry JSON parse errors - they're not transient
+        throw new GraphAPIError(
+          "Invalid JSON response from Graph API",
+          500,
+          false
+        );
+      }
 
     } catch (error) {
       lastError = error as Error;
