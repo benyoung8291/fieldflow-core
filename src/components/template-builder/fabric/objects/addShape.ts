@@ -10,8 +10,8 @@ export const addRectangle = (canvas: any, options: {
     top: 100,
     width: 150,
     height: 100,
-    fill: options.fill || "transparent",
-    stroke: options.stroke || "hsl(var(--border))",
+    fill: options.fill || "rgba(0,0,0,0)",
+    stroke: options.stroke || "#cccccc",
     strokeWidth: options.strokeWidth || 2,
   });
 
@@ -31,8 +31,8 @@ export const addCircle = (canvas: any, options: {
     left: 100,
     top: 100,
     radius: 50,
-    fill: options.fill || "transparent",
-    stroke: options.stroke || "hsl(var(--border))",
+    fill: options.fill || "rgba(0,0,0,0)",
+    stroke: options.stroke || "#cccccc",
     strokeWidth: options.strokeWidth || 2,
   });
 
@@ -48,7 +48,7 @@ export const addLine = (canvas: any, options: {
   strokeWidth?: number;
 } = {}) => {
   const line = new Line([50, 50, 200, 50], {
-    stroke: options.stroke || "hsl(var(--border))",
+    stroke: options.stroke || "#cccccc",
     strokeWidth: options.strokeWidth || 2,
   });
 
