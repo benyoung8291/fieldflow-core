@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Trash2, MapPin, Square, X } from "lucide-react";
+import { Trash2, MapPin, Square } from "lucide-react";
 import { Markup } from "../FloorPlanViewer";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -31,17 +31,7 @@ export function MobileMarkupSheet({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[90vh] max-w-[95vw] p-0 gap-0 flex flex-col">
         <DialogHeader className="px-4 py-4 border-b shrink-0">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl">Markup List</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl">Markup List</DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 px-4">
           <div className="py-4">
