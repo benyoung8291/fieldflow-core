@@ -40,6 +40,22 @@ serve(async (req) => {
       }
     );
 
+    // Check if user with this email already exists
+    console.log("🔍 Checking if user exists...");
+    const { data: existingUsers, error: checkError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (checkError) {
+      console.error("❌ Error checking existing users:", checkError);
+      throw new Error(`Failed to check existing users: ${checkError.message}`);
+    }
+
+    const userExists = existingUsers?.users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
+    
+    if (userExists) {
+      console.log("⚠️ User with this email already exists");
+      throw new Error(`A user with the email ${email} already exists. Please use a different email address.`);
+    }
+
     // Create user in auth
     console.log("🔐 Creating auth user...");
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
