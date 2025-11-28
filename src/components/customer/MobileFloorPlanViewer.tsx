@@ -131,17 +131,10 @@ export function MobileFloorPlanViewer({
     const scaleForHeight = targetHeight / contentDimensions.height;
     
     // Also check if it fits width-wise
-    const scaleForWidth = containerDimensions.width / contentDimensions.width;
+    const scaleForWidth = (containerDimensions.width * 0.95) / contentDimensions.width;
     
-    // Use the smaller scale to ensure content fits, but still try to achieve 80% height
-    let calculatedScale = scaleForHeight;
-    
-    // If content would be too wide, scale it down to fit
-    const scaledWidth = contentDimensions.width * calculatedScale;
-    if (scaledWidth > containerDimensions.width) {
-      calculatedScale = scaleForWidth * 0.95; // Use 95% of width to add some padding
-    }
-    
+    // Use the smaller scale to ensure content fits within bounds
+    const calculatedScale = Math.min(scaleForHeight, scaleForWidth);
     const clampedScale = Math.max(0.5, Math.min(3, calculatedScale));
 
     // Calculate the dimensions after scaling
@@ -149,14 +142,10 @@ export function MobileFloorPlanViewer({
     const finalScaledHeight = contentDimensions.height * clampedScale;
 
     // Calculate offset to center the scaled content
-    // Position the content so its center aligns with the container center
-    const contentCenterX = finalScaledWidth / 2;
-    const contentCenterY = finalScaledHeight / 2;
-    const containerCenterX = containerDimensions.width / 2;
-    const containerCenterY = containerDimensions.height / 2;
-    
-    const offsetX = containerCenterX - contentCenterX;
-    const offsetY = containerCenterY - contentCenterY;
+    // Since transform-origin is top-left, we position the top-left corner
+    // so that the center of the scaled content aligns with container center
+    const offsetX = (containerDimensions.width - finalScaledWidth) / 2;
+    const offsetY = (containerDimensions.height - finalScaledHeight) / 2;
 
     console.log("Initial zoom setup:", {
       containerDimensions,
@@ -167,7 +156,13 @@ export function MobileFloorPlanViewer({
       calculatedScale,
       clampedScale,
       scaledDimensions: { width: finalScaledWidth, height: finalScaledHeight },
-      offset: { x: offsetX, y: offsetY }
+      offset: { x: offsetX, y: offsetY },
+      centerCheck: {
+        contentCenterX: offsetX + finalScaledWidth / 2,
+        containerCenterX: containerDimensions.width / 2,
+        contentCenterY: offsetY + finalScaledHeight / 2,
+        containerCenterY: containerDimensions.height / 2
+      }
     });
 
     // Apply the scale and offset immediately
