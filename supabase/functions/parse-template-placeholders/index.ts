@@ -47,14 +47,24 @@ Deno.serve(async (req) => {
 
     console.log('Extracted XML length:', documentXml.length);
 
-    // Extract all {{placeholder}} patterns from the XML
+    // Strip out all XML tags to get plain text (Word formatting can split placeholders)
+    const plainText = documentXml
+      .replace(/<[^>]+>/g, '') // Remove all XML tags
+      .replace(/&lt;/g, '<')   // Decode HTML entities
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+
+    console.log('Plain text sample:', plainText.substring(0, 500));
+
+    // Extract all {{placeholder}} patterns from the plain text
     const placeholderRegex = /\{\{([^}]+)\}\}/g;
     const placeholders = new Set<string>();
     
-    for (const match of documentXml.matchAll(placeholderRegex)) {
+    for (const match of plainText.matchAll(placeholderRegex)) {
       const placeholder = match[1].trim();
-      // Filter out XML or formatting artifacts
-      if (placeholder && !placeholder.includes('<') && !placeholder.includes('>')) {
+      if (placeholder) {
         placeholders.add(placeholder);
       }
     }
@@ -63,7 +73,7 @@ Deno.serve(async (req) => {
     const loopMarkerRegex = /\[\[(SG|EG):([^\]]+)\]\]/g;
     const loopSections = new Set<string>();
     
-    for (const match of documentXml.matchAll(loopMarkerRegex)) {
+    for (const match of plainText.matchAll(loopMarkerRegex)) {
       const sectionName = match[2].trim();
       loopSections.add(sectionName);
     }
