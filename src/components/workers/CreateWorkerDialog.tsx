@@ -58,8 +58,20 @@ export default function CreateWorkerDialog({ open, onOpenChange }: CreateWorkerD
         },
       });
 
-      if (createError) throw createError;
-      if (!newUser?.userId) throw new Error("Failed to create user");
+      if (createError) {
+        console.error("Edge function error:", createError);
+        throw new Error(createError.message || "Failed to create worker");
+      }
+      
+      // Check if the response contains an error
+      if (newUser?.error) {
+        console.error("Worker creation error:", newUser.error);
+        throw new Error(newUser.error);
+      }
+      
+      if (!newUser?.userId) {
+        throw new Error("Failed to create user - no user ID returned");
+      }
 
       return newUser.userId;
     },
