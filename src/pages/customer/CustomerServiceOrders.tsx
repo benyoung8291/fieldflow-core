@@ -182,8 +182,13 @@ export default function CustomerServiceOrders() {
       group.totalHours += item.estimated_hours || 0;
     });
 
-    // Convert map to array and sort by date
-    return Array.from(grouped.values()).sort((a, b) => 
+    // Convert map to array, sort groups by date, and sort items within each group alphabetically
+    return Array.from(grouped.values()).map(group => ({
+      ...group,
+      items: group.items.sort((a, b) => 
+        (a.description || '').localeCompare(b.description || '')
+      )
+    })).sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   }, [futureContractItems]);
