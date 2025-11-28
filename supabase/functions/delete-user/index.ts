@@ -41,15 +41,14 @@ Deno.serve(async (req) => {
       throw new Error('Profile not found')
     }
 
-    const { data: adminRole } = await supabaseAdmin
+    const { data: adminRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
       .eq('tenant_id', requestingProfile.tenant_id)
       .in('role', ['tenant_admin', 'super_admin'])
-      .maybeSingle()
 
-    if (!adminRole) {
+    if (!adminRoles || adminRoles.length === 0) {
       throw new Error('Insufficient permissions')
     }
 
