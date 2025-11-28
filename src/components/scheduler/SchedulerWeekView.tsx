@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import GPSCheckInDialog from "./GPSCheckInDialog";
 import RecurringEditDialog from "./RecurringEditDialog";
+import { DeleteAppointmentDialog } from "@/components/appointments/DeleteAppointmentDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DraggableAppointment from "./DraggableAppointment";
@@ -61,7 +62,9 @@ export default function SchedulerWeekView({
   const [gpsDialogOpen, setGpsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [showRecurringDeleteDialog, setShowRecurringDeleteDialog] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null);
+  const [deleteType, setDeleteType] = useState<"single" | "series">("single");
   
   const weekStart = startOfWeek(currentDate);
   const weekEnd = endOfWeek(currentDate);
@@ -149,12 +152,22 @@ export default function SchedulerWeekView({
         open={showRecurringDeleteDialog}
         onOpenChange={setShowRecurringDeleteDialog}
         onConfirm={(type) => {
-          if (appointmentToDelete) {
-            handleDelete(appointmentToDelete.id, type);
-          }
+          setDeleteType(type);
           setShowRecurringDeleteDialog(false);
+          setShowDeleteConfirmDialog(true);
         }}
         action="delete"
+      />
+
+      <DeleteAppointmentDialog
+        open={showDeleteConfirmDialog}
+        onOpenChange={setShowDeleteConfirmDialog}
+        onConfirm={() => {
+          if (appointmentToDelete) {
+            handleDelete(appointmentToDelete.id, deleteType);
+          }
+        }}
+        appointmentTitle={appointmentToDelete?.title || "this appointment"}
       />
       
       <div className="space-y-4 overflow-x-auto">

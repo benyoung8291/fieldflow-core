@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import GPSCheckInDialog from "./GPSCheckInDialog";
 import RecurringEditDialog from "./RecurringEditDialog";
+import { DeleteAppointmentDialog } from "@/components/appointments/DeleteAppointmentDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DraggableAppointment from "./DraggableAppointment";
@@ -50,7 +51,9 @@ export default function SchedulerDayView({
   const [gpsDialogOpen, setGpsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [showRecurringDeleteDialog, setShowRecurringDeleteDialog] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null);
+  const [deleteType, setDeleteType] = useState<"single" | "series">("single");
 
   const todayAppointments = appointments.filter(apt =>
     isSameDay(new Date(apt.start_time), currentDate)
@@ -64,11 +67,12 @@ export default function SchedulerDayView({
   };
 
   const handleDeleteClick = (appointment: any) => {
+    setAppointmentToDelete(appointment);
     if (appointment.is_recurring || appointment.parent_appointment_id) {
-      setAppointmentToDelete(appointment);
       setShowRecurringDeleteDialog(true);
     } else {
-      handleDelete(appointment.id, "single");
+      setDeleteType("single");
+      setShowDeleteConfirmDialog(true);
     }
   };
 
@@ -123,12 +127,22 @@ export default function SchedulerDayView({
         open={showRecurringDeleteDialog}
         onOpenChange={setShowRecurringDeleteDialog}
         onConfirm={(type) => {
-          if (appointmentToDelete) {
-            handleDelete(appointmentToDelete.id, type);
-          }
+          setDeleteType(type);
           setShowRecurringDeleteDialog(false);
+          setShowDeleteConfirmDialog(true);
         }}
         action="delete"
+      />
+
+      <DeleteAppointmentDialog
+        open={showDeleteConfirmDialog}
+        onOpenChange={setShowDeleteConfirmDialog}
+        onConfirm={() => {
+          if (appointmentToDelete) {
+            handleDelete(appointmentToDelete.id, deleteType);
+          }
+        }}
+        appointmentTitle={appointmentToDelete?.title || "this appointment"}
       />
       
       <div className="space-y-4">
