@@ -144,6 +144,7 @@ export default function CustomerPortalUsers({ customerId, tenantId }: CustomerPo
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -168,6 +169,17 @@ export default function CustomerPortalUsers({ customerId, tenantId }: CustomerPo
                           {user.phone}
                         </div>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        user.portal_role === "full_access" ? "default" :
+                        user.portal_role === "supervisor" ? "secondary" :
+                        "outline"
+                      }>
+                        {user.portal_role === "full_access" && "Full Access"}
+                        {user.portal_role === "supervisor" && "Supervisor"}
+                        {user.portal_role === "basic" && "Basic"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.is_active ? "default" : "secondary"}>

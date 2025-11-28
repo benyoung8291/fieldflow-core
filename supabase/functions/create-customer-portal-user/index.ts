@@ -22,6 +22,7 @@ const createPortalUserSchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   password: z.string().min(8),
+  portalRole: z.enum(["full_access", "supervisor", "basic"]).default("basic"),
 });
 
 serve(async (req) => {
@@ -119,6 +120,7 @@ serve(async (req) => {
         last_name: validated.lastName,
         email: validated.email,
         phone: validated.phone,
+        portal_role: validated.portalRole,
         is_active: true,
         invited_at: new Date().toISOString(),
         invited_by: user.id,

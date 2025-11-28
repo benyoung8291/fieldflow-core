@@ -4,10 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CustomerPortalUserDialogProps {
   open: boolean;
@@ -23,6 +25,7 @@ interface UserFormData {
   email: string;
   phone: string;
   password?: string;
+  portal_role: "full_access" | "supervisor" | "basic";
 }
 
 export default function CustomerPortalUserDialog({
@@ -33,6 +36,7 @@ export default function CustomerPortalUserDialog({
   user,
 }: CustomerPortalUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<"full_access" | "supervisor" | "basic">("basic");
   const queryClient = useQueryClient();
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UserFormData>({
@@ -41,16 +45,20 @@ export default function CustomerPortalUserDialog({
       last_name: "",
       email: "",
       phone: "",
+      portal_role: "basic",
     },
   });
 
   useEffect(() => {
     if (open) {
+      const defaultRole = user?.portal_role || "basic";
+      setSelectedRole(defaultRole);
       reset(user || {
         first_name: "",
         last_name: "",
         email: "",
         phone: "",
+        portal_role: "basic",
       });
     }
   }, [open, user, reset]);
@@ -66,6 +74,7 @@ export default function CustomerPortalUserDialog({
             first_name: data.first_name,
             last_name: data.last_name,
             phone: data.phone,
+            portal_role: selectedRole,
           })
           .eq("id", user.id);
 
@@ -95,6 +104,7 @@ export default function CustomerPortalUserDialog({
               email: data.email,
               phone: data.phone,
               password: data.password,
+              portalRole: selectedRole,
             },
           }
         );
@@ -193,6 +203,28 @@ export default function CustomerPortalUserDialog({
           <div>
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" type="tel" {...register("phone")} />
+          </div>
+
+          <div>
+            <Label htmlFor="portal_role">Portal Role *</Label>
+            <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic User</SelectItem>
+                <SelectItem value="supervisor">Supervisor User</SelectItem>
+                <SelectItem value="full_access">Full Portal User</SelectItem>
+              </SelectContent>
+            </Select>
+            <Alert className="mt-2">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                {selectedRole === "basic" && "Can create requests and markup floor plans only"}
+                {selectedRole === "supervisor" && "Can create requests, markup floor plans, and view past requests and field reports"}
+                {selectedRole === "full_access" && "Full access including financial data, invoices, and contracts"}
+              </AlertDescription>
+            </Alert>
           </div>
 
           {!user && (
