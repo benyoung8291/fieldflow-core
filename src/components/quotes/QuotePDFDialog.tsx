@@ -26,7 +26,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [showSubItems, setShowSubItems] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("default");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [emailMode, setEmailMode] = useState(initialEmailMode || false);
   const [emailData, setEmailData] = useState({
     to: customerEmail || "",
@@ -54,6 +54,13 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
     },
     enabled: open,
   });
+
+  // Auto-select first template when templates load
+  useEffect(() => {
+    if (templates.length > 0 && !selectedTemplate) {
+      setSelectedTemplate(templates[0].id);
+    }
+  }, [templates, selectedTemplate]);
 
   const handleGeneratePDF = async () => {
     setGenerating(true);
@@ -161,17 +168,22 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
         </DialogHeader>
 
         <div className="space-y-4">
+          {templates.length === 0 && (
+            <div className="text-sm text-muted-foreground p-4 bg-muted rounded-md">
+              No templates available. Please upload a Word template in Settings → Document Templates.
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label>PDF Template</Label>
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
               <SelectTrigger>
-                <SelectValue placeholder="Select template (optional)" />
+                <SelectValue placeholder="Select template" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Default Template</SelectItem>
                 {templates.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
-                    {template.name}
+                    {template.name} {template.is_default && "(Default)"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -233,7 +245,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
                 >
                   Email Instead
                 </Button>
-                <Button onClick={handleGeneratePDF} disabled={generating}>
+                <Button onClick={handleGeneratePDF} disabled={generating || !selectedTemplate || templates.length === 0}>
                   {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Generate PDF
                 </Button>
