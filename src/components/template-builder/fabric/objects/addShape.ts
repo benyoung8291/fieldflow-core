@@ -10,9 +10,9 @@ export const addRectangle = (canvas: any, options: {
     top: 100,
     width: 150,
     height: 100,
-    fill: options.fill || "hsl(var(--primary))",
-    stroke: options.stroke || "transparent",
-    strokeWidth: options.strokeWidth || 0,
+    fill: options.fill || "transparent",
+    stroke: options.stroke || "hsl(var(--border))",
+    strokeWidth: options.strokeWidth || 2,
   });
 
   canvas.add(rect);
@@ -31,9 +31,9 @@ export const addCircle = (canvas: any, options: {
     left: 100,
     top: 100,
     radius: 50,
-    fill: options.fill || "hsl(var(--primary))",
-    stroke: options.stroke || "transparent",
-    strokeWidth: options.strokeWidth || 0,
+    fill: options.fill || "transparent",
+    stroke: options.stroke || "hsl(var(--border))",
+    strokeWidth: options.strokeWidth || 2,
   });
 
   canvas.add(circle);

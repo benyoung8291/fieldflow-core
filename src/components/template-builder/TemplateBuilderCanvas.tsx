@@ -27,6 +27,7 @@ export const TemplateBuilderCanvas = ({ templateId, templateData, onSave }: Temp
   const [documentType, setDocumentType] = useState("quote");
   const [templateName, setTemplateName] = useState("Untitled Template");
   const [canvas, setCanvas] = useState<any>(null);
+  const [selectedObject, setSelectedObject] = useState<any>(null);
   const { 
     activeObject, 
     duplicateSelected, 
@@ -141,13 +142,13 @@ export const TemplateBuilderCanvas = ({ templateId, templateData, onSave }: Temp
         <div className="flex-1 overflow-auto">
           <FabricCanvasComponent 
             onReady={setCanvas}
-            onSelectionChange={() => {}}
+            onSelectionChange={setSelectedObject}
           />
         </div>
 
         <FabricPropertiesPanel
           canvas={canvas}
-          activeObject={activeObject}
+          activeObject={selectedObject}
           onDuplicate={duplicateSelected}
           onDelete={deleteSelected}
           onBringToFront={bringToFront}
