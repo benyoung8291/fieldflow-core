@@ -574,12 +574,16 @@ export function MobileFloorPlanViewer({
                 setNumPages(1);
                 console.log("Image loaded:", {
                   natural: { width: img.naturalWidth, height: img.naturalHeight },
-                  rendered: { width: img.width, height: img.height }
+                  container: { 
+                    width: containerRef.current?.clientWidth, 
+                    height: containerRef.current?.clientHeight 
+                  }
                 });
               }}
               style={{
-                width: containerDimensions.width || "100%",
+                width: "auto",
                 height: "auto",
+                maxWidth: "none",
                 display: "block",
                 pointerEvents: "none",
               }}
