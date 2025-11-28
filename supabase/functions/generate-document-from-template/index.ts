@@ -248,22 +248,43 @@ Deno.serve(async (req) => {
       try {
         let content = zip.files[fileName]?.asText();
         if (content) {
-          // Step 1: Find sections with {{ or }} and merge text runs
-          // Match patterns like <w:r>...<w:t>{{</w:t>...</w:r><w:r>...<w:t>name</w:t>...</w:r><w:r>...<w:t>}}</w:t>...</w:r>
-          content = content.replace(/<w:r\b[^>]*>.*?<\/w:r>/g, (run) => {
-            // If this run contains placeholder delimiters, extract just the text
-            if (run.includes('{{') || run.includes('}}')) {
-              const texts = run.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
-              const combinedText = texts.map(t => t.replace(/<[^>]+>/g, '')).join('');
-              // Return simplified run with combined text
-              return `<w:r><w:t>${combinedText}</w:t></w:r>`;
-            }
-            return run;
+          // Strategy: Find sequences that look like placeholders spanning multiple runs and merge them
+          // Look for patterns starting with {{ and ending with }} (with any content/tags in between)
+          content = content.replace(/<w:r[^>]*>(?:[^<]|<(?!w:r))*?<w:t[^>]*>\{\{[^<]*<\/w:t>.*?<w:t[^>]*>[^<]*\}\}<\/w:t>(?:[^<]|<(?!w:r))*?<\/w:r>/g, (match) => {
+            // Extract all text content from w:t tags in this sequence
+            const textMatches = match.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
+            const fullText = textMatches.map(t => t.replace(/<[^>]+>/g, '')).join('');
+            
+            // Clean up: remove duplicate {{ and }}
+            const cleaned = fullText.replace(/\{\{+/g, '{{').replace(/\}\}+/g, '}}');
+            
+            // Return a single, clean run
+            return `<w:r><w:t>${cleaned}</w:t></w:r>`;
           });
           
-          // Step 2: Remove duplicate {{ or }}
-          content = content.replace(/\{\{+/g, '{{');
-          content = content.replace(/\}\}+/g, '}}');
+          // Also handle cases where runs are completely separate
+          // Merge adjacent runs that contain parts of placeholders
+          let lastMatch = '';
+          do {
+            lastMatch = content;
+            // Find adjacent runs that together form a placeholder
+            content = content.replace(/(<w:r[^>]*><w:t[^>]*>)([^<]*\{\{?)(<\/w:t><\/w:r>)\s*(<w:r[^>]*><w:t[^>]*>)([^<]*?)(<\/w:t><\/w:r>)/g, 
+              (match, open1, text1, close1, open2, text2, close2) => {
+                const combined = text1 + text2;
+                // If this looks like it's part of a placeholder, merge the runs
+                if (combined.includes('{{') || combined.includes('}}')) {
+                  return `<w:r><w:t>${combined}</w:t></w:r>`;
+                }
+                return match;
+              }
+            );
+          } while (content !== lastMatch && lastMatch.length > 0);
+          
+          // Final cleanup: remove any remaining duplicate delimiters
+          content = content.replace(/<w:t([^>]*)>([^<]*)<\/w:t>/g, (match, attrs, text) => {
+            const cleaned = text.replace(/\{\{+/g, '{{').replace(/\}\}+/g, '}}');
+            return `<w:t${attrs}>${cleaned}</w:t>`;
+          });
           
           zip.file(fileName, content);
         }
