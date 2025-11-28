@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ViewModeToggle } from "@/components/layout/ViewModeToggle";
@@ -129,31 +130,57 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
       return (
         <div key={item.id}>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (item.is_folder) {
-                  toggleFolder(item.id);
-                } else if (item.path) {
-                  handleNavigate(item.path);
-                }
-              }}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                sidebarCollapsed ? "justify-center px-2" : ""
-              )}
-              title={sidebarCollapsed ? item.label : undefined}
-            >
-              {item.is_folder && !sidebarCollapsed && (
-                <div className="mr-1">
-                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
-                </div>
-              )}
-              <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
-              {!sidebarCollapsed && item.label}
-            </button>
+            {sidebarCollapsed ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (item.is_folder) {
+                        toggleFolder(item.id);
+                      } else if (item.path) {
+                        handleNavigate(item.path);
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
+                      isActive
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      "justify-center px-2"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <button
+                onClick={() => {
+                  if (item.is_folder) {
+                    toggleFolder(item.id);
+                  } else if (item.path) {
+                    handleNavigate(item.path);
+                  }
+                }}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                {item.is_folder && (
+                  <div className="mr-1">
+                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
+                  </div>
+                )}
+                <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                {item.label}
+              </button>
+            )}
           </div>
           
           {/* Render children when folder is expanded */}
@@ -188,9 +215,11 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     };
 
     return (
-      <div className="space-y-1">
-        {menuItems.map((item) => renderMenuItem(item))}
-      </div>
+      <TooltipProvider>
+        <div className="space-y-1">
+          {menuItems.map((item) => renderMenuItem(item))}
+        </div>
+      </TooltipProvider>
     );
   };
 
