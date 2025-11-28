@@ -240,32 +240,45 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer();
     const zip = new PizZip(arrayBuffer);
     
-    // Fix broken placeholders in the XML (Word often splits them across runs)
+    // Fix broken placeholders caused by Word formatting
+    // Word often splits placeholders across multiple <w:t> runs, creating patterns like:
+    // <w:t>{{</w:t><w:t>{{</w:t><w:t>Quote_Number</w:t><w:t>}}</w:t>
     const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
     xmlFiles.forEach(fileName => {
       try {
         let content = zip.files[fileName]?.asText();
         if (content) {
-          // Remove all XML tags between {{ and }} to fix broken placeholders
-          content = content.replace(/\{\{([^}]+)\}\}/g, (match, placeholder) => {
-            // Remove any XML tags within the placeholder
-            const cleaned = placeholder.replace(/<[^>]+>/g, '');
-            return `{{${cleaned}}}`;
+          // Step 1: Find sections with {{ or }} and merge text runs
+          // Match patterns like <w:r>...<w:t>{{</w:t>...</w:r><w:r>...<w:t>name</w:t>...</w:r><w:r>...<w:t>}}</w:t>...</w:r>
+          content = content.replace(/<w:r\b[^>]*>.*?<\/w:r>/g, (run) => {
+            // If this run contains placeholder delimiters, extract just the text
+            if (run.includes('{{') || run.includes('}}')) {
+              const texts = run.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
+              const combinedText = texts.map(t => t.replace(/<[^>]+>/g, '')).join('');
+              // Return simplified run with combined text
+              return `<w:r><w:t>${combinedText}</w:t></w:r>`;
+            }
+            return run;
           });
-          // Also fix cases where opening {{ or closing }} are split
-          content = content.replace(/\{(<[^>]+>)*\{/g, '{{');
-          content = content.replace(/\}(<[^>]+>)*\}/g, '}}');
+          
+          // Step 2: Remove duplicate {{ or }}
+          content = content.replace(/\{\{+/g, '{{');
+          content = content.replace(/\}\}+/g, '}}');
+          
           zip.file(fileName, content);
         }
       } catch (e) {
-        // File might not exist, skip it
+        console.error(`Error fixing ${fileName}:`, e);
       }
     });
     
-    // Initialize docxtemplater
+    // Initialize docxtemplater with lenient syntax to handle any remaining issues
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
+      syntax: {
+        allowUnopenedTag: true,
+      },
     });
 
     // Prepare data for template
