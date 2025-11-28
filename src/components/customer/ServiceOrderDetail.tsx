@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { 
   Loader2, 
   Calendar, 
@@ -9,7 +11,9 @@ import {
   ClipboardList,
   DollarSign,
   FileText,
-  Clock
+  Clock,
+  Image as ImageIcon,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +22,8 @@ interface ServiceOrderDetailProps {
 }
 
 export function ServiceOrderDetail({ orderId }: ServiceOrderDetailProps) {
+  const navigate = useNavigate();
+  
   const { data: order, isLoading } = useQuery({
     queryKey: ["service-order-detail", orderId],
     queryFn: async () => {
@@ -46,6 +52,53 @@ export function ServiceOrderDetail({ orderId }: ServiceOrderDetailProps) {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: fieldReports } = useQuery({
+    queryKey: ["service-order-field-reports", orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("field_reports")
+        .select(`
+          *,
+          appointment:appointments!inner(
+            id,
+            service_order_id
+          )
+        `)
+        .eq("appointment.service_order_id", orderId)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orderId,
+  });
+
+  const { data: markupRequests } = useQuery({
+    queryKey: ["service-order-markup-requests", orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("helpdesk_tickets")
+        .select(`
+          *,
+          appointment:appointments!inner(
+            id,
+            service_order_id
+          ),
+          markups:ticket_markups(
+            id,
+            floor_plan_id
+          )
+        `)
+        .eq("appointment.service_order_id", orderId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orderId,
   });
 
   if (isLoading) {
@@ -223,7 +276,11 @@ export function ServiceOrderDetail({ orderId }: ServiceOrderDetailProps) {
           <CardContent>
             <div className="space-y-3">
               {order.appointments.map((apt: any) => (
-                <div key={apt.id} className="flex items-start justify-between p-3 rounded-lg bg-muted/30 hover-lift">
+                <div 
+                  key={apt.id} 
+                  className="flex items-start justify-between p-3 rounded-lg bg-muted/30 hover-lift cursor-pointer"
+                  onClick={() => navigate(`/customer/appointments/${apt.id}`)}
+                >
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{apt.title}</p>
                     <p className="text-xs text-muted-foreground">
@@ -244,6 +301,112 @@ export function ServiceOrderDetail({ orderId }: ServiceOrderDetailProps) {
                     )}
                   >
                     {formatStatus(apt.status)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Field Reports */}
+      {fieldReports && fieldReports.length > 0 && (
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Field Reports</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {fieldReports.map((report: any) => (
+                <div 
+                  key={report.id} 
+                  className="flex items-start justify-between p-3 rounded-lg bg-muted/30 hover-lift cursor-pointer"
+                  onClick={() => navigate(`/customer/field-reports/${report.id}`)}
+                >
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-semibold">{report.report_number}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(report.service_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
+                    {report.work_description && (
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {report.work_description}
+                      </p>
+                    )}
+                  </div>
+                  <Badge className="rounded-lg px-2 py-0.5 text-xs bg-success/10 text-success border-success/20">
+                    Approved
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Markup Requests */}
+      {markupRequests && markupRequests.length > 0 && (
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Markup Requests</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {markupRequests.map((request: any) => (
+                <div 
+                  key={request.id} 
+                  className="flex items-start justify-between p-3 rounded-lg bg-muted/30 hover-lift cursor-pointer"
+                  onClick={() => navigate(`/customer/requests/${request.id}`)}
+                >
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {request.priority === 'urgent' && (
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                      )}
+                      <p className="text-sm font-semibold">
+                        {request.subject || 'Markup Request'}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(request.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    {request.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {request.description}
+                      </p>
+                    )}
+                    {request.markups && request.markups.length > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <ImageIcon className="h-3 w-3" />
+                        <span>{request.markups.length} markup{request.markups.length !== 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                  <Badge 
+                    className={cn(
+                      "rounded-lg px-2 py-0.5 text-xs",
+                      request.status === 'closed' ? "bg-success/10 text-success border-success/20" :
+                      request.status === 'in_progress' ? "bg-info/10 text-info border-info/20" :
+                      "bg-warning/10 text-warning border-warning/20"
+                    )}
+                  >
+                    {formatStatus(request.status)}
                   </Badge>
                 </div>
               ))}
