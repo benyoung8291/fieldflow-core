@@ -156,9 +156,9 @@ export default function DroppableAppointmentCard({
               <Users className="h-3 w-3" />
               <span>Workers ({workers.length})</span>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-col gap-1">
               {workers.map((w: any) => (
-                <Badge key={w.worker_id} variant="secondary" className="text-xs pr-1 flex items-center gap-1 max-w-[200px]">
+                <Badge key={w.worker_id} variant="secondary" className="text-xs pr-1 flex items-center justify-between gap-1 w-full">
                   <span className="truncate">
                     {w.profiles?.first_name} {w.profiles?.last_name}
                   </span>
