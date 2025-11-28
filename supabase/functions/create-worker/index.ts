@@ -128,9 +128,9 @@ serve(async (req) => {
     const userId = authData.user.id;
     console.log("✅ Auth user created:", userId);
 
-    // Create profile
-    console.log("👤 Creating profile...");
-    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+    // Create profile (use upsert to handle trigger-created profiles)
+    console.log("👤 Creating/updating profile...");
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
       id: userId,
       tenant_id: tenantId,
       first_name: firstName,
@@ -138,13 +138,15 @@ serve(async (req) => {
       email,
       phone: phone || null,
       is_active: true,
+    }, {
+      onConflict: 'id'
     });
 
     if (profileError) {
       console.error("❌ Profile error:", profileError);
       throw new Error(`Profile creation error: ${profileError.message}`);
     }
-    console.log("✅ Profile created");
+    console.log("✅ Profile created/updated");
 
     // Add worker role
     console.log("🏷️ Adding worker role...");
