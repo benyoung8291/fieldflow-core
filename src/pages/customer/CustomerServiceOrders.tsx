@@ -3,13 +3,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ClipboardList, Calendar, MapPin, Clock, Users, FileEdit, Package } from "lucide-react";
+import { Loader2, ClipboardList, Calendar, MapPin, Clock, Users, FileEdit, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import React from "react";
+import { Button } from "@/components/ui/button";
 
 export default function CustomerServiceOrders() {
   const navigate = useNavigate();
+  const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 5;
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
   const { data: profile } = useQuery({
     queryKey: ["customer-profile"],
     queryFn: async () => {
@@ -172,6 +188,15 @@ export default function CustomerServiceOrders() {
     );
   }, [futureContractItems]);
 
+  // Paginate grouped future orders
+  const paginatedFutureOrders = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return groupedFutureOrders.slice(startIndex, endIndex);
+  }, [groupedFutureOrders, currentPage]);
+
+  const totalPages = Math.ceil(groupedFutureOrders.length / itemsPerPage);
+
   return (
     <CustomerPortalLayout>
       <div className="space-y-8">
@@ -279,14 +304,25 @@ export default function CustomerServiceOrders() {
 
             {/* Future Scheduled Service Orders from Contracts */}
             {groupedFutureOrders && groupedFutureOrders.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Scheduled Future Services
-                </h2>
-                {groupedFutureOrders.map((group, index) => (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-muted-foreground flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Scheduled Future Services
+                  </h2>
+                  <span className="text-sm text-muted-foreground">
+                    {groupedFutureOrders.length} scheduled service{groupedFutureOrders.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {paginatedFutureOrders.map((group, index) => {
+                  const groupKey = `${group.locationId}_${group.date}`;
+                  const isExpanded = expandedGroups.has(groupKey);
+                  const displayedItems = isExpanded ? group.items : group.items.slice(0, 3);
+                  const hasMore = group.items.length > 3;
+
+                  return (
                   <Card 
-                    key={`${group.locationId}_${group.date}_${index}`}
+                    key={groupKey}
                     className="border-border/40 bg-accent/5 hover-lift overflow-hidden group"
                   >
                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
@@ -340,7 +376,7 @@ export default function CustomerServiceOrders() {
 
                         {/* Line items */}
                         <div className="space-y-2 pl-4 border-l-2 border-accent/30">
-                          {group.items.map((item: any, itemIndex: number) => (
+                          {displayedItems.map((item: any, itemIndex: number) => (
                             <div key={item.id} className="space-y-1">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
@@ -366,11 +402,33 @@ export default function CustomerServiceOrders() {
                                   )}
                                 </div>
                               </div>
-                              {itemIndex < group.items.length - 1 && (
+                              {itemIndex < displayedItems.length - 1 && (
                                 <div className="h-px bg-border/40 my-2" />
                               )}
                             </div>
                           ))}
+
+                          {/* Show more/less button */}
+                          {hasMore && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleGroup(groupKey)}
+                              className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="h-3 w-3 mr-1" />
+                                  Show less
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-3 w-3 mr-1" />
+                                  Show {group.items.length - 3} more item{group.items.length - 3 !== 1 ? 's' : ''}
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
 
                         {/* Total */}
@@ -383,7 +441,43 @@ export default function CustomerServiceOrders() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                );
+                })}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
