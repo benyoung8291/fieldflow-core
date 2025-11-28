@@ -214,12 +214,15 @@ Deno.serve(async (req) => {
     let filePath = template.template_file_url;
     console.log('Original file URL:', filePath);
     
-    if (filePath.includes('/storage/v1/object/public/document_templates/')) {
+    // Remove bucket name prefix if present (both with dash and underscore)
+    if (filePath.startsWith('document-templates/')) {
+      filePath = filePath.replace('document-templates/', '');
+    } else if (filePath.startsWith('document_templates/')) {
+      filePath = filePath.replace('document_templates/', '');
+    } else if (filePath.includes('/storage/v1/object/public/document_templates/')) {
       filePath = filePath.split('/storage/v1/object/public/document_templates/')[1];
     } else if (filePath.includes('/storage/v1/object/document_templates/')) {
       filePath = filePath.split('/storage/v1/object/document_templates/')[1];
-    } else if (filePath.startsWith('document_templates/')) {
-      filePath = filePath.replace('document_templates/', '');
     }
     
     console.log('Extracted file path:', filePath);
