@@ -210,11 +210,26 @@ Deno.serve(async (req) => {
     });
 
     // Download the template file from Supabase storage
+    // Extract file path from URL (template_file_url might be a full URL)
+    let filePath = template.template_file_url;
+    console.log('Original file URL:', filePath);
+    
+    if (filePath.includes('/storage/v1/object/public/document_templates/')) {
+      filePath = filePath.split('/storage/v1/object/public/document_templates/')[1];
+    } else if (filePath.includes('/storage/v1/object/document_templates/')) {
+      filePath = filePath.split('/storage/v1/object/document_templates/')[1];
+    } else if (filePath.startsWith('document_templates/')) {
+      filePath = filePath.replace('document_templates/', '');
+    }
+    
+    console.log('Extracted file path:', filePath);
+    
     const { data: fileData, error: fileError } = await supabase.storage
       .from('document_templates')
-      .download(template.template_file_url.replace('document_templates/', ''));
+      .download(filePath);
 
     if (fileError || !fileData) {
+      console.error('Download error:', fileError);
       throw new Error('Failed to download template file');
     }
 
