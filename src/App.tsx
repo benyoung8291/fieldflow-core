@@ -104,6 +104,7 @@ const CustomerFieldReports = lazy(() => import("./pages/customer/CustomerFieldRe
 const ServiceOrderView = lazy(() => import("./pages/customer/ServiceOrderView"));
 const AppointmentView = lazy(() => import("./pages/customer/AppointmentView"));
 const FieldReportView = lazy(() => import("./pages/customer/FieldReportView"));
+const TemplateBuilderPage = lazy(() => import("./pages/TemplateBuilderPage"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -329,6 +330,7 @@ const App = () => {
             <Route path="/financial-reconciliation" element={isAuthenticated ? <ProtectedRoute><FinancialReconciliation /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/pipeline" element={isAuthenticated ? <ProtectedRoute><QuotePipeline /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/settings" element={isAuthenticated ? <ProtectedRoute><Settings /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/template-builder/:id?" element={isAuthenticated ? <ProtectedRoute><TemplateBuilderPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/tasks" element={isAuthenticated ? <ProtectedRoute><Tasks /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/invoices" element={isAuthenticated ? <ProtectedRoute><InvoicesList /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/invoices/create" element={isAuthenticated ? <ProtectedRoute><Invoices /></ProtectedRoute> : <Navigate to="/auth" replace />} />
