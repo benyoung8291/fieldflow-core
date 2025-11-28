@@ -240,6 +240,28 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer();
     const zip = new PizZip(arrayBuffer);
     
+    // Fix broken placeholders in the XML (Word often splits them across runs)
+    const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
+    xmlFiles.forEach(fileName => {
+      try {
+        let content = zip.files[fileName]?.asText();
+        if (content) {
+          // Remove all XML tags between {{ and }} to fix broken placeholders
+          content = content.replace(/\{\{([^}]+)\}\}/g, (match, placeholder) => {
+            // Remove any XML tags within the placeholder
+            const cleaned = placeholder.replace(/<[^>]+>/g, '');
+            return `{{${cleaned}}}`;
+          });
+          // Also fix cases where opening {{ or closing }} are split
+          content = content.replace(/\{(<[^>]+>)*\{/g, '{{');
+          content = content.replace(/\}(<[^>]+>)*\}/g, '}}');
+          zip.file(fileName, content);
+        }
+      } catch (e) {
+        // File might not exist, skip it
+      }
+    });
+    
     // Initialize docxtemplater
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
