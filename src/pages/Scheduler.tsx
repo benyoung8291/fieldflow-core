@@ -1519,6 +1519,7 @@ export default function Scheduler() {
                 currentDate={currentDate}
                 appointments={appointments}
                 viewType={viewType}
+                stateFilter={stateFilter}
                 onAppointmentClick={setViewDetailsAppointmentId}
                 onCreateAppointment={(serviceOrderId, date, startTime, endTime) => {
                   const [hours, minutes] = startTime.split(':');

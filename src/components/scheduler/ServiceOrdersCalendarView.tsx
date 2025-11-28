@@ -12,6 +12,7 @@ interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
   appointments: any[];
   viewType: "day" | "week" | "timegrid" | "month" | "kanban";
+  stateFilter?: string;
   onAppointmentClick: (id: string) => void;
   onCreateAppointment: (serviceOrderId: string, date: Date, startTime: string, endTime: string) => void;
   onRemoveWorker: (appointmentId: string, workerId: string) => void;
@@ -21,26 +22,37 @@ export default function ServiceOrdersCalendarView({
   currentDate,
   appointments,
   viewType,
+  stateFilter = "all",
   onAppointmentClick,
   onCreateAppointment,
   onRemoveWorker,
 }: ServiceOrdersCalendarViewProps) {
   // Fetch service orders with appointments and line items
   const { data: serviceOrders = [] } = useQuery({
-    queryKey: ["service-orders-for-calendar"],
+    queryKey: ["service-orders-for-calendar", stateFilter],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_orders")
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name),
-          service_order_line_items(*)
+          service_order_line_items(*),
+          customer_locations!service_orders_customer_location_id_fkey(state)
         `)
         .in("status", ["draft", "scheduled", "in_progress"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Filter by state if filter is applied
+      let filteredData = data || [];
+      if (stateFilter !== "all") {
+        filteredData = filteredData.filter(order => 
+          order.customer_locations?.state === stateFilter
+        );
+      }
+      
+      return filteredData;
     },
   });
 
