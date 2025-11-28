@@ -197,13 +197,20 @@ export default function HelpDesk() {
   }, [pipelines]);
 
   // Save selected pipeline and filters to localStorage when they change
+  // Auto-switch to "All" view when selecting "Requests" pipeline
   useEffect(() => {
     if (selectedPipelineId !== null) {
       localStorage.setItem('helpdeskLastPipeline', selectedPipelineId);
+      
+      // Check if this is the "Requests" pipeline
+      const requestsPipeline = pipelines?.find(p => p.name === "Requests");
+      if (requestsPipeline && selectedPipelineId === requestsPipeline.id) {
+        setFilterAssignment('all');
+      }
     } else {
       localStorage.setItem('helpdeskLastPipeline', 'all');
     }
-  }, [selectedPipelineId]);
+  }, [selectedPipelineId, pipelines]);
 
   useEffect(() => {
     localStorage.setItem('helpdeskLastFilter', filterAssignment);
@@ -239,7 +246,14 @@ export default function HelpDesk() {
           customer:customers(id, name),
           contact:contacts(id, first_name, last_name, email),
           assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
-          email_account:helpdesk_email_accounts(id, email_address)
+          email_account:helpdesk_email_accounts(id, email_address),
+          appointment:appointments(
+            id,
+            title,
+            start_time,
+            end_time,
+            location:customer_locations(id, name, address)
+          )
         `)
         .eq("id", selectedTicketId)
         .single();

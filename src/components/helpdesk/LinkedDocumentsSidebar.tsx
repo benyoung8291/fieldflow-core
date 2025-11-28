@@ -30,8 +30,8 @@ interface DocumentType {
 }
 
 const DOCUMENT_TYPES: DocumentType[] = [
-  { type: "service_order", label: "Service Orders", icon: <ClipboardList className="h-4 w-4" />, route: (id) => `/service-orders/${id}` },
   { type: "appointment", label: "Appointments", icon: <Calendar className="h-4 w-4" />, route: (id) => `/appointments/${id}` },
+  { type: "service_order", label: "Service Orders", icon: <ClipboardList className="h-4 w-4" />, route: (id) => `/service-orders/${id}` },
   { type: "quote", label: "Quotes", icon: <FileText className="h-4 w-4" />, route: (id) => `/quotes/${id}` },
   { type: "invoice", label: "Invoices", icon: <DollarSign className="h-4 w-4" />, route: (id) => `/invoices/${id}` },
   { type: "project", label: "Projects", icon: <FileText className="h-4 w-4" />, route: (id) => `/projects/${id}` },
@@ -263,6 +263,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     if (ticket?.contact) count++;
     if (ticket?.supplier) count++;
     if (ticket?.lead) count++;
+    if (ticket?.appointment?.location) count++; // Add location
     if (linkedDocs) count += linkedDocs.length;
     return count;
   }, [ticket, linkedDocs]);
@@ -330,6 +331,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                   ticket?.contact && 'Contact', 
                   ticket?.supplier && 'Supplier',
                   ticket?.lead && 'Lead',
+                  ticket?.appointment?.location && 'Location',
                   linkedDocs && linkedDocs.length > 0 && `${linkedDocs.length} doc${linkedDocs.length === 1 ? '' : 's'}`
                 ].filter(Boolean).join(' · ')}
               </div>
@@ -593,6 +595,41 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                 ) : null}
               </div>
             </div>
+
+            {/* Location Card - NEW */}
+            <div className={cn(
+              "group relative overflow-hidden rounded-xl border transition-all duration-200",
+              ticket?.appointment?.location 
+                ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
+                : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+            )}>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
+                      ticket?.appointment?.location ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-semibold">Location</span>
+                  </div>
+                </div>
+                
+                {ticket?.appointment?.location ? (
+                  <div className="p-2 rounded-lg bg-background/50">
+                    <p className="text-sm font-medium text-foreground">{ticket.appointment.location.name}</p>
+                    {ticket.appointment.location.address && (
+                      <p className="text-xs text-muted-foreground mt-1">{ticket.appointment.location.address}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Link this request to an appointment to see its location
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Documents Section */}
@@ -607,6 +644,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
               {DOCUMENT_TYPES.map((docType) => {
               const docs = groupedDocs[docType.type] || [];
               const hasLinkedDocs = docs.length > 0;
+              const isAppointment = docType.type === 'appointment';
 
               return (
                 <div
@@ -615,7 +653,9 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                     "group relative overflow-hidden rounded-xl border transition-all duration-200",
                     hasLinkedDocs 
                       ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
-                      : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
+                      : "bg-card border-border hover:border-primary/20 hover:shadow-sm",
+                    // Highlight appointments for better visibility
+                    isAppointment && !hasLinkedDocs && "ring-2 ring-primary/20"
                   )}
                 >
                   <div className="p-4 space-y-3">
@@ -639,12 +679,22 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                       <Button
                         variant={showDocLinks[docType.type] ? "secondary" : "ghost"}
                         size="sm"
-                        className="h-7 px-2.5 text-xs font-medium"
+                        className={cn(
+                          "h-7 px-2.5 text-xs font-medium",
+                          isAppointment && !hasLinkedDocs && "bg-primary text-primary-foreground hover:bg-primary/90"
+                        )}
                         onClick={() => setShowDocLinks({ ...showDocLinks, [docType.type]: !showDocLinks[docType.type] })}
                       >
                         {showDocLinks[docType.type] ? "Cancel" : hasLinkedDocs ? "Add More" : "+ Link"}
                       </Button>
                     </div>
+                    
+                    {/* Help text for appointment linking */}
+                    {isAppointment && !hasLinkedDocs && !showDocLinks[docType.type] && (
+                      <div className="text-xs text-muted-foreground bg-primary/5 p-2 rounded-lg">
+                        💡 Link this request to an appointment to schedule the work
+                      </div>
+                    )}
 
                   {showDocLinks[docType.type] && (
                     <div className="mt-2">
