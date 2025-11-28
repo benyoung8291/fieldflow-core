@@ -51,37 +51,49 @@ serve(async (req) => {
 
     const existingAuthUser = existingUsers?.users?.find(user => user.email?.toLowerCase() === email.toLowerCase());
     
+    // Also check for orphaned profile (profile without auth user)
+    const { data: existingProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", email.toLowerCase())
+      .maybeSingle();
+    
+    if (existingAuthUser && existingProfile) {
+      // User exists with complete profile
+      console.log("⚠️ User with complete profile already exists");
+      throw new Error(`A user with the email ${email} already exists. Please use a different email address.`);
+    }
+    
+    // Clean up orphaned records
     if (existingAuthUser) {
-      console.log("⚠️ User found in auth.users, checking if profile exists...");
+      console.log("🧹 Orphaned auth user detected, deleting...");
+      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
       
-      // Check if this user has a profile (complete registration)
-      const { data: profile, error: profileCheckError } = await supabaseAdmin
+      if (deleteAuthError) {
+        console.error("❌ Error deleting orphaned auth user:", deleteAuthError);
+        throw new Error(`Failed to clean up orphaned auth user: ${deleteAuthError.message}`);
+      }
+      console.log("✅ Orphaned auth user deleted");
+    }
+    
+    if (existingProfile) {
+      console.log("🧹 Orphaned profile detected, deleting...");
+      const { error: deleteProfileError } = await supabaseAdmin
         .from("profiles")
-        .select("id")
-        .eq("email", email.toLowerCase())
-        .single();
+        .delete()
+        .eq("id", existingProfile.id);
       
-      if (profileCheckError && profileCheckError.code !== "PGRST116") { // PGRST116 = no rows returned
-        console.error("❌ Error checking profile:", profileCheckError);
-        throw new Error(`Failed to check user profile: ${profileCheckError.message}`);
+      if (deleteProfileError) {
+        console.error("❌ Error deleting orphaned profile:", deleteProfileError);
+        throw new Error(`Failed to clean up orphaned profile: ${deleteProfileError.message}`);
       }
+      console.log("✅ Orphaned profile deleted");
       
-      if (profile) {
-        // User exists with complete profile
-        console.log("⚠️ User with complete profile already exists");
-        throw new Error(`A user with the email ${email} already exists. Please use a different email address.`);
-      } else {
-        // Orphaned auth user - exists in auth.users but no profile
-        console.log("🧹 Orphaned auth user detected, cleaning up...");
-        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
-        
-        if (deleteError) {
-          console.error("❌ Error deleting orphaned user:", deleteError);
-          throw new Error(`Failed to clean up orphaned user: ${deleteError.message}`);
-        }
-        
-        console.log("✅ Orphaned user cleaned up, proceeding with creation");
-      }
+      // Also delete user_roles if they exist
+      await supabaseAdmin
+        .from("user_roles")
+        .delete()
+        .eq("user_id", existingProfile.id);
     }
 
     // Create user in auth
