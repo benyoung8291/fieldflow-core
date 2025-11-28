@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp, Copy } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, Archive, Plus, MapPin, History, FileText, User, Trash2, FileUp, Copy, AlertCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { formatCurrency, getMelbourneNow, toMelbourneTime } from "@/lib/utils";
@@ -465,7 +466,7 @@ export default function ServiceContractDetails() {
               <CardTitle className="text-sm font-medium">Auto-Generation</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <Switch 
                     checked={contract.auto_generate} 
@@ -475,9 +476,13 @@ export default function ServiceContractDetails() {
                   <span className="text-sm">{contract.auto_generate ? "Enabled" : "Disabled"}</span>
                 </div>
                 {!contract.auto_generate && lineItems.some((item: any) => !item.location_id || !item.estimated_hours || item.estimated_hours <= 0) && (
-                  <p className="text-xs text-muted-foreground">
-                    Some line items missing location or estimated hours
-                  </p>
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="text-sm font-semibold">Cannot enable auto-generation</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      All line items must have a location and estimated hours set before auto-generation can be enabled.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
             </CardContent>
