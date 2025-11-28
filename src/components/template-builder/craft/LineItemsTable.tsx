@@ -13,12 +13,21 @@ export const LineItemsTable = ({
   showLineTotal = true,
   showDescription = true
 }: LineItemsTableProps) => {
-  const { connectors: { connect, drag } } = useNode();
+  const { connectors: { connect, drag }, selected, hovered } = useNode((node) => ({
+    selected: node.events.selected,
+    hovered: node.events.hovered
+  }));
   
   return (
     <div
       ref={(ref) => ref && connect(drag(ref))}
-      style={{ width: "100%", cursor: "move" }}
+      style={{ 
+        width: "100%", 
+        cursor: "move",
+        outline: selected ? "2px solid hsl(var(--primary))" : hovered ? "1px dashed hsl(var(--primary) / 0.5)" : "none",
+        outlineOffset: "2px",
+        transition: "outline 0.2s"
+      }}
     >
       <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid hsl(var(--border))" }}>
         <thead>

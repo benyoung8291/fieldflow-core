@@ -25,7 +25,10 @@ export const RichTextBlock = ({
   textTransform = "none",
   textDecoration = "none"
 }: RichTextBlockProps) => {
-  const { connectors: { connect, drag } } = useNode();
+  const { connectors: { connect, drag }, selected, hovered } = useNode((node) => ({
+    selected: node.events.selected,
+    hovered: node.events.hovered
+  }));
   
   return (
     <div
@@ -44,7 +47,9 @@ export const RichTextBlock = ({
         textDecoration,
         padding: "8px",
         cursor: "move",
-        outline: "none"
+        outline: selected ? "2px solid hsl(var(--primary))" : hovered ? "1px dashed hsl(var(--primary) / 0.5)" : "none",
+        outlineOffset: "2px",
+        transition: "outline 0.2s"
       }}
     >
       {text}

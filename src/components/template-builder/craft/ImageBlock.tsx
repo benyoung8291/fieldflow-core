@@ -19,7 +19,10 @@ export const ImageBlock = ({
   borderRadius = 0,
   opacity = 1
 }: ImageBlockProps) => {
-  const { connectors: { connect, drag } } = useNode();
+  const { connectors: { connect, drag }, selected, hovered } = useNode((node) => ({
+    selected: node.events.selected,
+    hovered: node.events.hovered
+  }));
   const [imageError, setImageError] = useState(false);
   
   return (
@@ -32,7 +35,10 @@ export const ImageBlock = ({
         position: "relative",
         overflow: "hidden",
         borderRadius: `${borderRadius}px`,
-        opacity
+        opacity,
+        outline: selected ? "2px solid hsl(var(--primary))" : hovered ? "1px dashed hsl(var(--primary) / 0.5)" : "none",
+        outlineOffset: "2px",
+        transition: "outline 0.2s"
       }}
     >
       {src && !imageError ? (

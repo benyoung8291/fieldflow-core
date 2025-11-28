@@ -16,7 +16,10 @@ export const GradientBackground = ({
   gradientDirection = 135,
   padding = 32
 }: GradientBackgroundProps) => {
-  const { connectors: { connect, drag } } = useNode();
+  const { connectors: { connect, drag }, selected, hovered } = useNode((node) => ({
+    selected: node.events.selected,
+    hovered: node.events.hovered
+  }));
   
   return (
     <div
@@ -28,7 +31,10 @@ export const GradientBackground = ({
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        gap: "16px"
+        gap: "16px",
+        outline: selected ? "2px solid hsl(var(--primary))" : hovered ? "1px dashed hsl(var(--primary) / 0.5)" : "none",
+        outlineOffset: "2px",
+        transition: "outline 0.2s"
       }}
     >
       {children}
