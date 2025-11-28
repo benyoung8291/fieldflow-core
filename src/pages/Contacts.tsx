@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, MapPin, User, Building2, Archive } from "lucide-react";
+import { Plus, Search, Archive, ArrowUpDown } from "lucide-react";
 import ContactManagementDialog from "@/components/contacts/ContactManagementDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
@@ -21,11 +21,13 @@ export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const isMobile = useIsMobile();
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: contactsResponse, isLoading } = useQuery({
-    queryKey: ["contacts", activeTab, showArchived, searchQuery, pagination.currentPage, pagination.pageSize],
+    queryKey: ["contacts", activeTab, showArchived, searchQuery, pagination.currentPage, pagination.pageSize, sortColumn, sortDirection],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       let query = supabase
@@ -36,7 +38,7 @@ export default function Contacts() {
           supplier:suppliers(name),
           assigned_user:profiles!contacts_assigned_to_fkey(id, first_name, last_name)
         `, { count: 'exact' })
-        .order("created_at", { ascending: false });
+        .order(sortColumn, { ascending: sortDirection === "asc" });
 
       // Filter by archived status
       if (showArchived) {
@@ -87,6 +89,16 @@ export default function Contacts() {
   const handleAdd = () => {
     setSelectedContact(null);
     setDialogOpen(true);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+    pagination.resetPage();
   };
 
   const getContactTypeLabel = (type: string) => {
@@ -174,112 +186,143 @@ export default function Contacts() {
 
           <TabsContent value={activeTab} className="space-y-4">
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Card key={i}>
-                    <CardContent className="p-6">
-                      <Skeleton className="h-24 w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Location</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : contacts && contacts.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {contacts.map((contact) => (
-                  <Card
-                    key={contact.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => navigate(`/contacts/${contact.id}`)}
-                  >
-                    <CardContent className="p-6 space-y-4">
-                      {/* Header with name and badges */}
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-semibold text-lg line-clamp-1">
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleSort("first_name")}
+                          className="hover:bg-transparent"
+                        >
+                          Name
+                          <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleSort("contact_type")}
+                          className="hover:bg-transparent"
+                        >
+                          Type
+                          <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleSort("status")}
+                          className="hover:bg-transparent"
+                        >
+                          Status
+                          <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleSort("company_name")}
+                          className="hover:bg-transparent"
+                        >
+                          Company
+                          <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Location</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contacts.map((contact) => (
+                      <TableRow 
+                        key={contact.id}
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/contacts/${contact.id}`)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
                             {contact.first_name} {contact.last_name}
-                          </h3>
-                          {contact.is_primary && (
-                            <Badge variant="outline" className="text-xs shrink-0">
-                              Primary
-                            </Badge>
+                            {contact.is_primary && (
+                              <Badge variant="outline" className="text-xs">
+                                Primary
+                              </Badge>
+                            )}
+                          </div>
+                          {contact.position && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {contact.position}
+                            </div>
                           )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
+                        </TableCell>
+                        <TableCell>
                           <Badge className={getContactTypeColor(contact.contact_type)}>
                             {getContactTypeLabel(contact.contact_type)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge className={getStatusColor(contact.status)}>
                             {contact.status}
                           </Badge>
-                        </div>
-                      </div>
-
-                      {/* Contact details */}
-                      <div className="space-y-2 text-sm">
-                        {contact.position && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <User className="h-4 w-4 shrink-0" />
-                            <span className="line-clamp-1">{contact.position}</span>
-                          </div>
-                        )}
-                        {contact.company_name && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Building2 className="h-4 w-4 shrink-0" />
-                            <span className="line-clamp-1">{contact.company_name}</span>
-                          </div>
-                        )}
-                        {contact.email && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Mail className="h-4 w-4 shrink-0" />
-                            <span className="line-clamp-1">{contact.email}</span>
-                          </div>
-                        )}
-                        {(contact.phone || contact.mobile) && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Phone className="h-4 w-4 shrink-0" />
-                            <span className="line-clamp-1">
-                              {contact.mobile || contact.phone}
-                            </span>
-                          </div>
-                        )}
-                        {(contact.city || contact.state) && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4 shrink-0" />
-                            <span className="line-clamp-1">
-                              {[contact.city, contact.state].filter(Boolean).join(", ")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Relationships */}
-                      {(contact.customer || contact.supplier || contact.assigned_user) && (
-                        <div className="pt-2 border-t space-y-1 text-xs text-muted-foreground">
-                          {contact.customer && (
-                            <div>Customer: {contact.customer.name}</div>
-                          )}
-                          {contact.supplier && (
-                            <div>Supplier: {contact.supplier.name}</div>
-                          )}
-                          {contact.assigned_user && (
-                            <div>Assigned to: {contact.assigned_user.full_name}</div>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        </TableCell>
+                        <TableCell>{contact.company_name || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {contact.email || "-"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {contact.mobile || contact.phone || "-"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {[contact.city, contact.state].filter(Boolean).join(", ") || "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <p className="text-muted-foreground">
-                    {searchQuery
-                      ? "No contacts found matching your search."
-                      : "No contacts yet. Create your first contact to get started."}
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="border rounded-lg p-12 text-center">
+                <p className="text-muted-foreground">
+                  {searchQuery
+                    ? "No contacts found matching your search."
+                    : "No contacts yet. Create your first contact to get started."}
+                </p>
+              </div>
             )}
           </TabsContent>
         </Tabs>
