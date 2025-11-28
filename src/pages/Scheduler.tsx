@@ -1467,16 +1467,18 @@ export default function Scheduler() {
                     SO
                   </Label>
                 </div>
-                <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
-                  <TabsList className="h-7">
-                    <TabsTrigger value="day" className="text-[10px] px-2 py-0">Day</TabsTrigger>
-                    <TabsTrigger value="week" className="text-[10px] px-2 py-0">Week</TabsTrigger>
-                    <TabsTrigger value="timegrid" className="text-[10px] px-2 py-0">Grid</TabsTrigger>
-                    <TabsTrigger value="month" className="text-[10px] px-2 py-0">Month</TabsTrigger>
-                    <TabsTrigger value="kanban" className="text-[10px] px-2 py-0">Kanban</TabsTrigger>
-                    <TabsTrigger value="capacity" className="text-[10px] px-2 py-0">Capacity</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                {!showServiceOrderView && (
+                  <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)}>
+                    <TabsList className="h-7">
+                      <TabsTrigger value="day" className="text-[10px] px-2 py-0">Day</TabsTrigger>
+                      <TabsTrigger value="week" className="text-[10px] px-2 py-0">Week</TabsTrigger>
+                      <TabsTrigger value="timegrid" className="text-[10px] px-2 py-0">Grid</TabsTrigger>
+                      <TabsTrigger value="month" className="text-[10px] px-2 py-0">Month</TabsTrigger>
+                      <TabsTrigger value="kanban" className="text-[10px] px-2 py-0">Kanban</TabsTrigger>
+                      <TabsTrigger value="capacity" className="text-[10px] px-2 py-0">Capacity</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                )}
               </div>
             </div>
           </CardHeader>
