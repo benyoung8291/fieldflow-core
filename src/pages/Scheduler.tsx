@@ -74,6 +74,64 @@ export default function Scheduler() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [updateCursorPosition]);
 
+  // Real-time subscriptions for appointments and worker assignments
+  useEffect(() => {
+    const appointmentsChannel = supabase
+      .channel('scheduler-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          console.log('Appointment change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
+        }
+      )
+      .subscribe();
+
+    const workersChannel = supabase
+      .channel('scheduler-workers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointment_workers'
+        },
+        (payload) => {
+          console.log('Worker assignment change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
+        }
+      )
+      .subscribe();
+
+    const serviceOrdersChannel = supabase
+      .channel('scheduler-service-orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_orders'
+        },
+        (payload) => {
+          console.log('Service order change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ["service-orders-for-calendar"] });
+          queryClient.invalidateQueries({ queryKey: ["service-orders-active"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(workersChannel);
+      supabase.removeChannel(serviceOrdersChannel);
+    };
+  }, [queryClient]);
+
   // Keyboard shortcut for undo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
