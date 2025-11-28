@@ -2,19 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, MapPin, Square, Camera, Image as ImageIcon, X } from "lucide-react";
+import { Trash2, MapPin, Square, Camera, Image as ImageIcon, X, Loader2 } from "lucide-react";
 import { Markup } from "./FloorPlanViewer";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FloorPlanMarkupListProps {
   markups: Markup[];
   onMarkupUpdate: (id: string, notes: string) => void;
-  onMarkupPhotoUpdate: (id: string, photo: File | null) => void;
+  onMarkupPhotoUpdate: (id: string, photo: File | string | null) => void;
   onMarkupDelete: (id: string) => void;
   selectedMarkupId: string | null;
   onMarkupSelect: (id: string) => void;
+  uploadingPhotos?: Set<string>;
 }
 
 export function FloorPlanMarkupList({
@@ -24,18 +26,110 @@ export function FloorPlanMarkupList({
   onMarkupDelete,
   selectedMarkupId,
   onMarkupSelect,
+  uploadingPhotos = new Set(),
 }: FloorPlanMarkupListProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentMarkupId, setCurrentMarkupId] = useState<string | null>(null);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, markupId: string) => {
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+
+          const maxDimension = 1920;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > maxDimension) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Failed to compress image'));
+                return;
+              }
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadToStorage = async (file: File, markupId: string): Promise<string> => {
+    const fileExt = 'jpg';
+    const fileName = `${markupId}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('ticket-markups')
+      .upload(filePath, file, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('ticket-markups')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, markupId: string) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error("Image must be less than 10MB");
-        return;
-      }
-      onMarkupPhotoUpdate(markupId, file);
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be less than 10MB");
+      return;
+    }
+
+    try {
+      toast.loading("Compressing image...", { id: `compress-${markupId}` });
+      const compressedFile = await compressImage(file);
+      toast.dismiss(`compress-${markupId}`);
+      
+      // Start background upload
+      toast.loading("Uploading photo...", { id: `upload-${markupId}` });
+      const publicUrl = await uploadToStorage(compressedFile, markupId);
+      toast.success("Photo uploaded", { id: `upload-${markupId}` });
+      
+      onMarkupPhotoUpdate(markupId, publicUrl);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast.error("Failed to process image", { id: `upload-${markupId}` });
     }
   };
 
@@ -113,7 +207,14 @@ export function FloorPlanMarkupList({
                   {/* Photo section */}
                   <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                     <Label className="text-xs">Photo (optional)</Label>
-                    {photoPreview ? (
+                    {uploadingPhotos.has(markup.id) ? (
+                      <div className="flex items-center justify-center h-24 border border-border rounded-lg bg-muted">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-xs text-muted-foreground">Uploading...</span>
+                        </div>
+                      </div>
+                    ) : photoPreview ? (
                       <div className="relative rounded-lg overflow-hidden border border-border">
                         <img
                           src={photoPreview}

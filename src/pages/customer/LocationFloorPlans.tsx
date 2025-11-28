@@ -130,6 +130,25 @@ export default function LocationFloorPlans() {
 
   const createRequestMutation = useMutation({
     mutationFn: async () => {
+      // Check if any uploads are still in progress
+      if (uploadingPhotos.size > 0) {
+        toast.error("Please wait for photo uploads to complete");
+        throw new Error('Photos still uploading');
+      }
+
+      // Validate that all markups have notes
+      const incompleteMarkups = markups.filter(m => !m.notes?.trim());
+      if (incompleteMarkups.length > 0) {
+        toast.error("Please add a description to all markups before creating a request");
+        throw new Error('Missing markup descriptions');
+      }
+
+      // Warn if photos are missing (but don't block)
+      const markupsWithoutPhotos = markups.filter(m => !m.photo);
+      if (markupsWithoutPhotos.length > 0) {
+        toast.info("Consider adding photos to your markups for faster resolution");
+      }
+
       console.log("Creating request with:", { 
         customerId: profile?.customer_id, 
         tenantId: profile?.tenant_id, 
@@ -187,32 +206,9 @@ export default function LocationFloorPlans() {
         }
       }
 
-      // Upload photos and create markups
-      const markupInserts = await Promise.all(markups.map(async (markup, index) => {
-        let photoUrl: string | undefined;
-
-        // Upload photo if present and is a File
-        if (markup.photo && markup.photo instanceof File) {
-          const fileExt = markup.photo.name.split('.').pop();
-          const fileName = `${ticket.id}/${index}-${Date.now()}.${fileExt}`;
-          
-          const { error: uploadError, data: uploadData } = await supabase.storage
-            .from('ticket-markups')
-            .upload(fileName, markup.photo, {
-              contentType: markup.photo.type,
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error("Error uploading photo:", uploadError);
-            // Continue without photo rather than failing the whole request
-          } else {
-            const { data: { publicUrl } } = supabase.storage
-              .from('ticket-markups')
-              .getPublicUrl(fileName);
-            photoUrl = publicUrl;
-          }
-        }
+      // Create markup records (photos are already uploaded as URLs)
+      const markupInserts = markups.map((markup, index) => {
+        const photoUrl = typeof markup.photo === 'string' ? markup.photo : undefined;
 
         if (markup.type === "pin") {
           return {
@@ -244,7 +240,7 @@ export default function LocationFloorPlans() {
             },
           };
         }
-      }));
+      });
 
       const { error: markupError } = await supabase
         .from("ticket_markups")
@@ -270,16 +266,27 @@ export default function LocationFloorPlans() {
     },
   });
 
+  const [uploadingPhotos, setUploadingPhotos] = useState<Set<string>>(new Set());
+
   const updateMarkupNote = (id: string, notes: string) => {
     setMarkups((prev) =>
       prev.map((m) => (m.id === id ? { ...m, notes } : m))
     );
   };
 
-  const updateMarkupPhoto = (id: string, photo: File | null) => {
+  const updateMarkupPhoto = (id: string, photo: File | string | null) => {
     setMarkups((prev) =>
       prev.map((m) => (m.id === id ? { ...m, photo: photo || undefined } : m))
     );
+    
+    // Remove from uploading set if it's a string URL (upload complete)
+    if (typeof photo === 'string' || photo === null) {
+      setUploadingPhotos(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   const deleteMarkup = (id: string) => {
@@ -335,6 +342,12 @@ export default function LocationFloorPlans() {
               <Button
                 size="sm"
                 onClick={() => {
+                  // Check if any uploads are still in progress
+                  if (uploadingPhotos.size > 0) {
+                    toast.error("Please wait for photo uploads to complete");
+                    return;
+                  }
+
                   // Validate markups before opening dialog
                   const incompleteMarkups = markups.filter(m => !m.notes?.trim());
                   if (incompleteMarkups.length > 0) {
@@ -351,10 +364,17 @@ export default function LocationFloorPlans() {
                   setTaskDescription("");
                   setShowCreateDialog(true);
                 }}
-                disabled={markups.length === 0 || !profile?.tenant_id || !profile?.customer_id}
+                disabled={markups.length === 0 || uploadingPhotos.size > 0 || !profile?.tenant_id || !profile?.customer_id}
                 className="shadow-lg"
               >
-                Create ({markups.length})
+                {uploadingPhotos.size > 0 ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  `Create (${markups.length})`
+                )}
               </Button>
             </div>
           </div>
@@ -363,6 +383,7 @@ export default function LocationFloorPlans() {
             imageUrl={floorPlanImageUrl}
             markups={markups}
             onMarkupsChange={setMarkups}
+            uploadingPhotos={uploadingPhotos}
           />
         </div>
 
@@ -490,6 +511,12 @@ export default function LocationFloorPlans() {
                   </Button>
                   <Button
                     onClick={() => {
+                      // Check if any uploads are still in progress
+                      if (uploadingPhotos.size > 0) {
+                        toast.error("Please wait for photo uploads to complete");
+                        return;
+                      }
+
                       // Validate markups before opening dialog
                       const incompleteMarkups = markups.filter(m => !m.notes?.trim());
                       if (incompleteMarkups.length > 0) {
@@ -506,9 +533,16 @@ export default function LocationFloorPlans() {
                       setTaskDescription("");
                       setShowCreateDialog(true);
                     }}
-                    disabled={markups.length === 0 || !profile?.tenant_id || !profile?.customer_id}
+                    disabled={markups.length === 0 || uploadingPhotos.size > 0 || !profile?.tenant_id || !profile?.customer_id}
                   >
-                    Create Request ({markups.length})
+                    {uploadingPhotos.size > 0 ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      `Create Request (${markups.length})`
+                    )}
                   </Button>
                 </div>
               </CardHeader>
@@ -533,11 +567,12 @@ export default function LocationFloorPlans() {
                 <FloorPlanMarkupList
                   markups={markups}
                   onMarkupUpdate={updateMarkupNote}
-                  onMarkupPhotoUpdate={updateMarkupPhoto}
-                  onMarkupDelete={deleteMarkup}
-                  selectedMarkupId={selectedMarkupId}
-                  onMarkupSelect={setSelectedMarkupId}
-                />
+                      onMarkupPhotoUpdate={updateMarkupPhoto}
+                      onMarkupDelete={deleteMarkup}
+                      selectedMarkupId={selectedMarkupId}
+                      onMarkupSelect={setSelectedMarkupId}
+                      uploadingPhotos={uploadingPhotos}
+                    />
               </CardContent>
             </Card>
           </div>

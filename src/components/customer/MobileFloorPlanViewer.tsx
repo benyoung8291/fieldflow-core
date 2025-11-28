@@ -43,6 +43,7 @@ interface MobileFloorPlanViewerProps {
   markups: Markup[];
   onMarkupsChange: (markups: Markup[]) => void;
   readOnly?: boolean;
+  uploadingPhotos?: Set<string>;
 }
 
 export function MobileFloorPlanViewer({
@@ -51,6 +52,7 @@ export function MobileFloorPlanViewer({
   markups,
   onMarkupsChange,
   readOnly = false,
+  uploadingPhotos = new Set(),
 }: MobileFloorPlanViewerProps) {
   const displayUrl = imageUrl || pdfUrl;
   const isImage = imageUrl || !pdfUrl.toLowerCase().endsWith('.pdf');
@@ -515,7 +517,7 @@ export function MobileFloorPlanViewer({
     onMarkupsChange(newMarkups);
   };
 
-  const updateMarkupPhoto = (id: string, photo: File | null) => {
+  const updateMarkupPhoto = (id: string, photo: File | string | null) => {
     const newMarkups = markups.map((m) => (m.id === id ? { ...m, photo: photo || undefined } : m));
     onMarkupsChange(newMarkups);
   };
@@ -711,6 +713,7 @@ export function MobileFloorPlanViewer({
           onMarkupDelete={deleteMarkup}
           open={markupSheetOpen}
           onOpenChange={setMarkupSheetOpen}
+          uploadingPhotos={uploadingPhotos}
         />
       )}
     </div>
