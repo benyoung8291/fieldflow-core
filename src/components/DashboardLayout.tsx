@@ -45,6 +45,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const [openPopover, setOpenPopover] = useState<string | null>(null);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     localStorage.setItem('expandedMenuFolders', JSON.stringify(Array.from(expandedFolders)));
@@ -62,6 +63,24 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
       newExpanded.add(folderId);
     }
     setExpandedFolders(newExpanded);
+  };
+
+  const handlePopoverOpen = (itemId: string) => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+    setOpenPopover(itemId);
+  };
+
+  const handlePopoverClose = () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+    }
+    const timeout = setTimeout(() => {
+      setOpenPopover(null);
+    }, 150); // 150ms delay before closing
+    setHoverTimeout(timeout);
   };
 
   const handleNavigate = (path: string) => {
@@ -82,8 +101,8 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
             <Popover open={openPopover === item.id} onOpenChange={(open) => setOpenPopover(open ? item.id : null)}>
               <PopoverTrigger asChild>
                 <button
-                  onMouseEnter={() => setOpenPopover(item.id)}
-                  onMouseLeave={() => setOpenPopover(null)}
+                  onMouseEnter={() => handlePopoverOpen(item.id)}
+                  onMouseLeave={handlePopoverClose}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
                     "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -96,8 +115,8 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
                 side="right" 
                 align="start" 
                 className="w-56 p-2 z-[9999]"
-                onMouseEnter={() => setOpenPopover(item.id)}
-                onMouseLeave={() => setOpenPopover(null)}
+                onMouseEnter={() => handlePopoverOpen(item.id)}
+                onMouseLeave={handlePopoverClose}
               >
                 <div className="space-y-1">
                   <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
