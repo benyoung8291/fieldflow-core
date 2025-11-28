@@ -76,7 +76,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
         throw new Error(data.error || 'Failed to generate document');
       }
 
-      // Download the Word document
+      // Download the filled Word document
       if (data.data.file) {
         const binary = atob(data.data.file);
         const bytes = new Uint8Array(binary.length);
@@ -95,7 +95,7 @@ export default function QuotePDFDialog({ open, onOpenChange, quoteId, customerEm
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success("Word document downloaded successfully. Open in Word to generate PDF.");
+        toast.success("Document generated! Open the file and save as PDF from Word (File → Save As → PDF).");
       } else {
         throw new Error('No file data received');
       }
