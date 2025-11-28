@@ -103,6 +103,7 @@ export default function CustomerServiceOrders() {
         throw error;
       }
       console.log("Customer portal: Future contract items loaded", data);
+      console.log("Customer portal: Sample contract data", data?.[0]?.contract);
       return data;
     },
     enabled: !!profile?.customer_id,
