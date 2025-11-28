@@ -14,6 +14,7 @@ interface LineItem {
   margin_percentage: string;
   sell_price: string;
   line_total: number;
+  estimated_hours?: string;
   parent_line_item_id?: string;
   subItems?: LineItem[];
   expanded?: boolean;
@@ -200,6 +201,7 @@ export default function InlineQuoteLineItems({
         cost_price: "",
         margin_percentage: defaultMarginPercentage.toString(),
         sell_price: "",
+        estimated_hours: "0",
         line_total: 0,
         subItems: [],
         expanded: false,
@@ -224,6 +226,7 @@ export default function InlineQuoteLineItems({
       cost_price: "",
       margin_percentage: defaultMarginPercentage.toString(),
       sell_price: "",
+      estimated_hours: "0",
       line_total: 0,
     });
     newItems[parentIndex].expanded = true;
@@ -248,6 +251,7 @@ export default function InlineQuoteLineItems({
       cost_price: itemToDuplicate.cost_price,
       margin_percentage: itemToDuplicate.margin_percentage,
       sell_price: itemToDuplicate.sell_price,
+      estimated_hours: itemToDuplicate.estimated_hours,
       line_total: itemToDuplicate.line_total,
       expanded: itemToDuplicate.subItems && itemToDuplicate.subItems.length > 0,
     };
@@ -260,6 +264,7 @@ export default function InlineQuoteLineItems({
         cost_price: subItem.cost_price,
         margin_percentage: subItem.margin_percentage,
         sell_price: subItem.sell_price,
+        estimated_hours: subItem.estimated_hours,
         line_total: subItem.line_total,
       }));
     }
@@ -287,6 +292,7 @@ export default function InlineQuoteLineItems({
                 <TableHead className="w-[40px] font-semibold"></TableHead>
                 <TableHead className="min-w-[300px] font-semibold">Description</TableHead>
                 <TableHead className="w-[100px] text-right font-semibold">Quantity</TableHead>
+                <TableHead className="w-[100px] text-right font-semibold">Est. Hours</TableHead>
                 <TableHead className="w-[120px] text-right font-semibold">Cost</TableHead>
                 <TableHead className="w-[100px] text-right font-semibold">Margin %</TableHead>
                 <TableHead className="w-[120px] text-right font-semibold">Sell</TableHead>
@@ -333,6 +339,9 @@ export default function InlineQuoteLineItems({
                         <span className="text-sm">{item.quantity}</span>
                       </TableCell>
                       <TableCell className="text-right py-3">
+                        <span className="text-sm">{parseFloat(item.estimated_hours || "0").toFixed(2)}h</span>
+                      </TableCell>
+                      <TableCell className="text-right py-3">
                         {itemHasSubItems ? (
                           <span className="text-sm text-muted-foreground">
                             {formatCurrency(calculateAggregatedValues(item).cost)}
@@ -377,6 +386,9 @@ export default function InlineQuoteLineItems({
                           <span className="text-sm text-muted-foreground">{subItem.quantity}</span>
                         </TableCell>
                         <TableCell className="text-right py-2.5">
+                          <span className="text-sm text-muted-foreground">{parseFloat(subItem.estimated_hours || "0").toFixed(2)}h</span>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
                           <span className="text-sm text-muted-foreground">{formatCurrency(parseFloat(subItem.cost_price))}</span>
                         </TableCell>
                         <TableCell className="text-right py-2.5">
@@ -410,6 +422,7 @@ export default function InlineQuoteLineItems({
                 <TableHead className="w-[40px] font-semibold"></TableHead>
                 <TableHead className="min-w-[300px] font-semibold">Description</TableHead>
                 <TableHead className="w-[100px] text-right font-semibold">Quantity</TableHead>
+                <TableHead className="w-[100px] text-right font-semibold">Est. Hours</TableHead>
                 <TableHead className="w-[120px] text-right font-semibold">Cost</TableHead>
                 <TableHead className="w-[100px] text-right font-semibold">Margin %</TableHead>
                 <TableHead className="w-[120px] text-right font-semibold">Sell</TableHead>
@@ -462,6 +475,16 @@ export default function InlineQuoteLineItems({
                           className="border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md"
                         />
                       )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.estimated_hours || "0"}
+                        onChange={(e) => updateLineItem(index, "estimated_hours", e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className="border-0 focus-visible:ring-0 text-right bg-transparent hover:bg-muted/50 transition-colors px-3 rounded-md"
+                      />
                     </TableCell>
                     <TableCell className="py-2">
                       {hasSubItems(item) ? (

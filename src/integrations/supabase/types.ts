@@ -5516,6 +5516,7 @@ export type Database = {
           cost_price: number | null
           created_at: string | null
           description: string
+          estimated_hours: number | null
           id: string
           is_from_price_book: boolean | null
           is_gst_free: boolean | null
@@ -5536,6 +5537,7 @@ export type Database = {
           cost_price?: number | null
           created_at?: string | null
           description: string
+          estimated_hours?: number | null
           id?: string
           is_from_price_book?: boolean | null
           is_gst_free?: boolean | null
@@ -5556,6 +5558,7 @@ export type Database = {
           cost_price?: number | null
           created_at?: string | null
           description?: string
+          estimated_hours?: number | null
           id?: string
           is_from_price_book?: boolean | null
           is_gst_free?: boolean | null
