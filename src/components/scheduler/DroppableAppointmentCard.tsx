@@ -42,6 +42,7 @@ export default function DroppableAppointmentCard({
     data: {
       type: "appointment",
       appointment: appointment,
+      appointmentId: appointment.id,
     },
     disabled: !isDragIntent,
   });
