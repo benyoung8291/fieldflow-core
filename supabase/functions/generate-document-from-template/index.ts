@@ -66,9 +66,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (quoteError) throw quoteError;
-      documentData = quote;
-
       // Fetch line items
       const { data: items, error: itemsError } = await supabase
         .from('quote_line_items')
