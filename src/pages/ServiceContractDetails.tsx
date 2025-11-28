@@ -352,6 +352,11 @@ export default function ServiceContractDetails() {
   
   const isEditingLocked = contract.auto_generate;
   
+  // Check if auto-generation can be enabled (has missing requirements)
+  const canEnableAutoGeneration = !lineItems.some((item: any) => 
+    !item.location_id || !item.estimated_hours || item.estimated_hours <= 0
+  );
+  
   // Calculate total annual contract value based on frequencies
   const totalValue = lineItems.reduce((sum: number, item: any) => {
     const frequencyMultiplier = {
@@ -471,11 +476,11 @@ export default function ServiceContractDetails() {
                   <Switch 
                     checked={contract.auto_generate} 
                     onCheckedChange={(checked) => toggleAutoGenerateMutation.mutate(checked)}
-                    disabled={toggleAutoGenerateMutation.isPending}
+                    disabled={!canEnableAutoGeneration || toggleAutoGenerateMutation.isPending}
                   />
                   <span className="text-sm">{contract.auto_generate ? "Enabled" : "Disabled"}</span>
                 </div>
-                {!contract.auto_generate && lineItems.some((item: any) => !item.location_id || !item.estimated_hours || item.estimated_hours <= 0) && (
+                {!contract.auto_generate && !canEnableAutoGeneration && (
                   <Alert variant="destructive" className="py-2">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="text-sm font-semibold">Cannot enable auto-generation</AlertTitle>
@@ -651,10 +656,42 @@ export default function ServiceContractDetails() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 text-sm">
-                            <MapPin className="h-3 w-3 text-muted-foreground" />
-                            {item.customer_locations?.name || "No location"}
-                          </div>
+                          {editingCell?.id === item.id && editingCell?.field === "location_id" ? (
+                            <Select 
+                              value={cellValue || ""} 
+                              onValueChange={(value) => { 
+                                setCellValue(value); 
+                                updateCellMutation.mutate({ 
+                                  itemId: item.id, 
+                                  field: "location_id", 
+                                  value: value || null 
+                                }); 
+                                setEditingCell(null); 
+                              }}
+                            >
+                              <SelectTrigger className="h-8 w-48">
+                                <SelectValue placeholder="Select location" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">No location</SelectItem>
+                                {customerLocations?.map((loc: any) => (
+                                  <SelectItem key={loc.id} value={loc.id}>
+                                    {loc.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div 
+                              onClick={() => startEditingCell(item.id, "location_id", item.location_id)} 
+                              className="flex items-center gap-1 text-sm cursor-pointer hover:bg-accent px-2 py-1 rounded"
+                            >
+                              <MapPin className="h-3 w-3 text-muted-foreground" />
+                              <span className={!item.customer_locations?.name ? "text-muted-foreground" : ""}>
+                                {item.customer_locations?.name || "No location"}
+                              </span>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           {editingCell?.id === item.id && editingCell?.field === "key_number" ? (
