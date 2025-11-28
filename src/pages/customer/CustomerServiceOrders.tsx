@@ -85,6 +85,7 @@ export default function CustomerServiceOrders() {
           *,
           contract:service_contracts!inner(
             customer_id,
+            contract_number,
             title,
             status
           ),
@@ -250,8 +251,7 @@ export default function CustomerServiceOrders() {
                             <Badge 
                               className="rounded-lg px-3 py-1 text-xs font-semibold border bg-accent/20 text-accent-foreground border-accent/30"
                             >
-                              <Clock className="h-3 w-3 mr-1 inline" />
-                              Scheduled
+                              Service Contract - {item.contract?.contract_number} - {item.contract?.title}
                             </Badge>
                           </div>
 
