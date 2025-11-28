@@ -64,24 +64,23 @@ serve(async (req) => {
       throw new Error(`A user with the email ${email} already exists. Please use a different email address.`);
     }
     
-    // Clean up orphaned records - do a comprehensive cleanup
+    // Clean up orphaned records - delete profile FIRST, then auth user
     if (existingAuthUser) {
       console.log("🧹 Orphaned auth user detected, deleting...");
       const authUserId = existingAuthUser.id;
       
-      // Delete the auth user first
+      // Delete profile and user_roles FIRST (before deleting auth user)
+      console.log("🧹 Deleting orphaned profile and roles...");
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", authUserId);
+      await supabaseAdmin.from("profiles").delete().eq("id", authUserId);
+      
+      // Now delete the auth user
       const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
       if (deleteAuthError) {
         console.error("❌ Error deleting orphaned auth user:", deleteAuthError);
         throw new Error(`Failed to clean up orphaned auth user: ${deleteAuthError.message}`);
       }
-      console.log("✅ Orphaned auth user deleted");
-      
-      // Clean up any associated profile (by auth user ID, not email)
-      await supabaseAdmin.from("profiles").delete().eq("id", authUserId);
-      
-      // Clean up user_roles
-      await supabaseAdmin.from("user_roles").delete().eq("user_id", authUserId);
+      console.log("✅ Orphaned auth user and related records deleted");
     }
     
     if (existingProfile && !existingAuthUser) {
