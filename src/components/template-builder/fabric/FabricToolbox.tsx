@@ -109,15 +109,26 @@ export const FabricToolbox = ({ canvas, documentType }: FabricToolboxProps) => {
           {/* Tables */}
           <div>
             <h3 className="text-sm font-medium mb-2 text-muted-foreground">Tables</h3>
-            <Button
-              onClick={() => addLineItemsTable(canvas)}
-              variant="outline"
-              className="w-full justify-start"
-              size="sm"
-            >
-              <Table className="mr-2 h-4 w-4" />
-              Line Items
-            </Button>
+            <div className="space-y-1">
+              <Button
+                onClick={() => addLineItemsTable(canvas, false)}
+                variant="outline"
+                className="w-full justify-start"
+                size="sm"
+              >
+                <Table className="mr-2 h-4 w-4" />
+                Line Items
+              </Button>
+              <Button
+                onClick={() => addLineItemsTable(canvas, true)}
+                variant="outline"
+                className="w-full justify-start"
+                size="sm"
+              >
+                <Table className="mr-2 h-4 w-4" />
+                Line Items (with Sub-items)
+              </Button>
+            </div>
           </div>
         </div>
       </ScrollArea>
