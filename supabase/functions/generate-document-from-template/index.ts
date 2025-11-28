@@ -44,7 +44,6 @@ Deno.serve(async (req) => {
         .select(`
           *,
           customer:customers(*),
-          contact:contacts(*),
           profile:profiles(first_name, last_name, email)
         `)
         .eq('id', document_id)
@@ -52,6 +51,19 @@ Deno.serve(async (req) => {
 
       if (quoteError) throw quoteError;
       documentData = quote;
+
+      // Fetch contact if quote has a contact_id
+      if (quote.contact_id) {
+        const { data: contact, error: contactError } = await supabase
+          .from('contacts')
+          .select('*')
+          .eq('id', quote.contact_id)
+          .single();
+        
+        if (!contactError && contact) {
+          documentData.contact = contact;
+        }
+      }
 
       // Fetch location if quote has a location_id
       if (quote.location_id) {
