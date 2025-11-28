@@ -331,6 +331,7 @@ const App = () => {
             <Route path="/financial-reconciliation" element={isAuthenticated ? <ProtectedRoute><FinancialReconciliation /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/pipeline" element={isAuthenticated ? <ProtectedRoute><QuotePipeline /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/settings" element={isAuthenticated ? <ProtectedRoute><Settings /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/settings/templates" element={isAuthenticated ? <ProtectedRoute><TemplatesListPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/templates" element={isAuthenticated ? <ProtectedRoute><TemplatesListPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/template-builder/:id?" element={isAuthenticated ? <ProtectedRoute><TemplateBuilderPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/tasks" element={isAuthenticated ? <ProtectedRoute><Tasks /></ProtectedRoute> : <Navigate to="/auth" replace />} />

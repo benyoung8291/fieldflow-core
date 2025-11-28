@@ -10,6 +10,7 @@ import { PreBuiltBlocks } from "./PreBuiltBlocks";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { getFieldsByDocumentType } from "@/lib/documentFields";
 import { 
   Box, 
   Type, 
@@ -22,8 +23,13 @@ import {
   Layers
 } from "lucide-react";
 
-export const EnhancedToolbox = () => {
+interface EnhancedToolboxProps {
+  documentType: string;
+}
+
+export const EnhancedToolbox = ({ documentType }: EnhancedToolboxProps) => {
   const { connectors } = useEditor();
+  const availableFields = getFieldsByDocumentType(documentType);
 
   const layoutComponents = [
     {
@@ -53,13 +59,15 @@ export const EnhancedToolbox = () => {
       description: "Body text",
       component: <RichTextBlock text="Your text here" fontSize={16} />
     },
-    {
-      icon: Database,
-      name: "Data Field",
-      description: "Dynamic data",
-      component: <DataField />
-    }
   ];
+
+  // Generate dynamic data field components from document type fields
+  const dataFieldComponents = availableFields.map(field => ({
+    icon: Database,
+    name: field.label,
+    description: field.category,
+    component: <DataField field={field.field} label={field.label} />
+  }));
 
   const mediaComponents = [
     {
@@ -156,7 +164,9 @@ export const EnhancedToolbox = () => {
           <Separator />
           <ComponentGroup title="Shapes" components={shapeComponents} />
           <Separator />
-          <ComponentGroup title="Data" components={dataComponents} />
+          <ComponentGroup title="Data Fields" components={dataFieldComponents} />
+          <Separator />
+          <ComponentGroup title="Tables" components={dataComponents} />
           <Separator />
           <PreBuiltBlocks />
         </div>

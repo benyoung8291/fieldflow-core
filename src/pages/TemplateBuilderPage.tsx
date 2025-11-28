@@ -9,7 +9,7 @@ export default function TemplateBuilderPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSave = async (json: string, thumbnail: string) => {
+  const handleSave = async (json: string, thumbnail: string, name: string, documentType: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -27,6 +27,8 @@ export default function TemplateBuilderPage() {
         const { error } = await supabase
           .from("pdf_templates")
           .update({
+            name,
+            document_type: documentType,
             template_json: JSON.parse(json),
             thumbnail_url: thumbnail,
             updated_at: new Date().toISOString()
@@ -40,8 +42,8 @@ export default function TemplateBuilderPage() {
           .from("pdf_templates")
           .insert({
             tenant_id: profile.tenant_id,
-            name: "New Template",
-            document_type: "quote",
+            name,
+            document_type: documentType,
             template_json: JSON.parse(json),
             thumbnail_url: thumbnail,
             created_by: user.id
