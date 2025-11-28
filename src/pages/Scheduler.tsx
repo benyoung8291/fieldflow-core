@@ -1016,7 +1016,12 @@ export default function Scheduler() {
 
     // Handle dropping appointment into delete zone
     if (over.id === "delete-zone" && draggedItem?.type === "appointment") {
-      const appointmentId = draggedItem.appointmentId || active.id;
+      const appointmentId = draggedItem.appointmentId || draggedItem.appointment?.id;
+      
+      if (!appointmentId) {
+        console.error("No appointment ID found for deletion");
+        return;
+      }
       
       if (isDraggingSelectedAppointment) {
         // Delete all selected appointments
@@ -1027,7 +1032,7 @@ export default function Scheduler() {
         clearSelection();
       } else {
         // Delete single appointment
-        deleteAppointmentMutation.mutate(appointmentId as string);
+        deleteAppointmentMutation.mutate(appointmentId);
       }
       return;
     }
