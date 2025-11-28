@@ -13,7 +13,10 @@ export const DataField = ({
   fontSize = 14,
   fontWeight = 400
 }: DataFieldProps) => {
-  const { connectors: { connect, drag } } = useNode();
+  const { connectors: { connect, drag }, selected, hovered } = useNode((node) => ({
+    selected: node.events.selected,
+    hovered: node.events.hovered
+  }));
   
   return (
     <div
@@ -22,7 +25,10 @@ export const DataField = ({
         padding: "8px",
         border: "1px dashed hsl(var(--border))",
         borderRadius: "4px",
-        cursor: "move"
+        cursor: "move",
+        outline: selected ? "2px solid hsl(var(--primary))" : hovered ? "1px dashed hsl(var(--primary) / 0.5)" : "none",
+        outlineOffset: "2px",
+        transition: "outline 0.2s"
       }}
     >
       <div style={{ fontSize: "10px", color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}>

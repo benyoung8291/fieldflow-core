@@ -21,14 +21,20 @@ export const ShapeBlock = ({
   borderColor = "#000000",
   opacity = 1
 }: ShapeBlockProps) => {
-  const { connectors: { connect, drag } } = useNode();
+  const { connectors: { connect, drag }, selected, hovered } = useNode((node) => ({
+    selected: node.events.selected,
+    hovered: node.events.hovered
+  }));
   
   const getShapeStyles = () => {
     const baseStyles = {
       background,
       opacity,
       border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : "none",
-      cursor: "move"
+      cursor: "move",
+      outline: selected ? "2px solid hsl(var(--primary))" : hovered ? "1px dashed hsl(var(--primary) / 0.5)" : "none",
+      outlineOffset: "2px",
+      transition: "outline 0.2s"
     };
 
     switch (shape) {

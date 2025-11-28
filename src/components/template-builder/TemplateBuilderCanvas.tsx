@@ -49,6 +49,7 @@ export const TemplateBuilderCanvas = ({
   const [saving, setSaving] = useState(false);
   const [documentType, setDocumentType] = useState<string>("quote");
   const [templateName, setTemplateName] = useState<string>("Untitled Template");
+  const [pageMargins, setPageMargins] = useState({ top: 20, right: 20, bottom: 20, left: 20 }); // in mm
   const navigate = useNavigate();
 
   const handleSave = async (query: any, name: string, docType: string) => {
@@ -111,6 +112,10 @@ export const TemplateBuilderCanvas = ({
             ShapeBlock,
             GradientBackground
           }}
+          indicator={{
+            success: "hsl(var(--primary))",
+            error: "hsl(var(--destructive))",
+          }}
         >
           {/* Toolbox */}
           <EnhancedToolbox documentType={documentType} />
@@ -119,14 +124,20 @@ export const TemplateBuilderCanvas = ({
           <div className="flex-1 overflow-auto bg-muted/30 p-8 relative">
             <CanvasToolbar 
               onPreview={() => console.log("Preview")} 
-              onExport={() => console.log("Export")} 
+              onExport={() => console.log("Export")}
+              pageMargins={pageMargins}
+              onPageMarginsChange={setPageMargins}
             />
             
             <div 
               className="max-w-[210mm] mx-auto bg-background shadow-2xl relative"
               style={{ 
+                width: "210mm", // A4 width
                 minHeight: "297mm", // A4 height
-                padding: "20mm"
+                paddingTop: `${pageMargins.top}mm`,
+                paddingRight: `${pageMargins.right}mm`,
+                paddingBottom: `${pageMargins.bottom}mm`,
+                paddingLeft: `${pageMargins.left}mm`
               }}
             >
               <Frame>

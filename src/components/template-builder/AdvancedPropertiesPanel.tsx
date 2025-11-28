@@ -12,22 +12,24 @@ import { useToast } from "@/hooks/use-toast";
 
 export const AdvancedPropertiesPanel = () => {
   const { toast } = useToast();
-  const { selected, actions, query } = useEditor((state, query) => {
-    const currentNodeId = query.getEvent('selected').last();
+  const { selected } = useEditor((state) => {
+    const [currentNodeId] = state.events.selected;
     let selected;
 
-    if (currentNodeId) {
+    if (currentNodeId && state.nodes[currentNodeId]) {
       const node = state.nodes[currentNodeId];
       selected = {
         id: currentNodeId,
-        name: node.data.name,
+        name: node.data.displayName || node.data.name,
         props: node.data.props,
-        isDeletable: query.node(currentNodeId).isDeletable(),
+        isDeletable: node.data.name !== 'ROOT',
       };
     }
 
     return { selected };
   });
+
+  const { actions } = useEditor();
 
   const handlePropChange = (propName: string, value: any) => {
     if (selected) {
@@ -85,11 +87,19 @@ export const AdvancedPropertiesPanel = () => {
       <div className="w-80 border-l border-border bg-background">
         <div className="p-4 border-b border-border">
           <h2 className="font-semibold">Properties</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Click on an element to edit
+          </p>
         </div>
         <div className="p-4">
-          <p className="text-sm text-muted-foreground">
-            Select an element to edit its properties
-          </p>
+          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+            <p className="text-sm text-muted-foreground mb-2">
+              No element selected
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Click on any text, image, or shape in the canvas to view and edit its properties
+            </p>
+          </div>
         </div>
       </div>
     );
