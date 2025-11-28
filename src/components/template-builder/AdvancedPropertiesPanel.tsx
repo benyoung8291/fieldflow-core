@@ -369,6 +369,70 @@ export const AdvancedPropertiesPanel = () => {
               {selected.name === "Container" && (
                 <>
                   <div className="space-y-2">
+                    <Label>Position Type</Label>
+                    <Select 
+                      value={selected.props.position || "relative"} 
+                      onValueChange={(v) => handlePropChange('position', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="relative">Relative (Flow)</SelectItem>
+                        <SelectItem value="absolute">Absolute (Free)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selected.props.position === "absolute" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>X Position: {selected.props.x}px</Label>
+                        <Slider
+                          value={[selected.props.x || 0]}
+                          onValueChange={(v) => handlePropChange('x', v[0])}
+                          min={0}
+                          max={800}
+                          step={1}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Y Position: {selected.props.y}px</Label>
+                        <Slider
+                          value={[selected.props.y || 0]}
+                          onValueChange={(v) => handlePropChange('y', v[0])}
+                          min={0}
+                          max={1200}
+                          step={1}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Width: {selected.props.width === "auto" ? "Auto" : `${selected.props.width}px`}</Label>
+                        <Slider
+                          value={[typeof selected.props.width === "number" ? selected.props.width : 200]}
+                          onValueChange={(v) => handlePropChange('width', v[0])}
+                          min={50}
+                          max={800}
+                          step={10}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Height: {selected.props.height === "auto" ? "Auto" : `${selected.props.height}px`}</Label>
+                        <Slider
+                          value={[typeof selected.props.height === "number" ? selected.props.height : 100]}
+                          onValueChange={(v) => handlePropChange('height', v[0])}
+                          min={50}
+                          max={600}
+                          step={10}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-2">
                     <Label>Padding: {selected.props.padding}px</Label>
                     <Slider
                       value={[selected.props.padding || 16]}

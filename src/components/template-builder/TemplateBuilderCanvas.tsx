@@ -10,37 +10,34 @@ import { AdvancedPropertiesPanel } from "./AdvancedPropertiesPanel";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { TemplateNameDialog } from "./TemplateNameDialog";
 import { GradientBackground } from "./craft/GradientBackground";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface TemplateBuilderCanvasProps {
   templateId?: string;
   templateData?: any;
-  onSave: (json: string, thumbnail: string) => Promise<void>;
+  onSave: (json: string, thumbnail: string, name: string, documentType: string) => Promise<void>;
 }
 
-const SaveButton = ({ onSave, saving }: { onSave: (query: any) => void; saving: boolean }) => {
+const SaveButton = ({ onSave, saving, templateName, setTemplateName, documentType, setDocumentType }: { 
+  onSave: (query: any, name: string, docType: string) => void; 
+  saving: boolean;
+  templateName: string;
+  setTemplateName: (name: string) => void;
+  documentType: string;
+  setDocumentType: (type: string) => void;
+}) => {
   const { query } = useEditor();
-  const [showDialog, setShowDialog] = useState(false);
   
   return (
-    <>
-      <Button onClick={() => setShowDialog(true)} disabled={saving} size="lg">
-        <Save className="mr-2 h-4 w-4" />
-        {saving ? "Saving..." : "Save Template"}
-      </Button>
-      <TemplateNameDialog
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        onSave={(name, type) => {
-          onSave(query);
-          setShowDialog(false);
-        }}
-        saving={saving}
-      />
-    </>
+    <Button onClick={() => onSave(query, templateName, documentType)} disabled={saving} size="lg">
+      <Save className="mr-2 h-4 w-4" />
+      {saving ? "Saving..." : "Save Template"}
+    </Button>
   );
 };
 
@@ -50,14 +47,16 @@ export const TemplateBuilderCanvas = ({
   onSave 
 }: TemplateBuilderCanvasProps) => {
   const [saving, setSaving] = useState(false);
+  const [documentType, setDocumentType] = useState<string>("quote");
+  const [templateName, setTemplateName] = useState<string>("Untitled Template");
   const navigate = useNavigate();
 
-  const handleSave = async (query: any) => {
+  const handleSave = async (query: any, name: string, docType: string) => {
     setSaving(true);
     try {
       const json = query.serialize();
       // TODO: Generate thumbnail using html2canvas
-      await onSave(json, "");
+      await onSave(json, "", name, docType);
     } finally {
       setSaving(false);
     }
@@ -71,7 +70,32 @@ export const TemplateBuilderCanvas = ({
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-lg font-semibold">Template Builder</h1>
+          <div>
+            <h1 className="text-lg font-semibold">Template Builder</h1>
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              className="text-sm text-muted-foreground bg-transparent border-none outline-none focus:ring-0"
+              placeholder="Template name"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Document Type:</Label>
+            <Select value={documentType} onValueChange={setDocumentType}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="quote">Quote</SelectItem>
+                <SelectItem value="invoice">Invoice</SelectItem>
+                <SelectItem value="purchase_order">Purchase Order</SelectItem>
+                <SelectItem value="field_report">Field Report</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -89,7 +113,7 @@ export const TemplateBuilderCanvas = ({
           }}
         >
           {/* Toolbox */}
-          <EnhancedToolbox />
+          <EnhancedToolbox documentType={documentType} />
 
           {/* Canvas */}
           <div className="flex-1 overflow-auto bg-muted/30 p-8 relative">
@@ -116,7 +140,14 @@ export const TemplateBuilderCanvas = ({
               </Frame>
             </div>
             <div className="mt-6 flex justify-center">
-              <SaveButton onSave={handleSave} saving={saving} />
+              <SaveButton 
+                onSave={handleSave} 
+                saving={saving}
+                templateName={templateName}
+                setTemplateName={setTemplateName}
+                documentType={documentType}
+                setDocumentType={setDocumentType}
+              />
             </div>
           </div>
 

@@ -7,6 +7,11 @@ interface ContainerProps {
   background?: string;
   flexDirection?: "row" | "column";
   gap?: number;
+  position?: "relative" | "absolute";
+  x?: number;
+  y?: number;
+  width?: number | "auto";
+  height?: number | "auto";
 }
 
 export const Container = ({ 
@@ -14,7 +19,12 @@ export const Container = ({
   padding = 16, 
   background = "transparent",
   flexDirection = "column",
-  gap = 8
+  gap = 8,
+  position = "relative",
+  x = 0,
+  y = 0,
+  width = "auto",
+  height = "auto"
 }: ContainerProps) => {
   const { connectors: { connect, drag } } = useNode();
   
@@ -27,8 +37,13 @@ export const Container = ({
         display: "flex",
         flexDirection,
         gap: `${gap}px`,
-        minHeight: "50px",
-        width: "100%"
+        minHeight: position === "absolute" ? (height === "auto" ? "50px" : `${height}px`) : "50px",
+        width: position === "absolute" ? (width === "auto" ? "200px" : `${width}px`) : "100%",
+        position,
+        ...(position === "absolute" && {
+          left: `${x}px`,
+          top: `${y}px`,
+        })
       }}
     >
       {children}
@@ -42,7 +57,12 @@ Container.craft = {
     padding: 16,
     background: "transparent",
     flexDirection: "column",
-    gap: 8
+    gap: 8,
+    position: "relative",
+    x: 0,
+    y: 0,
+    width: "auto",
+    height: "auto"
   },
   rules: {
     canDrag: () => true,
