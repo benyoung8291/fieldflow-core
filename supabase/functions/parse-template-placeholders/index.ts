@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import PizZip from 'https://esm.sh/pizzip@3.1.6';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -33,16 +34,22 @@ Deno.serve(async (req) => {
 
     // Convert blob to array buffer
     const arrayBuffer = await fileData.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Parse Word document as ZIP archive
+    const zip = new PizZip(arrayBuffer);
+    
+    // Extract the main document XML
+    const documentXml = zip.file('word/document.xml')?.asText();
+    
+    if (!documentXml) {
+      throw new Error('Could not extract document.xml from Word file');
+    }
 
-    // Convert to text and search for placeholders
-    // Word documents are ZIP files, so we need to look at the XML content
-    const decoder = new TextDecoder('utf-8');
-    const content = decoder.decode(uint8Array);
+    console.log('Extracted XML length:', documentXml.length);
 
-    // Extract all {{placeholder}} patterns
+    // Extract all {{placeholder}} patterns from the XML
     const placeholderRegex = /\{\{([^}]+)\}\}/g;
-    const matches = content.matchAll(placeholderRegex);
+    const matches = documentXml.matchAll(placeholderRegex);
     const placeholders = new Set<string>();
 
     for (const match of matches) {
