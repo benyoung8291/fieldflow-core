@@ -50,7 +50,10 @@ export default function CustomerServiceOrders() {
           location:customer_locations!service_orders_customer_location_id_fkey(name, address),
           appointments:appointments(
             id,
-            markup_requests:markup_requests(id)
+            tickets:helpdesk_tickets(
+              id,
+              ticket_markups(id)
+            )
           )
         `)
         .eq("customer_id", profile.customer_id)
@@ -67,7 +70,8 @@ export default function CustomerServiceOrders() {
         ...order,
         appointmentCount: order.appointments?.length || 0,
         markupCount: order.appointments?.reduce((total: number, apt: any) => 
-          total + (apt.markup_requests?.length || 0), 0) || 0
+          total + (apt.tickets?.reduce((t: number, ticket: any) => 
+            t + (ticket.ticket_markups?.length || 0), 0) || 0), 0) || 0
       }));
     },
     enabled: !!profile?.customer_id,
@@ -103,7 +107,6 @@ export default function CustomerServiceOrders() {
         throw error;
       }
       console.log("Customer portal: Future contract items loaded", data);
-      console.log("Customer portal: Sample contract data", data?.[0]?.contract);
       return data;
     },
     enabled: !!profile?.customer_id,
