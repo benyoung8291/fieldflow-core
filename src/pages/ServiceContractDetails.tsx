@@ -43,6 +43,8 @@ export default function ServiceContractDetails() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [locationStateFilter, setLocationStateFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [showCreateLocationDialog, setShowCreateLocationDialog] = useState(false);
+  const [editingLocationForItem, setEditingLocationForItem] = useState<string | null>(null);
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],
@@ -605,7 +607,7 @@ export default function ServiceContractDetails() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
+                      <TableHead className="w-12 relative group">
                         <input
                           type="checkbox"
                           checked={filteredAndSortedLineItems.length > 0 && filteredAndSortedLineItems.every((item: any) => selectedItems.has(item.id))}
@@ -613,18 +615,49 @@ export default function ServiceContractDetails() {
                           className="cursor-pointer"
                           disabled={isEditingLocked}
                         />
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
                       </TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Key Number</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Unit Price</TableHead>
-                      <TableHead>Annual Revenue</TableHead>
-                      <TableHead>Est. Hours</TableHead>
-                      <TableHead>Frequency</TableHead>
-                      <TableHead>First Gen</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="relative group min-w-[200px]">
+                        Description
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group min-w-[180px]">
+                        Location
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group min-w-[120px]">
+                        Key Number
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group w-20">
+                        Qty
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group w-32">
+                        Unit Price
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group w-32">
+                        Annual Revenue
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group w-24">
+                        Est. Hours
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group min-w-[140px]">
+                        Frequency
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group w-32">
+                        First Gen
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="relative group w-24">
+                        Status
+                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
+                      </TableHead>
+                      <TableHead className="w-32">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -655,11 +688,16 @@ export default function ServiceContractDetails() {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="group relative">
                           {editingCell?.id === item.id && editingCell?.field === "location_id" ? (
                             <Select 
                               value={cellValue || "NONE"} 
-                              onValueChange={(value) => { 
+                              onValueChange={(value) => {
+                                if (value === "CREATE_NEW") {
+                                  setEditingLocationForItem(item.id);
+                                  setShowCreateLocationDialog(true);
+                                  return;
+                                }
                                 const locationId = value === "NONE" ? null : value;
                                 setCellValue(locationId); 
                                 updateCellMutation.mutate({ 
@@ -673,8 +711,12 @@ export default function ServiceContractDetails() {
                               <SelectTrigger className="h-8 w-48">
                                 <SelectValue placeholder="Select location" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="z-50">
                                 <SelectItem value="NONE">No location</SelectItem>
+                                <SelectItem value="CREATE_NEW" className="text-primary font-medium">
+                                  <Plus className="h-4 w-4 inline mr-2" />
+                                  Create New Location
+                                </SelectItem>
                                 {customerLocations?.map((loc: any) => (
                                   <SelectItem key={loc.id} value={loc.id}>
                                     {loc.name}
@@ -693,6 +735,7 @@ export default function ServiceContractDetails() {
                               </span>
                             </div>
                           )}
+                          <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 opacity-0 group-hover:opacity-100" />
                         </TableCell>
                         <TableCell>
                           {editingCell?.id === item.id && editingCell?.field === "key_number" ? (
@@ -1442,6 +1485,34 @@ export default function ServiceContractDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <QuickLocationDialog
+        open={showCreateLocationDialog}
+        onOpenChange={(open) => {
+          setShowCreateLocationDialog(open);
+          if (!open) {
+            setEditingLocationForItem(null);
+          }
+        }}
+        customerId={contract.customers.id}
+        customerName={contract.customers.name}
+        onLocationCreated={(locationId) => {
+          queryClient.invalidateQueries({ queryKey: ["customer-locations", contract.customers.id] });
+          
+          // If we were editing a line item, update it with the new location
+          if (editingLocationForItem) {
+            updateCellMutation.mutate({
+              itemId: editingLocationForItem,
+              field: "location_id",
+              value: locationId
+            });
+            setEditingLocationForItem(null);
+          }
+          
+          setShowCreateLocationDialog(false);
+          setEditingCell(null);
+        }}
+      />
     </div>
     </DashboardLayout>
   );
