@@ -120,10 +120,10 @@ export default function ServiceOrdersCalendarView({
     <div className="h-full overflow-x-auto">
       <div className="min-w-[800px]">
         {/* Header Row - Days */}
-        <div className="grid grid-cols-8 gap-2 mb-2">
-          <div className="font-semibold text-sm p-2">Service Order</div>
+        <div className="grid grid-cols-8 gap-px bg-border flex-shrink-0 bg-background pb-px border-b">
+          <div className="font-semibold text-sm p-2 bg-background">Service Order</div>
           {days.map(day => (
-            <div key={day.toISOString()} className="text-center font-semibold text-sm p-2">
+            <div key={day.toISOString()} className="text-center font-semibold text-sm p-2 bg-background">
               <div>{format(day, "EEE")}</div>
               <div className="text-xs text-muted-foreground">{format(day, "MMM d")}</div>
             </div>
@@ -131,11 +131,11 @@ export default function ServiceOrdersCalendarView({
         </div>
 
         {/* Service Order Rows */}
-        <div className="space-y-2">
+        <div className="space-y-px bg-border">
           {appointmentsByServiceOrder.map(order => (
-            <div key={order.id} className="grid grid-cols-8 gap-2">
+            <div key={order.id} className="grid grid-cols-8 gap-px bg-border">
               {/* Service Order Info */}
-              <Card className="p-2 flex flex-col justify-center">
+              <Card className="p-2 flex flex-col justify-center bg-background border-0">
                 <div className="space-y-1">
                   <Badge variant="outline" className="text-xs w-fit">
                     {order.order_number}
@@ -167,7 +167,7 @@ export default function ServiceOrdersCalendarView({
                     date={day}
                     workerId={null}
                     className={cn(
-                      "min-h-[120px] p-2 rounded-lg",
+                      "min-h-[120px] p-2 bg-background",
                       isInRange && "bg-yellow-100/60 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800",
                       isPreferred && "!border-green-500 dark:!border-green-600 !border-2"
                     )}
