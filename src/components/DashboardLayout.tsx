@@ -82,16 +82,23 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
             <Popover open={openPopover === item.id} onOpenChange={(open) => setOpenPopover(open ? item.id : null)}>
               <PopoverTrigger asChild>
                 <button
+                  onMouseEnter={() => setOpenPopover(item.id)}
+                  onMouseLeave={() => setOpenPopover(null)}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
                     "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  title={item.label}
                 >
                   <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="right" align="start" className="w-56 p-2 z-[9999]">
+              <PopoverContent 
+                side="right" 
+                align="start" 
+                className="w-56 p-2 z-[9999]"
+                onMouseEnter={() => setOpenPopover(item.id)}
+                onMouseLeave={() => setOpenPopover(null)}
+              >
                 <div className="space-y-1">
                   <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
                     {item.label}
