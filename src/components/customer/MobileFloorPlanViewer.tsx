@@ -120,7 +120,7 @@ export function MobileFloorPlanViewer({
 
   // Initial zoom and center when content loads
   useEffect(() => {
-    if (isInitialZoomSet || !containerDimensions.width || !containerDimensions.height || !contentDimensions.height) {
+    if (isInitialZoomSet || !containerDimensions.width || !containerDimensions.height || !contentDimensions.width || !contentDimensions.height) {
       return;
     }
 
@@ -129,7 +129,7 @@ export function MobileFloorPlanViewer({
     const initialScale = targetHeight / contentDimensions.height;
     const clampedScale = Math.max(0.5, Math.min(3, initialScale));
 
-    // Calculate offset to center the content
+    // Calculate offset to center the content with top-left origin
     const scaledWidth = contentDimensions.width * clampedScale;
     const scaledHeight = contentDimensions.height * clampedScale;
     const offsetX = (containerDimensions.width - scaledWidth) / 2;
@@ -141,13 +141,14 @@ export function MobileFloorPlanViewer({
       targetHeight,
       initialScale,
       clampedScale,
+      scaledDimensions: { width: scaledWidth, height: scaledHeight },
       offset: { x: offsetX, y: offsetY }
     });
 
     setScale(clampedScale);
     setOffset({ x: offsetX, y: offsetY });
     setIsInitialZoomSet(true);
-  }, [containerDimensions.width, containerDimensions.height, contentDimensions.height, isInitialZoomSet]);
+  }, [containerDimensions.width, containerDimensions.height, contentDimensions.width, contentDimensions.height, isInitialZoomSet]);
 
   // Auto-zoom to fit markups in read-only mode
   useEffect(() => {
@@ -550,7 +551,7 @@ export function MobileFloorPlanViewer({
           className="relative"
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: "center center",
+            transformOrigin: "top left",
             willChange: "transform",
           }}
         >
