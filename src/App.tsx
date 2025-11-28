@@ -101,7 +101,6 @@ const RequestView = lazy(() => import("./pages/customer/RequestView"));
 const LocationFloorPlans = lazy(() => import("./pages/customer/LocationFloorPlans"));
 const CustomerServiceOrders = lazy(() => import("./pages/customer/CustomerServiceOrders"));
 const CustomerFieldReports = lazy(() => import("./pages/customer/CustomerFieldReports"));
-const CustomerAppointments = lazy(() => import("./pages/customer/CustomerAppointments"));
 const ServiceOrderView = lazy(() => import("./pages/customer/ServiceOrderView"));
 const AppointmentView = lazy(() => import("./pages/customer/AppointmentView"));
 const FieldReportView = lazy(() => import("./pages/customer/FieldReportView"));
@@ -366,7 +365,6 @@ const App = () => {
             <Route path="/customer/service-orders/:orderId" element={isAuthenticated ? <ProtectedRoute><ServiceOrderView /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/field-reports" element={isAuthenticated ? <ProtectedRoute><CustomerFieldReports /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/field-reports/:reportId" element={isAuthenticated ? <ProtectedRoute><FieldReportView /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/customer/appointments" element={isAuthenticated ? <ProtectedRoute><CustomerAppointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/appointments/:appointmentId" element={isAuthenticated ? <ProtectedRoute><AppointmentView /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
             <Route path="/worker/dashboard" element={isAuthenticated ? <ProtectedRoute><WorkerDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
