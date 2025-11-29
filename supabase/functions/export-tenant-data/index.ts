@@ -52,6 +52,8 @@ serve(async (req) => {
       throw new Error("Tenant ID is required");
     }
 
+    console.log(`🔍 Looking up tenant with ID: ${tenantId}`);
+
     // Verify tenant exists
     const { data: tenant, error: tenantError } = await supabaseClient
       .from("tenants")
@@ -59,7 +61,13 @@ serve(async (req) => {
       .eq("id", tenantId)
       .single();
 
-    if (tenantError || !tenant) {
+    if (tenantError) {
+      console.error("❌ Tenant query error:", tenantError);
+      throw new Error(`Tenant query failed: ${tenantError.message}`);
+    }
+
+    if (!tenant) {
+      console.error("❌ No tenant found with ID:", tenantId);
       throw new Error("Tenant not found");
     }
 
