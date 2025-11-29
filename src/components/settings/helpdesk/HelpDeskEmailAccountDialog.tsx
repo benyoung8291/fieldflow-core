@@ -254,15 +254,14 @@ export function HelpDeskEmailAccountDialog({
           }
           
           try {
-            // Poll database for completion
+            // Poll database for completion using secure RPC function
             // @ts-ignore - Bypass complex type inference
-            const result = await supabase
-              .from("oauth_temp_tokens")
-              .select("*")
-              .eq("session_key", sessionKey)
-              .maybeSingle();
+            const result = await supabase.rpc('get_oauth_token_by_key', { 
+              p_session_key: sessionKey 
+            });
             
-            const tokenData = result.data;
+            // RPC returns an array, get the first result
+            const tokenData = result.data?.[0];
             const fetchError = result.error;
 
             if (tokenData && !fetchError) {
@@ -271,11 +270,8 @@ export function HelpDeskEmailAccountDialog({
               
               console.log("✅ OAuth tokens retrieved from polling");
 
-              // Delete the temp tokens
-              await supabase
-                .from("oauth_temp_tokens")
-                .delete()
-                .eq("session_key", sessionKey);
+              // Note: Tokens are automatically cleaned up by the cleanup-oauth-tokens edge function
+              // No need to delete manually (user doesn't have permission)
 
               const oauthData = {
                 email: tokenData.email,

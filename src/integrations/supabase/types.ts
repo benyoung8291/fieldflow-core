@@ -9071,6 +9071,34 @@ export type Database = {
         Args: { p_entity_type: string; p_tenant_id: string }
         Returns: string
       }
+      get_oauth_token_by_key: {
+        Args: { p_session_key: string }
+        Returns: {
+          access_token: string
+          account_id: string
+          created_at: string
+          email: string
+          expires_in: number
+          id: string
+          refresh_token: string
+          session_id: string
+          session_key: string
+        }[]
+      }
+      get_oauth_token_by_session: {
+        Args: { p_session_id: string }
+        Returns: {
+          access_token: string
+          account_id: string
+          created_at: string
+          email: string
+          expires_in: number
+          id: string
+          refresh_token: string
+          session_id: string
+          session_key: string
+        }[]
+      }
       get_purchase_order_with_links: {
         Args: { p_po_id: string }
         Returns: {
