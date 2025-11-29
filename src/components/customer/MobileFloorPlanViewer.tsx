@@ -140,29 +140,30 @@ export function MobileFloorPlanViewer({
     const calculatedScale = targetHeight / contentDimensions.height;
     const finalScale = Math.min(5, calculatedScale);
 
-    // Calculate scaled dimensions
+    // CRITICAL: With transform: translate() scale(), the translate is applied to UNSCALED content
+    // So we need to calculate offset in unscaled content space, then it gets scaled
+    // After scaling, the actual translation will be: offset * scale
+    
+    // Calculate where we want the content after scaling
     const scaledWidth = contentDimensions.width * finalScale;
     const scaledHeight = contentDimensions.height * finalScale;
-
-    // Center the scaled content in the container
-    const offsetX = (containerDimensions.width - scaledWidth) / 2;
-    const offsetY = (containerDimensions.height - scaledHeight) / 2;
+    
+    // How much we want to translate in screen space (scaled)
+    const screenSpaceOffsetX = (containerDimensions.width - scaledWidth) / 2;
+    const screenSpaceOffsetY = (containerDimensions.height - scaledHeight) / 2;
+    
+    // Convert to content space (unscaled) by dividing by scale
+    const offsetX = screenSpaceOffsetX / finalScale;
+    const offsetY = screenSpaceOffsetY / finalScale;
 
     console.log("Initial zoom setup:", {
       container: containerDimensions,
       content: contentDimensions,
       scale: finalScale,
       scaledSize: { width: scaledWidth, height: scaledHeight },
-      offset: { x: offsetX, y: offsetY },
-      isOffscreen: offsetX < 0 ? 'Content wider than screen - showing center' : 'Content fits',
-      mathCheck: {
-        viewportWidth: containerDimensions.width,
-        scaledContentWidth: scaledWidth,
-        centering: `(${containerDimensions.width} - ${scaledWidth}) / 2 = ${offsetX}`,
-        visibleRange: offsetX < 0 
-          ? `Showing content from ${Math.abs(offsetX)}px to ${Math.abs(offsetX) + containerDimensions.width}px of ${scaledWidth}px total`
-          : 'Entire content visible'
-      }
+      screenSpaceOffset: { x: screenSpaceOffsetX, y: screenSpaceOffsetY },
+      contentSpaceOffset: { x: offsetX, y: offsetY },
+      verification: `After scale, translate ${offsetX} * ${finalScale} = ${offsetX * finalScale} (should be ${screenSpaceOffsetX})`
     });
 
     setScale(finalScale);
