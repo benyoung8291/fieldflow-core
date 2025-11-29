@@ -135,30 +135,36 @@ export function MobileFloorPlanViewer({
       return;
     }
 
-    // Always scale to 80% of screen height - user wants to see the center
+    // Scale to 80% of screen height
     const targetHeight = containerDimensions.height * 0.8;
     const calculatedScale = targetHeight / contentDimensions.height;
-    
-    // Don't clamp the scale - allow it to be whatever size needed for 80% height
     const finalScale = Math.min(5, calculatedScale); // Only prevent extreme zoom-in
 
-    // Calculate the dimensions after scaling
-    const finalScaledWidth = contentDimensions.width * finalScale;
-    const finalScaledHeight = contentDimensions.height * finalScale;
+    // Calculate scaled dimensions
+    const scaledWidth = contentDimensions.width * finalScale;
+    const scaledHeight = contentDimensions.height * finalScale;
 
-    // Center the content both horizontally and vertically
-    // Even if content is wider than screen, we want the CENTER visible
-    const offsetX = (containerDimensions.width - finalScaledWidth) / 2;
-    const offsetY = (containerDimensions.height - finalScaledHeight) / 2;
+    // Calculate container center points
+    const containerCenterX = containerDimensions.width / 2;
+    const containerCenterY = containerDimensions.height / 2;
+
+    // Position content so its center aligns with container center
+    // offsetX positions the LEFT edge of the content so that the content's center is at containerCenterX
+    const offsetX = containerCenterX - (scaledWidth / 2);
+    const offsetY = containerCenterY - (scaledHeight / 2);
 
     console.log("Initial zoom setup:", {
-      containerDimensions,
-      contentDimensions,
-      targetHeight,
-      calculatedScale,
-      finalScale,
-      scaledDimensions: { width: finalScaledWidth, height: finalScaledHeight },
-      offset: { x: offsetX, y: offsetY }
+      container: containerDimensions,
+      content: contentDimensions,
+      scale: finalScale,
+      scaledSize: { width: scaledWidth, height: scaledHeight },
+      containerCenter: { x: containerCenterX, y: containerCenterY },
+      offset: { x: offsetX, y: offsetY },
+      verification: {
+        contentCenterX: offsetX + scaledWidth / 2,
+        contentCenterY: offsetY + scaledHeight / 2,
+        shouldMatch: { x: containerCenterX, y: containerCenterY }
+      }
     });
 
     setScale(finalScale);
