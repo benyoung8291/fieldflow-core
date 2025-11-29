@@ -140,26 +140,21 @@ export function MobileFloorPlanViewer({
     const calculatedScale = targetHeight / contentDimensions.height;
     const finalScale = Math.min(5, calculatedScale);
 
-    // With transformOrigin: "center", we need to position where the CENTER of the content should be
-    // The unscaled content center is at (contentWidth/2, contentHeight/2)
-    // We want this center to be at the container center
-    const contentCenterX = contentDimensions.width / 2;
-    const contentCenterY = contentDimensions.height / 2;
-    
-    const containerCenterX = containerDimensions.width / 2;
-    const containerCenterY = containerDimensions.height / 2;
+    // Calculate scaled dimensions
+    const scaledWidth = contentDimensions.width * finalScale;
+    const scaledHeight = contentDimensions.height * finalScale;
 
-    // The offset moves the content's natural center to the container's center
-    const offsetX = containerCenterX - contentCenterX;
-    const offsetY = containerCenterY - contentCenterY;
+    // Center the scaled content in the container
+    const offsetX = (containerDimensions.width - scaledWidth) / 2;
+    const offsetY = (containerDimensions.height - scaledHeight) / 2;
 
     console.log("Initial zoom setup:", {
       container: containerDimensions,
       content: contentDimensions,
       scale: finalScale,
-      contentCenter: { x: contentCenterX, y: contentCenterY },
-      containerCenter: { x: containerCenterX, y: containerCenterY },
-      offset: { x: offsetX, y: offsetY }
+      scaledSize: { width: scaledWidth, height: scaledHeight },
+      offset: { x: offsetX, y: offsetY },
+      isOffscreen: offsetX < 0 ? 'Content wider than screen - showing center' : 'Content fits'
     });
 
     setScale(finalScale);
@@ -592,7 +587,7 @@ export function MobileFloorPlanViewer({
           className="relative"
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: "center",
+            transformOrigin: "top left",
             willChange: "transform",
           }}
         >
