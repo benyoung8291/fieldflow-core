@@ -140,30 +140,27 @@ export function MobileFloorPlanViewer({
     const calculatedScale = targetHeight / contentDimensions.height;
     const finalScale = Math.min(5, calculatedScale);
 
-    // CRITICAL: With transform: translate() scale(), the translate is applied to UNSCALED content
-    // So we need to calculate offset in unscaled content space, then it gets scaled
-    // After scaling, the actual translation will be: offset * scale
-    
-    // Calculate where we want the content after scaling
+    // Calculate scaled dimensions
     const scaledWidth = contentDimensions.width * finalScale;
     const scaledHeight = contentDimensions.height * finalScale;
-    
-    // How much we want to translate in screen space (scaled)
-    const screenSpaceOffsetX = (containerDimensions.width - scaledWidth) / 2;
-    const screenSpaceOffsetY = (containerDimensions.height - scaledHeight) / 2;
-    
-    // Convert to content space (unscaled) by dividing by scale
-    const offsetX = screenSpaceOffsetX / finalScale;
-    const offsetY = screenSpaceOffsetY / finalScale;
+
+    // Center the scaled content in the container
+    // With transform: translate() scale() and origin: top-left,
+    // the translate is applied AFTER scaling, so it's already in screen space
+    const offsetX = (containerDimensions.width - scaledWidth) / 2;
+    const offsetY = (containerDimensions.height - scaledHeight) / 2;
 
     console.log("Initial zoom setup:", {
       container: containerDimensions,
       content: contentDimensions,
       scale: finalScale,
       scaledSize: { width: scaledWidth, height: scaledHeight },
-      screenSpaceOffset: { x: screenSpaceOffsetX, y: screenSpaceOffsetY },
-      contentSpaceOffset: { x: offsetX, y: offsetY },
-      verification: `After scale, translate ${offsetX} * ${finalScale} = ${offsetX * finalScale} (should be ${screenSpaceOffsetX})`
+      offset: { x: offsetX, y: offsetY },
+      centerCheck: {
+        scaledCenterX: offsetX + scaledWidth / 2,
+        containerCenterX: containerDimensions.width / 2,
+        match: Math.abs((offsetX + scaledWidth / 2) - containerDimensions.width / 2) < 1
+      }
     });
 
     setScale(finalScale);
