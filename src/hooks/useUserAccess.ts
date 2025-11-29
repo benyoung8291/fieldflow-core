@@ -39,7 +39,7 @@ export function useUserAccess() {
       };
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always fetch fresh for security-critical access checks
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
