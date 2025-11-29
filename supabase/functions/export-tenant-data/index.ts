@@ -110,12 +110,13 @@ serve(async (req) => {
     ];
 
     const exportData: Record<string, any[]> = {};
-    let processedCount = 0;
+    let successCount = 0;
+    let errorCount = 0;
 
     // Export each table
     for (const table of tables) {
       try {
-        console.log(`  📄 Exporting table: ${table} (${processedCount + 1}/${tables.length})`);
+        console.log(`  📄 Exporting table: ${table} (${successCount + errorCount + 1}/${tables.length})`);
         
         const { data, error } = await supabaseClient
           .from(table)
@@ -125,17 +126,20 @@ serve(async (req) => {
         if (error) {
           console.error(`  ❌ Error exporting ${table}:`, error.message);
           exportData[table] = [];
+          errorCount++;
         } else {
           exportData[table] = data || [];
           console.log(`  ✅ Exported ${data?.length || 0} rows from ${table}`);
+          successCount++;
         }
-        
-        processedCount++;
       } catch (err) {
         console.error(`  ❌ Exception exporting ${table}:`, err);
         exportData[table] = [];
+        errorCount++;
       }
     }
+
+    console.log(`📊 Export summary: ${successCount} succeeded, ${errorCount} failed, ${tables.length} total`);
 
     // Log the export action
     await supabaseClient.from("audit_logs").insert({
@@ -148,14 +152,17 @@ serve(async (req) => {
       note: `Exported all data for tenant: ${tenant.name}`
     });
 
-    console.log(`✅ Export completed. Total tables: ${tables.length}`);
-
     return new Response(
       JSON.stringify({
         success: true,
         tenantName: tenant.name,
         data: exportData,
-        exportedAt: new Date().toISOString()
+        exportedAt: new Date().toISOString(),
+        stats: {
+          totalTables: tables.length,
+          successCount,
+          errorCount
+        }
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

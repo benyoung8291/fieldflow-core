@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Plus, Building2, Users, DollarSign, Download } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import Papa from "papaparse";
+import JSZip from "jszip";
 
 export default function SuperAdmin() {
   const queryClient = useQueryClient();
@@ -103,49 +104,52 @@ export default function SuperAdmin() {
 
   const handleExport = async () => {
     if (!selectedTenantId) {
-      toast.error("Please select a tenant to export");
+      toast.error("Please select a tenant");
       return;
     }
 
     setIsExporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("export-tenant-data", {
-        body: { tenantId: selectedTenantId },
+      const { data: responseData, error } = await supabase.functions.invoke('export-tenant-data', {
+        body: { tenantId: selectedTenantId }
       });
 
       if (error) throw error;
+      if (!responseData?.success) throw new Error(responseData?.error || "Export failed");
 
-      if (!data?.success) {
-        throw new Error(data?.error || "Export failed");
-      }
-
-      const tenantName = data.tenantName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const exportDate = new Date().toISOString().split('T')[0];
+      const { data, tenantName, exportedAt, stats } = responseData;
       
-      // Download each table as a separate CSV
-      let downloadedCount = 0;
-      const totalTables = Object.keys(data.data).length;
+      toast.success(`Preparing ${stats.totalTables} tables for download (${stats.successCount} with data, ${stats.errorCount} skipped)...`);
 
-      for (const [tableName, tableData] of Object.entries(data.data)) {
-        if (Array.isArray(tableData) && tableData.length > 0) {
-          const csv = Papa.unparse(tableData);
-          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `${tenantName}_${tableName}_${exportDate}.csv`;
-          link.click();
-          URL.revokeObjectURL(link.href);
-          downloadedCount++;
-          
-          // Small delay to prevent browser from blocking multiple downloads
-          await new Promise(resolve => setTimeout(resolve, 100));
+      // Create zip file
+      const zip = new JSZip();
+      const timestamp = new Date(exportedAt).toISOString().split('T')[0];
+      
+      // Add each table as CSV to the zip
+      Object.entries(data).forEach(([tableName, rows]: [string, any[]]) => {
+        if (rows && rows.length > 0) {
+          const csv = Papa.unparse(rows);
+          zip.file(`${tableName}.csv`, csv);
         }
-      }
+      });
 
-      toast.success(`Successfully exported ${downloadedCount} of ${totalTables} tables with data`);
+      // Generate zip file
+      const blob = await zip.generateAsync({ type: 'blob' });
+      
+      // Download the zip
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${tenantName}_export_${timestamp}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success(`Export completed! Downloaded ${tenantName}_export_${timestamp}.zip`);
     } catch (error) {
       console.error("Export error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to export data");
+      toast.error("Failed to export tenant data");
     } finally {
       setIsExporting(false);
     }
