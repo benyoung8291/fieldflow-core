@@ -6,7 +6,6 @@ import { Trash2, MapPin, Square, Camera, Image as ImageIcon, X, Loader2 } from "
 import { Markup } from "../FloorPlanViewer";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -147,19 +146,21 @@ export function MobileMarkupSheet({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[90vh] max-w-[95vw] p-0 gap-0 flex flex-col">
-        <DialogHeader className="px-4 py-4 border-b shrink-0">
-          <DialogTitle className="text-xl">Markup List</DialogTitle>
+      <DialogContent 
+        className="h-[85vh] max-w-[95vw] p-0 gap-0 flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="px-3 py-3 border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <DialogTitle className="text-base font-semibold">Markups ({markups.length})</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 px-4">
-          <div className="py-4">
-            {markups.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg mb-2">No markups yet</p>
-                <p className="text-sm">Tap the pin or area button to add markups</p>
+        <div className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="p-3 pb-6 min-h-full">{markups.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm mb-1">No markups yet</p>
+                <p className="text-xs">Tap pin or area to add</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {markups.map((markup, index) => {
                   const photoPreview = getPhotoPreview(markup.photo);
                   
@@ -167,117 +168,115 @@ export function MobileMarkupSheet({
                     <Card
                       key={markup.id}
                       className={cn(
-                        "p-4 transition-all cursor-pointer",
-                        selectedMarkupId === markup.id && "ring-2 ring-primary shadow-lg"
+                        "p-2.5 transition-all",
+                        selectedMarkupId === markup.id && "ring-2 ring-primary"
                       )}
-                      onClick={() => onMarkupSelect(markup.id)}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
+                      <div className="space-y-2">
+                        {/* Header with icon, number, and delete */}
+                        <div className="flex items-center gap-2">
                           {markup.type === "pin" ? (
-                            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                              <MapPin className="h-5 w-5 text-destructive" />
+                            <div className="h-7 w-7 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                              <MapPin className="h-3.5 w-3.5 text-destructive" />
                             </div>
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                              <Square className="h-5 w-5 text-yellow-600" />
+                            <div className="h-7 w-7 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
+                              <Square className="h-3.5 w-3.5 text-yellow-600" />
                             </div>
                           )}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-semibold">
-                              #{index + 1}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {markup.type === "pin" ? "Pin" : "Area"}
-                            </span>
-                          </div>
                           
-                          <Input
-                            placeholder="Describe the issue..."
-                            value={markup.notes || ""}
-                            onChange={(e) => {
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            #{index + 1}
+                          </Badge>
+                          
+                          <span className="text-xs text-muted-foreground">
+                            {markup.type === "pin" ? "Pin" : "Area"}
+                          </span>
+                          
+                          <div className="flex-1" />
+                          
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
                               e.stopPropagation();
-                              onMarkupUpdate(markup.id, e.target.value);
+                              onMarkupDelete(markup.id);
                             }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-base"
-                          />
-
-                          {/* Photo section */}
-                          <div className="space-y-2">
-                            {uploadingPhotos.has(markup.id) ? (
-                              <div className="flex items-center justify-center h-32 border border-border rounded-lg bg-muted">
-                                <div className="flex flex-col items-center gap-2">
-                                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                  <span className="text-sm text-muted-foreground">Uploading...</span>
-                                </div>
-                              </div>
-                            ) : photoPreview ? (
-                              <div className="relative rounded-lg overflow-hidden border border-border">
-                                <img
-                                  src={photoPreview}
-                                  alt="Markup photo"
-                                  className="w-full h-32 object-cover"
-                                />
-                                <Button
-                                  size="icon"
-                                  variant="destructive"
-                                  className="absolute top-2 right-2 h-8 w-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onMarkupPhotoUpdate(markup.id, null);
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCurrentMarkupId(markup.id);
-                                    cameraInputRef.current?.click();
-                                  }}
-                                >
-                                  <Camera className="h-4 w-4 mr-2" />
-                                  Take Photo
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCurrentMarkupId(markup.id);
-                                    fileInputRef.current?.click();
-                                  }}
-                                >
-                                  <ImageIcon className="h-4 w-4 mr-2" />
-                                  Gallery
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                            className="h-7 w-7 shrink-0"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
                         </div>
                         
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => {
+                        {/* Description input */}
+                        <Input
+                          placeholder="Describe issue..."
+                          value={markup.notes || ""}
+                          onChange={(e) => {
                             e.stopPropagation();
-                            onMarkupDelete(markup.id);
+                            onMarkupUpdate(markup.id, e.target.value);
                           }}
-                          className="flex-shrink-0 h-10 w-10"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-9 text-sm"
+                        />
+
+                        {/* Compact photo section */}
+                        {uploadingPhotos.has(markup.id) ? (
+                          <div className="flex items-center justify-center h-20 border border-dashed border-border rounded-md bg-muted/50">
+                            <div className="flex items-center gap-1.5">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                              <span className="text-xs text-muted-foreground">Uploading...</span>
+                            </div>
+                          </div>
+                        ) : photoPreview ? (
+                          <div className="relative rounded-md overflow-hidden border border-border">
+                            <img
+                              src={photoPreview}
+                              alt="Markup"
+                              className="w-full h-24 object-cover"
+                            />
+                            <Button
+                              size="icon"
+                              variant="destructive"
+                              className="absolute top-1 right-1 h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onMarkupPhotoUpdate(markup.id, null);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentMarkupId(markup.id);
+                                cameraInputRef.current?.click();
+                              }}
+                            >
+                              <Camera className="h-3 w-3 mr-1" />
+                              Photo
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentMarkupId(markup.id);
+                                fileInputRef.current?.click();
+                              }}
+                            >
+                              <ImageIcon className="h-3 w-3 mr-1" />
+                              Gallery
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   );
@@ -285,7 +284,7 @@ export function MobileMarkupSheet({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
       
       {/* Hidden file inputs */}

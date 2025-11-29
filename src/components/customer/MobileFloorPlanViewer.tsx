@@ -135,23 +135,19 @@ export function MobileFloorPlanViewer({
       return;
     }
 
-    // Calculate scale to fit 80% of screen height
+    // Always scale to 80% of screen height - user wants to see the center
     const targetHeight = containerDimensions.height * 0.8;
-    const scaleForHeight = targetHeight / contentDimensions.height;
+    const calculatedScale = targetHeight / contentDimensions.height;
     
-    // Also check if it fits width-wise (with 5% padding)
-    const scaleForWidth = (containerDimensions.width * 0.95) / contentDimensions.width;
-    
-    // Use the smaller scale to ensure content fits within bounds
-    // Don't clamp to minimum - allow it to be as small as needed to fit
-    const calculatedScale = Math.min(scaleForHeight, scaleForWidth);
-    const clampedScale = Math.min(3, calculatedScale); // Only clamp maximum, not minimum
+    // Don't clamp the scale - allow it to be whatever size needed for 80% height
+    const finalScale = Math.min(5, calculatedScale); // Only prevent extreme zoom-in
 
     // Calculate the dimensions after scaling
-    const finalScaledWidth = contentDimensions.width * clampedScale;
-    const finalScaledHeight = contentDimensions.height * clampedScale;
+    const finalScaledWidth = contentDimensions.width * finalScale;
+    const finalScaledHeight = contentDimensions.height * finalScale;
 
-    // Calculate offset to center the scaled content
+    // Center the content both horizontally and vertically
+    // Even if content is wider than screen, we want the CENTER visible
     const offsetX = (containerDimensions.width - finalScaledWidth) / 2;
     const offsetY = (containerDimensions.height - finalScaledHeight) / 2;
 
@@ -159,15 +155,13 @@ export function MobileFloorPlanViewer({
       containerDimensions,
       contentDimensions,
       targetHeight,
-      scaleForHeight,
-      scaleForWidth,
       calculatedScale,
-      clampedScale,
+      finalScale,
       scaledDimensions: { width: finalScaledWidth, height: finalScaledHeight },
       offset: { x: offsetX, y: offsetY }
     });
 
-    setScale(clampedScale);
+    setScale(finalScale);
     setOffset({ x: offsetX, y: offsetY });
     setIsInitialZoomSet(true);
   }, [containerDimensions.width, containerDimensions.height, contentDimensions.width, contentDimensions.height, isInitialZoomSet]);
