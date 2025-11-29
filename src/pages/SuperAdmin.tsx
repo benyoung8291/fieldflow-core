@@ -8,14 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Building2, Users, DollarSign } from "lucide-react";
+import { Plus, Building2, Users, DollarSign, Download } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
+import Papa from "papaparse";
 
 export default function SuperAdmin() {
   const queryClient = useQueryClient();
   const { userRoles } = usePermissions();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+  const [isExporting, setIsExporting] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
     abn: "",
@@ -95,6 +99,56 @@ export default function SuperAdmin() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createTenantMutation.mutate(formData);
+  };
+
+  const handleExport = async () => {
+    if (!selectedTenantId) {
+      toast.error("Please select a tenant to export");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("export-tenant-data", {
+        body: { tenantId: selectedTenantId },
+      });
+
+      if (error) throw error;
+
+      if (!data?.success) {
+        throw new Error(data?.error || "Export failed");
+      }
+
+      const tenantName = data.tenantName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const exportDate = new Date().toISOString().split('T')[0];
+      
+      // Download each table as a separate CSV
+      let downloadedCount = 0;
+      const totalTables = Object.keys(data.data).length;
+
+      for (const [tableName, tableData] of Object.entries(data.data)) {
+        if (Array.isArray(tableData) && tableData.length > 0) {
+          const csv = Papa.unparse(tableData);
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `${tenantName}_${tableName}_${exportDate}.csv`;
+          link.click();
+          URL.revokeObjectURL(link.href);
+          downloadedCount++;
+          
+          // Small delay to prevent browser from blocking multiple downloads
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      toast.success(`Successfully exported ${downloadedCount} of ${totalTables} tables with data`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to export data");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const stats = tenants
@@ -320,6 +374,42 @@ export default function SuperAdmin() {
               </div>
             ) : (
               <p className="text-muted-foreground">No tenants found</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Export</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="export-tenant">Select Tenant</Label>
+              <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+                <SelectTrigger id="export-tenant">
+                  <SelectValue placeholder="Choose a tenant to export..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants?.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button 
+              onClick={handleExport} 
+              disabled={!selectedTenantId || isExporting}
+              className="w-full sm:w-auto"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isExporting ? "Exporting..." : "Export All Tables"}
+            </Button>
+            {isExporting && (
+              <p className="text-sm text-muted-foreground">
+                Please wait while we export all tables. Multiple CSV files will be downloaded.
+              </p>
             )}
           </CardContent>
         </Card>
