@@ -127,10 +127,8 @@ export default function SuperAdmin() {
       
       // Add each table as CSV to the zip
       Object.entries(data).forEach(([tableName, rows]: [string, any[]]) => {
-        if (rows && rows.length > 0) {
-          const csv = Papa.unparse(rows);
-          zip.file(`${tableName}.csv`, csv);
-        }
+        const csv = Papa.unparse(rows);
+        zip.file(`${tableName}.csv`, csv);
       });
 
       // Generate zip file
