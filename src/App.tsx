@@ -18,6 +18,7 @@ import { useRealtimeNotifications } from "./hooks/useNotifications";
 import { MobileBottomNav } from "./components/layout/MobileBottomNav";
 import { WorkerMobileBottomNav } from "./components/layout/WorkerMobileBottomNav";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { UpdateNotificationBar } from "@/components/UpdateNotificationBar";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting and faster initial load
@@ -295,6 +296,7 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
+              <UpdateNotificationBar />
               {isAuthenticated && <OnboardingWizard />}
               <MobileBottomNav />
               <WorkerMobileBottomNav />
