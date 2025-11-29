@@ -55,7 +55,7 @@ serve(async (req) => {
     // Verify tenant exists
     const { data: tenant, error: tenantError } = await supabaseClient
       .from("tenants")
-      .select("id, company_name")
+      .select("id, name")
       .eq("id", tenantId)
       .single();
 
@@ -63,7 +63,7 @@ serve(async (req) => {
       throw new Error("Tenant not found");
     }
 
-    console.log(`📦 Exporting data for tenant: ${tenant.company_name}`);
+    console.log(`📦 Exporting data for tenant: ${tenant.name}`);
 
     // List of all tables with tenant_id
     const tables = [
@@ -137,7 +137,7 @@ serve(async (req) => {
       action: "export_all_data",
       user_id: user.id,
       user_name: user.email || "Unknown",
-      note: `Exported all data for tenant: ${tenant.company_name}`
+      note: `Exported all data for tenant: ${tenant.name}`
     });
 
     console.log(`✅ Export completed. Total tables: ${tables.length}`);
@@ -145,7 +145,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        tenantName: tenant.company_name,
+        tenantName: tenant.name,
         data: exportData,
         exportedAt: new Date().toISOString()
       }),
