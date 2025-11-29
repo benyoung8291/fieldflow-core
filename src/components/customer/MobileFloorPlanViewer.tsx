@@ -154,7 +154,15 @@ export function MobileFloorPlanViewer({
       scale: finalScale,
       scaledSize: { width: scaledWidth, height: scaledHeight },
       offset: { x: offsetX, y: offsetY },
-      isOffscreen: offsetX < 0 ? 'Content wider than screen - showing center' : 'Content fits'
+      isOffscreen: offsetX < 0 ? 'Content wider than screen - showing center' : 'Content fits',
+      mathCheck: {
+        viewportWidth: containerDimensions.width,
+        scaledContentWidth: scaledWidth,
+        centering: `(${containerDimensions.width} - ${scaledWidth}) / 2 = ${offsetX}`,
+        visibleRange: offsetX < 0 
+          ? `Showing content from ${Math.abs(offsetX)}px to ${Math.abs(offsetX) + containerDimensions.width}px of ${scaledWidth}px total`
+          : 'Entire content visible'
+      }
     });
 
     setScale(finalScale);
@@ -164,6 +172,9 @@ export function MobileFloorPlanViewer({
 
   // Auto-zoom to fit markups in read-only mode
   useEffect(() => {
+    // Disable auto-zoom - let user manually navigate
+    return;
+    
     if (!readOnly || markups.length === 0 || !containerDimensions.width || !contentRef.current) {
       return;
     }
