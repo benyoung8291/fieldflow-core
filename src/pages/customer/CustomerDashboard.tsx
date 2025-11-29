@@ -1,12 +1,14 @@
 import { CustomerPortalLayout } from "@/components/layout/CustomerPortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, MapPin, FileText, Clock, ClipboardList, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   const { data: profile } = useQuery({
     queryKey: ["customer-profile"],
@@ -118,13 +120,120 @@ export default function CustomerDashboard() {
     enabled: !!profile?.customer_id,
   });
 
-  const openRequests = requests?.filter(req => req.status !== 'completed') || [];
-  const activeServiceOrders = serviceOrders?.filter(so => so.status === 'in_progress') || [];
-  const upcomingAppointments = appointments?.filter((apt: any) => 
-    new Date(apt.start_time) > new Date() && apt.status === 'scheduled'
+  // Calculate metrics with correct filters
+  const openRequests = requests?.filter(req => 
+    req.status !== 'completed' && req.status !== 'closed'
   ) || [];
+  
+  const activeServiceOrders = serviceOrders?.filter(so => 
+    so.status !== 'completed' && so.status !== 'cancelled'
+  ) || [];
+  
+  const upcomingAppointments = appointments?.filter((apt: any) => {
+    const appointmentDate = new Date(apt.start_time);
+    const now = new Date();
+    return appointmentDate > now && 
+           (apt.status === 'scheduled' || apt.status === 'published' || apt.status === 'confirmed');
+  }) || [];
+  
   const recentReports = fieldReports?.slice(0, 5) || [];
   const recentRequests = requests?.slice(0, 5) || [];
+
+  // Set up realtime subscriptions for all data sources
+  useEffect(() => {
+    if (!profile?.customer_id) return;
+
+    // Subscribe to helpdesk tickets changes
+    const ticketsChannel = supabase
+      .channel('customer-tickets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'helpdesk_tickets',
+          filter: `customer_id=eq.${profile.customer_id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['customer-requests-count'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to service orders changes
+    const serviceOrdersChannel = supabase
+      .channel('customer-service-orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_orders',
+          filter: `customer_id=eq.${profile.customer_id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['customer-service-orders-count'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to appointments changes
+    const appointmentsChannel = supabase
+      .channel('customer-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['customer-appointments-count'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to field reports changes
+    const reportsChannel = supabase
+      .channel('customer-reports-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'field_reports'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['customer-field-reports-count'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to customer locations changes
+    const locationsChannel = supabase
+      .channel('customer-locations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customer_locations',
+          filter: `customer_id=eq.${profile.customer_id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['customer-locations'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketsChannel);
+      supabase.removeChannel(serviceOrdersChannel);
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(reportsChannel);
+      supabase.removeChannel(locationsChannel);
+    };
+  }, [profile?.customer_id, queryClient]);
 
   return (
     <CustomerPortalLayout>
