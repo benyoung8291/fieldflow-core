@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +18,13 @@ const signInSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Check if user is already authenticated on mount - simplified
+  // Check if user is already authenticated on mount
   useEffect(() => {
     let mounted = true;
     
@@ -31,9 +33,24 @@ export default function Auth() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (mounted && session) {
-          // User is already authenticated - redirect to dashboard
-          // ProtectedRoute will handle the proper routing based on access
-          navigate("/dashboard", { replace: true });
+          // Get user's actual access info to determine correct route
+          const { data: accessData, error: accessError } = await supabase.rpc('get_user_access_info');
+          
+          if (accessError) {
+            console.error("Access check error:", accessError);
+            setIsCheckingAuth(false);
+            return;
+          }
+          
+          const access = Array.isArray(accessData) && accessData.length > 0 ? accessData[0] : null;
+          
+          if (access) {
+            // Navigate to user's appropriate default route
+            navigate(access.default_route, { replace: true });
+          } else {
+            // No access - let them see login
+            setIsCheckingAuth(false);
+          }
         } else {
           setIsCheckingAuth(false);
         }
@@ -127,6 +144,9 @@ export default function Auth() {
         }
       }
 
+      // Clear cached access data to ensure fresh data
+      queryClient.removeQueries({ queryKey: ["user-access"] });
+      
       // Show success and redirect to appropriate dashboard
       toast.success("Welcome back!");
       navigate(access.default_route, { replace: true });
