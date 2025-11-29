@@ -138,33 +138,28 @@ export function MobileFloorPlanViewer({
     // Scale to 80% of screen height
     const targetHeight = containerDimensions.height * 0.8;
     const calculatedScale = targetHeight / contentDimensions.height;
-    const finalScale = Math.min(5, calculatedScale); // Only prevent extreme zoom-in
+    const finalScale = Math.min(5, calculatedScale);
 
-    // Calculate scaled dimensions
-    const scaledWidth = contentDimensions.width * finalScale;
-    const scaledHeight = contentDimensions.height * finalScale;
-
-    // Calculate container center points
+    // With transformOrigin: "center", we need to position where the CENTER of the content should be
+    // The unscaled content center is at (contentWidth/2, contentHeight/2)
+    // We want this center to be at the container center
+    const contentCenterX = contentDimensions.width / 2;
+    const contentCenterY = contentDimensions.height / 2;
+    
     const containerCenterX = containerDimensions.width / 2;
     const containerCenterY = containerDimensions.height / 2;
 
-    // Position content so its center aligns with container center
-    // offsetX positions the LEFT edge of the content so that the content's center is at containerCenterX
-    const offsetX = containerCenterX - (scaledWidth / 2);
-    const offsetY = containerCenterY - (scaledHeight / 2);
+    // The offset moves the content's natural center to the container's center
+    const offsetX = containerCenterX - contentCenterX;
+    const offsetY = containerCenterY - contentCenterY;
 
     console.log("Initial zoom setup:", {
       container: containerDimensions,
       content: contentDimensions,
       scale: finalScale,
-      scaledSize: { width: scaledWidth, height: scaledHeight },
+      contentCenter: { x: contentCenterX, y: contentCenterY },
       containerCenter: { x: containerCenterX, y: containerCenterY },
-      offset: { x: offsetX, y: offsetY },
-      verification: {
-        contentCenterX: offsetX + scaledWidth / 2,
-        contentCenterY: offsetY + scaledHeight / 2,
-        shouldMatch: { x: containerCenterX, y: containerCenterY }
-      }
+      offset: { x: offsetX, y: offsetY }
     });
 
     setScale(finalScale);
@@ -597,7 +592,7 @@ export function MobileFloorPlanViewer({
           className="relative"
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: "top left",
+            transformOrigin: "center",
             willChange: "transform",
           }}
         >
