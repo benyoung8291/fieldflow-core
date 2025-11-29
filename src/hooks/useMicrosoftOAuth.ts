@@ -24,13 +24,9 @@ export function useMicrosoftOAuth(
       console.log("🔍 Found OAuth session ID in URL:", sessionId);
       
       try {
-        // Fetch tokens from database with timeout
+        // Fetch tokens using secure RPC function with timeout
         const fetchWithTimeout = Promise.race([
-          supabase
-            .from("oauth_temp_tokens")
-            .select("*")
-            .eq("session_id", sessionId)
-            .single(),
+          supabase.rpc('get_oauth_token_by_session', { p_session_id: sessionId }),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error("OAuth token fetch timeout")), 5000)
           )
@@ -47,31 +43,26 @@ export function useMicrosoftOAuth(
           return;
         }
 
-        if (data) {
-          console.log("✅ OAuth tokens retrieved from database");
+        // RPC function returns an array, get the first result
+        const tokenData = data?.[0];
+
+        if (tokenData) {
+          console.log("✅ OAuth tokens retrieved securely");
           
           // Clean up URL
           params.delete("microsoft_oauth_session");
           const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
           window.history.replaceState({}, "", newUrl);
 
-          // Delete tokens from database (fire and forget)
-          try {
-            await supabase
-              .from("oauth_temp_tokens")
-              .delete()
-              .eq("session_id", sessionId);
-            console.log("Temp tokens deleted");
-          } catch (deleteErr) {
-            console.error("Failed to delete temp tokens:", deleteErr);
-          }
+          // Note: Tokens are automatically cleaned up by the cleanup-oauth-tokens edge function
+          // No need to delete manually (user doesn't have permission)
 
           const oauthData = {
-            email: data.email,
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
-            expiresIn: data.expires_in,
-            accountId: data.account_id,
+            email: tokenData.email,
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            expiresIn: tokenData.expires_in,
+            accountId: tokenData.account_id,
           };
 
           // Store in sessionStorage as backup
