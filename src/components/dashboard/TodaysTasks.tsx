@@ -14,7 +14,7 @@ interface Task {
   title: string;
   status: string;
   priority: string;
-  due_date: string;
+  due_date: string | null;
   linked_module: string | null;
   linked_record_id: string | null;
 }
@@ -47,10 +47,10 @@ export function TodaysTasks() {
         .from("tasks")
         .select("*")
         .eq("assigned_to", currentUser!.id)
-        .lte("due_date", today)
         .in("status", ["pending", "in_progress"])
-        .order("due_date", { ascending: true })
-        .limit(20);
+        .or(`due_date.lte.${today},due_date.is.null`)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(30);
 
       if (error) throw error;
       
@@ -71,10 +71,11 @@ export function TodaysTasks() {
   };
 
   // Filter using centralized helper
-  const overdueTasks = tasks.filter(t => isTaskOverdue(t.due_date, t.status));
-  const todayTasks = tasks.filter(t => !isTaskOverdue(t.due_date, t.status));
-  const displayTasks = tasks.slice(0, 5);
-  const hasMoreTasks = tasks.length > 5;
+  const overdueTasks = tasks.filter(t => t.due_date && isTaskOverdue(t.due_date, t.status));
+  const todayTasks = tasks.filter(t => t.due_date && !isTaskOverdue(t.due_date, t.status));
+  const noDateTasks = tasks.filter(t => !t.due_date);
+  const displayTasks = tasks.slice(0, 7);
+  const hasMoreTasks = tasks.length > 7;
 
   if (isLoading) {
     return (
@@ -88,15 +89,22 @@ export function TodaysTasks() {
 
   return (
     <div>
-      {overdueTasks.length > 0 && (
-        <div className="flex gap-1.5 mb-2">
-          <Badge variant="destructive" className="text-[10px] gap-0.5">
-            <AlertCircle className="h-2.5 w-2.5" />
-            {overdueTasks.length} overdue
-          </Badge>
+      {(overdueTasks.length > 0 || noDateTasks.length > 0) && (
+        <div className="flex gap-1.5 mb-2 flex-wrap">
+          {overdueTasks.length > 0 && (
+            <Badge variant="destructive" className="text-[10px] gap-0.5">
+              <AlertCircle className="h-2.5 w-2.5" />
+              {overdueTasks.length} overdue
+            </Badge>
+          )}
           <Badge variant="secondary" className="text-[10px]">
             {todayTasks.length} today
           </Badge>
+          {noDateTasks.length > 0 && (
+            <Badge variant="outline" className="text-[10px]">
+              {noDateTasks.length} no date
+            </Badge>
+          )}
         </div>
       )}
       {tasks.length === 0 ? (
@@ -108,7 +116,7 @@ export function TodaysTasks() {
         <div>
           <div className="space-y-2">
             {displayTasks.map((task) => {
-              const taskIsOverdue = isTaskOverdue(task.due_date, task.status);
+              const taskIsOverdue = task.due_date ? isTaskOverdue(task.due_date, task.status) : false;
               
               return (
                 <div
@@ -145,9 +153,15 @@ export function TodaysTasks() {
                           Overdue
                         </Badge>
                       )}
-                      <span className="text-[10px] text-muted-foreground">
-                        {format(new Date(task.due_date), "MMM d")}
-                      </span>
+                      {task.due_date ? (
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(task.due_date), "MMM d")}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">
+                          No date
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
