@@ -99,7 +99,7 @@ function DroppableColumn({
   return (
     <Card
       className={cn(
-        "flex flex-col min-h-[500px] transition-all duration-200",
+        "flex flex-col h-[calc(100vh-280px)] transition-all duration-200",
         isHighlighted && "ring-2 ring-primary shadow-lg"
       )}
     >
@@ -252,15 +252,14 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
       groups[dateKey] = [];
     });
     
-    // Add "no-due-date" group for tasks without due dates
-    groups['no-due-date'] = [];
-    
-    const firstWorkdayKey = columns.length > 0 ? format(columns[0].date, 'yyyy-MM-dd') : null;
+    const todayKey = columns.length > 0 ? format(columns[0].date, 'yyyy-MM-dd') : null;
 
     safeTasks.forEach((task: any) => {
-      // Handle tasks without due_date
+      // Tasks without due_date go to Today column
       if (!task.due_date) {
-        groups['no-due-date'].push(task);
+        if (todayKey) {
+          groups[todayKey].push(task);
+        }
         return;
       }
       
@@ -269,8 +268,9 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
       
       if (groups[taskDateKey]) {
         groups[taskDateKey].push(task);
-      } else if (firstWorkdayKey && isBefore(taskDate, columns[0].date)) {
-        groups[firstWorkdayKey].push(task);
+      } else if (todayKey && isBefore(taskDate, columns[0].date)) {
+        // Overdue tasks also go to Today
+        groups[todayKey].push(task);
       }
     });
 
@@ -305,7 +305,7 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
   }
 
   return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {columns.map((column) => (
           <DroppableColumn
             key={format(column.date, 'yyyy-MM-dd')}
@@ -317,14 +317,6 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
             isHighlighted={column.isToday}
           />
         ))}
-        <DroppableColumn
-          key="no-due-date"
-          id="no-due-date"
-          title="No Due Date"
-          tasks={tasksByDate['no-due-date'] || []}
-          onTaskClick={onTaskClick}
-          workersMap={workersMap}
-        />
       </div>
   );
 }

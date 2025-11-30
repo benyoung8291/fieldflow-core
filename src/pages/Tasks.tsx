@@ -875,54 +875,67 @@ export default function Tasks() {
     try {
       if (kanbanViewMode === 'status') {
         // Status-based kanban: update task status
-        const newStatus = newKey; // The droppable column ID is the status
+        const newStatus = newKey;
         
-        // Only update if status actually changed
         if (task.status !== newStatus) {
-          const {
-            error
-          } = await supabase.from("tasks" as any).update({
+          // Optimistic update - update cache immediately
+          queryClient.setQueryData(
+            ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery, pagination.currentPage, pagination.pageSize],
+            (old: any) => {
+              if (!old?.tasks) return old;
+              return {
+                ...old,
+                tasks: old.tasks.map((t: any) => 
+                  t.id === task.id 
+                    ? { ...t, status: newStatus, completed_at: newStatus === "completed" ? new Date().toISOString() : null }
+                    : t
+                )
+              };
+            }
+          );
+
+          // Then update the database
+          const { error } = await supabase.from("tasks" as any).update({
             status: newStatus,
             completed_at: newStatus === "completed" ? new Date().toISOString() : null
           }).eq("id", task.id);
-          if (error) throw error;
-          queryClient.invalidateQueries({
-            queryKey: ["tasks"]
-          });
+          
+          if (error) {
+            // Revert on error
+            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            throw error;
+          }
           toast.success("Task status updated");
         }
       } else {
         // Date-based kanban: update due date
-        if (newKey === 'no-due-date') {
-          // Clear the due date
-          const {
-            error
-          } = await supabase.from("tasks" as any).update({
-            due_date: null
+        const newDueDate = new Date(newKey).toISOString();
+        const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
+        
+        if (currentDateKey !== newKey) {
+          // Optimistic update
+          queryClient.setQueryData(
+            ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery, pagination.currentPage, pagination.pageSize],
+            (old: any) => {
+              if (!old?.tasks) return old;
+              return {
+                ...old,
+                tasks: old.tasks.map((t: any) => 
+                  t.id === task.id ? { ...t, due_date: newDueDate } : t
+                )
+              };
+            }
+          );
+
+          const { error } = await supabase.from("tasks" as any).update({
+            due_date: newDueDate
           }).eq("id", task.id);
-          if (error) throw error;
-          queryClient.invalidateQueries({
-            queryKey: ["tasks"]
-          });
-          toast.success("Task due date cleared");
-        } else {
-          // Set the due date to the column's date
-          const newDueDate = new Date(newKey);
           
-          // Only update if the date actually changed
-          const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
-          if (currentDateKey !== newKey) {
-            const {
-              error
-            } = await supabase.from("tasks" as any).update({
-              due_date: newDueDate.toISOString()
-            }).eq("id", task.id);
-            if (error) throw error;
-            queryClient.invalidateQueries({
-              queryKey: ["tasks"]
-            });
-            toast.success("Task date updated");
+          if (error) {
+            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            throw error;
           }
+          toast.success("Task date updated");
         }
       }
     } catch (error) {
