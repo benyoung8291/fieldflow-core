@@ -893,21 +893,36 @@ export default function Tasks() {
         }
       } else {
         // Date-based kanban: update due date
-        const newDueDate = new Date(newKey);
-        
-        // Only update if the date actually changed
-        const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
-        if (currentDateKey !== newKey) {
+        if (newKey === 'no-due-date') {
+          // Clear the due date
           const {
             error
           } = await supabase.from("tasks" as any).update({
-            due_date: newDueDate.toISOString()
+            due_date: null
           }).eq("id", task.id);
           if (error) throw error;
           queryClient.invalidateQueries({
             queryKey: ["tasks"]
           });
-          toast.success("Task date updated");
+          toast.success("Task due date cleared");
+        } else {
+          // Set the due date to the column's date
+          const newDueDate = new Date(newKey);
+          
+          // Only update if the date actually changed
+          const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
+          if (currentDateKey !== newKey) {
+            const {
+              error
+            } = await supabase.from("tasks" as any).update({
+              due_date: newDueDate.toISOString()
+            }).eq("id", task.id);
+            if (error) throw error;
+            queryClient.invalidateQueries({
+              queryKey: ["tasks"]
+            });
+            toast.success("Task date updated");
+          }
         }
       }
     } catch (error) {

@@ -3,7 +3,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { format, addDays, isWeekend, isSameDay, startOfDay, isPast } from "date-fns";
+import { format, addDays, isWeekend, isSameDay, startOfDay, isPast, parseISO, isBefore } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DraggableTaskCard from "./DraggableTaskCard";
@@ -251,32 +251,26 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
       const dateKey = format(col.date, 'yyyy-MM-dd');
       groups[dateKey] = [];
     });
-
-    // Use the first available workday column for overdue tasks
+    
+    // Add "no-due-date" group for tasks without due dates
+    groups['no-due-date'] = [];
+    
     const firstWorkdayKey = columns.length > 0 ? format(columns[0].date, 'yyyy-MM-dd') : null;
 
     safeTasks.forEach((task: any) => {
-      if (task.due_date) {
-        try {
-          const taskDueDate = new Date(task.due_date);
-          // Validate the date is valid
-          if (!isNaN(taskDueDate.getTime())) {
-            const taskDate = startOfDay(taskDueDate);
-            
-            // If task is overdue (before first workday) and not completed, show it in first workday column
-            if (firstWorkdayKey && taskDate < columns[0].date && task.status !== 'completed') {
-              groups[firstWorkdayKey].push(task);
-            } else {
-              // Otherwise, show in its original date column
-              const dateKey = format(taskDate, 'yyyy-MM-dd');
-              if (groups[dateKey]) {
-                groups[dateKey].push(task);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Invalid due_date for task:', task.id, task.due_date);
-        }
+      // Handle tasks without due_date
+      if (!task.due_date) {
+        groups['no-due-date'].push(task);
+        return;
+      }
+      
+      const taskDate = parseISO(task.due_date);
+      const taskDateKey = format(taskDate, 'yyyy-MM-dd');
+      
+      if (groups[taskDateKey]) {
+        groups[taskDateKey].push(task);
+      } else if (firstWorkdayKey && isBefore(taskDate, columns[0].date)) {
+        groups[firstWorkdayKey].push(task);
       }
     });
 
@@ -311,18 +305,26 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {columns.map((column) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {columns.map((column) => (
+          <DroppableColumn
+            key={format(column.date, 'yyyy-MM-dd')}
+            id={format(column.date, 'yyyy-MM-dd')}
+            title={column.title}
+            tasks={tasksByDate[format(column.date, 'yyyy-MM-dd')]}
+            onTaskClick={onTaskClick}
+            workersMap={workersMap}
+            isHighlighted={column.isToday}
+          />
+        ))}
         <DroppableColumn
-          key={format(column.date, 'yyyy-MM-dd')}
-          id={format(column.date, 'yyyy-MM-dd')}
-          title={column.title}
-          tasks={tasksByDate[format(column.date, 'yyyy-MM-dd')]}
+          key="no-due-date"
+          id="no-due-date"
+          title="No Due Date"
+          tasks={tasksByDate['no-due-date'] || []}
           onTaskClick={onTaskClick}
           workersMap={workersMap}
-          isHighlighted={column.isToday}
         />
-      ))}
-    </div>
+      </div>
   );
 }
