@@ -220,7 +220,7 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
         }
       });
       
-      if (!isWeekend(currentDate) || hasTasksOnDate) {
+      if (!isWeekend(currentDate)) {
         let dayLabel: string;
         if (isSameDay(currentDate, today)) {
           dayLabel = 'Today';
