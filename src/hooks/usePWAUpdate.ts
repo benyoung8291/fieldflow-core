@@ -1,22 +1,34 @@
 import { useEffect, useState } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
 import { toast } from 'sonner';
+
+// Conditionally import PWA register only in production
+let useRegisterSW: any = null;
+if (import.meta.env.PROD) {
+  useRegisterSW = (await import('virtual:pwa-register/react')).useRegisterSW;
+}
 
 export const usePWAUpdate = () => {
   const [needRefresh, setNeedRefresh] = useState(false);
+
+  // In development, provide no-op functions
+  const pwaHook = import.meta.env.PROD && useRegisterSW ? useRegisterSW({
+    onRegistered(registration: any) {
+      console.log('SW Registered:', registration);
+    },
+    onRegisterError(error: any) {
+      console.error('SW registration error:', error);
+    },
+  }) : {
+    offlineReady: [false, () => {}],
+    needRefresh: [false, () => {}],
+    updateServiceWorker: () => {},
+  };
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefreshState, setNeedRefreshState],
     updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(registration) {
-      console.log('SW Registered:', registration);
-    },
-    onRegisterError(error) {
-      console.error('SW registration error:', error);
-    },
-  });
+  } = pwaHook;
 
   useEffect(() => {
     if (offlineReady) {
