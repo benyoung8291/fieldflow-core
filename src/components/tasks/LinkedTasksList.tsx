@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TaskDialog, { TaskFormData } from "./TaskDialog";
+import { getModuleRoute, statusConfig, priorityConfig, isTaskOverdue } from "@/lib/taskUtils";
+import { useTasks, useUpdateTaskStatus } from "@/hooks/useTasks";
+import { useWorkersCache } from "@/hooks/useWorkersCache";
 
 interface LinkedTasksListProps {
   linkedModule: string;
@@ -21,158 +24,25 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const getModuleRoute = (module: string, id: string) => {
-    const routes: Record<string, string> = {
-      customer: `/customers/${id}`,
-      lead: `/leads/${id}`,
-      project: `/projects/${id}`,
-      quote: `/quotes/${id}`,
-      service_order: `/service-orders/${id}`,
-      appointment: `/appointments/${id}`,
-      invoice: `/invoices/${id}`,
-      contract: `/service-contracts/${id}`,
-    };
-    return routes[module] || '#';
-  };
-
-  const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", linkedModule, linkedRecordId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks" as any)
-        .select("*")
-        .eq("linked_module", linkedModule)
-        .eq("linked_record_id", linkedRecordId)
-        .order("due_date", { ascending: true });
-
-      if (error) throw error;
-      
-      // Fetch linked record names
-      const tasksWithLinks = await Promise.all((data || []).map(async (task: any) => {
-        if (!task.linked_module || !task.linked_record_id) return task;
-        
-        let linkedRecordName = null;
-        let documentType = task.linked_module;
-        try {
-          let tableName = task.linked_module;
-          let nameField = 'name';
-          
-          // Map module to table and field names
-          if (task.linked_module === 'service_order') {
-            tableName = 'service_orders';
-            nameField = 'title';
-          } else if (task.linked_module === 'quote') {
-            tableName = 'quotes';
-            nameField = 'title';
-          } else if (task.linked_module === 'project') {
-            tableName = 'projects';
-            nameField = 'name';
-          } else if (task.linked_module === 'customer') {
-            tableName = 'customers';
-            nameField = 'name';
-          } else if (task.linked_module === 'lead') {
-            tableName = 'leads';
-            nameField = 'name';
-          } else if (task.linked_module === 'appointment') {
-            tableName = 'appointments';
-            nameField = 'title';
-          } else if (task.linked_module === 'invoice') {
-            tableName = 'invoices';
-            nameField = 'invoice_number';
-          } else if (task.linked_module === 'contract') {
-            tableName = 'service_contracts';
-            nameField = 'name';
-          }
-
-          const { data: linkedData } = await supabase
-            .from(tableName)
-            .select(nameField)
-            .eq('id', task.linked_record_id)
-            .maybeSingle();
-          
-          if (linkedData) {
-            linkedRecordName = (linkedData as any)[nameField] || null;
-          }
-
-          // Format document type for display
-          documentType = task.linked_module
-            .replace('_', ' ')
-            .split(' ')
-            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-        } catch (e) {
-          console.error('Error fetching linked record:', e);
-        }
-        
-        return { ...task, linked_record_name: linkedRecordName, document_type: documentType };
-      }));
-      
-      return tasksWithLinks;
-    },
+  // Use centralized hooks
+  const { data: tasks = [], isLoading } = useTasks({
+    module: linkedModule,
+    recordId: linkedRecordId,
+    includeLinkedRecords: true,
+    includeSubtaskCounts: false,
   });
 
-  // Fetch assigned user data separately
-  const { data: assignedUsers = [] } = useQuery({
-    queryKey: ["assigned-users", tasks.map((t: any) => t?.assigned_to).filter(Boolean)],
-    queryFn: async () => {
-      const userIds = [...new Set(tasks.map((t: any) => t?.assigned_to).filter(Boolean))];
-      if (userIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .in("id", userIds);
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: tasks.length > 0,
-  });
+  const { data: workers = [] } = useWorkersCache();
+  const updateTaskMutation = useUpdateTaskStatus();
 
-  const { data: workers = [] } = useQuery({
-    queryKey: ["workers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .eq("is_active", true)
-        .order("first_name");
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Map status and priority colors from centralized config
+  const statusColors: Record<string, string> = Object.fromEntries(
+    Object.entries(statusConfig).map(([key, value]) => [key, value.color])
+  );
 
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
-      const { error } = await supabase
-        .from("tasks" as any)
-        .update({ status })
-        .eq("id", taskId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success("Task updated");
-    },
-    onError: () => {
-      toast.error("Failed to update task");
-    },
-  });
-
-  const statusColors: Record<string, string> = {
-    pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-    in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    completed: "bg-green-500/10 text-green-500 border-green-500/20",
-    cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
-  };
-
-  const priorityColors: Record<string, string> = {
-    low: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-    medium: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-    urgent: "bg-red-500/10 text-red-500 border-red-500/20",
-  };
+  const priorityColors: Record<string, string> = Object.fromEntries(
+    Object.entries(priorityConfig).map(([key, value]) => [key, value.color])
+  );
 
   if (isLoading) {
     return (
@@ -187,7 +57,7 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
   // Merge assigned user data with tasks
   const tasksWithAssigned = tasks.map((task: any) => ({
     ...task,
-    assigned: assignedUsers.find((u: any) => u.id === task.assigned_to)
+    assigned: workers.find((u: any) => u.id === task.assigned_to)
   }));
 
   if (tasksWithAssigned.length === 0) {
@@ -263,11 +133,11 @@ export default function LinkedTasksList({ linkedModule, linkedRecordId }: Linked
                       <span>{task.progress_percentage}% complete</span>
                     </div>
                   )}
-                  {task.due_date && (
+                      {task.due_date && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       Due: {format(new Date(task.due_date), "MMM d, yyyy")}
-                      {new Date(task.due_date) < new Date() && task.status !== "completed" && (
+                      {isTaskOverdue(task.due_date, task.status) && (
                         <AlertCircle className="h-3 w-3 text-red-500 ml-1" />
                       )}
                     </div>

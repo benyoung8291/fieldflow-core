@@ -9,11 +9,13 @@ import { Zap } from "lucide-react";
 
 interface GanttTask {
   id: string;
-  name: string;
+  name?: string; // Gantt chart uses 'name'
+  title?: string; // Project tasks use 'title'
   start_date: string;
   end_date: string;
   status: string;
   progress?: number;
+  progress_percentage?: number; // Project tasks use this name
 }
 
 interface Dependency {
@@ -32,7 +34,13 @@ interface ProjectGanttChartProps {
 }
 
 export default function ProjectGanttChart({ tasks, dependencies = [], projectStart, projectEnd }: ProjectGanttChartProps) {
-  const { criticalTaskIds, taskSlack, criticalPathDuration } = useCriticalPath(tasks, dependencies);
+  // Normalize tasks to ensure they have required fields
+  const normalizedTasks = tasks.map(t => ({
+    ...t,
+    name: t.name || t.title || 'Untitled',
+  }));
+  
+  const { criticalTaskIds, taskSlack, criticalPathDuration } = useCriticalPath(normalizedTasks as any, dependencies);
   const { chartStart, chartEnd, dayColumns, taskBars } = useMemo(() => {
     if (!tasks.length) {
       return { chartStart: new Date(), chartEnd: new Date(), dayColumns: [], taskBars: [] };
@@ -59,8 +67,14 @@ export default function ProjectGanttChart({ tasks, dependencies = [], projectSta
       const startOffset = differenceInDays(taskStart, chartStart);
       const duration = differenceInDays(taskEnd, taskStart) + 1;
 
+      // Handle both name (Gantt) and title (project tasks) fields
+      const taskName = task.name || task.title || 'Untitled Task';
+      const taskProgress = task.progress ?? task.progress_percentage ?? 0;
+
       return {
         ...task,
+        name: taskName,
+        progress: taskProgress,
         left: (startOffset / totalDays) * 100,
         width: (duration / totalDays) * 100,
       };
@@ -70,6 +84,7 @@ export default function ProjectGanttChart({ tasks, dependencies = [], projectSta
   }, [tasks, projectStart, projectEnd]);
 
   const statusColors: Record<string, string> = {
+    'pending': 'bg-gray-500',
     'not_started': 'bg-gray-500',
     'in_progress': 'bg-blue-500',
     'completed': 'bg-green-500',
