@@ -1,28 +1,46 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-// Conditionally import PWA register only in production
-let useRegisterSW: any = null;
-if (import.meta.env.PROD) {
-  useRegisterSW = (await import('virtual:pwa-register/react')).useRegisterSW;
-}
+type PWAHook = {
+  offlineReady: [boolean, (value: boolean) => void];
+  needRefresh: [boolean, (value: boolean) => void];
+  updateServiceWorker: (reloadPage?: boolean) => Promise<void> | void;
+};
+
+// Type-safe no-op for development
+const noOpPWA: PWAHook = {
+  offlineReady: [false, () => {}],
+  needRefresh: [false, () => {}],
+  updateServiceWorker: () => {},
+};
 
 export const usePWAUpdate = () => {
   const [needRefresh, setNeedRefresh] = useState(false);
 
-  // In development, provide no-op functions
-  const pwaHook = import.meta.env.PROD && useRegisterSW ? useRegisterSW({
-    onRegistered(registration: any) {
-      console.log('SW Registered:', registration);
-    },
-    onRegisterError(error: any) {
-      console.error('SW registration error:', error);
-    },
-  }) : {
-    offlineReady: [false, () => {}],
-    needRefresh: [false, () => {}],
-    updateServiceWorker: () => {},
-  };
+  // Only use real PWA in production builds
+  const isDev = import.meta.env.DEV;
+  
+  // In development, use no-op. In production, dynamically import
+  const [pwaHook, setPwaHook] = useState<PWAHook>(noOpPWA);
+
+  useEffect(() => {
+    if (!isDev) {
+      // Only load PWA in production
+      import('virtual:pwa-register/react').then(({ useRegisterSW }) => {
+        const hook = useRegisterSW({
+          onRegistered(registration) {
+            console.log('SW Registered:', registration);
+          },
+          onRegisterError(error) {
+            console.error('SW registration error:', error);
+          },
+        });
+        setPwaHook(hook as PWAHook);
+      }).catch(() => {
+        console.warn('PWA not available');
+      });
+    }
+  }, [isDev]);
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
