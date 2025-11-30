@@ -24,6 +24,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import DraggableTaskCard from "@/components/tasks/DraggableTaskCard";
+import CompleteDropZone from "@/components/tasks/CompleteDropZone";
 export default function Tasks() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -869,13 +870,47 @@ export default function Tasks() {
     setActiveTask(null);
     if (!over) return;
     const task = active.data.current?.task;
-    const newKey = over.id as string;
-    if (!task || !newKey) return;
+    const destinationId = over.id as string;
+    if (!task || !destinationId) return;
+
+    // Handle drop on complete zone
+    if (destinationId === "complete-zone") {
+      if (task.status !== "completed") {
+        // Optimistic update
+        queryClient.setQueryData(
+          ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery, pagination.currentPage, pagination.pageSize],
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return {
+              ...old,
+              tasks: old.tasks.map((t: any) =>
+                t.id === task.id
+                  ? { ...t, status: "completed", completed_at: new Date().toISOString() }
+                  : t
+              )
+            };
+          }
+        );
+
+        const { error } = await supabase.from("tasks" as any).update({
+          status: "completed",
+          completed_at: new Date().toISOString()
+        }).eq("id", task.id);
+
+        if (error) {
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          toast.error("Failed to complete task");
+          return;
+        }
+        toast.success("Task completed! 🎉");
+      }
+      return;
+    }
 
     try {
       if (kanbanViewMode === 'status') {
         // Status-based kanban: update task status
-        const newStatus = newKey;
+        const newStatus = destinationId;
         
         if (task.status !== newStatus) {
           // Optimistic update - update cache immediately
@@ -909,10 +944,10 @@ export default function Tasks() {
         }
       } else {
         // Date-based kanban: update due date
-        const newDueDate = new Date(newKey).toISOString();
+        const newDueDate = new Date(destinationId).toISOString();
         const currentDateKey = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : null;
         
-        if (currentDateKey !== newKey) {
+        if (currentDateKey !== destinationId) {
           // Optimistic update
           queryClient.setQueryData(
             ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery, pagination.currentPage, pagination.pageSize],
@@ -1146,7 +1181,8 @@ export default function Tasks() {
 
         {/* Tasks List or Kanban View */}
         {viewMode === 'kanban' ? <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <TaskKanbanView 
+            <CompleteDropZone isVisible={!!activeTask && activeTask.status !== 'completed'} />
+            <TaskKanbanView
               tasks={filteredTasksForDisplay} 
               onTaskClick={handleTaskClick} 
               viewMode={kanbanViewMode}
