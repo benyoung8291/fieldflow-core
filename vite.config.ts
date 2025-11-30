@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
+      external: mode === "development" ? ['virtual:pwa-register/react'] : [],
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
