@@ -5,8 +5,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckSquare, Circle, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format, isPast, startOfDay } from "date-fns";
+import { format, isPast, startOfDay, isToday } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { getModuleRoute, isTaskOverdue, sortTasksByUrgency } from "@/lib/taskUtils";
 
 interface Task {
   id: string;
@@ -46,59 +47,32 @@ export function TodaysTasks() {
         .from("tasks")
         .select("*")
         .eq("assigned_to", currentUser!.id)
-        .lte("due_date", today) // Get today's and overdue tasks
+        .lte("due_date", today)
         .in("status", ["pending", "in_progress"])
         .order("due_date", { ascending: true })
         .limit(20);
 
       if (error) throw error;
       
-      // Sort: overdue first, then by priority
-      const sortedTasks = (data as Task[]).sort((a, b) => {
-        const aIsOverdue = isPast(startOfDay(new Date(a.due_date)));
-        const bIsOverdue = isPast(startOfDay(new Date(b.due_date)));
-        
-        // Overdue tasks first
-        if (aIsOverdue && !bIsOverdue) return -1;
-        if (!aIsOverdue && bIsOverdue) return 1;
-        
-        // Then by priority
-        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-        return priorityOrder[a.priority as keyof typeof priorityOrder] - 
-               priorityOrder[b.priority as keyof typeof priorityOrder];
-      });
-      
-      return sortedTasks;
+      // Use centralized sorting
+      return sortTasksByUrgency(data as Task[]);
     },
   });
 
   const handleTaskClick = (task: Task) => {
     if (task.linked_module && task.linked_record_id) {
-      const moduleRoutes: { [key: string]: string } = {
-        "service_orders": "/service-orders",
-        "quotes": "/quotes",
-        "projects": "/projects",
-        "invoices": "/invoices",
-        "customers": "/customers",
-      };
-      
-      const basePath = moduleRoutes[task.linked_module];
-      if (basePath) {
-        navigate(`${basePath}/${task.linked_record_id}`);
+      const route = getModuleRoute(task.linked_module, task.linked_record_id);
+      if (route !== '#') {
+        navigate(route);
         return;
       }
     }
-    
     navigate("/tasks");
   };
 
-  const isOverdue = (dueDate: string) => {
-    return isPast(startOfDay(new Date(dueDate))) && 
-           format(new Date(dueDate), "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd");
-  };
-
-  const overdueTasks = tasks.filter(t => isOverdue(t.due_date));
-  const todayTasks = tasks.filter(t => !isOverdue(t.due_date));
+  // Filter using centralized helper
+  const overdueTasks = tasks.filter(t => isTaskOverdue(t.due_date, t.status));
+  const todayTasks = tasks.filter(t => !isTaskOverdue(t.due_date, t.status));
   const displayTasks = tasks.slice(0, 5);
   const hasMoreTasks = tasks.length > 5;
 
@@ -134,7 +108,7 @@ export function TodaysTasks() {
         <div>
           <div className="space-y-2">
             {displayTasks.map((task) => {
-              const taskIsOverdue = isOverdue(task.due_date);
+              const taskIsOverdue = isTaskOverdue(task.due_date, task.status);
               
               return (
                 <div

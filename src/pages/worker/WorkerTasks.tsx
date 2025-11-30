@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -18,44 +19,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
-
-const statusConfig = {
-  pending: {
-    label: "To Do",
-    icon: Circle,
-    className: "text-muted-foreground",
-  },
-  in_progress: {
-    label: "In Progress",
-    icon: Clock,
-    className: "text-info",
-  },
-  completed: {
-    label: "Completed",
-    icon: CheckCircle2,
-    className: "text-success",
-  },
-  cancelled: {
-    label: "Cancelled",
-    icon: Circle,
-    className: "text-muted-foreground",
-  },
-};
-
-const priorityConfig = {
-  low: {
-    label: "Low",
-    className: "bg-muted text-muted-foreground border-muted",
-  },
-  medium: {
-    label: "Medium",
-    className: "bg-warning/20 text-warning border-warning/30",
-  },
-  high: {
-    label: "High",
-    className: "bg-destructive/20 text-destructive border-destructive/30",
-  },
-};
+import { statusConfig, priorityConfig, isTaskOverdue } from "@/lib/taskUtils";
 
 export default function WorkerTasks() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -141,7 +105,7 @@ export default function WorkerTasks() {
   };
 
   const groupedTasks = {
-    overdue: tasks.filter((t: any) => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'completed'),
+    overdue: tasks.filter((t: any) => isTaskOverdue(t.due_date, t.status)),
     today: tasks.filter((t: any) => t.due_date && isToday(new Date(t.due_date)) && t.status !== 'completed'),
     upcoming: tasks.filter((t: any) => (!t.due_date || (!isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)))) && t.status !== 'completed'),
     completed: tasks.filter((t: any) => t.status === 'completed'),
@@ -288,10 +252,10 @@ export default function WorkerTasks() {
               <div className="flex items-center gap-2">
                 {selectedTask && statusConfig[selectedTask.status as keyof typeof statusConfig] && (
                   <>
-                    {(() => {
-                      const StatusIcon = statusConfig[selectedTask.status as keyof typeof statusConfig].icon;
-                      return <StatusIcon className={`h-5 w-5 ${statusConfig[selectedTask.status as keyof typeof statusConfig].className}`} />;
-                    })()}
+                    {React.createElement(
+                      statusConfig[selectedTask.status as keyof typeof statusConfig].icon as any,
+                      { className: `h-5 w-5 ${statusConfig[selectedTask.status as keyof typeof statusConfig].className}` }
+                    )}
                     <span className={statusConfig[selectedTask.status as keyof typeof statusConfig].className}>
                       {statusConfig[selectedTask.status as keyof typeof statusConfig].label}
                     </span>
@@ -379,7 +343,7 @@ function TaskCard({ task, onSelect, onMarkComplete, onMarkInProgress, getDueDate
   const statusInfo = statusConfig[task.status as keyof typeof statusConfig];
   const priorityInfo = priorityConfig[task.priority as keyof typeof priorityConfig];
   const dueDateLabel = getDueDateLabel(task.due_date);
-  const StatusIcon = statusInfo.icon;
+  const StatusIcon = statusInfo.icon as any;
 
   return (
     <Card 
