@@ -50,6 +50,7 @@ export default function Tasks() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [groupMode, setGroupMode] = useState<'status' | 'tag' | 'document'>('status');
   const [kanbanViewMode, setKanbanViewMode] = useState<'date' | 'status'>('status');
+  const [showCompleted, setShowCompleted] = useState(false);
   const queryClient = useQueryClient();
   const pagination = usePagination({ initialPageSize: 50 });
 
@@ -112,10 +113,13 @@ export default function Tasks() {
     }
   });
 
-  // Set view mode from user profile
+  // Set view mode and kanban mode from user profile
   useEffect(() => {
     if (userProfile?.task_view_preference) {
       setViewMode(userProfile.task_view_preference as 'list' | 'kanban');
+    }
+    if (userProfile?.task_kanban_mode) {
+      setKanbanViewMode(userProfile.task_kanban_mode as 'date' | 'status');
     }
   }, [userProfile]);
 
@@ -146,9 +150,38 @@ export default function Tasks() {
       });
     }
   });
+
+  // Save kanban mode preference mutation
+  const saveKanbanMode = useMutation({
+    mutationFn: async (mode: 'date' | 'status') => {
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const {
+        error
+      } = await supabase.from("profiles").update({
+        task_kanban_mode: mode
+      }).eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-tasks"]
+      });
+    }
+  });
+
   const handleViewModeChange = (mode: 'list' | 'kanban') => {
     setViewMode(mode);
     saveViewPreference.mutate(mode);
+  };
+
+  const handleKanbanModeChange = (mode: 'date' | 'status') => {
+    setKanbanViewMode(mode);
+    saveKanbanMode.mutate(mode);
   };
   const {
     data: workers = []
@@ -570,6 +603,14 @@ export default function Tasks() {
     assigned_user: assignedUsersData.find((u: any) => u.id === task.assigned_to)
   }));
 
+  // Filter out completed/cancelled tasks by default
+  const filteredTasksForDisplay = useMemo(() => {
+    if (showCompleted) return tasksWithUsers;
+    return tasksWithUsers.filter(
+      (task: any) => task.status !== 'completed' && task.status !== 'cancelled'
+    );
+  }, [tasksWithUsers, showCompleted]);
+
   // Extract unique tags from all tasks
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -589,20 +630,20 @@ export default function Tasks() {
       'completed': [],
       'cancelled': []
     };
-    tasksWithUsers.forEach((task: any) => {
+    filteredTasksForDisplay.forEach((task: any) => {
       if (groups[task.status]) {
         groups[task.status].push(task);
       }
     });
     return groups;
-  }, [tasksWithUsers]);
+  }, [filteredTasksForDisplay]);
 
   // Group tasks by tag
   const groupedByTag = useMemo(() => {
     const groups: Record<string, any[]> = {
       'untagged': []
     };
-    tasksWithUsers.forEach((task: any) => {
+    filteredTasksForDisplay.forEach((task: any) => {
       if (!task.tags || task.tags.length === 0) {
         groups['untagged'].push(task);
       } else {
@@ -615,14 +656,14 @@ export default function Tasks() {
       }
     });
     return groups;
-  }, [tasksWithUsers]);
+  }, [filteredTasksForDisplay]);
 
   // Group tasks by document type
   const groupedByDocument = useMemo(() => {
     const groups: Record<string, any[]> = {
       'no_link': []
     };
-    tasksWithUsers.forEach((task: any) => {
+    filteredTasksForDisplay.forEach((task: any) => {
       if (!task.document_type) {
         groups['no_link'].push(task);
       } else {
@@ -633,7 +674,7 @@ export default function Tasks() {
       }
     });
     return groups;
-  }, [tasksWithUsers]);
+  }, [filteredTasksForDisplay]);
   const statusLabels: Record<string, string> = {
     'pending': 'Pending',
     'in_progress': 'In Progress',
@@ -944,12 +985,22 @@ export default function Tasks() {
           <div className="flex items-center gap-2">
             {/* View Mode and Kanban Mode Toggle */}
             <div className="flex gap-2">
+              <Button
+                variant={showCompleted ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="h-8 text-xs"
+              >
+                <CheckSquare className="h-4 w-4 mr-1" />
+                {showCompleted ? 'Hide' : 'Show'} Completed
+              </Button>
+
               {viewMode === 'kanban' && (
                 <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                   <Button
                     variant={kanbanViewMode === 'status' ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setKanbanViewMode('status')}
+                    onClick={() => handleKanbanModeChange('status')}
                     className="h-8 text-xs"
                   >
                     Status
@@ -957,7 +1008,7 @@ export default function Tasks() {
                   <Button
                     variant={kanbanViewMode === 'date' ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setKanbanViewMode('date')}
+                    onClick={() => handleKanbanModeChange('date')}
                     className="h-8 text-xs"
                   >
                     Date
@@ -1068,9 +1119,10 @@ export default function Tasks() {
         {/* Tasks List or Kanban View */}
         {viewMode === 'kanban' ? <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <TaskKanbanView 
-              tasks={tasksWithUsers} 
+              tasks={filteredTasksForDisplay} 
               onTaskClick={handleTaskClick} 
               viewMode={kanbanViewMode}
+              showCompleted={showCompleted}
             />
             <DragOverlay dropAnimation={{
               duration: 200,

@@ -13,6 +13,7 @@ interface TaskKanbanViewProps {
   tasks: any[];
   onTaskClick: (task: any) => void;
   viewMode?: 'date' | 'status';
+  showCompleted?: boolean;
 }
 
 interface DroppableColumnProps {
@@ -149,7 +150,7 @@ function DroppableColumn({
   );
 }
 
-export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status' }: TaskKanbanViewProps) {
+export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status', showCompleted = false }: TaskKanbanViewProps) {
   // Safety check for tasks prop
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   
@@ -282,11 +283,19 @@ export default function TaskKanbanView({ tasks, onTaskClick, viewMode = 'status'
     return groups;
   }, [safeTasks, columns]);
 
+  // Filter status columns when showCompleted is false
+  const visibleStatusColumns = showCompleted 
+    ? statusColumns 
+    : statusColumns.filter(col => col.id !== 'completed' && col.id !== 'cancelled');
+
   // Render based on viewMode
   if (viewMode === 'status') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statusColumns.map((column) => (
+      <div className={cn(
+        "grid grid-cols-1 gap-4",
+        showCompleted ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2"
+      )}>
+        {visibleStatusColumns.map((column) => (
           <DroppableColumn
             key={column.id}
             id={column.id}
