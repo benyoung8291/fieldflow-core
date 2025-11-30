@@ -15,7 +15,6 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: mode === "development" ? ['virtual:pwa-register/react'] : [],
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
@@ -32,8 +31,14 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    mode === "production" && VitePWA({
+    VitePWA({
       registerType: "autoUpdate",
+      devOptions: {
+        enabled: true,
+        type: "module",
+        suppressWarnings: true,
+      },
+      injectRegister: mode === "development" ? null : "auto",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
         name: "Service Pulse",
@@ -63,7 +68,7 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-      workbox: {
+      workbox: mode === "production" ? {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
         skipWaiting: true,
@@ -82,7 +87,7 @@ export default defineConfig(({ mode }) => ({
             },
           },
         ],
-      },
+      } : undefined,
     }),
   ].filter(Boolean),
   resolve: {
