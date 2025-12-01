@@ -1620,6 +1620,7 @@ export type Database = {
       }
       customer_portal_users: {
         Row: {
+          contact_id: string | null
           created_at: string
           customer_id: string
           email: string
@@ -1637,6 +1638,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string
           customer_id: string
           email: string
@@ -1654,6 +1656,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          contact_id?: string | null
           created_at?: string
           customer_id?: string
           email?: string
@@ -1671,6 +1674,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_portal_users_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_portal_users_customer_id_fkey"
             columns: ["customer_id"]
@@ -2946,6 +2956,7 @@ export type Database = {
           is_read: boolean | null
           last_message_at: string | null
           lead_id: string | null
+          location_id: string | null
           microsoft_conversation_id: string | null
           microsoft_message_id: string | null
           pipeline_id: string | null
@@ -2984,6 +2995,7 @@ export type Database = {
           is_read?: boolean | null
           last_message_at?: string | null
           lead_id?: string | null
+          location_id?: string | null
           microsoft_conversation_id?: string | null
           microsoft_message_id?: string | null
           pipeline_id?: string | null
@@ -3022,6 +3034,7 @@ export type Database = {
           is_read?: boolean | null
           last_message_at?: string | null
           lead_id?: string | null
+          location_id?: string | null
           microsoft_conversation_id?: string | null
           microsoft_message_id?: string | null
           pipeline_id?: string | null
@@ -3092,6 +3105,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helpdesk_tickets_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
             referencedColumns: ["id"]
           },
           {

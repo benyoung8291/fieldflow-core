@@ -106,7 +106,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create helpdesk ticket
+    // Find or create contact if submitter email is provided
+    let contactId: string | null = null;
+    if (submitterEmail) {
+      // Check if contact exists
+      const { data: existingContact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('email', submitterEmail)
+        .eq('customer_id', shareLink.customer_id)
+        .eq('tenant_id', shareLink.tenant_id)
+        .maybeSingle();
+
+      if (existingContact) {
+        contactId = existingContact.id;
+      } else if (submitterName) {
+        // Create new contact
+        const nameParts = submitterName.split(' ');
+        const firstName = nameParts[0] || submitterName;
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { data: newContact } = await supabase
+          .from('contacts')
+          .insert({
+            tenant_id: shareLink.tenant_id,
+            customer_id: shareLink.customer_id,
+            first_name: firstName,
+            last_name: lastName,
+            email: submitterEmail,
+            contact_type: 'customer',
+            status: 'active',
+            source: 'shared_floor_plan',
+          })
+          .select('id')
+          .single();
+
+        if (newContact) {
+          contactId = newContact.id;
+        }
+      }
+    }
+
+    // Create helpdesk ticket with auto-linked location and contact
     const ticketSubject = requestTitle || 
       `${shareLink.location.name} - Shared Floor Plan Request`;
     
@@ -115,6 +156,8 @@ Deno.serve(async (req) => {
       .insert({
         subject: ticketSubject,
         customer_id: shareLink.customer_id,
+        location_id: shareLink.location_id,
+        contact_id: contactId,
         tenant_id: shareLink.tenant_id,
         pipeline_id: pipeline.id,
         status: 'new',

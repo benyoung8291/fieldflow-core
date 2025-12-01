@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText, ArrowLeft, Maximize2, X, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ensurePortalUserContact } from "@/utils/portalUserContact";
 
 export default function LocationFloorPlans() {
   const { locationId } = useParams<{ locationId: string }>();
@@ -172,12 +173,21 @@ export default function LocationFloorPlans() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create helpdesk ticket
+      // Ensure portal user has a linked contact
+      const contactId = await ensurePortalUserContact(
+        user.id,
+        profile.customer_id,
+        profile.tenant_id
+      );
+
+      // Create helpdesk ticket with auto-linked location and contact
       const { data: ticket, error: ticketError } = await supabase
         .from("helpdesk_tickets")
         .insert([{
           subject: `${taskTitle} - ${location?.name}`,
           customer_id: profile.customer_id,
+          location_id: locationId,
+          contact_id: contactId,
           tenant_id: profile.tenant_id,
           pipeline_id: requestsPipeline.id,
           status: "new",

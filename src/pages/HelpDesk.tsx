@@ -82,9 +82,10 @@ export default function HelpDesk() {
   });
 
   useEffect(() => {
-    // Load last used filter from localStorage
+    // Load last used filter and folder from localStorage
     const lastFilter = localStorage.getItem('helpdeskLastFilter');
     const lastUserId = localStorage.getItem('helpdeskLastUserId');
+    const lastFolder = localStorage.getItem('helpdeskLastFolder');
     
     if (lastFilter && (lastFilter === 'all' || lastFilter === 'unassigned' || lastFilter === 'assigned_to_me')) {
       setFilterAssignment(lastFilter as any);
@@ -97,6 +98,12 @@ export default function HelpDesk() {
       setFilterUserId(lastUserId);
     } else if (currentUser?.id) {
       setFilterUserId(currentUser.id);
+    }
+
+    if (lastFolder && ['inbox', 'sent', 'drafts', 'archive', 'deleted', 'junk', 'starred', 'all'].includes(lastFolder)) {
+      setSelectedFolder(lastFolder as MailboxFolder);
+      // Set filterArchived based on folder
+      setFilterArchived(lastFolder === 'archive' || lastFolder === 'deleted' || lastFolder === 'junk');
     }
   }, [currentUser?.id]);
 
@@ -177,7 +184,24 @@ export default function HelpDesk() {
     enabled: !!currentUser,
   });
 
-  // Fetch all users for the filter dropdown
+  // Fetch users filtered by pipeline when a pipeline is selected
+  const { data: pipelineUsers } = useQuery({
+    queryKey: ["helpdesk-pipeline-users", selectedPipelineId],
+    queryFn: async () => {
+      if (!selectedPipelineId || !currentUser) return null;
+      
+      const { data, error } = await supabase
+        .from("helpdesk_pipeline_users")
+        .select("user_id, profiles:user_id(id, first_name, last_name, email)")
+        .eq("pipeline_id", selectedPipelineId);
+      
+      if (error) throw error;
+      return data?.map(d => d.profiles).filter(Boolean) as any[];
+    },
+    enabled: !!selectedPipelineId && !!currentUser,
+  });
+
+  // Fetch all users for the filter dropdown (fallback when no pipeline selected)
   const { data: allUsers } = useQuery({
     queryKey: ["helpdesk-all-users"],
     queryFn: async () => {
@@ -194,6 +218,9 @@ export default function HelpDesk() {
     },
     enabled: !!currentUser,
   });
+
+  // Use pipeline-specific users when a pipeline is selected, otherwise all users
+  const filteredUsers = selectedPipelineId && pipelineUsers ? pipelineUsers : allUsers;
 
   // Load last selected pipeline from localStorage
   useEffect(() => {
@@ -234,6 +261,11 @@ export default function HelpDesk() {
       localStorage.setItem('helpdeskLastUserId', filterUserId);
     }
   }, [filterUserId]);
+
+  // Persist selected folder
+  useEffect(() => {
+    localStorage.setItem('helpdeskLastFolder', selectedFolder);
+  }, [selectedFolder]);
 
   const { data: emailAccounts } = useQuery({
     queryKey: ["helpdesk-email-accounts-active"],
@@ -544,7 +576,7 @@ export default function HelpDesk() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">All Users</SelectItem>
-                {allUsers?.map((user) => (
+                {filteredUsers?.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.first_name} {user.last_name}
                   </SelectItem>
