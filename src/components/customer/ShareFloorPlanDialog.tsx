@@ -92,7 +92,7 @@ export function ShareFloorPlanDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg z-[60]">
         <DialogHeader>
           <DialogTitle>Share Floor Plan</DialogTitle>
         </DialogHeader>

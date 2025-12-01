@@ -194,7 +194,7 @@ export default function CustomerRequests() {
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex items-center gap-2">
                             <p className="font-medium truncate">
-                              {link.floor_plan?.floor_number} {link.location?.name} - {link.location?.customer_location_id}
+                              Floor {link.floor_plan?.floor_number} {link.floor_plan?.name} - {link.location?.name}
                             </p>
                             {expired && (
                               <Badge variant="destructive" className="text-xs">
