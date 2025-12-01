@@ -882,18 +882,20 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
         </ScrollArea>
       </div>
 
-      {/* Email Composer */}
-      <div data-composer>
-        <EmailComposerEnhanced
-          ref={composerRef}
-          onSend={(emailData) => sendReplyMutation.mutateAsync(emailData)}
-          defaultTo={ticket?.sender_email || ticket?.external_email || ""}
-          defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
-          isSending={sendReplyMutation.isPending}
-          emailThread={emailThread}
-          ticketId={ticketId}
-        />
-      </div>
+      {/* Email Composer - Hidden in Requests pipeline */}
+      {ticket?.pipeline?.name !== "Requests" && (
+        <div data-composer>
+          <EmailComposerEnhanced
+            ref={composerRef}
+            onSend={(emailData) => sendReplyMutation.mutateAsync(emailData)}
+            defaultTo={ticket?.sender_email || ticket?.external_email || ""}
+            defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
+            isSending={sendReplyMutation.isPending}
+            emailThread={emailThread}
+            ticketId={ticketId}
+          />
+        </div>
+      )}
     </div>
   );
 }
