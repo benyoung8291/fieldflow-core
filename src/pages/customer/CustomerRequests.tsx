@@ -70,7 +70,7 @@ export default function CustomerRequests() {
         .from("floor_plan_share_links")
         .select(`
           *,
-          floor_plan:floor_plans(name),
+          floor_plan:floor_plans(name, floor_number),
           location:customer_locations(name)
         `)
         .eq("created_by", user.id)
@@ -193,7 +193,11 @@ export default function CustomerRequests() {
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium truncate">{link.floor_plan?.name}</p>
+                            <p className="font-medium truncate">
+                              {link.floor_plan?.floor_number 
+                                ? `Floor ${link.floor_plan.floor_number}` 
+                                : link.floor_plan?.name} - {link.location?.name}
+                            </p>
                             {expired && (
                               <Badge variant="destructive" className="text-xs">
                                 Expired
