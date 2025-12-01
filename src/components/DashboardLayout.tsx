@@ -119,38 +119,29 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
       const isExpanded = expandedFolders.has(item.id);
       const Icon = item.iconComponent;
 
-      // Render folder with popover when collapsed
+      // Render folder with popover when collapsed - click-based for reliability
       if (item.is_folder && sidebarCollapsed && children.length > 0) {
         return (
           <div key={item.id}>
             <Popover open={openPopover === item.id} onOpenChange={(open) => setOpenPopover(open ? item.id : null)}>
-              <div 
-                className="relative"
-                onMouseEnter={() => handlePopoverOpen(item.id)}
-                onMouseLeave={handlePopoverClose}
-              >
-                <PopoverTrigger asChild>
-                  <button
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
-                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
-                  </button>
-                </PopoverTrigger>
-                {/* Hover bridge zone - invisible area connecting trigger to popover */}
-                {openPopover === item.id && (
-                  <div className="absolute top-0 left-full w-2 h-full pointer-events-none" />
-                )}
-              </div>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={() => setOpenPopover(openPopover === item.id ? null : item.id)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
+                    openPopover === item.id && "bg-sidebar-accent",
+                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                </button>
+              </PopoverTrigger>
               <PopoverContent 
                 side="right" 
                 align="start" 
-                sideOffset={0}
+                sideOffset={4}
                 className="w-56 p-2 z-[9999]"
-                onMouseEnter={() => handlePopoverOpen(item.id)}
-                onMouseLeave={handlePopoverClose}
+                onInteractOutside={() => setOpenPopover(null)}
               >
                 <div className="space-y-1">
                   <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
