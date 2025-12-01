@@ -5,12 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Map, Users, Calendar, ListTodo, Clock, CheckCircle, AlertCircle, LogOut, User } from 'lucide-react';
-import { useWorkerRole } from '@/hooks/useWorkerRole';
 import { toast } from 'sonner';
 
 export default function SupervisorDashboard() {
   const navigate = useNavigate();
-  const { isSupervisorOrAbove } = useWorkerRole();
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({
     activeWorkers: 0,
@@ -21,12 +19,8 @@ export default function SupervisorDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isSupervisorOrAbove) {
-      navigate('/worker/dashboard');
-      return;
-    }
     loadDashboardData();
-  }, [isSupervisorOrAbove]);
+  }, []);
 
   const loadDashboardData = async () => {
     try {

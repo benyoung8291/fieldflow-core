@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useWorkerRole = () => {
-  const { data: userData } = useQuery({
+  const { data: userData, isLoading, error } = useQuery({
     queryKey: ["worker-role"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -15,7 +15,7 @@ export const useWorkerRole = () => {
         .eq("user_id", user.id);
 
       const isSupervisorOrAbove = rolesQuery.data?.some((r: any) => 
-        r.role === "tenant_admin" || r.role === "supervisor"
+        r.role === "tenant_admin" || r.role === "supervisor" || r.role === "management" || r.role === "super_admin"
       ) || false;
 
       // Check if user is also a worker (exists in workers table)
@@ -35,12 +35,15 @@ export const useWorkerRole = () => {
         showToggle: isSupervisorOrAbove && isWorker,
       };
     },
+    retry: 2,
   });
 
-  return userData || {
-    userId: null,
-    isSupervisorOrAbove: false,
-    isWorker: false,
-    showToggle: false,
+  return {
+    userId: userData?.userId || null,
+    isSupervisorOrAbove: userData?.isSupervisorOrAbove || false,
+    isWorker: userData?.isWorker || false,
+    showToggle: userData?.showToggle || false,
+    isLoading,
+    error,
   };
 };
