@@ -501,9 +501,18 @@ export default function LocationFloorPlans() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <Button
-                size="sm"
-                onClick={() => {
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowShareDialog(true)}
+                  className="bg-background/95 backdrop-blur shadow-lg"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
                   // Check if any uploads are still in progress
                   if (uploadingPhotos.size > 0) {
                     toast.error("Please wait for photo uploads to complete");
@@ -548,7 +557,8 @@ export default function LocationFloorPlans() {
                 ) : (
                   `Create (${markups.length})`
                 )}
-              </Button>
+                </Button>
+              </div>
             </div>
           </div>
           <MobileFloorPlanViewer
