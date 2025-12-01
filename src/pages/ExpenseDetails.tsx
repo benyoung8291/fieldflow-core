@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ExpenseDialog } from "@/components/expenses/ExpenseDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 export default function ExpenseDetails() {
   const { id } = useParams();
@@ -92,6 +93,14 @@ export default function ExpenseDetails() {
         approved_by_user: approved_by_user?.data,
       };
     },
+  });
+
+  // Track presence on this expense
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "expenses",
+    documentName: expense?.expense_number ? `Expense ${expense.expense_number}` : undefined,
   });
 
   const { data: attachments = [] } = useQuery({

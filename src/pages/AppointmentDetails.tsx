@@ -47,6 +47,7 @@ import FieldReportsList from "@/components/field-reports/FieldReportsList";
 import { DocumentNotes } from "@/components/notes/DocumentNotes";
 import { AppointmentAttachments } from "@/components/appointments/AppointmentAttachments";
 import { CreateTimeLogDialog } from "@/components/appointments/CreateTimeLogDialog";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground border-muted",
@@ -129,6 +130,14 @@ export default function AppointmentDetails() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Track presence on this appointment
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "appointments",
+    documentName: appointment?.title ? `Appointment: ${appointment.title}` : undefined,
   });
 
   // Fetch available workers

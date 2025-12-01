@@ -36,6 +36,7 @@ import { InlineLineItemRow } from "@/components/purchase-orders/InlineLineItemRo
 import AuditTimeline from "@/components/audit/AuditTimeline";
 import { canApplyGST, getGSTWarning } from "@/lib/gstCompliance";
 import APInvoiceDialog from "@/components/invoices/APInvoiceDialog";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 export default function PurchaseOrderDetails() {
   const { id } = useParams();
@@ -53,6 +54,14 @@ export default function PurchaseOrderDetails() {
   const [projects, setProjects] = useState<any[]>([]);
   const [linkedServiceOrder, setLinkedServiceOrder] = useState<any>(null);
   const [linkedProject, setLinkedProject] = useState<any>(null);
+
+  // Track presence on this purchase order
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "purchase-orders",
+    documentName: purchaseOrder?.po_number ? `PO ${purchaseOrder.po_number}` : undefined,
+  });
 
   useEffect(() => {
     if (id) {
