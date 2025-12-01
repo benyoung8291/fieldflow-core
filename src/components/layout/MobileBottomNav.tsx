@@ -48,7 +48,7 @@ export const MobileBottomNav = () => {
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { data: access, isLoading } = useUserAccess();
-  const { canView, isLoading: permissionsLoading } = usePermissions();
+  const { canView, isLoading: permissionsLoading, hasLoadedPermissions } = usePermissions();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -76,18 +76,28 @@ export const MobileBottomNav = () => {
 
   // Filter nav items based on permissions
   const visiblePrimaryNav = useMemo(() => {
+    // Don't filter until permissions are definitely loaded
+    if (permissionsLoading || !hasLoadedPermissions) {
+      return primaryNavItems;
+    }
+    
     return primaryNavItems.filter(item => {
       const module = getRouteModule(item.path);
       return !module || canView(module);
     });
-  }, [canView]);
+  }, [canView, permissionsLoading, hasLoadedPermissions]);
 
   const visibleMoreNav = useMemo(() => {
+    // Don't filter until permissions are definitely loaded
+    if (permissionsLoading || !hasLoadedPermissions) {
+      return moreNavItems;
+    }
+    
     return moreNavItems.filter(item => {
       const module = getRouteModule(item.path);
       return !module || canView(module);
     });
-  }, [canView]);
+  }, [canView, permissionsLoading, hasLoadedPermissions]);
 
   const isActivePath = (path: string) => location.pathname === path;
 

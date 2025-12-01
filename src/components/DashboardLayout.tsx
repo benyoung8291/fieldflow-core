@@ -43,7 +43,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     return saved === 'true';
   });
   const { menuItems, isLoading: menuLoading } = useCustomMenu();
-  const { canView, isLoading: permissionsLoading } = usePermissions();
+  const { canView, isLoading: permissionsLoading, hasLoadedPermissions } = usePermissions();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('expandedMenuFolders');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -93,7 +93,10 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
 
   // Filter menu items based on permissions
   const filteredMenuItems = useMemo(() => {
-    if (permissionsLoading) return menuItems;
+    // Don't filter until permissions are definitely loaded
+    if (permissionsLoading || !hasLoadedPermissions) {
+      return menuItems;
+    }
     
     return menuItems.filter(item => {
       const module = getRouteModule(item.path || "");
@@ -107,7 +110,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
         return canView(module);
       }) || []
     }));
-  }, [menuItems, canView, permissionsLoading]);
+  }, [menuItems, canView, permissionsLoading, hasLoadedPermissions]);
 
   const renderMenuContent = () => {
     const renderMenuItem = (item: any) => {
