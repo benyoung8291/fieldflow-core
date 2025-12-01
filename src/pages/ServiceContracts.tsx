@@ -33,6 +33,9 @@ export default function ServiceContracts() {
   const [sortBy, setSortBy] = useState<string>("contract_number");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filterText, setFilterText] = useState("");
+  const [genSortBy, setGenSortBy] = useState<string>("date");
+  const [genSortOrder, setGenSortOrder] = useState<"asc" | "desc">("asc");
+  const [genFilterText, setGenFilterText] = useState("");
   
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
@@ -209,7 +212,57 @@ export default function ServiceContracts() {
     }
     return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : (bVal > aVal ? 1 : -1);
   });
-  const upcomingGenerations = calculateUpcomingGenerations().slice(0, 50);
+  // Filter and sort upcoming generations
+  let upcomingGenerations = calculateUpcomingGenerations();
+  
+  // Apply text filter
+  if (genFilterText) {
+    const filterLower = genFilterText.toLowerCase();
+    upcomingGenerations = upcomingGenerations.filter((gen: any) => 
+      gen.contractNumber?.toLowerCase().includes(filterLower) ||
+      gen.customerName?.toLowerCase().includes(filterLower) ||
+      gen.contractTitle?.toLowerCase().includes(filterLower) ||
+      gen.lineItems?.some((item: any) => item.description?.toLowerCase().includes(filterLower))
+    );
+  }
+  
+  // Apply sorting
+  upcomingGenerations = [...upcomingGenerations].sort((a: any, b: any) => {
+    let aVal, bVal;
+    
+    switch (genSortBy) {
+      case "date":
+        aVal = a.date.getTime();
+        bVal = b.date.getTime();
+        break;
+      case "contract":
+        aVal = a.contractNumber || "";
+        bVal = b.contractNumber || "";
+        break;
+      case "customer":
+        aVal = a.customerName || "";
+        bVal = b.customerName || "";
+        break;
+      case "title":
+        aVal = a.contractTitle || "";
+        bVal = b.contractTitle || "";
+        break;
+      case "amount":
+        aVal = a.totalAmount;
+        bVal = b.totalAmount;
+        break;
+      default:
+        aVal = a.date.getTime();
+        bVal = b.date.getTime();
+    }
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return genSortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    }
+    return genSortOrder === "asc" ? (aVal > bVal ? 1 : -1) : (bVal > aVal ? 1 : -1);
+  });
+  
+  upcomingGenerations = upcomingGenerations.slice(0, 50);
   const monthlyRevenue = calculateMonthlyRevenue();
   
   // Calculate total annualized value from line items using frequency multipliers
@@ -614,6 +667,116 @@ export default function ServiceContracts() {
               <CardDescription>Future service orders grouped by generation date - showing next 50</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Filter by contract, customer, title, or line item..."
+                      value={genFilterText}
+                      onChange={(e) => setGenFilterText(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  {genFilterText && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setGenFilterText("")}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Sort by:</span>
+                  <Button
+                    variant={genSortBy === "date" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (genSortBy === "date") {
+                        setGenSortOrder(genSortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setGenSortBy("date");
+                        setGenSortOrder("asc");
+                      }
+                    }}
+                  >
+                    Date
+                    {genSortBy === "date" && (
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                  <Button
+                    variant={genSortBy === "contract" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (genSortBy === "contract") {
+                        setGenSortOrder(genSortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setGenSortBy("contract");
+                        setGenSortOrder("asc");
+                      }
+                    }}
+                  >
+                    Contract
+                    {genSortBy === "contract" && (
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                  <Button
+                    variant={genSortBy === "customer" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (genSortBy === "customer") {
+                        setGenSortOrder(genSortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setGenSortBy("customer");
+                        setGenSortOrder("asc");
+                      }
+                    }}
+                  >
+                    Customer
+                    {genSortBy === "customer" && (
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                  <Button
+                    variant={genSortBy === "title" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (genSortBy === "title") {
+                        setGenSortOrder(genSortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setGenSortBy("title");
+                        setGenSortOrder("asc");
+                      }
+                    }}
+                  >
+                    Title
+                    {genSortBy === "title" && (
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                  <Button
+                    variant={genSortBy === "amount" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (genSortBy === "amount") {
+                        setGenSortOrder(genSortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setGenSortBy("amount");
+                        setGenSortOrder("asc");
+                      }
+                    }}
+                  >
+                    Amount
+                    {genSortBy === "amount" && (
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-2">
                 {upcomingGenerations.map((serviceOrder: any, idx: number) => (
                   <Collapsible key={idx} className="border rounded-lg">
