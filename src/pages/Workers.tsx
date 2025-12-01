@@ -15,6 +15,7 @@ import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import { usePresence } from "@/hooks/usePresence";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import CreateWorkerDialog from "@/components/workers/CreateWorkerDialog";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 interface Worker {
   id: string;
@@ -101,10 +102,15 @@ export default function Workers() {
           </div>
           <div className="flex items-center gap-2">
             <PresenceIndicator users={onlineUsers} />
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <PermissionButton
+              module="workers"
+              permission="create"
+              onClick={() => setShowCreateDialog(true)}
+              hideIfNoPermission={true}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Create New Worker
-            </Button>
+            </PermissionButton>
             <Button onClick={() => navigate("/settings")} variant="outline">
               <SettingsIcon className="h-4 w-4 mr-2" />
               Manage Users
@@ -238,26 +244,28 @@ export default function Workers() {
                             }}>
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm("Are you sure you want to remove worker access? This will remove the worker role but keep the user account.")) {
-                                  // Remove worker role via user_roles
-                                  supabase
-                                    .from("user_roles")
-                                    .delete()
-                                    .eq("user_id", worker.id)
-                                    .eq("role", "worker")
-                                    .then(() => {
-                                      queryClient.invalidateQueries({ queryKey: ["workers"] });
-                                      toast.success("Worker access removed");
-                                    });
-                                }
-                              }}
-                              className="text-destructive"
-                            >
-                              Remove Worker Access
-                            </DropdownMenuItem>
+                            <PermissionGate module="workers" permission="delete">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Are you sure you want to remove worker access? This will remove the worker role but keep the user account.")) {
+                                    // Remove worker role via user_roles
+                                    supabase
+                                      .from("user_roles")
+                                      .delete()
+                                      .eq("user_id", worker.id)
+                                      .eq("role", "worker")
+                                      .then(() => {
+                                        queryClient.invalidateQueries({ queryKey: ["workers"] });
+                                        toast.success("Worker access removed");
+                                      });
+                                  }
+                                }}
+                                className="text-destructive"
+                              >
+                                Remove Worker Access
+                              </DropdownMenuItem>
+                            </PermissionGate>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

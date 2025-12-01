@@ -9317,7 +9317,22 @@ export type Database = {
         | "workflows"
         | "knowledge_base"
         | "reports"
-      app_role: "tenant_admin" | "supervisor" | "manager" | "user"
+        | "expenses"
+        | "invoices"
+        | "user_management"
+        | "integrations"
+      app_role:
+        | "tenant_admin"
+        | "supervisor"
+        | "manager"
+        | "user"
+        | "management"
+        | "worker"
+        | "accountant"
+        | "warehouse_manager"
+        | "subcontractor"
+        | "super_admin"
+        | "customer"
       appointment_status:
         | "draft"
         | "published"
@@ -9505,8 +9520,24 @@ export const Constants = {
         "workflows",
         "knowledge_base",
         "reports",
+        "expenses",
+        "invoices",
+        "user_management",
+        "integrations",
       ],
-      app_role: ["tenant_admin", "supervisor", "manager", "user"],
+      app_role: [
+        "tenant_admin",
+        "supervisor",
+        "manager",
+        "user",
+        "management",
+        "worker",
+        "accountant",
+        "warehouse_manager",
+        "subcontractor",
+        "super_admin",
+        "customer",
+      ],
       appointment_status: [
         "draft",
         "published",

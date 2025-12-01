@@ -14,6 +14,7 @@ import { Plus, FileText, ExternalLink, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddInvoiceLineDialog from "@/components/invoices/AddInvoiceLineDialog";
+import { PermissionButton } from "@/components/permissions";
 
 export default function Invoices() {
   const navigate = useNavigate();
