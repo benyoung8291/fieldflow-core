@@ -25,11 +25,19 @@ serve(async (req) => {
       .from("helpdesk_tickets")
       .select("*")
       .eq("id", ticketId)
-      .single();
+      .maybeSingle();
 
-    if (ticketError || !ticket) {
-      console.error("Ticket not found:", ticketError);
-      throw new Error("Ticket not found");
+    if (ticketError) {
+      console.error("Error fetching ticket:", ticketError);
+      throw new Error("Error fetching ticket");
+    }
+
+    if (!ticket) {
+      console.log("Ticket not found:", ticketId);
+      return new Response(
+        JSON.stringify({ success: false, error: "Ticket not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
     }
 
     // Get the email account if ticket has an email_account_id
