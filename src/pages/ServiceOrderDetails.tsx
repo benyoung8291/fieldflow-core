@@ -651,6 +651,11 @@ export default function ServiceOrderDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service_orders"] });
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      // Invalidate contract service orders if this order was linked to a contract
+      if (order?.contract_id) {
+        queryClient.invalidateQueries({ queryKey: ["contract-service-orders", order.contract_id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["contract-service-orders"] });
       toast({ title: "Service order deleted successfully" });
       navigate("/service-orders");
     },
