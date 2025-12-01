@@ -50,6 +50,7 @@ export const MobileBottomNav = () => {
   const { data: access, isLoading } = useUserAccess();
   const { canView, isLoading: permissionsLoading, hasLoadedPermissions } = usePermissions();
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
@@ -62,19 +63,7 @@ export const MobileBottomNav = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (!isMobile || !isAuthenticated) return null;
-  if (location.pathname.startsWith('/worker') || location.pathname.startsWith('/customer') || location.pathname === '/auth') return null;
-  
-  // Wait for access check to complete to prevent flash of wrong menu
-  if (isLoading || permissionsLoading) return null;
-  
-  // Only show for users with office access
-  if (!access?.canAccessOffice) return null;
-  if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/helpdesk')) {
-    return null;
-  }
-
-  // Filter nav items based on permissions
+  // Filter nav items based on permissions (must be before early returns)
   const visiblePrimaryNav = useMemo(() => {
     // Don't filter until permissions are definitely loaded
     if (permissionsLoading || !hasLoadedPermissions) {
@@ -98,6 +87,19 @@ export const MobileBottomNav = () => {
       return !module || canView(module);
     });
   }, [canView, permissionsLoading, hasLoadedPermissions]);
+
+  // NOW we can do early returns after all hooks have been called
+  if (!isMobile || !isAuthenticated) return null;
+  if (location.pathname.startsWith('/worker') || location.pathname.startsWith('/customer') || location.pathname === '/auth') return null;
+  
+  // Wait for access check to complete to prevent flash of wrong menu
+  if (isLoading || permissionsLoading) return null;
+  
+  // Only show for users with office access
+  if (!access?.canAccessOffice) return null;
+  if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/helpdesk')) {
+    return null;
+  }
 
   const isActivePath = (path: string) => location.pathname === path;
 
