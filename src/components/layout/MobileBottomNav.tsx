@@ -3,8 +3,10 @@ import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUserAccess } from "@/hooks/useUserAccess";
+import { usePermissions } from "@/hooks/usePermissions";
+import { getRouteModule } from "@/config/routePermissions";
 import {
   Sheet,
   SheetContent,
@@ -46,6 +48,7 @@ export const MobileBottomNav = () => {
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { data: access, isLoading } = useUserAccess();
+  const { canView, isLoading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -63,7 +66,7 @@ export const MobileBottomNav = () => {
   if (location.pathname.startsWith('/worker') || location.pathname.startsWith('/customer') || location.pathname === '/auth') return null;
   
   // Wait for access check to complete to prevent flash of wrong menu
-  if (isLoading) return null;
+  if (isLoading || permissionsLoading) return null;
   
   // Only show for users with office access
   if (!access?.canAccessOffice) return null;
@@ -71,12 +74,27 @@ export const MobileBottomNav = () => {
     return null;
   }
 
+  // Filter nav items based on permissions
+  const visiblePrimaryNav = useMemo(() => {
+    return primaryNavItems.filter(item => {
+      const module = getRouteModule(item.path);
+      return !module || canView(module);
+    });
+  }, [canView]);
+
+  const visibleMoreNav = useMemo(() => {
+    return moreNavItems.filter(item => {
+      const module = getRouteModule(item.path);
+      return !module || canView(module);
+    });
+  }, [canView]);
+
   const isActivePath = (path: string) => location.pathname === path;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50 shadow-xl pb-safe">
       <div className="flex items-center justify-around h-16 px-2">
-        {primaryNavItems.map((item) => {
+        {visiblePrimaryNav.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(item.path);
           
@@ -120,7 +138,7 @@ export const MobileBottomNav = () => {
               <SheetTitle className="text-xl font-semibold">More Options</SheetTitle>
             </SheetHeader>
             <div className="grid grid-cols-3 gap-3 pb-6">
-              {moreNavItems.map((item) => {
+              {visibleMoreNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActivePath(item.path);
                 

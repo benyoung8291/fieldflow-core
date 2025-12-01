@@ -20,6 +20,8 @@ import { WorkerMobileBottomNav } from "./components/layout/WorkerMobileBottomNav
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { UpdateNotificationBar } from "@/components/UpdateNotificationBar";
 import { Loader2 } from "lucide-react";
+import { PermissionProtectedRoute } from "@/components/PermissionProtectedRoute";
+import { getRouteModule } from "@/config/routePermissions";
 
 // Lazy load all pages for code splitting and faster initial load
 const UserManagement = lazy(() => import("./pages/UserManagement"));
@@ -107,6 +109,7 @@ const AppointmentView = lazy(() => import("./pages/customer/AppointmentView"));
 const FieldReportView = lazy(() => import("./pages/customer/FieldReportView"));
 const TemplateBuilderPage = lazy(() => import("./pages/TemplateBuilderPage"));
 const TemplatesListPage = lazy(() => import("./pages/TemplatesListPage"));
+const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -308,62 +311,62 @@ const App = () => {
                   <Route path="/worker/auth" element={<Navigate to="/auth" replace />} />
                   <Route path="/dashboard" element={isAuthenticated ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/super-admin" element={isAuthenticated ? <ProtectedRoute><SuperAdmin /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/users" element={isAuthenticated ? <ProtectedRoute><UserManagement /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/quotes" element={isAuthenticated ? <ProtectedRoute><Quotes /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/quotes/:id" element={isAuthenticated ? <ProtectedRoute><QuoteDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/projects" element={isAuthenticated ? <ProtectedRoute><Projects /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/projects/:id" element={isAuthenticated ? <ProtectedRoute><ProjectDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/service-orders" element={isAuthenticated ? <ProtectedRoute><ServiceOrders /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/service-orders/:id" element={isAuthenticated ? <ProtectedRoute><ServiceOrderDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/service-contracts" element={isAuthenticated ? <ProtectedRoute><ServiceContracts /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/service-contracts/:id" element={isAuthenticated ? <ProtectedRoute><ServiceContractDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/timesheets" element={isAuthenticated ? <ProtectedRoute><Timesheets /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/timesheets/:id" element={isAuthenticated ? <ProtectedRoute><TimesheetDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/scheduler" element={isAuthenticated ? <ProtectedRoute><Scheduler /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/appointments" element={isAuthenticated ? <ProtectedRoute><Appointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/appointments/:id" element={isAuthenticated ? <ProtectedRoute><AppointmentDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/customers" element={isAuthenticated ? <ProtectedRoute><Customers /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/customers/:id" element={isAuthenticated ? <ProtectedRoute><CustomerDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/customer-locations/:id" element={isAuthenticated ? <ProtectedRoute><CustomerLocationDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/leads" element={isAuthenticated ? <ProtectedRoute><Leads /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/leads/:id" element={isAuthenticated ? <ProtectedRoute><LeadDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/workers" element={isAuthenticated ? <ProtectedRoute><Workers /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/workers/:id" element={isAuthenticated ? <ProtectedRoute><WorkerDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/skills" element={isAuthenticated ? <ProtectedRoute><Skills /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/training-matrix" element={isAuthenticated ? <ProtectedRoute><TrainingMatrix /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/analytics" element={isAuthenticated ? <ProtectedRoute><Analytics /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/financial-reconciliation" element={isAuthenticated ? <ProtectedRoute><FinancialReconciliation /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/pipeline" element={isAuthenticated ? <ProtectedRoute><QuotePipeline /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/settings" element={isAuthenticated ? <ProtectedRoute><Settings /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/settings/templates" element={isAuthenticated ? <ProtectedRoute><TemplatesListPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/templates" element={isAuthenticated ? <ProtectedRoute><TemplatesListPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/template-builder/:id?" element={isAuthenticated ? <ProtectedRoute><TemplateBuilderPage /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/tasks" element={isAuthenticated ? <ProtectedRoute><Tasks /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/invoices" element={isAuthenticated ? <ProtectedRoute><InvoicesList /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/invoices/create" element={isAuthenticated ? <ProtectedRoute><Invoices /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/invoices/:id" element={isAuthenticated ? <ProtectedRoute><InvoiceDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/ap-invoices" element={isAuthenticated ? <ProtectedRoute><APInvoicesList /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/ap-invoices/:id" element={isAuthenticated ? <ProtectedRoute><APInvoiceDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/ap-invoice-approval-queue" element={isAuthenticated ? <ProtectedRoute><APInvoiceApprovalQueue /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/recurring-invoices" element={isAuthenticated ? <ProtectedRoute><RecurringInvoices /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/recurring-invoices/:id" element={isAuthenticated ? <ProtectedRoute><RecurringInvoiceDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/suppliers" element={isAuthenticated ? <ProtectedRoute><Suppliers /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/purchase-orders" element={isAuthenticated ? <ProtectedRoute><PurchaseOrders /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/purchase-orders/:id" element={isAuthenticated ? <ProtectedRoute><PurchaseOrderDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/expenses" element={isAuthenticated ? <ProtectedRoute><Expenses /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/expenses/:id" element={isAuthenticated ? <ProtectedRoute><ExpenseDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/credit-card-reconciliation" element={isAuthenticated ? <ProtectedRoute><CreditCardReconciliation /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/unassigned-transactions" element={isAuthenticated ? <ProtectedRoute><UnassignedTransactions /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/workflows" element={isAuthenticated ? <ProtectedRoute><Workflows /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/workflows/templates" element={isAuthenticated ? <ProtectedRoute><WorkflowTemplateSelector /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/workflows/:id" element={isAuthenticated ? <ProtectedRoute><WorkflowBuilder /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/field-reports" element={isAuthenticated ? <ProtectedRoute><FieldReports /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/contacts" element={isAuthenticated ? <ProtectedRoute><Contacts /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/contacts/:id" element={isAuthenticated ? <ProtectedRoute><ContactDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/helpdesk" element={isAuthenticated ? <ProtectedRoute><HelpDesk /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/helpdesk/analytics" element={isAuthenticated ? <ProtectedRoute><HelpdeskAnalytics /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/crm-hub" element={isAuthenticated ? <ProtectedRoute><CRMHub /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/knowledge-base" element={isAuthenticated ? <ProtectedRoute><KnowledgeBase /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/users" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/users")}><UserManagement /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/quotes" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/quotes")}><Quotes /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/quotes/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/quotes")}><QuoteDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/projects" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/projects")}><Projects /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/projects/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/projects")}><ProjectDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/service-orders" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/service-orders")}><ServiceOrders /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/service-orders/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/service-orders")}><ServiceOrderDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/service-contracts" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/service-contracts")}><ServiceContracts /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/service-contracts/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/service-contracts")}><ServiceContractDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/timesheets" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/timesheets")}><Timesheets /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/timesheets/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/timesheets")}><TimesheetDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/scheduler" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/scheduler")}><Scheduler /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/appointments" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/appointments")}><Appointments /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/appointments/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/appointments")}><AppointmentDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/customers" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/customers")}><Customers /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/customers/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/customers")}><CustomerDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/customer-locations/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/customers")}><CustomerLocationDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/leads" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/leads")}><Leads /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/leads/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/leads")}><LeadDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/workers" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workers")}><Workers /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/workers/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workers")}><WorkerDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/skills" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/skills")}><Skills /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/training-matrix" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/training-matrix")}><TrainingMatrix /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/analytics" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/analytics")}><Analytics /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/financial-reconciliation" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/financial-reconciliation")}><FinancialReconciliation /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/pipeline" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/pipeline")}><QuotePipeline /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/settings" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/settings")}><Settings /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/settings/templates" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/settings")}><TemplatesListPage /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/templates" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/settings")}><TemplatesListPage /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/template-builder/:id?" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/settings")}><TemplateBuilderPage /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/tasks" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/tasks")}><Tasks /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/invoices" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><InvoicesList /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/invoices/create" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><Invoices /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/invoices/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><InvoiceDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/ap-invoices" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/ap-invoices")}><APInvoicesList /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/ap-invoices/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/ap-invoices")}><APInvoiceDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/ap-invoice-approval-queue" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/ap-invoices")}><APInvoiceApprovalQueue /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/recurring-invoices" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><RecurringInvoices /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/recurring-invoices/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><RecurringInvoiceDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/suppliers" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/suppliers")}><Suppliers /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/purchase-orders" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/purchase-orders")}><PurchaseOrders /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/purchase-orders/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/purchase-orders")}><PurchaseOrderDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/expenses" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/expenses")}><Expenses /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/expenses/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/expenses")}><ExpenseDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/credit-card-reconciliation" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/expenses")}><CreditCardReconciliation /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/unassigned-transactions" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/expenses")}><UnassignedTransactions /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/workflows" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workflows")}><Workflows /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/workflows/templates" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workflows")}><WorkflowTemplateSelector /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/workflows/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workflows")}><WorkflowBuilder /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/field-reports" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/field-reports")}><FieldReports /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/contacts" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/contacts")}><Contacts /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/contacts/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/contacts")}><ContactDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/helpdesk" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/helpdesk")}><HelpDesk /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/helpdesk/analytics" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/helpdesk")}><HelpdeskAnalytics /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/crm-hub" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/crm")}><CRMHub /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/knowledge-base" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/knowledge-base")}><KnowledgeBase /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* Customer Portal Routes */}
             <Route path="/customer" element={isAuthenticated ? <ProtectedRoute><CustomerDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/locations" element={isAuthenticated ? <ProtectedRoute><CustomerLocations /></ProtectedRoute> : <Navigate to="/auth" replace />} />
@@ -375,6 +378,8 @@ const App = () => {
             <Route path="/customer/field-reports" element={isAuthenticated ? <ProtectedRoute><CustomerFieldReports /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/field-reports/:reportId" element={isAuthenticated ? <ProtectedRoute><FieldReportView /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/customer/appointments/:appointmentId" element={isAuthenticated ? <ProtectedRoute><AppointmentView /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            {/* Access Denied Route */}
+            <Route path="/access-denied" element={isAuthenticated ? <Suspense fallback={<RouteLoader />}><AccessDenied /></Suspense> : <Navigate to="/auth" replace />} />
             {/* Worker Mobile Routes */}
             <Route path="/worker/dashboard" element={isAuthenticated ? <ProtectedRoute><WorkerDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/profile" element={isAuthenticated ? <ProtectedRoute><WorkerProfile /></ProtectedRoute> : <Navigate to="/auth" replace />} />
