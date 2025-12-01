@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { Loader2, ClipboardList, Calendar, MapPin, Clock, Users, FileEdit, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -26,30 +27,7 @@ export default function CustomerServiceOrders() {
       return newSet;
     });
   };
-  const { data: profile } = useQuery({
-    queryKey: ["customer-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error("Customer portal: User not authenticated");
-        throw new Error("Not authenticated");
-      }
-
-      console.log("Customer portal: Fetching profile for user", user.id);
-      const { data, error } = await supabase
-        .from("customer_portal_users")
-        .select("customer_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) {
-        console.error("Customer portal: Error fetching profile", error);
-        throw error;
-      }
-      console.log("Customer portal: Profile loaded", data);
-      return data;
-    },
-  });
+  const { data: profile } = useCustomerProfile();
 
   const { data: serviceOrders, isLoading } = useQuery({
     queryKey: ["customer-service-orders", profile?.customer_id],

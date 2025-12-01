@@ -3,26 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { Loader2, MapPin, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function CustomerLocations() {
-  const { data: profile } = useQuery({
-    queryKey: ["customer-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("customer_portal_users")
-        .select("customer_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: profile } = useCustomerProfile();
 
   const { data: locations, isLoading } = useQuery({
     queryKey: ["customer-locations", profile?.customer_id],

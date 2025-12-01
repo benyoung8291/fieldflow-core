@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { Loader2, FileText, Calendar, Link as LinkIcon, Copy, Trash2, Clock, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -13,22 +14,7 @@ import { formatDistanceToNow } from "date-fns";
 
 export default function CustomerRequests() {
   const navigate = useNavigate();
-  const { data: profile } = useQuery({
-    queryKey: ["customer-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("customer_portal_users")
-        .select("customer_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: profile } = useCustomerProfile();
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["customer-tickets", profile?.customer_id],

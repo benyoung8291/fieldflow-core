@@ -18,6 +18,7 @@ import { Loader2, FileText, ArrowLeft, Maximize2, X, Share2 } from "lucide-react
 import { toast } from "sonner";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ensurePortalUserContact } from "@/utils/portalUserContact";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 
 export default function LocationFloorPlans() {
   const { locationId } = useParams<{ locationId: string }>();
@@ -88,35 +89,7 @@ export default function LocationFloorPlans() {
     }
   }, [searchParams, floorPlans, isLoading]);
 
-  const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
-    queryKey: ["customer-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("customer_portal_users")
-        .select("customer_id, tenant_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      
-      console.log("Customer portal: Profile data loaded", data);
-      return data;
-    },
-  });
-
-  // Debug logging for profile state
-  useEffect(() => {
-    console.log("Profile state:", { 
-      profile, 
-      profileLoading, 
-      profileError,
-      hasTenantId: !!profile?.tenant_id,
-      hasCustomerId: !!profile?.customer_id 
-    });
-  }, [profile, profileLoading, profileError]);
+  const { data: profile, isLoading: profileLoading, error: profileError } = useCustomerProfile();
 
   // Get Requests pipeline ID
   const { data: requestsPipeline } = useQuery({
