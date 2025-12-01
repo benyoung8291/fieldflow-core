@@ -279,6 +279,12 @@ export default function ServiceOrderDialog({
       
       if (orderError) throw orderError;
 
+      // CRITICAL: Fetch customer-related data FIRST before setting formData
+      // This ensures contacts, locations, and projects are loaded when formData is populated
+      if (orderData.customer_id) {
+        await fetchCustomerRelatedData(orderData.customer_id);
+      }
+
       // Fetch line items
       const { data: lineItemsData } = await supabase
         .from("service_order_line_items")
@@ -311,6 +317,7 @@ export default function ServiceOrderDialog({
       }
       
       if (orderData) {
+        // Now set formData AFTER customer-related data is loaded
         setFormData({
           customer_id: orderData.customer_id || "",
           customer_location_id: orderData.customer_location_id || "",
