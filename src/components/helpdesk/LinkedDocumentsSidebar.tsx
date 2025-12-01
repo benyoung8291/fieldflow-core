@@ -82,7 +82,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                   .from("appointments")
                   .select("appointment_number, title, description, status, start_time, end_time, location_address")
                   .eq("id", doc.document_id)
-                  .single();
+                  .maybeSingle();
                 details = apt;
                 break;
               case 'quote':
@@ -914,7 +914,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             return {
                               title: docData?.appointment_number 
                                 ? `${docData.appointment_number}${docData.title ? ` - ${docData.title}` : ''}`
-                                : docData?.title || doc.document_number || 'Untitled',
+                                : docData?.title || doc.title || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.start_time,
                               time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null,
