@@ -71,7 +71,7 @@ export default function CustomerRequests() {
         .select(`
           *,
           floor_plan:floor_plans(name, floor_number),
-          location:customer_locations(name)
+          location:customer_locations(name, customer_location_id)
         `)
         .eq("created_by", user.id)
         .order("created_at", { ascending: false });
@@ -194,9 +194,7 @@ export default function CustomerRequests() {
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex items-center gap-2">
                             <p className="font-medium truncate">
-                              {link.floor_plan?.floor_number 
-                                ? `Floor ${link.floor_plan.floor_number}` 
-                                : link.floor_plan?.name} - {link.location?.name}
+                              {link.floor_plan?.floor_number} {link.location?.name} - {link.location?.customer_location_id}
                             </p>
                             {expired && (
                               <Badge variant="destructive" className="text-xs">
