@@ -41,7 +41,7 @@ export function LinkedDocumentDetailsDialog({
         invoice: "*, customer:customers(name)",
         project: "*, customer:customers(name)",
         task: "*",
-        appointment: "*, customer:customers(name)",
+        appointment: "*, service_order:service_orders(work_order_number, customer:customers(name)), assigned_user:profiles!appointments_assigned_to_fkey(first_name, last_name)",
       };
 
       const tableName = tableMap[documentType];
@@ -123,7 +123,9 @@ export function LinkedDocumentDetailsDialog({
     if (documentType === "invoice") return document.invoice_number || "Invoice";
     if (documentType === "project") return document.name || "Project";
     if (documentType === "task") return document.title || "Task";
-    if (documentType === "appointment") return document.title || "Appointment";
+    if (documentType === "appointment") return document.appointment_number 
+      ? `${document.appointment_number}${document.title ? ` - ${document.title}` : ''}`
+      : document.title || "Appointment";
     return "Document";
   };
 
@@ -365,6 +367,97 @@ export function LinkedDocumentDetailsDialog({
                 )}
               </TabsContent>
             </Tabs>
+          ) : documentType === "appointment" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {document.appointment_number && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Appointment Number</div>
+                    <div className="text-base font-medium">{document.appointment_number}</div>
+                  </div>
+                )}
+
+                {document.status && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Status</div>
+                    <div className="text-base">
+                      <span className={`px-2 py-1 rounded-full text-sm ${
+                        document.status === 'completed' ? 'bg-green-100 dark:bg-green-900/20 text-green-900 dark:text-green-100' :
+                        document.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100' :
+                        document.status === 'scheduled' ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-900 dark:text-purple-100' :
+                        'bg-muted'
+                      }`}>
+                        {document.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {document.title && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Title</div>
+                  <div className="text-base">{document.title}</div>
+                </div>
+              )}
+
+              {(document.start_time || document.end_time) && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Date & Time</div>
+                  <div className="text-base">
+                    {document.start_time && format(new Date(document.start_time), "PPP")}
+                    {document.start_time && document.end_time && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {format(new Date(document.start_time), "p")} - {format(new Date(document.end_time), "p")}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {document.location_address && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Location</div>
+                  <div className="text-base flex items-start gap-2">
+                    <svg className="h-4 w-4 mt-0.5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{document.location_address}</span>
+                  </div>
+                </div>
+              )}
+
+              {document.description && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Description</div>
+                  <div className="text-base whitespace-pre-wrap mt-1">{document.description}</div>
+                </div>
+              )}
+
+              {document.assigned_user && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Assigned To</div>
+                  <div className="text-base">
+                    {document.assigned_user.first_name} {document.assigned_user.last_name}
+                  </div>
+                </div>
+              )}
+
+              {document.service_order && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Service Order</div>
+                  <div className="text-base">
+                    {document.service_order.work_order_number}
+                    {document.service_order.customer && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        ({document.service_order.customer.name})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -409,7 +502,9 @@ export function LinkedDocumentDetailsDialog({
           )
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              Document not found
+              {documentType === "appointment" 
+                ? "Appointment details not accessible or not found" 
+                : "Document not found"}
             </div>
           )}
         </div>
