@@ -151,6 +151,36 @@ export default function ServiceOrderDialog({
     }
   }, [open, orderId, customerId, leadId]);
 
+  // Set up realtime subscription for service order updates when editing
+  useEffect(() => {
+    if (!open || !orderId) return;
+
+    const channel = supabase
+      .channel(`service-order-dialog-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'service_orders',
+          filter: `id=eq.${orderId}`
+        },
+        (payload) => {
+          console.log('[ServiceOrderDialog] Service order updated by another user:', payload);
+          toast({
+            title: "Document updated",
+            description: "This service order was updated by another user. Refreshing...",
+          });
+          fetchOrder();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, orderId]);
+
   useEffect(() => {
     if (formData.customer_id) {
       fetchCustomerRelatedData(formData.customer_id);

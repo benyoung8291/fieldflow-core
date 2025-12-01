@@ -55,7 +55,7 @@ export function FieldReportDetail({ reportId }: FieldReportDetailProps) {
               id,
               work_order_number,
               description,
-              location:customer_locations!service_orders_location_id_fkey(name, address, city, state, postcode)
+              location:customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode)
             )
           ),
           photos:field_report_photos(
