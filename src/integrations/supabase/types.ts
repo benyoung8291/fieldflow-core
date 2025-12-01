@@ -7637,6 +7637,7 @@ export type Database = {
           company_website: string | null
           country: string | null
           created_at: string | null
+          default_tax_rate: number | null
           id: string
           logo_url: string | null
           postcode: string | null
@@ -7660,6 +7661,7 @@ export type Database = {
           company_website?: string | null
           country?: string | null
           created_at?: string | null
+          default_tax_rate?: number | null
           id?: string
           logo_url?: string | null
           postcode?: string | null
@@ -7683,6 +7685,7 @@ export type Database = {
           company_website?: string | null
           country?: string | null
           created_at?: string | null
+          default_tax_rate?: number | null
           id?: string
           logo_url?: string | null
           postcode?: string | null
@@ -9276,6 +9279,10 @@ export type Database = {
           new_refresh_token: string
         }
         Returns: undefined
+      }
+      user_can_access_tenant: {
+        Args: { check_tenant_id: string }
+        Returns: boolean
       }
       user_has_any_role_safe: {
         Args: { check_roles: Database["public"]["Enums"]["user_role"][] }

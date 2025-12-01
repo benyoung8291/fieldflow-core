@@ -49,58 +49,78 @@ export const usePermissions = () => {
   const { data: userRoles, isLoading: rolesLoading, error: rolesError } = useQuery({
     queryKey: ["user-roles"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.warn("[usePermissions] No authenticated user");
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.warn("[usePermissions] No authenticated user");
+          return [];
+        }
+
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.error("[usePermissions] Error fetching roles:", error);
+          throw error;
+        }
+        
+        console.log(`[usePermissions] Loaded ${data?.length || 0} roles:`, data);
+        return data || [];
+      } catch (err) {
+        console.error("[usePermissions] Unexpected error in roles query:", err);
+        // Return empty array instead of throwing to prevent app crash
         return [];
       }
-
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role, tenant_id")
-        .eq("user_id", user.id);
-
-      if (error) {
-        console.error("[usePermissions] Error fetching roles:", error);
-        throw error;
-      }
-      
-      console.log(`[usePermissions] Loaded ${data?.length || 0} roles:`, data);
-      return data || [];
     },
-    retry: 2,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: permissions, isLoading: permissionsLoading, error: permissionsError } = useQuery({
     queryKey: ["user-permissions", userRoles],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.warn("[usePermissions] No authenticated user for permissions");
+          return [];
+        }
 
-      if (!userRoles || userRoles.length === 0) return [];
+        if (!userRoles || userRoles.length === 0) {
+          console.log("[usePermissions] No roles found, returning empty permissions");
+          return [];
+        }
 
-      const roles = userRoles.map((r) => r.role);
-      const tenantIds = userRoles.map((r) => r.tenant_id);
-      
-      const { data, error } = await supabase
-        .from("role_permissions")
-        .select("module, permission, conditions")
-        .in("role", roles)
-        .in("tenant_id", tenantIds)
-        .eq("is_active", true);
+        const roles = userRoles.map((r) => r.role);
+        const tenantIds = userRoles.map((r) => r.tenant_id);
+        
+        const { data, error } = await supabase
+          .from("role_permissions")
+          .select("module, permission, conditions")
+          .in("role", roles)
+          .in("tenant_id", tenantIds)
+          .eq("is_active", true);
 
-      if (error) {
-        console.error("[usePermissions] Error fetching permissions:", error);
-        throw error;
+        if (error) {
+          console.error("[usePermissions] Error fetching permissions:", error);
+          throw error;
+        }
+        
+        console.log(`[usePermissions] Loaded ${data?.length || 0} permissions for roles:`, roles);
+        return data as UserPermission[] || [];
+      } catch (err) {
+        console.error("[usePermissions] Unexpected error in permissions query:", err);
+        // Return empty array instead of throwing to prevent app crash
+        return [];
       }
-      
-      console.log(`[usePermissions] Loaded ${data?.length || 0} permissions for roles:`, roles);
-      return data as UserPermission[] || [];
     },
     enabled: !!userRoles && userRoles.length > 0,
     staleTime: 0, // Always fetch fresh
-    retry: 2,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
   const hasLoadedPermissions = useMemo(() => 
