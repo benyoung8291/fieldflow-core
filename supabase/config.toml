@@ -111,3 +111,5 @@ verify_jwt = true
 [functions.generate-field-report-pdf]
 verify_jwt = true
 
+[functions.create-shared-markup-request]
+verify_jwt = false

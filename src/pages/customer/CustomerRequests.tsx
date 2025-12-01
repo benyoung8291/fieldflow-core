@@ -1,11 +1,15 @@
 import { CustomerPortalLayout } from "@/components/layout/CustomerPortalLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileText, Calendar } from "lucide-react";
+import { Loader2, FileText, Calendar, Link as LinkIcon, Copy, Trash2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 export default function CustomerRequests() {
   const navigate = useNavigate();
@@ -54,6 +58,69 @@ export default function CustomerRequests() {
     enabled: !!profile?.customer_id,
   });
 
+  const queryClient = useQueryClient();
+
+  const { data: shareLinks, refetch: refetchShareLinks } = useQuery({
+    queryKey: ["share-links"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("floor_plan_share_links")
+        .select(`
+          *,
+          floor_plan:floor_plans(name),
+          location:customer_locations(name)
+        `)
+        .eq("created_by", user.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const deleteLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const { error } = await supabase
+        .from("floor_plan_share_links")
+        .update({ is_active: false })
+        .eq("id", linkId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Share link deleted");
+      refetchShareLinks();
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete share link:", error);
+      toast.error("Failed to delete share link");
+    },
+  });
+
+  const handleCopyLink = (token: string) => {
+    const shareUrl = `${window.location.origin}/share/floor-plan/${token}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success("Link copied to clipboard!");
+  };
+
+  const isExpired = (link: any) => {
+    return new Date(link.expires_at) < new Date();
+  };
+
+  const isAtLimit = (link: any) => {
+    return link.max_submissions && link.usage_count >= link.max_submissions;
+  };
+
+  const getExpiryText = (link: any) => {
+    if (isExpired(link)) return "Expired";
+    return `Expires ${formatDistanceToNow(new Date(link.expires_at), { addSuffix: true })}`;
+  };
+
+  const activeLinks = shareLinks?.filter(l => !isExpired(l) && !isAtLimit(l) && l.is_active);
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "completed":
@@ -96,6 +163,97 @@ export default function CustomerRequests() {
             Track your service requests and their status
           </p>
         </div>
+
+        {/* Shared Links Section */}
+        {shareLinks && shareLinks.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Shared Floor Plan Links</h2>
+              <Badge variant="outline" className="text-xs">
+                {activeLinks?.length || 0} Active
+              </Badge>
+            </div>
+            
+            <div className="space-y-2">
+              {shareLinks.map((link: any) => {
+                const expired = isExpired(link);
+                const atLimit = isAtLimit(link);
+                const inactive = !link.is_active;
+                const isInactive = expired || atLimit || inactive;
+
+                return (
+                  <Card 
+                    key={link.id}
+                    className={cn(
+                      "border-border/40 overflow-hidden",
+                      isInactive && "opacity-60"
+                    )}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">{link.floor_plan?.name}</p>
+                            {expired && (
+                              <Badge variant="destructive" className="text-xs">
+                                Expired
+                              </Badge>
+                            )}
+                            {atLimit && !expired && (
+                              <Badge variant="secondary" className="text-xs">
+                                At Limit
+                              </Badge>
+                            )}
+                            {inactive && !expired && !atLimit && (
+                              <Badge variant="secondary" className="text-xs">
+                                Inactive
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>
+                              {link.usage_count} / {link.max_submissions || '∞'} used
+                            </span>
+                            <span>•</span>
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span className={expired ? "text-destructive" : ""}>
+                                {getExpiryText(link)}
+                              </span>
+                            </div>
+                          </div>
+                          <Progress 
+                            value={link.max_submissions ? (link.usage_count / link.max_submissions) * 100 : 0}
+                            className="h-1"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isInactive && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleCopyLink(link.token)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => deleteLinkMutation.mutate(link.id)}
+                            disabled={deleteLinkMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center p-16">
