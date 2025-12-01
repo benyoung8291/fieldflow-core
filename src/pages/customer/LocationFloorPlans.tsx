@@ -107,6 +107,17 @@ export default function LocationFloorPlans() {
     },
   });
 
+  // Debug logging for profile state
+  useEffect(() => {
+    console.log("Profile state:", { 
+      profile, 
+      profileLoading, 
+      profileError,
+      hasTenantId: !!profile?.tenant_id,
+      hasCustomerId: !!profile?.customer_id 
+    });
+  }, [profile, profileLoading, profileError]);
+
   // Get Requests pipeline ID
   const { data: requestsPipeline } = useQuery({
     queryKey: ["requests-pipeline", profile?.tenant_id],
@@ -394,6 +405,8 @@ export default function LocationFloorPlans() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Uploading...
                   </>
+                ) : !profile?.tenant_id || !profile?.customer_id ? (
+                  "Profile Required"
                 ) : (
                   `Create Request (${markups.length})`
                 )}
@@ -571,6 +584,8 @@ export default function LocationFloorPlans() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Uploading...
                   </>
+                ) : !profile?.tenant_id || !profile?.customer_id ? (
+                  "Profile Required"
                 ) : (
                   `Create (${markups.length})`
                 )}
@@ -755,6 +770,8 @@ export default function LocationFloorPlans() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Uploading...
                     </>
+                  ) : !profile?.tenant_id || !profile?.customer_id ? (
+                    "Profile Required"
                   ) : (
                     `Create Request (${markups.length})`
                   )}
@@ -765,6 +782,12 @@ export default function LocationFloorPlans() {
             {profileError && (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg mb-2">
                 Failed to load profile. Please refresh the page.
+              </div>
+            )}
+            
+            {!profileLoading && (!profile?.tenant_id || !profile?.customer_id) && (
+              <div className="bg-amber-500/10 text-amber-700 text-sm p-3 rounded-lg mb-2">
+                Unable to create requests. Your profile may not be properly configured. Please contact support.
               </div>
             )}
             
@@ -841,7 +864,7 @@ export default function LocationFloorPlans() {
               </Button>
               <Button
                 onClick={() => createRequestMutation.mutate()}
-                disabled={!taskTitle || createRequestMutation.isPending}
+                disabled={!taskTitle || createRequestMutation.isPending || !profile?.tenant_id || !profile?.customer_id}
               >
                 {createRequestMutation.isPending ? (
                   <>
