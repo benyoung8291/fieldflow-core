@@ -13,8 +13,9 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { FloorPlanMarkupList } from "@/components/customer/FloorPlanMarkupList";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileText, ArrowLeft } from "lucide-react";
+import { Loader2, FileText, ArrowLeft, Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 export default function LocationFloorPlans() {
   const { locationId } = useParams<{ locationId: string }>();
@@ -28,6 +29,7 @@ export default function LocationFloorPlans() {
   const [taskTitle, setTaskTitle] = useState("Add to next service");
   const [taskDescription, setTaskDescription] = useState("");
   const [selectedMarkupId, setSelectedMarkupId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const { data: location } = useQuery({
@@ -83,7 +85,7 @@ export default function LocationFloorPlans() {
     }
   }, [searchParams, floorPlans, isLoading]);
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
     queryKey: ["customer-profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -320,6 +322,157 @@ export default function LocationFloorPlans() {
     }
   }, [selectedPlan, selectedFloorPlan, floorPlanUrl, floorPlanImageUrl]);
 
+  // Fullscreen focus mode for desktop
+  if (isFullscreen && selectedPlan) {
+    return (
+      <>
+        <div className="fixed inset-0 z-50 bg-background">
+          <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setIsFullscreen(false)}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Exit Focus Mode
+            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => { 
+                  setSelectedPlan(null); 
+                  setMarkups([]); 
+                  setIsFullscreen(false); 
+                }}
+              >
+                Back to Plans
+              </Button>
+              <Button 
+                onClick={() => {
+                  const incompleteMarkups = markups.filter(m => !m.notes?.trim());
+                  if (incompleteMarkups.length > 0) {
+                    toast.error("Please add a description to all markups");
+                    return;
+                  }
+                  setTaskTitle("Add to next service");
+                  setTaskDescription("");
+                  setShowCreateDialog(true);
+                }}
+                disabled={
+                  markups.length === 0 || 
+                  uploadingPhotos.size > 0 || 
+                  profileLoading ||
+                  !profile?.tenant_id || 
+                  !profile?.customer_id
+                }
+              >
+                {profileLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : uploadingPhotos.size > 0 ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  `Create Request (${markups.length})`
+                )}
+              </Button>
+            </div>
+          </div>
+          <div className="h-full pt-20 px-4">
+            <ResizablePanelGroup direction="horizontal" className="h-full rounded-2xl border overflow-hidden">
+              <ResizablePanel defaultSize={75} minSize={50}>
+                <div className="h-full p-4 flex flex-col">
+                  <h2 className="text-lg font-semibold mb-4 truncate">
+                    {selectedFloorPlan?.name}
+                  </h2>
+                  <div className="flex-1 min-h-0">
+                    <FloorPlanViewer
+                      pdfUrl={floorPlanUrl || ""}
+                      imageUrl={floorPlanImageUrl}
+                      markups={markups}
+                      onMarkupsChange={setMarkups}
+                      mode={mode}
+                      onModeChange={setMode}
+                    />
+                  </div>
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              <ResizablePanel defaultSize={25} minSize={15} maxSize={40} collapsible collapsedSize={4}>
+                <div className="h-full p-4 overflow-auto">
+                  <FloorPlanMarkupList
+                    markups={markups}
+                    onMarkupUpdate={updateMarkupNote}
+                    onMarkupPhotoUpdate={updateMarkupPhoto}
+                    onMarkupDelete={deleteMarkup}
+                    selectedMarkupId={selectedMarkupId}
+                    onMarkupSelect={setSelectedMarkupId}
+                    uploadingPhotos={uploadingPhotos}
+                  />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        </div>
+
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Maintenance Request</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  placeholder="Brief description of the issue"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={taskDescription}
+                  onChange={(e) => setTaskDescription(e.target.value)}
+                  placeholder="Detailed description of what needs to be done"
+                  rows={4}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {markups.length} markup(s) will be included with this request
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => createRequestMutation.mutate()}
+                disabled={!taskTitle || createRequestMutation.isPending || !profile?.tenant_id || !profile?.customer_id}
+              >
+                {createRequestMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Request"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
   // Mobile full-screen view (outside layout to hide footer)
   if (isMobile && selectedPlan) {
     return (
@@ -364,10 +517,21 @@ export default function LocationFloorPlans() {
                   setTaskDescription("");
                   setShowCreateDialog(true);
                 }}
-                disabled={markups.length === 0 || uploadingPhotos.size > 0 || !profile?.tenant_id || !profile?.customer_id}
+                disabled={
+                  markups.length === 0 || 
+                  uploadingPhotos.size > 0 || 
+                  profileLoading ||
+                  !profile?.tenant_id || 
+                  !profile?.customer_id
+                }
                 className="shadow-lg"
               >
-                {uploadingPhotos.size > 0 ? (
+                {profileLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : uploadingPhotos.size > 0 ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Uploading...
@@ -489,93 +653,106 @@ export default function LocationFloorPlans() {
             </div>
           )
         ) : (
-          // Desktop view
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-4">
-            {/* Floor Plan Viewer */}
-            <Card className="h-[calc(100vh-12rem)]">
-              <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle>
-                  {selectedFloorPlan?.floor_number 
-                    ? `${selectedFloorPlan.floor_number} ${selectedFloorPlan.name}` 
-                    : selectedFloorPlan?.name}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedPlan(null);
-                      setMarkups([]);
-                    }}
-                  >
-                    Back to Plans
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      // Check if any uploads are still in progress
-                      if (uploadingPhotos.size > 0) {
-                        toast.error("Please wait for photo uploads to complete");
-                        return;
-                      }
-
-                      // Validate markups before opening dialog
-                      const incompleteMarkups = markups.filter(m => !m.notes?.trim());
-                      if (incompleteMarkups.length > 0) {
-                        toast.error("Please add a description to all markups before creating a request");
-                        return;
-                      }
-                      
-                      const markupsWithoutPhotos = markups.filter(m => !m.photo);
-                      if (markupsWithoutPhotos.length > 0) {
-                        toast.info("Consider adding photos to your markups for faster resolution");
-                      }
-                      
-                      setTaskTitle("Add to next service");
-                      setTaskDescription("");
-                      setShowCreateDialog(true);
-                    }}
-                    disabled={markups.length === 0 || uploadingPhotos.size > 0 || !profile?.tenant_id || !profile?.customer_id}
-                  >
-                    {uploadingPhotos.size > 0 ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      `Create Request (${markups.length})`
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="h-[calc(100%-5rem)]">
-                 <FloorPlanViewer
-                   pdfUrl={floorPlanUrl || ""}
-                   imageUrl={floorPlanImageUrl}
-                   markups={markups}
-                   onMarkupsChange={setMarkups}
-                   mode={mode}
-                   onModeChange={setMode}
-                 />
-              </CardContent>
-            </Card>
-
-            {/* Markup List Sidebar */}
-            <Card className="h-fit lg:h-[calc(100vh-12rem)] overflow-auto">
-              <CardHeader>
-                <CardTitle className="text-lg">Markup List</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FloorPlanMarkupList
-                  markups={markups}
-                  onMarkupUpdate={updateMarkupNote}
-                      onMarkupPhotoUpdate={updateMarkupPhoto}
-                      onMarkupDelete={deleteMarkup}
-                      selectedMarkupId={selectedMarkupId}
-                      onMarkupSelect={setSelectedMarkupId}
-                      uploadingPhotos={uploadingPhotos}
+          <>
+            {profileError && (
+              <div className="bg-destructive/10 text-destructive text-sm p-4 rounded-lg mb-4">
+                Failed to load profile. Please refresh the page.
+              </div>
+            )}
+            
+            <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-10rem)] rounded-2xl border overflow-hidden">
+              {/* Main Floor Plan Viewer */}
+              <ResizablePanel defaultSize={75} minSize={50}>
+                <div className="h-full p-4 flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold truncate">
+                      {selectedFloorPlan?.name}
+                    </h2>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsFullscreen(true)}
+                        title="Focus Mode"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedPlan(null);
+                          setMarkups([]);
+                        }}
+                      >
+                        Back to Plans
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const incompleteMarkups = markups.filter(m => !m.notes?.trim());
+                          if (incompleteMarkups.length > 0) {
+                            toast.error("Please add a description to all markups");
+                            return;
+                          }
+                          setTaskTitle("Add to next service");
+                          setTaskDescription("");
+                          setShowCreateDialog(true);
+                        }}
+                        disabled={
+                          markups.length === 0 || 
+                          uploadingPhotos.size > 0 || 
+                          profileLoading ||
+                          !profile?.tenant_id || 
+                          !profile?.customer_id
+                        }
+                      >
+                        {profileLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : uploadingPhotos.size > 0 ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          `Create Request (${markups.length})`
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <FloorPlanViewer
+                      pdfUrl={floorPlanUrl || ""}
+                      imageUrl={floorPlanImageUrl}
+                      markups={markups}
+                      onMarkupsChange={setMarkups}
+                      mode={mode}
+                      onModeChange={setMode}
                     />
-              </CardContent>
-            </Card>
-          </div>
+                  </div>
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              {/* Collapsible Sidebar */}
+              <ResizablePanel defaultSize={25} minSize={15} maxSize={40} collapsible collapsedSize={4}>
+                <div className="h-full p-4 overflow-auto">
+                  <h3 className="text-lg font-semibold mb-4">Markups ({markups.length})</h3>
+                  <FloorPlanMarkupList
+                    markups={markups}
+                    onMarkupUpdate={updateMarkupNote}
+                    onMarkupPhotoUpdate={updateMarkupPhoto}
+                    onMarkupDelete={deleteMarkup}
+                    selectedMarkupId={selectedMarkupId}
+                    onMarkupSelect={setSelectedMarkupId}
+                    uploadingPhotos={uploadingPhotos}
+                  />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </>
         )}
 
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

@@ -226,7 +226,7 @@ export function FloorPlanViewer({
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Improved Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 border border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-2xl shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 p-3 border border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-2xl shadow-sm">
         {/* Mode Selection with keyboard shortcuts */}
         <div className="flex gap-2 flex-1">
             <Button
@@ -333,7 +333,7 @@ export function FloorPlanViewer({
       {/* Floor Plan Viewer with Markups */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto bg-gradient-to-br from-muted/20 to-muted/40 rounded-2xl touch-none"
+        className="relative flex-1 min-h-0 overflow-auto bg-gradient-to-br from-muted/20 to-muted/40 rounded-2xl touch-none"
         onClick={handleContainerClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
