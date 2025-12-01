@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
+import { parseMarkdown } from "@/utils/markdownParser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, X, Check, CalendarIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -801,7 +802,7 @@ export default function ServiceOrderDetails() {
             </CardContent>
           </Card>
 
-          {/* Location & Contact */}
+          {/* Location */}
           <Card>
             <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -809,7 +810,7 @@ export default function ServiceOrderDetails() {
                 Location
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-3 space-y-3">
+            <CardContent className="px-4 pb-3">
               {order.customer_locations ? (
                 <div>
                   <div className="text-sm font-medium mb-1">{order.customer_locations.name}</div>
@@ -821,77 +822,26 @@ export default function ServiceOrderDetails() {
                   </div>
                 </div>
               ) : (
-                <div className="text-xs text-muted-foreground">No location</div>
+                <div className="text-xs text-muted-foreground">No location assigned</div>
               )}
+            </CardContent>
+          </Card>
 
-              <Separator />
-
-              {/* Contact Section */}
-            {(() => {
-              const siteContact = (order as any).site_contact;
-              const facilityManagerContact = (order as any).facility_manager_contact;
-              
-              return (
-                <div className="space-y-4">
-                  {siteContact && (
-                    <>
-                      <div className="text-xs font-medium text-muted-foreground">Site Contact</div>
-                      <div className="flex items-start gap-2">
-                        <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">
-                            {siteContact.first_name} {siteContact.last_name}
-                          </div>
-                          {siteContact.position && (
-                            <div className="text-xs text-muted-foreground">{siteContact.position}</div>
-                          )}
-                          {siteContact.email && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Mail className="h-3 w-3" />
-                              {siteContact.email}
-                            </div>
-                          )}
-                          {(siteContact.phone || siteContact.mobile) && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Phone className="h-3 w-3" />
-                              {siteContact.mobile || siteContact.phone}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {facilityManagerContact && (
-                    <>
-                      <div className="text-xs font-medium text-muted-foreground">Facility Manager</div>
-                      <div className="flex items-start gap-2">
-                        <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">
-                            {facilityManagerContact.first_name} {facilityManagerContact.last_name}
-                          </div>
-                          {facilityManagerContact.position && (
-                            <div className="text-xs text-muted-foreground">{facilityManagerContact.position}</div>
-                          )}
-                          {facilityManagerContact.email && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Mail className="h-3 w-3" />
-                              {facilityManagerContact.email}
-                            </div>
-                          )}
-                          {(facilityManagerContact.phone || facilityManagerContact.mobile) && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Phone className="h-3 w-3" />
-                              {facilityManagerContact.mobile || facilityManagerContact.phone}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {!siteContact && !facilityManagerContact && (
+          {/* Contacts */}
+          <Card>
+            <CardHeader className="pb-2 pt-3 px-4">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Contacts
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              {(() => {
+                const siteContact = (order as any).site_contact;
+                const facilityManagerContact = (order as any).facility_manager_contact;
+                
+                if (!siteContact && !facilityManagerContact) {
+                  return (
                     <Button
                       variant="outline"
                       size="sm"
@@ -901,10 +851,71 @@ export default function ServiceOrderDetails() {
                       <UserPlus className="h-4 w-4 mr-2" />
                       Link or Create Contact
                     </Button>
-                  )}
-                </div>
-              );
-            })()}
+                  );
+                }
+                
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Site Contact */}
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                        Site Contact
+                      </Badge>
+                      {siteContact ? (
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{siteContact.first_name} {siteContact.last_name}</div>
+                          {siteContact.position && (
+                            <div className="text-xs text-muted-foreground">{siteContact.position}</div>
+                          )}
+                          {siteContact.email && (
+                            <a href={`mailto:${siteContact.email}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{siteContact.email}</span>
+                            </a>
+                          )}
+                          {(siteContact.phone || siteContact.mobile) && (
+                            <a href={`tel:${siteContact.mobile || siteContact.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              <Phone className="h-3 w-3" />
+                              {siteContact.mobile || siteContact.phone}
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">Not assigned</div>
+                      )}
+                    </div>
+                    
+                    {/* Facility Manager */}
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                        Facility Manager
+                      </Badge>
+                      {facilityManagerContact ? (
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{facilityManagerContact.first_name} {facilityManagerContact.last_name}</div>
+                          {facilityManagerContact.position && (
+                            <div className="text-xs text-muted-foreground">{facilityManagerContact.position}</div>
+                          )}
+                          {facilityManagerContact.email && (
+                            <a href={`mailto:${facilityManagerContact.email}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{facilityManagerContact.email}</span>
+                            </a>
+                          )}
+                          {(facilityManagerContact.phone || facilityManagerContact.mobile) && (
+                            <a href={`tel:${facilityManagerContact.mobile || facilityManagerContact.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                              <Phone className="h-3 w-3" />
+                              {facilityManagerContact.mobile || facilityManagerContact.phone}
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">Not assigned</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
@@ -1238,10 +1249,13 @@ export default function ServiceOrderDetails() {
                     <div 
                       className="text-sm prose prose-sm max-w-none dark:prose-invert"
                       dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(order.description || "No description", {
-                          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
-                          ALLOWED_ATTR: []
-                        })
+                        __html: DOMPurify.sanitize(
+                          parseMarkdown(order.description || "No description"),
+                          {
+                            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                            ALLOWED_ATTR: ['class']
+                          }
+                        )
                       }}
                     />
                   </div>
@@ -1268,39 +1282,68 @@ export default function ServiceOrderDetails() {
 
               <div>
                 <h3 className="font-semibold text-sm mb-1.5">Contact Details</h3>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {order.customer_locations && (
-                    <>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Site Address</div>
-                        <div className="text-sm">
-                          {order.customer_locations.address}
-                          {order.customer_locations.city && <>, {order.customer_locations.city}</>}
-                          {order.customer_locations.state && <> {order.customer_locations.state}</>}
-                          {order.customer_locations.postcode && <> {order.customer_locations.postcode}</>}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {(order as any).contacts && (
                     <div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <User className="h-3 w-3" />
-                        Contact
+                      <div className="text-xs text-muted-foreground mb-1">Site Address</div>
+                      <div className="text-sm">
+                        {order.customer_locations.address}
+                        {order.customer_locations.city && <>, {order.customer_locations.city}</>}
+                        {order.customer_locations.state && <> {order.customer_locations.state}</>}
+                        {order.customer_locations.postcode && <> {order.customer_locations.postcode}</>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Site Contact */}
+                  {(order as any).site_contact && (
+                    <div className="p-3 rounded-lg border bg-muted/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Site Contact</Badge>
                       </div>
                       <div className="text-sm font-medium">
-                        {(order as any).contacts.first_name} {(order as any).contacts.last_name}
+                        {(order as any).site_contact.first_name} {(order as any).site_contact.last_name}
                       </div>
-                      {(order as any).contacts.email && (
+                      {(order as any).site_contact.position && (
+                        <div className="text-xs text-muted-foreground mt-1">{(order as any).site_contact.position}</div>
+                      )}
+                      {(order as any).site_contact.email && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Mail className="h-3 w-3" />
-                          {(order as any).contacts.email}
+                          {(order as any).site_contact.email}
                         </div>
                       )}
-                      {(order as any).contacts.phone && (
+                      {((order as any).site_contact.phone || (order as any).site_contact.mobile) && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Phone className="h-3 w-3" />
-                          {(order as any).contacts.phone}
+                          {(order as any).site_contact.mobile || (order as any).site_contact.phone}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Facility Manager */}
+                  {(order as any).facility_manager_contact && (
+                    <div className="p-3 rounded-lg border bg-muted/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">Facility Manager</Badge>
+                      </div>
+                      <div className="text-sm font-medium">
+                        {(order as any).facility_manager_contact.first_name} {(order as any).facility_manager_contact.last_name}
+                      </div>
+                      {(order as any).facility_manager_contact.position && (
+                        <div className="text-xs text-muted-foreground mt-1">{(order as any).facility_manager_contact.position}</div>
+                      )}
+                      {(order as any).facility_manager_contact.email && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Mail className="h-3 w-3" />
+                          {(order as any).facility_manager_contact.email}
+                        </div>
+                      )}
+                      {((order as any).facility_manager_contact.phone || (order as any).facility_manager_contact.mobile) && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Phone className="h-3 w-3" />
+                          {(order as any).facility_manager_contact.mobile || (order as any).facility_manager_contact.phone}
                         </div>
                       )}
                     </div>
