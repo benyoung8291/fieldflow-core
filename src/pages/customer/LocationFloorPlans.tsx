@@ -478,6 +478,13 @@ export default function LocationFloorPlans() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ShareFloorPlanDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          floorPlan={selectedFloorPlan}
+          location={location}
+        />
       </>
     );
   }
@@ -619,6 +626,13 @@ export default function LocationFloorPlans() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ShareFloorPlanDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          floorPlan={selectedFloorPlan}
+          location={location}
+        />
       </>
     );
   }
