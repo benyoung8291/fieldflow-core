@@ -224,10 +224,13 @@ function calculateNextGenerationDate(currentDate: string, frequency: string): st
   const date = new Date(currentDate);
 
   switch (frequency) {
+    case "daily":
+      date.setDate(date.getDate() + 1);
+      break;
     case "weekly":
       date.setDate(date.getDate() + 7);
       break;
-    case "fortnightly":
+    case "bi_weekly":
       date.setDate(date.getDate() + 14);
       break;
     case "monthly":
@@ -236,7 +239,10 @@ function calculateNextGenerationDate(currentDate: string, frequency: string): st
     case "quarterly":
       date.setMonth(date.getMonth() + 3);
       break;
-    case "yearly":
+    case "semi_annually":
+      date.setMonth(date.getMonth() + 6);
+      break;
+    case "annually":
       date.setFullYear(date.getFullYear() + 1);
       break;
     case "one_time":

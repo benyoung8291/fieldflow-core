@@ -219,7 +219,7 @@ export default function ServiceContractDialog({
         recurrence_frequency: item.recurrence_frequency as any,
         first_generation_date: item.first_generation_date,
         next_generation_date: data.auto_generate ? item.first_generation_date : null,
-        location_id: item.location_id || null,
+        location_id: item.location_id && item.location_id !== "undefined" ? item.location_id : null,
         estimated_hours: item.estimated_hours || 0,
         notes: item.notes,
         item_order: index,
@@ -330,10 +330,10 @@ export default function ServiceContractDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                  <SelectItem value="bi_weekly">Fortnightly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
+                  <SelectItem value="annually">Annually</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -471,12 +471,13 @@ export default function ServiceContractDialog({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="one_time">One Time</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
                           <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                          <SelectItem value="bi_weekly">Fortnightly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="6_monthly">6 Monthly</SelectItem>
                           <SelectItem value="quarterly">Quarterly</SelectItem>
-                          <SelectItem value="yearly">Yearly</SelectItem>
+                          <SelectItem value="semi_annually">6 Monthly</SelectItem>
+                          <SelectItem value="annually">Annually</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

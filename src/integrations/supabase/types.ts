@@ -8939,14 +8939,22 @@ export type Database = {
         }
         Returns: undefined
       }
-      calculate_next_generation_date: {
-        Args: {
-          p_current_date: string
-          p_frequency: string
-          p_original_day_of_month?: number
-        }
-        Returns: string
-      }
+      calculate_next_generation_date:
+        | {
+            Args: {
+              p_current_date: string
+              p_frequency: string
+              p_original_day_of_month?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_current_date: string
+              p_frequency: Database["public"]["Enums"]["recurrence_frequency"]
+            }
+            Returns: string
+          }
       can_manage_user: {
         Args: { target_tenant_id: string; target_user_id: string }
         Returns: boolean

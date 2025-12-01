@@ -136,7 +136,7 @@ export default function ServiceContractDetails() {
           unit_price: lineItem.unit_price,
           line_total: lineItem.line_total,
           estimated_hours: lineItem.estimated_hours,
-          location_id: lineItem.location_id,
+          location_id: lineItem.location_id && lineItem.location_id !== "undefined" && lineItem.location_id !== "" ? lineItem.location_id : null,
           first_generation_date: lineItem.first_generation_date,
           recurrence_frequency: lineItem.recurrence_frequency,
           is_active: lineItem.is_active,
@@ -175,7 +175,7 @@ export default function ServiceContractDetails() {
           unit_price: lineItem.unit_price,
           line_total: lineItem.line_total,
           estimated_hours: lineItem.estimated_hours,
-          location_id: lineItem.location_id,
+          location_id: lineItem.location_id && lineItem.location_id !== "undefined" && lineItem.location_id !== "" ? lineItem.location_id : null,
           first_generation_date: lineItem.first_generation_date,
           recurrence_frequency: lineItem.recurrence_frequency,
           item_order: maxOrder + 1,
@@ -1343,12 +1343,13 @@ export default function ServiceContractDetails() {
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="one_time">One Time</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                        <SelectItem value="bi_weekly">Fortnightly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="6_monthly">6 Monthly</SelectItem>
                         <SelectItem value="quarterly">Quarterly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="semi_annually">6 Monthly</SelectItem>
+                        <SelectItem value="annually">Annually</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1381,7 +1382,7 @@ export default function ServiceContractDetails() {
                       unit_price: editingLineItem.unit_price,
                       line_total: editingLineItem.line_total,
                       estimated_hours: editingLineItem.estimated_hours,
-                      location_id: editingLineItem.location_id,
+                      location_id: editingLineItem.location_id && editingLineItem.location_id !== "undefined" && editingLineItem.location_id !== "" ? editingLineItem.location_id : null,
                       first_generation_date: editingLineItem.first_generation_date,
                       recurrence_frequency: editingLineItem.recurrence_frequency,
                       key_number: editingLineItem.key_number,
