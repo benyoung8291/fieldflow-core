@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Clock, Save } from 'lucide-react';
+import { Clock, Save } from 'lucide-react';
+import { WorkerHeader } from "@/components/worker/WorkerHeader";
 import { toast } from 'sonner';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
@@ -151,19 +152,7 @@ export default function WorkerSchedule() {
   return (
     <div ref={containerRef} className="min-h-screen bg-background pb-20">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
-      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/worker/dashboard')}
-            className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-bold">My Schedule</h1>
-        </div>
-      </header>
+      <WorkerHeader title="My Schedule" showBack />
 
       <div className="px-4 pt-4 space-y-4">
         <Card>

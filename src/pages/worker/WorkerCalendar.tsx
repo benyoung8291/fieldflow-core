@@ -13,6 +13,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { AlertCircle, Save } from "lucide-react";
 import { SeasonalAvailabilityList } from "@/components/workers/SeasonalAvailabilityList";
+import { WorkerHeader } from "@/components/worker/WorkerHeader";
 
 const daysOfWeek = [
   { value: "monday", label: "Monday" },
@@ -162,9 +163,9 @@ export default function WorkerCalendar() {
 
   return (
     <div className="container mx-auto px-4 pb-32 space-y-6">
-      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm -mx-4 px-4 py-3">
-        <h1 className="text-lg font-bold">My Availability</h1>
-      </header>
+      <div className="-mx-4">
+        <WorkerHeader title="My Availability" />
+      </div>
 
       {isLoading ? (
         <div className="space-y-4">

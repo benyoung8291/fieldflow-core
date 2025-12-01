@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
+import { WorkerHeader } from "@/components/worker/WorkerHeader";
 import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { cacheAppointments, getCachedAppointments, getDB } from '@/lib/offlineSync';
@@ -156,19 +156,7 @@ export default function WorkerAppointments() {
   return (
     <div ref={containerRef} className="min-h-screen bg-background pb-20">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
-      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/worker/dashboard')}
-            className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-bold">All Appointments</h1>
-        </div>
-      </header>
+      <WorkerHeader title="All Appointments" showBack />
 
       <div className="px-4 pt-6 space-y-4">
         {appointments.length === 0 ? (
