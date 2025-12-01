@@ -84,6 +84,7 @@ const WorkerDashboard = lazy(() => import("./pages/worker/WorkerDashboard"));
 const WorkerProfile = lazy(() => import("./pages/worker/WorkerProfile"));
 const WorkerAppointments = lazy(() => import("./pages/worker/WorkerAppointments"));
 const WorkerAppointmentDetails = lazy(() => import("./pages/worker/WorkerAppointmentDetails"));
+const WorkerRequestDetails = lazy(() => import("./pages/worker/WorkerRequestDetails"));
 const WorkerTimeLogs = lazy(() => import("./pages/worker/WorkerTimeLogs"));
 const WorkerTasks = lazy(() => import("./pages/worker/WorkerTasks"));
 const WorkerCalendar = lazy(() => import("./pages/worker/WorkerCalendar"));
@@ -394,6 +395,7 @@ const App = () => {
             <Route path="/worker/supervisor/service-orders" element={isAuthenticated ? <ProtectedRoute><SupervisorProtectedRoute><SupervisorServiceOrders /></SupervisorProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/appointments" element={isAuthenticated ? <ProtectedRoute><WorkerAppointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/appointments/:id" element={isAuthenticated ? <ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/appointments/:id/request/:ticketId" element={isAuthenticated ? <ProtectedRoute><WorkerRequestDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/time-logs" element={isAuthenticated ? <ProtectedRoute><WorkerTimeLogs /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/tasks" element={isAuthenticated ? <ProtectedRoute><WorkerTasks /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/calendar" element={isAuthenticated ? <ProtectedRoute><WorkerCalendar /></ProtectedRoute> : <Navigate to="/auth" replace />} />

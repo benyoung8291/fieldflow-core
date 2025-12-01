@@ -2928,10 +2928,14 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           assigned_to: string | null
+          completion_reviewed_at: string | null
+          completion_reviewed_by: string | null
           contact_id: string | null
           contract_id: string | null
           created_at: string
           customer_id: string | null
+          customer_notified_at: string | null
+          customer_notified_by: string | null
           email_account_id: string | null
           email_message_id: string | null
           email_thread_id: string | null
@@ -2962,10 +2966,14 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           assigned_to?: string | null
+          completion_reviewed_at?: string | null
+          completion_reviewed_by?: string | null
           contact_id?: string | null
           contract_id?: string | null
           created_at?: string
           customer_id?: string | null
+          customer_notified_at?: string | null
+          customer_notified_by?: string | null
           email_account_id?: string | null
           email_message_id?: string | null
           email_thread_id?: string | null
@@ -2996,10 +3004,14 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           assigned_to?: string | null
+          completion_reviewed_at?: string | null
+          completion_reviewed_by?: string | null
           contact_id?: string | null
           contract_id?: string | null
           created_at?: string
           customer_id?: string | null
+          customer_notified_at?: string | null
+          customer_notified_by?: string | null
           email_account_id?: string | null
           email_message_id?: string | null
           email_thread_id?: string | null
@@ -7884,34 +7896,55 @@ export type Database = {
       }
       ticket_markups: {
         Row: {
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
           floor_plan_id: string
           id: string
           markup_data: Json | null
+          notes: string | null
+          photo_url: string | null
           pin_x: number
           pin_y: number
+          response_notes: string | null
+          response_photos: Json | null
+          status: string | null
           tenant_id: string
           ticket_id: string
           updated_at: string | null
         }
         Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           floor_plan_id: string
           id?: string
           markup_data?: Json | null
+          notes?: string | null
+          photo_url?: string | null
           pin_x: number
           pin_y: number
+          response_notes?: string | null
+          response_photos?: Json | null
+          status?: string | null
           tenant_id: string
           ticket_id: string
           updated_at?: string | null
         }
         Update: {
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           floor_plan_id?: string
           id?: string
           markup_data?: Json | null
+          notes?: string | null
+          photo_url?: string | null
           pin_x?: number
           pin_y?: number
+          response_notes?: string | null
+          response_photos?: Json | null
+          status?: string | null
           tenant_id?: string
           ticket_id?: string
           updated_at?: string | null
