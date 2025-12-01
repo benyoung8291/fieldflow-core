@@ -125,6 +125,21 @@ export default function Customers() {
     },
   });
 
+  // Fetch total active customers count independently
+  const { data: customerStats = { totalActive: 0 } } = useQuery({
+    queryKey: ["customers_stats"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("customers")
+        .select("*", { count: 'exact', head: true })
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      
+      return { totalActive: count || 0 };
+    },
+  });
+
   // No need for client-side filtering since we're filtering in the database query
 
   const totalServiceOrders = Object.values(serviceOrderCounts).reduce((sum: number, count) => sum + (count as number), 0);
@@ -216,7 +231,7 @@ export default function Customers() {
                 <Building2 className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{customers.filter(c => c.is_active).length}</div>
+                <div className="text-2xl font-bold">{customerStats.totalActive}</div>
                 <p className="text-xs text-muted-foreground">All active accounts</p>
               </CardContent>
             </Card>
