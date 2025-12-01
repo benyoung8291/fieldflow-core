@@ -40,6 +40,9 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 import { WorkerAppointmentConfirmation } from '@/components/worker/WorkerAppointmentConfirmation';
 import { AppointmentCompletionReport } from '@/components/worker/AppointmentCompletionReport';
+import { useAppointmentRequests } from '@/hooks/useAppointmentRequests';
+import { WorkerRequestNotification } from '@/components/worker/WorkerRequestNotification';
+import { AlertCircle } from 'lucide-react';
 
 export default function WorkerAppointmentDetails() {
   const navigate = useNavigate();
@@ -56,6 +59,7 @@ export default function WorkerAppointmentDetails() {
   const [workNotes, setWorkNotes] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isPaused, setIsPaused] = useState(false);
+  const [showRequestNotification, setShowRequestNotification] = useState(false);
 
   const { containerRef, isRefreshing: isPulling, pullDistance } = usePullToRefresh({
     onRefresh: async () => {
@@ -86,6 +90,9 @@ export default function WorkerAppointmentDetails() {
       return data;
     },
   });
+
+  // Fetch linked customer requests
+  const { data: linkedRequests = [], refetch: refetchRequests } = useAppointmentRequests(id || null);
 
   useEffect(() => {
     loadAppointmentData();
@@ -437,6 +444,11 @@ export default function WorkerAppointmentDetails() {
 
       console.log('[Clock In] Clock-in completed successfully!');
       toast.success(`Clocked in successfully at your location!`);
+      
+      // Check if there are linked requests and show notification
+      if (linkedRequests && linkedRequests.length > 0) {
+        setShowRequestNotification(true);
+      }
     } catch (error: any) {
       console.error('[Clock In] Error caught:', error);
       
@@ -1228,6 +1240,47 @@ export default function WorkerAppointmentDetails() {
           </CardContent>
         </Card>
 
+        {/* Customer Requests */}
+        {linkedRequests && linkedRequests.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Customer Requests ({linkedRequests.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {linkedRequests.map((request: any) => {
+                const pendingCount = request.ticket_markups?.filter((m: any) => m.status === "pending").length || 0;
+                const completedCount = request.ticket_markups?.filter((m: any) => m.status === "completed").length || 0;
+                const totalCount = request.ticket_markups?.length || 0;
+                
+                return (
+                  <div
+                    key={request.id}
+                    className="p-3 rounded-lg border bg-card cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => navigate(`/worker/appointments/${id}/request/${request.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">#{request.ticket_number} - {request.subject}</p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0">
+                        {completedCount}/{totalCount}
+                      </Badge>
+                    </div>
+                    {pendingCount > 0 && (
+                      <p className="text-xs text-destructive">
+                        {pendingCount} item{pendingCount !== 1 ? 's' : ''} need attention
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Field Reports */}
         <Card>
           <CardHeader>
@@ -1329,6 +1382,14 @@ export default function WorkerAppointmentDetails() {
           onClose={() => setShowSignature(false)}
         />
       )}
+
+      {/* Request Notification Dialog */}
+      <WorkerRequestNotification
+        open={showRequestNotification}
+        onOpenChange={setShowRequestNotification}
+        requests={linkedRequests || []}
+        appointmentId={id || ''}
+      />
     </div>
   );
 }

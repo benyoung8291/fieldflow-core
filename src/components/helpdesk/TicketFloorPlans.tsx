@@ -63,15 +63,6 @@ export function TicketFloorPlans({ ticketId }: TicketFloorPlansProps) {
 
   return (
     <div className="space-y-4">
-      {/* Markup Response Panel */}
-      <MarkupResponsePanel
-        markups={markupsData || []}
-        ticketId={ticketId}
-        onResponseSubmitted={() => {
-          // Refetch markups after response submitted
-        }}
-      />
-
       {/* Floor Plans with Markups */}
       {Object.values(floorPlanGroups).map((group: any) => (
         <FloorPlanCard
@@ -80,6 +71,15 @@ export function TicketFloorPlans({ ticketId }: TicketFloorPlansProps) {
           markups={group.markups}
         />
       ))}
+
+      {/* Markup Response Panel */}
+      <MarkupResponsePanel
+        markups={markupsData || []}
+        ticketId={ticketId}
+        onResponseSubmitted={() => {
+          // Refetch markups after response submitted
+        }}
+      />
     </div>
   );
 }
