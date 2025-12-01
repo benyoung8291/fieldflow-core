@@ -75,6 +75,8 @@ export default function ServiceOrderDialog({
   const [priceBookDialogOpen, setPriceBookDialogOpen] = useState(false);
   const [quickLocationOpen, setQuickLocationOpen] = useState(false);
   const [quickContactOpen, setQuickContactOpen] = useState(false);
+  const [quickContactRole, setQuickContactRole] = useState<'site_contact' | 'facility_manager' | null>(null);
+  const [isLocationUserChanged, setIsLocationUserChanged] = useState(false);
   const [taxRate, setTaxRate] = useState<number>(10);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   
@@ -140,6 +142,7 @@ export default function ServiceOrderDialog({
       fetchCustomers();
       // Always reset form first to clear any stale data
       resetForm();
+      setIsLocationUserChanged(false); // Reset flag when opening dialog
       if (orderId) {
         fetchOrder();
       } else if (customerId) {
@@ -191,15 +194,15 @@ export default function ServiceOrderDialog({
     }
   }, [formData.customer_id]);
 
-  // Auto-populate contacts when location changes
+  // Auto-populate contacts when location changes (only if user manually changed it)
   useEffect(() => {
-    if (formData.customer_location_id && locations.length > 0) {
+    if (formData.customer_location_id && locations.length > 0 && isLocationUserChanged) {
       const selectedLocation = locations.find(loc => loc.id === formData.customer_location_id);
       if (selectedLocation) {
         autoLinkLocationContacts(selectedLocation);
       }
     }
-  }, [formData.customer_location_id, locations]);
+  }, [formData.customer_location_id, locations, isLocationUserChanged]);
 
   const fetchCustomers = async () => {
     const { data, error } = await supabase
@@ -753,10 +756,24 @@ export default function ServiceOrderDialog({
 
           <QuickContactDialog
             open={quickContactOpen}
-            onOpenChange={setQuickContactOpen}
+            onOpenChange={(open) => {
+              setQuickContactOpen(open);
+              if (!open) setQuickContactRole(null);
+            }}
             customerId={formData.customer_id}
-            onContactCreated={(contactId) => {
-              setFormData({ ...formData, customer_contact_id: contactId });
+            locationId={formData.customer_location_id}
+            assignAsRole={quickContactRole}
+            onContactCreated={(contactId, role) => {
+              // Set the appropriate contact field based on role
+              if (role === 'site_contact') {
+                setFormData({ ...formData, customer_contact_id: contactId });
+              } else if (role === 'facility_manager') {
+                setFormData({ ...formData, facility_manager_contact_id: contactId });
+              } else {
+                // If no role assigned, default to site contact for backwards compatibility
+                setFormData({ ...formData, customer_contact_id: contactId });
+              }
+              // Refresh contacts list and locations to get updated contact assignments
               fetchCustomerRelatedData(formData.customer_id);
             }}
           />
@@ -846,6 +863,7 @@ export default function ServiceOrderDialog({
                         value={formData.customer_location_id} 
                         onValueChange={(value) => {
                           setFormData({ ...formData, customer_location_id: value });
+                          setIsLocationUserChanged(true); // Mark that user changed location
                           setCurrentField("customer_location_id");
                           updateField("customer_location_id");
                         }}
@@ -879,7 +897,10 @@ export default function ServiceOrderDialog({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => setQuickContactOpen(true)}
+                            onClick={() => {
+                              setQuickContactRole('site_contact');
+                              setQuickContactOpen(true);
+                            }}
                           >
                             <Plus className="h-3 w-3 mr-1" />
                             Add
@@ -920,6 +941,20 @@ export default function ServiceOrderDialog({
                           <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">Facility</Badge>
                           Manager
                         </Label>
+                        {formData.customer_id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setQuickContactRole('facility_manager');
+                              setQuickContactOpen(true);
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add
+                          </Button>
+                        )}
                       </div>
                       <Select 
                         value={formData.facility_manager_contact_id} 
