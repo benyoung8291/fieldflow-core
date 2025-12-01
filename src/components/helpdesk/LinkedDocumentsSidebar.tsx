@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { SelectWithSearch } from "@/components/ui/select-with-search";
 import { DocumentLinkSearch } from "./DocumentLinkSearch";
 import { ThreadSummaryCard } from "./ThreadSummaryCard";
+import { RequestCompletionReview } from "./RequestCompletionReview";
 
 interface LinkedDocumentsSidebarProps {
   ticketId: string;
@@ -344,6 +345,11 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
             <div className="p-4 pb-8 space-y-4">
               {/* AI Thread Summary */}
               <ThreadSummaryCard ticketId={ticketId} />
+              
+              {/* Request Completion Review (only for Requests pipeline) */}
+              {ticket?.pipeline?.name === "Requests" && (
+                <RequestCompletionReview ticketId={ticketId} ticket={ticket} />
+              )}
               
               {/* Entities Section */}
               <div className="space-y-3">

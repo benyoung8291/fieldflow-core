@@ -85,7 +85,8 @@ export default function RequestView() {
             floor_number,
             file_url,
             image_url
-          )
+          ),
+          completed_by_user:profiles!ticket_markups_completed_by_fkey(first_name, last_name)
         `)
         .eq("ticket_id", requestId);
 
@@ -285,7 +286,7 @@ export default function RequestView() {
                 markups: []
               };
             }
-            acc[floorPlanId].markups.push(markup.markup_data);
+            acc[floorPlanId].markups.push(markup);
             return acc;
           }, {});
 
@@ -300,15 +301,94 @@ export default function RequestView() {
                   </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Floor Plan Viewer */}
                 <div className="h-[500px] rounded-lg overflow-hidden border border-border/40">
                   <MobileFloorPlanViewer
                     pdfUrl={group.floorPlan?.file_url || ""}
                     imageUrl={group.floorPlan?.image_url}
-                    markups={group.markups}
+                    markups={group.markups.map((m: any) => m.markup_data)}
                     onMarkupsChange={() => {}}
                     readOnly={true}
                   />
+                </div>
+
+                {/* Worker Responses */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Work Completed</h4>
+                  {group.markups.map((markup: any, index: number) => {
+                    const hasResponse = markup.response_notes || (markup.response_photos && Array.isArray(markup.response_photos) && markup.response_photos.length > 0);
+                    
+                    if (!hasResponse) return null;
+
+                    return (
+                      <div key={markup.id} className="p-4 bg-muted/30 rounded-lg space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {markup.markup_data?.type === "pin" ? "📍 Pin" : "🔲 Zone"} #{index + 1}
+                          </Badge>
+                          {(markup as any).status === "completed" && (
+                            <Badge className="bg-success/10 text-success border-success/20 text-xs">
+                              Completed
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Your Original Request */}
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground">Your Request:</p>
+                          <p className="text-sm">{markup.notes || "No notes provided"}</p>
+                          {markup.photo_url && (
+                            <img
+                              src={markup.photo_url}
+                              alt="Customer photo"
+                              className="w-full max-h-48 object-contain rounded border mt-2"
+                            />
+                          )}
+                        </div>
+
+                        {/* Worker's Response */}
+                        {markup.response_notes && (
+                          <div className="space-y-1.5 pt-2 border-t">
+                            <p className="text-xs font-medium text-muted-foreground">Our Response:</p>
+                            <p className="text-sm">{markup.response_notes}</p>
+                          </div>
+                        )}
+
+                        {/* Worker's Photos */}
+                        {markup.response_photos && Array.isArray(markup.response_photos) && markup.response_photos.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Completion Photos ({markup.response_photos.length}):
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {markup.response_photos.map((photoUrl: string, photoIndex: number) => (
+                                <img
+                                  key={photoIndex}
+                                  src={photoUrl}
+                                  alt={`Completion photo ${photoIndex + 1}`}
+                                  className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(photoUrl, '_blank')}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Completed By */}
+                        {markup.completed_by_user && (
+                          <div className="text-xs text-muted-foreground pt-2 border-t">
+                            Completed by {markup.completed_by_user.first_name} {markup.completed_by_user.last_name}
+                            {markup.completed_at && ` on ${new Date(markup.completed_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

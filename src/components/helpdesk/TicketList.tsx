@@ -38,6 +38,7 @@ interface TicketListProps {
   filterUserId?: string | null;
   filterArchived?: boolean;
   selectedFolder?: MailboxFolder;
+  isRequestsPipeline?: boolean;
 }
 
 export function TicketList({ 
@@ -47,7 +48,8 @@ export function TicketList({
   filterAssignment = "assigned_to_me", 
   filterUserId = null,
   filterArchived = false,
-  selectedFolder = "inbox"
+  selectedFolder = "inbox",
+  isRequestsPipeline = false
 }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
@@ -642,31 +644,37 @@ export function TicketList({
                       </>
                     )}
                   </ContextMenuItem>
-                  <ContextMenuItem>
-                    <Flag className="mr-2 h-4 w-4" />
-                    Flag
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem>
-                    <Reply className="mr-2 h-4 w-4" />
-                    Reply
-                  </ContextMenuItem>
-                  <ContextMenuItem>
-                    <Forward className="mr-2 h-4 w-4" />
-                    Forward
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuSub>
-                    <ContextMenuSubTrigger>
-                      <FolderInput className="mr-2 h-4 w-4" />
-                      Move to
-                    </ContextMenuSubTrigger>
-                    <ContextMenuSubContent className="w-48">
-                      <ContextMenuItem>Inbox</ContextMenuItem>
-                      <ContextMenuItem>Important</ContextMenuItem>
-                      <ContextMenuItem>Spam</ContextMenuItem>
-                    </ContextMenuSubContent>
-                  </ContextMenuSub>
+                  
+                  {!isRequestsPipeline && (
+                    <>
+                      <ContextMenuItem>
+                        <Flag className="mr-2 h-4 w-4" />
+                        Flag
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem>
+                        <Reply className="mr-2 h-4 w-4" />
+                        Reply
+                      </ContextMenuItem>
+                      <ContextMenuItem>
+                        <Forward className="mr-2 h-4 w-4" />
+                        Forward
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                          <FolderInput className="mr-2 h-4 w-4" />
+                          Move to
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="w-48">
+                          <ContextMenuItem>Inbox</ContextMenuItem>
+                          <ContextMenuItem>Important</ContextMenuItem>
+                          <ContextMenuItem>Spam</ContextMenuItem>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                    </>
+                  )}
+                  {isRequestsPipeline && <ContextMenuSeparator />}
                   <ContextMenuItem
                     onClick={() => archiveTicketMutation.mutate([ticket.id])}
                   >
