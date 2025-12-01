@@ -8,6 +8,7 @@ import { FileText, Plus, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 interface ProjectPurchaseOrdersTabProps {
   projectId: string;
@@ -138,7 +139,7 @@ export default function ProjectPurchaseOrdersTab({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    ${po.total_amount?.toFixed(2) || "0.00"}
+                    {formatCurrency(po.total_amount || 0)}
                   </TableCell>
                   <TableCell>
                     <Button

@@ -15,7 +15,7 @@ import {
   Clock,
   Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -341,11 +341,11 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
                         <div className="grid grid-cols-3 gap-4 mt-1 text-xs">
                           <div>
                             <span className="text-muted-foreground">PO Price:</span>
-                            <span className="ml-1 font-medium">${match.po_unit_price?.toFixed(2)}</span>
+                            <span className="ml-1 font-medium">{formatCurrency(match.po_unit_price)}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Invoice Price:</span>
-                            <span className="ml-1 font-medium">${match.invoice_unit_price?.toFixed(2)}</span>
+                            <span className="ml-1 font-medium">{formatCurrency(match.invoice_unit_price)}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">$ Variance:</span>
@@ -353,7 +353,7 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
                               "ml-1 font-medium",
                               match.total_variance !== 0 && "text-warning"
                             )}>
-                              ${match.total_variance?.toFixed(2)}
+                              {formatCurrency(match.total_variance)}
                             </span>
                           </div>
                         </div>
@@ -373,7 +373,7 @@ export default function ThreeWayMatchingCard({ invoiceId }: ThreeWayMatchingCard
               <Alert className="border-warning bg-warning/5">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 <AlertDescription>
-                  <strong>Total Variance: ${Math.abs(totalVariance).toFixed(2)}</strong>
+                  <strong>Total Variance: {formatCurrency(Math.abs(totalVariance))}</strong>
                   {totalVariance > 0 ? ' (Over)' : ' (Under)'}
                 </AlertDescription>
               </Alert>

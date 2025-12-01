@@ -6,6 +6,7 @@ import { Trash2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
+import { formatCurrency } from "@/lib/utils";
 
 interface InlineInvoiceLineItemRowProps {
   item: any;
@@ -123,7 +124,7 @@ export function InlineInvoiceLineItemRow({
           />
         </TableCell>
         <TableCell className="text-right font-medium">
-          ${(quantity * unitPrice).toFixed(2)}
+          {formatCurrency(quantity * unitPrice)}
         </TableCell>
         <TableCell>
           <div className="flex gap-1 justify-end">
@@ -187,9 +188,9 @@ export function InlineInvoiceLineItemRow({
         {item.sub_account || "-"}
       </TableCell>
       <TableCell className="text-right">{item.quantity}</TableCell>
-      <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+      <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
       <TableCell className="text-right font-medium">
-        ${item.line_total.toFixed(2)}
+        {formatCurrency(item.line_total)}
       </TableCell>
       {canEdit && (
         <TableCell>
