@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw, Plus, ArrowUpDown, Search } from "lucide-react";
 import { format, addMonths, parseISO, addWeeks } from "date-fns";
 import { useState } from "react";
 import RenewContractDialog from "@/components/quotes/RenewContractDialog";
@@ -28,6 +29,9 @@ export default function ServiceContracts() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("contract_number");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [filterText, setFilterText] = useState("");
   
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],
@@ -132,7 +136,64 @@ export default function ServiceContracts() {
       .slice(0, 12);
   };
 
-  const activeContracts = contracts?.filter((c: any) => c.status === "active") || [];
+  // Filter and sort active contracts
+  let activeContracts = contracts?.filter((c: any) => c.status === "active") || [];
+  
+  // Apply text filter
+  if (filterText) {
+    const filterLower = filterText.toLowerCase();
+    activeContracts = activeContracts.filter((c: any) => 
+      c.contract_number?.toLowerCase().includes(filterLower) ||
+      c.customers?.name?.toLowerCase().includes(filterLower) ||
+      c.description?.toLowerCase().includes(filterLower)
+    );
+  }
+  
+  // Apply sorting
+  activeContracts = [...activeContracts].sort((a: any, b: any) => {
+    let aVal, bVal;
+    
+    switch (sortBy) {
+      case "contract_number":
+        aVal = a.contract_number || "";
+        bVal = b.contract_number || "";
+        break;
+      case "customer":
+        aVal = a.customers?.name || "";
+        bVal = b.customers?.name || "";
+        break;
+      case "description":
+        aVal = a.description || "";
+        bVal = b.description || "";
+        break;
+      case "start_date":
+        aVal = a.start_date;
+        bVal = b.start_date;
+        break;
+      case "end_date":
+        aVal = a.end_date || "9999-12-31";
+        bVal = b.end_date || "9999-12-31";
+        break;
+      case "value":
+        aVal = (a.service_contract_line_items || []).reduce((sum: number, item: any) => {
+          const freq = {'daily': 365, 'weekly': 52, 'bi_weekly': 26, 'monthly': 12, 'quarterly': 4, 'semi_annually': 2, 'annually': 1}[item.recurrence_frequency] || 1;
+          return sum + ((item.quantity || 0) * (item.unit_price || 0) * freq);
+        }, 0);
+        bVal = (b.service_contract_line_items || []).reduce((sum: number, item: any) => {
+          const freq = {'daily': 365, 'weekly': 52, 'bi_weekly': 26, 'monthly': 12, 'quarterly': 4, 'semi_annually': 2, 'annually': 1}[item.recurrence_frequency] || 1;
+          return sum + ((item.quantity || 0) * (item.unit_price || 0) * freq);
+        }, 0);
+        break;
+      default:
+        aVal = a.contract_number || "";
+        bVal = b.contract_number || "";
+    }
+    
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    }
+    return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : (bVal > aVal ? 1 : -1);
+  });
   const upcomingGenerations = calculateUpcomingGenerations().slice(0, 20);
   const monthlyRevenue = calculateMonthlyRevenue();
   
@@ -315,15 +376,126 @@ export default function ServiceContracts() {
                 <CardDescription>All currently active service contracts</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Filter by contract number, customer, or description..."
+                      value={filterText}
+                      onChange={(e) => setFilterText(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  {filterText && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFilterText("")}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Contract Number</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => {
+                        if (sortBy === "contract_number") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortBy("contract_number");
+                          setSortOrder("asc");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Contract Number
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => {
+                        if (sortBy === "customer") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortBy("customer");
+                          setSortOrder("asc");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Customer
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => {
+                        if (sortBy === "description") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortBy("description");
+                          setSortOrder("asc");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Description
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => {
+                        if (sortBy === "start_date") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortBy("start_date");
+                          setSortOrder("asc");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Start Date
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => {
+                        if (sortBy === "end_date") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortBy("end_date");
+                          setSortOrder("asc");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        End Date
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
                     <TableHead>Next Generation</TableHead>
-                    <TableHead>12-Month Value</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => {
+                        if (sortBy === "value") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortBy("value");
+                          setSortOrder("asc");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        12-Month Value
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -402,6 +574,7 @@ export default function ServiceContracts() {
                       >
                         <TableCell className="font-medium">{contract.contract_number}</TableCell>
                         <TableCell>{contract.customers?.name}</TableCell>
+                        <TableCell className="max-w-xs truncate">{contract.description || "-"}</TableCell>
                         <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
                         <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
                         <TableCell>{nextGenDate ? format(nextGenDate, "PP") : "N/A"}</TableCell>
