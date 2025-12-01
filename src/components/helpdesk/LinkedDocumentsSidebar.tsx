@@ -80,7 +80,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
               case 'appointment':
                 const { data: apt } = await supabase
                   .from("appointments")
-                  .select("appointment_number, title, status, start_time, end_time, location_address")
+                  .select("appointment_number, title, description, status, start_time, end_time, location_address")
                   .eq("id", doc.document_id)
                   .single();
                 details = apt;
