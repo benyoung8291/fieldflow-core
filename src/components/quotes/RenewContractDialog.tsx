@@ -96,17 +96,6 @@ export default function RenewContractDialog({ open, onOpenChange, contract }: Re
           return sum + newPrice;
         }, 0) || 0;
 
-        // Generate new contract number
-        const { data: latestContract } = await supabase
-          .from("service_contracts" as any)
-          .select("contract_number")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const lastNumber = (latestContract as any)?.contract_number?.match(/\d+$/)?.[0] || "0";
-        const newNumber = `SC-${String(parseInt(lastNumber) + 1).padStart(5, "0")}`;
-
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
@@ -120,13 +109,22 @@ export default function RenewContractDialog({ open, onOpenChange, contract }: Re
 
         if (!profile?.tenant_id) throw new Error("No tenant found");
 
+        // Generate new contract number
+        const { data: newNumber, error: numberError } = await supabase
+          .rpc('get_next_sequential_number', {
+            p_tenant_id: profile.tenant_id,
+            p_entity_type: 'service_contract'
+          });
+
+        if (numberError) throw numberError;
+
         // Create new contract
         const { data: newContract, error: contractError } = await supabase
           .from("service_contracts" as any)
           .insert({
             tenant_id: profile.tenant_id,
             customer_id: contract.customer_id,
-            contract_number: newNumber,
+            contract_number: newNumber as string,
             title: `${contract.title} (Renewed)`,
             description: contract.description,
             start_date: newStartDate,
