@@ -9,11 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FloorPlanViewer, Markup, MarkupType } from "@/components/customer/FloorPlanViewer";
 import { MobileFloorPlanViewer } from "@/components/customer/MobileFloorPlanViewer";
+import { ShareFloorPlanDialog } from "@/components/customer/ShareFloorPlanDialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { FloorPlanMarkupList } from "@/components/customer/FloorPlanMarkupList";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileText, ArrowLeft, Maximize2, X } from "lucide-react";
+import { Loader2, FileText, ArrowLeft, Maximize2, X, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
@@ -30,6 +31,7 @@ export default function LocationFloorPlans() {
   const [taskDescription, setTaskDescription] = useState("");
   const [selectedMarkupId, setSelectedMarkupId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const { data: location } = useQuery({
@@ -345,6 +347,13 @@ export default function LocationFloorPlans() {
                 }}
               >
                 Back to Plans
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowShareDialog(true)}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
               </Button>
               <Button 
                 onClick={() => {
@@ -805,6 +814,13 @@ export default function LocationFloorPlans() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ShareFloorPlanDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          floorPlan={selectedFloorPlan}
+          location={location}
+        />
       </div>
     </CustomerPortalLayout>
   );

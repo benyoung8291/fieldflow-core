@@ -2377,6 +2377,86 @@ export type Database = {
           },
         ]
       }
+      floor_plan_share_links: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          customer_id: string
+          expires_at: string
+          floor_plan_id: string
+          id: string
+          is_active: boolean | null
+          last_used_at: string | null
+          location_id: string
+          max_submissions: number
+          notes: string | null
+          tenant_id: string
+          token: string
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          customer_id: string
+          expires_at: string
+          floor_plan_id: string
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          location_id: string
+          max_submissions?: number
+          notes?: string | null
+          tenant_id: string
+          token?: string
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string
+          expires_at?: string
+          floor_plan_id?: string
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          location_id?: string
+          max_submissions?: number
+          notes?: string | null
+          tenant_id?: string
+          token?: string
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_plan_share_links_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_share_links_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_share_links_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_share_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floor_plans: {
         Row: {
           created_at: string | null

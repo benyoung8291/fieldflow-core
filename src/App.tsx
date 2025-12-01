@@ -111,6 +111,7 @@ const FieldReportView = lazy(() => import("./pages/customer/FieldReportView"));
 const TemplateBuilderPage = lazy(() => import("./pages/TemplateBuilderPage"));
 const TemplatesListPage = lazy(() => import("./pages/TemplatesListPage"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
+const SharedFloorPlanMarkup = lazy(() => import("./pages/public/SharedFloorPlanMarkup"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -306,6 +307,9 @@ const App = () => {
               <WorkerMobileBottomNav />
               <Suspense fallback={<RouteLoader />}>
                 <Routes>
+                  {/* Public Routes */}
+                  <Route path="/share/floor-plan/:token" element={<SharedFloorPlanMarkup />} />
+                  
                   <Route path="/" element={isAuthenticated ? <RedirectToDefaultRoute /> : <Navigate to="/auth" replace />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/first-password-reset" element={isAuthenticated ? <FirstPasswordReset /> : <Navigate to="/auth" replace />} />
