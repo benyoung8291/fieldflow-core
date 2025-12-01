@@ -15,12 +15,17 @@ import React from "react";
 import { toast } from "sonner";
 import { FloorPlansTab } from "@/components/customer-locations/FloorPlansTab";
 import { FutureServiceOrdersTab } from "@/components/customer-locations/FutureServiceOrdersTab";
+import QuickContactDialog from "@/components/customers/QuickContactDialog";
+import { formatCurrency } from "@/lib/utils";
+import { UserPlus } from "lucide-react";
 
 export default function CustomerLocationDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isGeocoding, setIsGeocoding] = React.useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
+  const [contactRole, setContactRole] = React.useState<"site_contact" | "facility_manager">("site_contact");
 
   const { data: location, isLoading: locationLoading } = useQuery({
     queryKey: ["customer-location", id],
@@ -361,7 +366,20 @@ export default function CustomerLocationDetails() {
 
                 {location.site_contact && (
                   <div>
-                    <div className="text-sm text-muted-foreground">Site Contact</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm text-muted-foreground">Site Contact</div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setContactRole("site_contact");
+                          setContactDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <div className="font-medium">
                       {location.site_contact.first_name} {location.site_contact.last_name}
                     </div>
@@ -374,9 +392,41 @@ export default function CustomerLocationDetails() {
                   </div>
                 )}
 
+                {!location.site_contact && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm text-muted-foreground">Site Contact</div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setContactRole("site_contact");
+                          setContactDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Contact
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {location.facility_manager_contact && (
                   <div>
-                    <div className="text-sm text-muted-foreground">Facility Manager</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm text-muted-foreground">Facility Manager</div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setContactRole("facility_manager");
+                          setContactDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <div className="font-medium">
                       {location.facility_manager_contact.first_name} {location.facility_manager_contact.last_name}
                     </div>
@@ -386,6 +436,25 @@ export default function CustomerLocationDetails() {
                     {location.facility_manager_contact.phone && (
                       <div className="text-sm text-muted-foreground">{location.facility_manager_contact.phone}</div>
                     )}
+                  </div>
+                )}
+
+                {!location.facility_manager_contact && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm text-muted-foreground">Facility Manager</div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setContactRole("facility_manager");
+                          setContactDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Contact
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -461,8 +530,8 @@ export default function CustomerLocationDetails() {
                           <TableCell className="capitalize">{order.billing_type}</TableCell>
                           <TableCell>
                             {order.billing_type === "fixed" 
-                              ? `$${parseFloat(order.fixed_amount || 0).toFixed(2)}`
-                              : `${order.estimated_hours || 0}h @ $${parseFloat(order.hourly_rate || 0).toFixed(2)}`
+                              ? formatCurrency(parseFloat(order.fixed_amount || 0))
+                              : `${order.estimated_hours || 0}h @ ${formatCurrency(parseFloat(order.hourly_rate || 0))}`
                             }
                           </TableCell>
                           <TableCell>{format(parseISO(order.created_at), "PP")}</TableCell>
@@ -514,7 +583,7 @@ export default function CustomerLocationDetails() {
                               : "N/A"
                             }
                           </TableCell>
-                          <TableCell>${parseFloat(item.line_total).toFixed(2)}</TableCell>
+                          <TableCell>{formatCurrency(parseFloat(item.line_total))}</TableCell>
                           <TableCell>
                             <Badge variant={item.is_active ? "default" : "outline"}>
                               {item.is_active ? "Active" : "Inactive"}
@@ -583,6 +652,19 @@ export default function CustomerLocationDetails() {
           </Tabs>
         </Card>
       </div>
+
+      {/* Contact Dialog */}
+      <QuickContactDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        customerId={location.customer_id}
+        locationId={id}
+        assignAsRole={contactRole}
+        onContactCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["customer-location", id] });
+          setContactDialogOpen(false);
+        }}
+      />
     </DashboardLayout>
   );
 }

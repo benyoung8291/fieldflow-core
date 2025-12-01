@@ -24,7 +24,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
-import ContactSelectorDialog from "@/components/customers/ContactSelectorDialog";
+import { ContactRoleDialog } from "@/components/service-orders/ContactRoleDialog";
+import { formatCurrency } from "@/lib/utils";
 import FieldReportsTab from "@/components/service-orders/FieldReportsTab";
 import {
   AlertDialog,
@@ -83,6 +84,7 @@ export default function ServiceOrderDetails() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [purchaseOrderDialogOpen, setPurchaseOrderDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [contactRole, setContactRole] = useState<"site_contact" | "facility_manager">("site_contact");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
   const [editingDates, setEditingDates] = useState(false);
   const [preferredDate, setPreferredDate] = useState<Date | undefined>();
@@ -854,27 +856,26 @@ export default function ServiceOrderDetails() {
                 const siteContact = (order as any).site_contact;
                 const facilityManagerContact = (order as any).facility_manager_contact;
                 
-                if (!siteContact && !facilityManagerContact) {
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => setContactDialogOpen(true)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Link or Create Contact
-                    </Button>
-                  );
-                }
-                
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Site Contact */}
                     <div className="space-y-2">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                        Site Contact
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                          Site Contact
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setContactRole("site_contact");
+                            setContactDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus className="h-3 w-3" />
+                        </Button>
+                      </div>
                       {siteContact ? (
                         <div className="space-y-1">
                           <div className="font-medium text-sm">{siteContact.first_name} {siteContact.last_name}</div>
@@ -901,9 +902,22 @@ export default function ServiceOrderDetails() {
                     
                     {/* Facility Manager */}
                     <div className="space-y-2">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
-                        Facility Manager
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                          Facility Manager
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setContactRole("facility_manager");
+                            setContactDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus className="h-3 w-3" />
+                        </Button>
+                      </div>
                       {facilityManagerContact ? (
                         <div className="space-y-1">
                           <div className="font-medium text-sm">{facilityManagerContact.first_name} {facilityManagerContact.last_name}</div>
@@ -946,31 +960,31 @@ export default function ServiceOrderDetails() {
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Total ex GST</div>
                   <div className="text-2xl font-bold">
-                    ${((order as any).subtotal || totalRevenue).toFixed(2)}
+                    {formatCurrency((order as any).subtotal || totalRevenue)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Inc GST: ${((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0))).toFixed(2)}
+                    Inc GST: {formatCurrency((order as any).total_amount || (totalRevenue + ((order as any).tax_amount || 0)))}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Tax ({((order as any).tax_rate || 0).toFixed(1)}%): ${((order as any).tax_amount || 0).toFixed(2)}
+                    Tax ({((order as any).tax_rate || 0).toFixed(1)}%): {formatCurrency((order as any).tax_amount || 0)}
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Estimated Profit</div>
                   <div className="text-2xl font-bold text-success">
-                    ${(totalRevenue - totalCost - estimatedLaborCost).toFixed(2)}
+                    {formatCurrency(totalRevenue - totalCost - estimatedLaborCost)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Actual: ${totalProfit.toFixed(2)}
+                    Actual: {formatCurrency(totalProfit)}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Margin: {profitMargin.toFixed(1)}%
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Costs: ${actualCost.toFixed(2)}
+                    Costs: {formatCurrency(actualCost)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Est. Labor: ${estimatedLaborCost.toFixed(2)}
+                    Est. Labor: {formatCurrency(estimatedLaborCost)}
                   </div>
                 </div>
               </div>
@@ -1853,24 +1867,18 @@ export default function ServiceOrderDetails() {
         }}
       />
 
-      {/* Contact Selector Dialog */}
-      <ContactSelectorDialog
+      {/* Contact Role Dialog */}
+      <ContactRoleDialog
         open={contactDialogOpen}
         onOpenChange={setContactDialogOpen}
         customerId={order?.customer_id || ''}
-        onContactSelected={async (contactId) => {
-          // Update service order with new contact
-          const { error } = await supabase
-            .from('service_orders')
-            .update({ customer_contact_id: contactId })
-            .eq('id', id);
-          
-          if (!error) {
-            queryClient.invalidateQueries({ queryKey: ["service_order", id] });
-            toast({ title: "Contact linked successfully" });
-          } else {
-            toast({ title: "Error linking contact", description: error.message, variant: "destructive" });
-          }
+        serviceOrderId={id || ''}
+        currentSiteContactId={order?.customer_contact_id}
+        currentFacilityManagerId={order?.facility_manager_contact_id}
+        role={contactRole}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+          setContactDialogOpen(false);
         }}
       />
     </>
