@@ -32,7 +32,7 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
     },
   });
 
-  const { data: summary, isLoading, refetch } = useQuery({
+  const { data: summary, isLoading, error, refetch } = useQuery({
     queryKey: ["ticket-thread-summary", ticketId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("summarize-ticket-thread", {
@@ -43,6 +43,7 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
       return data;
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: false, // Don't retry on 404 errors
   });
 
   const handleRefresh = async () => {
@@ -161,6 +162,11 @@ export function ThreadSummaryCard({ ticketId }: ThreadSummaryCardProps) {
         </div>
       </Card>
     );
+  }
+
+  // Handle error state (e.g., ticket not found)
+  if (error) {
+    return null; // Silently hide component if ticket doesn't exist or has no messages
   }
 
   if (!summary) return null;
