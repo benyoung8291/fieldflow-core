@@ -170,10 +170,20 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
         throw new Error("Floor plan has no location");
       }
 
-      // Update ticket with location
+      // Get customer from location
+      const { data: location } = await supabase
+        .from("customer_locations")
+        .select("customer_id")
+        .eq("id", floorPlan.customer_location_id)
+        .single();
+
+      // Update ticket with both location and customer
       const { error } = await supabase
         .from("helpdesk_tickets")
-        .update({ location_id: floorPlan.customer_location_id })
+        .update({ 
+          location_id: floorPlan.customer_location_id,
+          customer_id: location?.customer_id || null
+        })
         .eq("id", ticketId);
 
       if (error) throw error;
@@ -183,7 +193,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
-      toast({ title: "Location auto-linked from floor plan" });
+      queryClient.invalidateQueries({ queryKey: ["ticket-location"] });
+      toast({ title: "Location and customer auto-linked from floor plan" });
     },
     onError: (error: any) => {
       toast({
@@ -211,16 +222,37 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
         }
       }
 
+      // If linking a location, automatically link its customer
+      if (field === "location_id" && value) {
+        const { data: location } = await supabase
+          .from("customer_locations")
+          .select("customer_id")
+          .eq("id", value)
+          .maybeSingle();
+        
+        if (location?.customer_id) {
+          updates.customer_id = location.customer_id;
+        }
+      }
+
       const { error } = await supabase
         .from("helpdesk_tickets")
         .update(updates)
         .eq("id", ticketId);
 
       if (error) throw error;
+      
+      return { field, value };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
+      
+      // Invalidate location query if we just updated location_id
+      if (data.field === "location_id") {
+        queryClient.invalidateQueries({ queryKey: ["ticket-location"] });
+      }
+      
       toast({ title: "Link updated successfully" });
       setShowCustomerLink(false);
       setShowContactLink(false);
