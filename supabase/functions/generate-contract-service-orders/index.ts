@@ -75,7 +75,7 @@ serve(async (req) => {
             p_tenant_id: tenant.id,
             p_start_date: startDate,
             p_end_date: endDate,
-            p_user_id: userId
+            p_created_by: userId
           });
 
           if (error) {
@@ -189,7 +189,7 @@ serve(async (req) => {
       p_tenant_id: profile.tenant_id,
       p_start_date: startDate,
       p_end_date: endDate,
-      p_user_id: user.id
+      p_created_by: user.id
     });
 
     if (error) {
