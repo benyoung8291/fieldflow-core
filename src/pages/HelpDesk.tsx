@@ -279,7 +279,7 @@ export default function HelpDesk() {
     },
   });
 
-  const { data: ticket } = useQuery({
+  const { data: ticket, error: ticketError } = useQuery({
     queryKey: ["helpdesk-ticket", selectedTicketId],
     queryFn: async () => {
       if (!selectedTicketId) return null;
@@ -302,7 +302,7 @@ export default function HelpDesk() {
           )
         `)
         .eq("id", selectedTicketId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as any;
@@ -313,21 +313,26 @@ export default function HelpDesk() {
   const handleSelectTicket = (ticketId: string) => {
     // Update URL first - this is the source of truth
     setSearchParams({ ticket: ticketId }, { replace: true });
-    
-    // Mark ticket as read in background (fire and forget)
-    supabase
-      .from("helpdesk_tickets")
-      .update({ is_read: true })
-      .eq("id", ticketId)
-      .then(() => {
-        queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
-      });
-    
-    // Also mark as read in Microsoft (fire and forget)
-    supabase.functions.invoke("microsoft-mark-read", {
-      body: { ticketId }
-    });
   };
+
+  // Effect to mark ticket as read when ticket data is loaded
+  useEffect(() => {
+    if (selectedTicketId && ticket) {
+      // Mark ticket as read in background (fire and forget)
+      supabase
+        .from("helpdesk_tickets")
+        .update({ is_read: true })
+        .eq("id", selectedTicketId)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+        });
+      
+      // Also mark as read in Microsoft (fire and forget)
+      supabase.functions.invoke("microsoft-mark-read", {
+        body: { ticketId: selectedTicketId }
+      });
+    }
+  }, [selectedTicketId, ticket]);
 
   // Get selected pipeline object
   const selectedPipeline = pipelines?.find(p => p.id === selectedPipelineId);
@@ -666,7 +671,34 @@ export default function HelpDesk() {
           {/* Middle: Timeline View */}
           <ResizablePanel defaultSize={47} minSize={35} className="relative bg-muted/20">
             {selectedTicketId ? (
-              <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
+              ticketError || (selectedTicketId && !ticket && !ticketError) ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center space-y-4 px-8 max-w-md animate-fade-in">
+                    <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                      <AlertOctagon className="h-10 w-10 text-destructive/60" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-lg font-semibold text-foreground">Ticket not found</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        This ticket may have been deleted or you don't have permission to view it
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setSearchParams({}, { replace: true });
+                          setSelectedTicketId(null);
+                        }}
+                        className="mt-4"
+                      >
+                        Back to tickets
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <TicketTimeline ticketId={selectedTicketId} ticket={ticket} />
+              )
             ) : (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center space-y-4 px-8 max-w-md animate-fade-in">
