@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { FloorPlanCard } from "./FloorPlanCard";
+import { MarkupResponsePanel } from "./MarkupResponsePanel";
 
 interface TicketFloorPlansProps {
   ticketId: string;
@@ -62,6 +63,16 @@ export function TicketFloorPlans({ ticketId }: TicketFloorPlansProps) {
 
   return (
     <div className="space-y-4">
+      {/* Markup Response Panel */}
+      <MarkupResponsePanel
+        markups={markupsData || []}
+        ticketId={ticketId}
+        onResponseSubmitted={() => {
+          // Refetch markups after response submitted
+        }}
+      />
+
+      {/* Floor Plans with Markups */}
       {Object.values(floorPlanGroups).map((group: any) => (
         <FloorPlanCard
           key={group.floorPlan.id}

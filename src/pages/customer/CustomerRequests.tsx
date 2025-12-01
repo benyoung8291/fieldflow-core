@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileText, Calendar, Link as LinkIcon, Copy, Trash2, Clock } from "lucide-react";
+import { Loader2, FileText, Calendar, Link as LinkIcon, Copy, Trash2, Clock, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -47,13 +47,28 @@ export default function CustomerRequests() {
             status, 
             completion_reported_at, 
             completion_notes
-          )
+          ),
+          markups:ticket_markups(id, status)
         `)
         .eq("customer_id", profile.customer_id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Calculate completion stats for each ticket
+      return data.map((ticket: any) => {
+        const totalMarkups = ticket.markups?.length || 0;
+        const completedMarkups = ticket.markups?.filter((m: any) => m.status === "completed").length || 0;
+        
+        return {
+          ...ticket,
+          completion_progress: {
+            total: totalMarkups,
+            completed: completedMarkups,
+            percentage: totalMarkups > 0 ? Math.round((completedMarkups / totalMarkups) * 100) : 0,
+          },
+        };
+      });
     },
     enabled: !!profile?.customer_id,
   });
@@ -345,6 +360,15 @@ export default function CustomerRequests() {
                                 month: 'short',
                                 day: 'numeric'
                               })}
+                            </span>
+                          </div>
+                        )}
+                        {/* Completion Progress */}
+                        {ticket.completion_progress && ticket.completion_progress.total > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <CheckSquare className="h-3.5 w-3.5" />
+                            <span>
+                              {ticket.completion_progress.completed}/{ticket.completion_progress.total} items completed
                             </span>
                           </div>
                         )}

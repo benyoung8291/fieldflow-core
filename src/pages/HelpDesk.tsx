@@ -283,6 +283,10 @@ export default function HelpDesk() {
     });
   };
 
+  // Get selected pipeline object
+  const selectedPipeline = pipelines?.find(p => p.id === selectedPipelineId);
+  const isRequestsPipeline = selectedPipeline?.name === "Requests" || !selectedPipeline?.email_account_id;
+
   const handleSyncEmails = async () => {
     if (!emailAccounts || emailAccounts.length === 0) {
       toast({
@@ -430,38 +434,43 @@ export default function HelpDesk() {
         {/* Header with Pipeline Selector, Quick Filters, and Sync */}
         <div className="flex items-center justify-between px-2 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
           <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 gap-2 px-3">
-                  <CurrentFolderIcon className="h-4 w-4" />
-                  <span className="font-medium">{currentFolderConfig.label}</span>
-                  <Menu className="h-3 w-3 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>Mailbox Folders</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {folderConfig.map((folder) => {
-                  const Icon = folder.icon;
-                  const isSelected = selectedFolder === folder.id;
-                  return (
-                    <DropdownMenuItem
-                      key={folder.id}
-                      onClick={() => {
-                        setSelectedFolder(folder.id);
-                        setFilterArchived(folder.id === "archive" || folder.id === "deleted" || folder.id === "junk");
-                      }}
-                      className="gap-2"
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="flex-1">{folder.label}</span>
-                      {isSelected && <Check className="h-4 w-4 text-primary" />}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="h-6 w-px bg-border" />
+            {/* Mailbox Folder Dropdown - Hide for Requests pipeline */}
+            {!isRequestsPipeline && (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-9 gap-2 px-3">
+                      <CurrentFolderIcon className="h-4 w-4" />
+                      <span className="font-medium">{currentFolderConfig.label}</span>
+                      <Menu className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Mailbox Folders</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {folderConfig.map((folder) => {
+                      const Icon = folder.icon;
+                      const isSelected = selectedFolder === folder.id;
+                      return (
+                        <DropdownMenuItem
+                          key={folder.id}
+                          onClick={() => {
+                            setSelectedFolder(folder.id);
+                            setFilterArchived(folder.id === "archive" || folder.id === "deleted" || folder.id === "junk");
+                          }}
+                          className="gap-2"
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="flex-1">{folder.label}</span>
+                          {isSelected && <Check className="h-4 w-4 text-primary" />}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <div className="h-6 w-px bg-border" />
+              </>
+            )}
             <h1 className="text-xl font-semibold text-foreground">Help Desk</h1>
             
           {/* Quick Filter Buttons */}
@@ -595,13 +604,14 @@ export default function HelpDesk() {
           {/* Ticket List */}
           <ResizablePanel defaultSize={28} minSize={20} maxSize={40} className="relative">
             <TicketList
-              selectedTicketId={selectedTicketId} 
+              selectedTicketId={selectedTicketId}
               onSelectTicket={handleSelectTicket}
               pipelineId={selectedPipelineId}
               filterAssignment={filterAssignment}
               filterUserId={filterUserId}
               filterArchived={filterArchived}
               selectedFolder={selectedFolder}
+              isRequestsPipeline={isRequestsPipeline}
             />
           </ResizablePanel>
 
