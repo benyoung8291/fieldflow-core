@@ -80,7 +80,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
               case 'appointment':
                 const { data: apt } = await supabase
                   .from("appointments")
-                  .select("title, status, start_time, end_time, location")
+                  .select("appointment_number, title, status, start_time, end_time, location_address")
                   .eq("id", doc.document_id)
                   .single();
                 details = apt;
@@ -912,11 +912,13 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                             };
                           case 'appointment':
                             return {
-                              title: docData?.title || doc.document_number || 'Untitled',
+                              title: docData?.appointment_number 
+                                ? `${docData.appointment_number}${docData.title ? ` - ${docData.title}` : ''}`
+                                : docData?.title || doc.document_number || 'Untitled',
                               status: docData?.status,
                               date: docData?.start_time,
                               time: docData?.end_time ? `${new Date(docData.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(docData.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : null,
-                              location: docData?.location,
+                              location: docData?.location_address,
                               label: 'Scheduled'
                             };
                           case 'quote':
