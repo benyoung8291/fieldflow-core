@@ -21,6 +21,7 @@ import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { UpdateNotificationBar } from "@/components/UpdateNotificationBar";
 import { Loader2 } from "lucide-react";
 import { PermissionProtectedRoute } from "@/components/PermissionProtectedRoute";
+import { SupervisorProtectedRoute } from "@/components/SupervisorProtectedRoute";
 import { getRouteModule } from "@/config/routePermissions";
 
 // Lazy load all pages for code splitting and faster initial load
@@ -383,10 +384,10 @@ const App = () => {
             {/* Worker Mobile Routes */}
             <Route path="/worker/dashboard" element={isAuthenticated ? <ProtectedRoute><WorkerDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/profile" element={isAuthenticated ? <ProtectedRoute><WorkerProfile /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/worker/supervisor/dashboard" element={isAuthenticated ? <ProtectedRoute><SupervisorDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/worker/supervisor/map" element={isAuthenticated ? <ProtectedRoute><SupervisorMapDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/worker/supervisor/appointments" element={isAuthenticated ? <ProtectedRoute><SupervisorAppointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
-            <Route path="/worker/supervisor/service-orders" element={isAuthenticated ? <ProtectedRoute><SupervisorServiceOrders /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/supervisor/dashboard" element={isAuthenticated ? <ProtectedRoute><SupervisorProtectedRoute><SupervisorDashboard /></SupervisorProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/supervisor/map" element={isAuthenticated ? <ProtectedRoute><SupervisorProtectedRoute><SupervisorMapDashboard /></SupervisorProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/supervisor/appointments" element={isAuthenticated ? <ProtectedRoute><SupervisorProtectedRoute><SupervisorAppointments /></SupervisorProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/supervisor/service-orders" element={isAuthenticated ? <ProtectedRoute><SupervisorProtectedRoute><SupervisorServiceOrders /></SupervisorProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/appointments" element={isAuthenticated ? <ProtectedRoute><WorkerAppointments /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/appointments/:id" element={isAuthenticated ? <ProtectedRoute><WorkerAppointmentDetails /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/time-logs" element={isAuthenticated ? <ProtectedRoute><WorkerTimeLogs /></ProtectedRoute> : <Navigate to="/auth" replace />} />
