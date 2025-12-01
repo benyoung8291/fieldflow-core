@@ -9115,24 +9115,15 @@ export type Database = {
         }
         Returns: string
       }
-      generate_service_orders_from_contracts:
-        | {
-            Args: {
-              p_end_date: string
-              p_start_date: string
-              p_tenant_id: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_end_date: string
-              p_start_date: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      generate_service_orders_from_contracts: {
+        Args: {
+          p_end_date: string
+          p_start_date: string
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_acumatica_password: {
         Args: { integration_id: string }
         Returns: string
