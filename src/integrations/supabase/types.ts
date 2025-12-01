@@ -6841,6 +6841,7 @@ export type Database = {
           date_range_end: string | null
           description: string | null
           estimated_hours: number | null
+          facility_manager_contact_id: string | null
           fixed_amount: number | null
           generated_from_date: string | null
           id: string
@@ -6892,6 +6893,7 @@ export type Database = {
           date_range_end?: string | null
           description?: string | null
           estimated_hours?: number | null
+          facility_manager_contact_id?: string | null
           fixed_amount?: number | null
           generated_from_date?: string | null
           id?: string
@@ -6943,6 +6945,7 @@ export type Database = {
           date_range_end?: string | null
           description?: string | null
           estimated_hours?: number | null
+          facility_manager_contact_id?: string | null
           fixed_amount?: number | null
           generated_from_date?: string | null
           id?: string
@@ -6997,6 +7000,13 @@ export type Database = {
             columns: ["customer_location_id"]
             isOneToOne: false
             referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_facility_manager_contact_id_fkey"
+            columns: ["facility_manager_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -9105,15 +9115,24 @@ export type Database = {
         }
         Returns: string
       }
-      generate_service_orders_from_contracts: {
-        Args: {
-          p_end_date: string
-          p_start_date: string
-          p_tenant_id: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
+      generate_service_orders_from_contracts:
+        | {
+            Args: {
+              p_end_date: string
+              p_start_date: string
+              p_tenant_id: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_end_date: string
+              p_start_date: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       get_acumatica_password: {
         Args: { integration_id: string }
         Returns: string

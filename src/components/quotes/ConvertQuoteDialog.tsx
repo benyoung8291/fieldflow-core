@@ -476,7 +476,7 @@ export default function ConvertQuoteDialog({
         .insert({
           tenant_id: profile.tenant_id,
           customer_id: customerId,
-          contact_id: primaryContact?.id || null,
+          customer_contact_id: primaryContact?.id || null,
           order_number: orderNumber,
           title: serviceOrderData.title,
           description: serviceOrderData.description,

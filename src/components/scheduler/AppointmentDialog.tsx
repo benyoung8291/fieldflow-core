@@ -74,12 +74,14 @@ export default function AppointmentDialog({
   // Service order fields for creating new appointments
   const [serviceOrderData, setServiceOrderData] = useState({
     customer_id: "",
+    location_id: "",
     title: "",
     description: "",
     priority: "normal",
   });
   
   const [customers, setCustomers] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [createNewServiceOrder, setCreateNewServiceOrder] = useState(!defaultServiceOrderId);
 
   const [recurrenceConfig, setRecurrenceConfig] = useState<any>(null);
@@ -122,6 +124,31 @@ export default function AppointmentDialog({
       setCustomers(data || []);
     }
   };
+
+  const fetchLocations = async (customerId: string) => {
+    const { data, error } = await supabase
+      .from("customer_locations")
+      .select("id, name, address")
+      .eq("customer_id", customerId)
+      .eq("is_active", true)
+      .order("name");
+    
+    if (error) {
+      toast({ title: "Error fetching locations", variant: "destructive" });
+    } else {
+      setLocations(data || []);
+    }
+  };
+
+  // Fetch locations when customer changes
+  useEffect(() => {
+    if (serviceOrderData.customer_id) {
+      fetchLocations(serviceOrderData.customer_id);
+    } else {
+      setLocations([]);
+      setServiceOrderData(prev => ({ ...prev, location_id: "" }));
+    }
+  }, [serviceOrderData.customer_id]);
 
   const fetchServiceOrders = async () => {
     const { data, error } = await supabase
@@ -287,10 +314,30 @@ export default function AppointmentDialog({
           return;
         }
 
+        // Get contacts from selected location
+        let siteContactId = null;
+        let facilityManagerContactId = null;
+        
+        if (serviceOrderData.location_id) {
+          const { data: location } = await supabase
+            .from('customer_locations')
+            .select('site_contact_id, facility_manager_contact_id')
+            .eq('id', serviceOrderData.location_id)
+            .single();
+          
+          if (location) {
+            siteContactId = location.site_contact_id;
+            facilityManagerContactId = location.facility_manager_contact_id;
+          }
+        }
+
         const { data: newServiceOrder, error: soError } = await supabase
           .from("service_orders")
           .insert([{
             customer_id: serviceOrderData.customer_id,
+            customer_location_id: serviceOrderData.location_id || null,
+            customer_contact_id: siteContactId,
+            facility_manager_contact_id: facilityManagerContactId,
             title: serviceOrderData.title,
             description: serviceOrderData.description,
             priority: serviceOrderData.priority,
@@ -519,6 +566,32 @@ export default function AppointmentDialog({
                           {customers.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
                               {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+
+                  <FieldPresenceWrapper fieldName="so_location_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="so_location_id">Location</Label>
+                      <Select 
+                        value={serviceOrderData.location_id} 
+                        onValueChange={(value) => {
+                          setServiceOrderData({ ...serviceOrderData, location_id: value });
+                          setCurrentField("so_location_id");
+                          updateField("so_location_id");
+                        }}
+                        disabled={!serviceOrderData.customer_id || locations.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select location (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name} {location.address && `- ${location.address}`}
                             </SelectItem>
                           ))}
                         </SelectContent>

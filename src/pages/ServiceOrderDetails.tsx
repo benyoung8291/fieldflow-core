@@ -130,17 +130,29 @@ export default function ServiceOrderDetails() {
 
       if (error) throw error;
       
-      // Fetch contact separately if contact_id exists
+      // Fetch site contact separately if exists
+      let siteContact = null;
       if (data?.customer_contact_id) {
         const { data: contact } = await supabase
           .from("contacts")
           .select("id, first_name, last_name, email, phone, mobile, position")
           .eq("id", data.customer_contact_id)
           .single();
-        return { ...data, contacts: contact };
+        siteContact = contact;
       }
       
-      return data;
+      // Fetch facility manager contact separately if exists
+      let facilityManagerContact = null;
+      if (data?.facility_manager_contact_id) {
+        const { data: contact } = await supabase
+          .from("contacts")
+          .select("id, first_name, last_name, email, phone, mobile, position")
+          .eq("id", data.facility_manager_contact_id)
+          .single();
+        facilityManagerContact = contact;
+      }
+      
+      return { ...data, site_contact: siteContact, facility_manager_contact: facilityManagerContact };
     },
   });
 
@@ -794,47 +806,82 @@ export default function ServiceOrderDetails() {
               <Separator />
 
               {/* Contact Section */}
-              {(() => {
-                const contact = (order as any).contacts;
-                return (
-                <>
-                  <div className="text-xs font-medium text-muted-foreground">Contact</div>
-                  {contact ? (
+            {(() => {
+              const siteContact = (order as any).site_contact;
+              const facilityManagerContact = (order as any).facility_manager_contact;
+              
+              return (
+                <div className="space-y-4">
+                  {siteContact && (
+                    <>
+                      <div className="text-xs font-medium text-muted-foreground">Site Contact</div>
                       <div className="flex items-start gap-2">
                         <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium">
-                            {contact.first_name} {contact.last_name}
+                            {siteContact.first_name} {siteContact.last_name}
                           </div>
-                          {contact.position && (
-                            <div className="text-xs text-muted-foreground">{contact.position}</div>
+                          {siteContact.position && (
+                            <div className="text-xs text-muted-foreground">{siteContact.position}</div>
                           )}
-                          {contact.email && (
+                          {siteContact.email && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                               <Mail className="h-3 w-3" />
-                              {contact.email}
+                              {siteContact.email}
                             </div>
                           )}
-                          {(contact.phone || contact.mobile) && (
+                          {(siteContact.phone || siteContact.mobile) && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                               <Phone className="h-3 w-3" />
-                              {contact.mobile || contact.phone}
+                              {siteContact.mobile || siteContact.phone}
                             </div>
                           )}
                         </div>
                       </div>
-                  ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => setContactDialogOpen(true)}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Link or Create Contact
-                      </Button>
+                    </>
                   )}
-                </>
+                  
+                  {facilityManagerContact && (
+                    <>
+                      <div className="text-xs font-medium text-muted-foreground">Facility Manager</div>
+                      <div className="flex items-start gap-2">
+                        <User className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">
+                            {facilityManagerContact.first_name} {facilityManagerContact.last_name}
+                          </div>
+                          {facilityManagerContact.position && (
+                            <div className="text-xs text-muted-foreground">{facilityManagerContact.position}</div>
+                          )}
+                          {facilityManagerContact.email && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Mail className="h-3 w-3" />
+                              {facilityManagerContact.email}
+                            </div>
+                          )}
+                          {(facilityManagerContact.phone || facilityManagerContact.mobile) && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Phone className="h-3 w-3" />
+                              {facilityManagerContact.mobile || facilityManagerContact.phone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {!siteContact && !facilityManagerContact && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setContactDialogOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Link or Create Contact
+                    </Button>
+                  )}
+                </div>
               );
             })()}
             </CardContent>

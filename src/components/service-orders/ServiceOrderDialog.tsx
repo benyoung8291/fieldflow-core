@@ -118,6 +118,7 @@ export default function ServiceOrderDialog({
     customer_id: "",
     customer_location_id: "",
     customer_contact_id: "",
+    facility_manager_contact_id: "",
     project_id: "",
     title: "",
     description: "",
@@ -217,13 +218,20 @@ export default function ServiceOrderDialog({
   const autoLinkLocationContacts = async (location: any) => {
     if (!location) return;
 
-    // If site contact exists, set it as the primary contact
-    if (location.site_contact_id && !formData.customer_contact_id) {
-      setFormData(prev => ({ ...prev, customer_contact_id: location.site_contact_id }));
+    // Auto-populate both contacts from the location
+    const updates: any = {};
+    
+    if (location.site_contact_id) {
+      updates.customer_contact_id = location.site_contact_id;
     }
-
-    // Link both contacts to the service order (will be saved when order is submitted)
-    // Store them for later use when creating the order
+    
+    if (location.facility_manager_contact_id) {
+      updates.facility_manager_contact_id = location.facility_manager_contact_id;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+    }
   };
 
   const fetchOrder = async () => {
@@ -274,6 +282,7 @@ export default function ServiceOrderDialog({
           customer_id: orderData.customer_id || "",
           customer_location_id: orderData.customer_location_id || "",
           customer_contact_id: orderData.customer_contact_id || "",
+          facility_manager_contact_id: orderData.facility_manager_contact_id || "",
           project_id: orderData.project_id || "",
           title: orderData.title || "",
           description: orderData.description || "",
@@ -323,6 +332,7 @@ export default function ServiceOrderDialog({
       customer_id: "",
       customer_location_id: "",
       customer_contact_id: "",
+      facility_manager_contact_id: "",
       project_id: "",
       title: "",
       description: "",
@@ -552,6 +562,7 @@ export default function ServiceOrderDialog({
         customer_id: formData.customer_id,
         customer_location_id: formData.customer_location_id || null,
         customer_contact_id: formData.customer_contact_id || null,
+        facility_manager_contact_id: formData.facility_manager_contact_id || null,
         project_id: formData.project_id || null,
         title: formData.title,
         description: formData.description,
@@ -829,7 +840,7 @@ export default function ServiceOrderDialog({
                   <FieldPresenceWrapper fieldName="customer_contact_id" onlineUsers={onlineUsers}>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="customer_contact_id">Contact</Label>
+                        <Label htmlFor="customer_contact_id">Site Contact</Label>
                         {formData.customer_id && (
                           <Button
                             type="button"
@@ -852,7 +863,7 @@ export default function ServiceOrderDialog({
                         disabled={!formData.customer_id || contacts.length === 0}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select contact" />
+                          <SelectValue placeholder="Select site contact" />
                         </SelectTrigger>
                         <SelectContent>
                           {contacts.map((contact) => (
@@ -866,34 +877,61 @@ export default function ServiceOrderDialog({
                     </div>
                   </FieldPresenceWrapper>
 
-                  {settings?.projects_service_orders_integration && (
-                    <FieldPresenceWrapper fieldName="project_id" onlineUsers={onlineUsers}>
-                      <div className="space-y-2">
-                        <Label htmlFor="project_id">Project (Optional)</Label>
-                        <Select 
-                          value={formData.project_id} 
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, project_id: value });
-                            setCurrentField("project_id");
-                            updateField("project_id");
-                          }}
-                          disabled={!formData.customer_id || projects.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select project" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {projects.map((project) => (
-                              <SelectItem key={project.id} value={project.id}>
-                                {project.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </FieldPresenceWrapper>
-                  )}
+                  <FieldPresenceWrapper fieldName="facility_manager_contact_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="facility_manager_contact_id">Facility Manager</Label>
+                      <Select 
+                        value={formData.facility_manager_contact_id} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, facility_manager_contact_id: value });
+                          setCurrentField("facility_manager_contact_id");
+                          updateField("facility_manager_contact_id");
+                        }}
+                        disabled={!formData.customer_id || contacts.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select facility manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contacts.map((contact) => (
+                            <SelectItem key={contact.id} value={contact.id}>
+                              {contact.first_name} {contact.last_name}
+                              {contact.email && ` (${contact.email})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
                 </div>
+
+                {settings?.projects_service_orders_integration && (
+                  <FieldPresenceWrapper fieldName="project_id" onlineUsers={onlineUsers}>
+                    <div className="space-y-2">
+                      <Label htmlFor="project_id">Project (Optional)</Label>
+                      <Select 
+                        value={formData.project_id} 
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, project_id: value });
+                          setCurrentField("project_id");
+                          updateField("project_id");
+                        }}
+                        disabled={!formData.customer_id || projects.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </FieldPresenceWrapper>
+                )}
 
                 <FieldPresenceWrapper fieldName="title" onlineUsers={onlineUsers}>
                   <div className="space-y-2">

@@ -234,12 +234,31 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
         return;
       }
 
+      // Get contacts from selected location
+      let siteContactId = null;
+      let facilityManagerContactId = null;
+      
+      if (formData.location_id) {
+        const { data: location } = await supabase
+          .from('customer_locations')
+          .select('site_contact_id, facility_manager_contact_id')
+          .eq('id', formData.location_id)
+          .single();
+        
+        if (location) {
+          siteContactId = location.site_contact_id;
+          facilityManagerContactId = location.facility_manager_contact_id;
+        }
+      }
+
       // Create service order
       const { data: serviceOrder, error: orderError } = await supabase
         .from('service_orders' as any)
         .insert({
           customer_id: formData.customer_id,
-          location_id: formData.location_id || null,
+          customer_location_id: formData.location_id || null,
+          customer_contact_id: siteContactId,
+          facility_manager_contact_id: facilityManagerContactId,
           title: formData.title,
           description: formData.description,
           preferred_date: formData.preferred_date || null,
