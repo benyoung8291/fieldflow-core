@@ -22,6 +22,9 @@ import NotificationCenter from "@/components/notifications/NotificationCenter";
 import { IssueReportDialog } from "@/components/common/IssueReportDialog";
 import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
 import { APP_VERSION } from "@/lib/version";
+import { usePermissions } from "@/hooks/usePermissions";
+import { getRouteModule } from "@/config/routePermissions";
+import { useMemo } from "react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -40,6 +43,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     return saved === 'true';
   });
   const { menuItems, isLoading: menuLoading } = useCustomMenu();
+  const { canView, isLoading: permissionsLoading } = usePermissions();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('expandedMenuFolders');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -86,6 +90,24 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
   const handleNavigate = (path: string) => {
     navigate(path);
   };
+
+  // Filter menu items based on permissions
+  const filteredMenuItems = useMemo(() => {
+    if (permissionsLoading) return menuItems;
+    
+    return menuItems.filter(item => {
+      const module = getRouteModule(item.path || "");
+      if (!module) return true; // Always show items without module requirement
+      return canView(module);
+    }).map(item => ({
+      ...item,
+      children: item.children?.filter((child: any) => {
+        const module = getRouteModule(child.path || "");
+        if (!module) return true;
+        return canView(module);
+      }) || []
+    }));
+  }, [menuItems, canView, permissionsLoading]);
 
   const renderMenuContent = () => {
     const renderMenuItem = (item: any) => {
@@ -243,7 +265,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     return (
       <TooltipProvider>
         <div className="space-y-1">
-          {menuItems.map((item) => renderMenuItem(item))}
+          {filteredMenuItems.map((item) => renderMenuItem(item))}
         </div>
       </TooltipProvider>
     );

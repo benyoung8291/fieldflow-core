@@ -23,6 +23,17 @@ const modules = [
   { key: "invoices", label: "Invoices", description: "Invoice creation and management" },
   { key: "user_management", label: "User Management", description: "User accounts and roles" },
   { key: "integrations", label: "Integrations", description: "Third-party integrations" },
+  { key: "helpdesk", label: "Help Desk", description: "Ticket management and support" },
+  { key: "purchase_orders", label: "Purchase Orders", description: "PO creation and approval" },
+  { key: "suppliers", label: "Suppliers", description: "Vendor and supplier management" },
+  { key: "timesheets", label: "Timesheets", description: "Time tracking and approval" },
+  { key: "tasks", label: "Tasks", description: "Task assignment and tracking" },
+  { key: "field_reports", label: "Field Reports", description: "On-site reporting and documentation" },
+  { key: "contacts", label: "Contacts", description: "Contact management and CRM" },
+  { key: "ap_invoices", label: "AP Invoices", description: "Accounts payable invoice processing" },
+  { key: "workflows", label: "Workflows", description: "Automation and process flows" },
+  { key: "knowledge_base", label: "Knowledge Base", description: "Documentation and articles" },
+  { key: "reports", label: "Reports", description: "Financial and operational reports" },
 ];
 
 const roles = [
@@ -30,7 +41,9 @@ const roles = [
   { key: "management", label: "Management", description: "Strategic oversight and high-level approvals across the organization", color: "destructive" },
   { key: "supervisor", label: "Supervisor", description: "Manage teams, approve requests, and oversee operations", color: "default" },
   { key: "worker", label: "Worker", description: "Execute assigned tasks and update records", color: "secondary" },
-  { key: "viewer", label: "Viewer", description: "Read-only access to assigned modules", color: "outline" },
+  { key: "accountant", label: "Accountant", description: "Financial management and reporting", color: "default" },
+  { key: "warehouse_manager", label: "Warehouse Manager", description: "Inventory and warehouse operations", color: "default" },
+  { key: "subcontractor", label: "Subcontractor", description: "External contractor access", color: "outline" },
 ];
 
 const permissions = ["view", "create", "edit", "delete", "approve", "export"];

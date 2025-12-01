@@ -9306,6 +9306,17 @@ export type Database = {
         | "analytics"
         | "settings"
         | "price_book"
+        | "helpdesk"
+        | "purchase_orders"
+        | "suppliers"
+        | "timesheets"
+        | "tasks"
+        | "field_reports"
+        | "contacts"
+        | "ap_invoices"
+        | "workflows"
+        | "knowledge_base"
+        | "reports"
       app_role: "tenant_admin" | "supervisor" | "manager" | "user"
       appointment_status:
         | "draft"
@@ -9483,6 +9494,17 @@ export const Constants = {
         "analytics",
         "settings",
         "price_book",
+        "helpdesk",
+        "purchase_orders",
+        "suppliers",
+        "timesheets",
+        "tasks",
+        "field_reports",
+        "contacts",
+        "ap_invoices",
+        "workflows",
+        "knowledge_base",
+        "reports",
       ],
       app_role: ["tenant_admin", "supervisor", "manager", "user"],
       appointment_status: [

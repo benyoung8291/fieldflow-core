@@ -16,9 +16,19 @@ export type Module =
   | "price_book"
   | "expenses"
   | "invoices"
-  | "reports"
+  | "user_management"
   | "integrations"
-  | "user_management";
+  | "helpdesk"
+  | "purchase_orders"
+  | "suppliers"
+  | "timesheets"
+  | "tasks"
+  | "field_reports"
+  | "contacts"
+  | "ap_invoices"
+  | "workflows"
+  | "knowledge_base"
+  | "reports";
 
 export type Permission = "view" | "create" | "edit" | "delete" | "approve" | "export" | "import";
 
