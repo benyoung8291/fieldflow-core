@@ -868,9 +868,12 @@ export default function ServiceOrderDialog({
 
                 <div className={`grid gap-4 ${settings?.projects_service_orders_integration ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <FieldPresenceWrapper fieldName="customer_contact_id" onlineUsers={onlineUsers}>
-                    <div className="space-y-2">
+                    <div className="space-y-2 p-3 rounded-lg border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/20">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="customer_contact_id">Site Contact</Label>
+                        <Label htmlFor="customer_contact_id" className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Site</Badge>
+                          Contact
+                        </Label>
                         {formData.customer_id && (
                           <Button
                             type="button"
@@ -898,18 +901,26 @@ export default function ServiceOrderDialog({
                         <SelectContent>
                           {contacts.map((contact) => (
                             <SelectItem key={contact.id} value={contact.id}>
-                              {contact.first_name} {contact.last_name}
-                              {contact.email && ` (${contact.email})`}
+                              <div className="flex items-center gap-2">
+                                <span>{contact.first_name} {contact.last_name}</span>
+                                {contact.email && <span className="text-xs text-muted-foreground">({contact.email})</span>}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">Primary on-site contact for this service</p>
                     </div>
                   </FieldPresenceWrapper>
 
                   <FieldPresenceWrapper fieldName="facility_manager_contact_id" onlineUsers={onlineUsers}>
-                    <div className="space-y-2">
-                      <Label htmlFor="facility_manager_contact_id">Facility Manager</Label>
+                    <div className="space-y-2 p-3 rounded-lg border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-950/20">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="facility_manager_contact_id" className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">Facility</Badge>
+                          Manager
+                        </Label>
+                      </div>
                       <Select 
                         value={formData.facility_manager_contact_id} 
                         onValueChange={(value) => {
@@ -925,12 +936,15 @@ export default function ServiceOrderDialog({
                         <SelectContent>
                           {contacts.map((contact) => (
                             <SelectItem key={contact.id} value={contact.id}>
-                              {contact.first_name} {contact.last_name}
-                              {contact.email && ` (${contact.email})`}
+                              <div className="flex items-center gap-2">
+                                <span>{contact.first_name} {contact.last_name}</span>
+                                {contact.email && <span className="text-xs text-muted-foreground">({contact.email})</span>}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">Building/facility management contact</p>
                     </div>
                   </FieldPresenceWrapper>
                 </div>
