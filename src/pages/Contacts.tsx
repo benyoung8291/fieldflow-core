@@ -164,7 +164,6 @@ export default function Contacts() {
               Add New Contact
             </PermissionButton>
           </div>
-          </div>
         </div>
 
         {/* Search */}
