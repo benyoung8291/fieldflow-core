@@ -45,7 +45,7 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
         invoice: "id, invoice_number, customer:customers(name)",
         project: "id, name, customer:customers(name)",
         task: "id, title, description",
-        appointment: "id, title, description, customer:customers(name)",
+        appointment: "id, title, description, start_time",
       };
 
       const tableMap: Record<string, string> = {
@@ -255,7 +255,10 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
     if (documentType === "invoice") return `${doc?.invoice_number || ""}${customerName}`;
     if (documentType === "project") return `${doc?.name || ""}${customerName}`;
     if (documentType === "task") return doc?.title || "";
-    if (documentType === "appointment") return `${doc?.title || ""}${customerName}`;
+    if (documentType === "appointment") {
+      const startTime = doc?.start_time ? new Date(doc.start_time).toLocaleDateString() : "";
+      return `${doc?.title || ""}${startTime ? ` - ${startTime}` : ""}`;
+    }
     return "";
   };
 

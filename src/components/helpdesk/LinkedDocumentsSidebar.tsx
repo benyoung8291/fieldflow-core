@@ -49,6 +49,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
   const [showContactLink, setShowContactLink] = useState(false);
   const [showSupplierLink, setShowSupplierLink] = useState(false);
   const [showLeadLink, setShowLeadLink] = useState(false);
+  const [showLocationLink, setShowLocationLink] = useState(false);
   const [showDocLinks, setShowDocLinks] = useState<Record<string, boolean>>({});
 
   const { data: linkedDocs } = useQuery({
@@ -144,6 +145,55 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     },
   });
 
+  const autoLinkFromMarkupsMutation = useMutation({
+    mutationFn: async () => {
+      // Get floor plan from ticket markups
+      const { data: markup } = await supabase
+        .from("ticket_markups")
+        .select("floor_plan_id")
+        .eq("ticket_id", ticketId)
+        .limit(1)
+        .maybeSingle();
+
+      if (!markup?.floor_plan_id) {
+        throw new Error("No floor plan found for this ticket");
+      }
+
+      // Get location from floor plan
+      const { data: floorPlan } = await supabase
+        .from("floor_plans")
+        .select("customer_location_id")
+        .eq("id", markup.floor_plan_id)
+        .single();
+
+      if (!floorPlan?.customer_location_id) {
+        throw new Error("Floor plan has no location");
+      }
+
+      // Update ticket with location
+      const { error } = await supabase
+        .from("helpdesk_tickets")
+        .update({ location_id: floorPlan.customer_location_id })
+        .eq("id", ticketId);
+
+      if (error) throw error;
+
+      return floorPlan.customer_location_id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
+      toast({ title: "Location auto-linked from floor plan" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to auto-link location",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateTicketLinkMutation = useMutation({
     mutationFn: async ({ field, value }: { field: string; value: string | null }) => {
       const updates: any = { [field]: value };
@@ -176,6 +226,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
       setShowContactLink(false);
       setShowSupplierLink(false);
       setShowLeadLink(false);
+      setShowLocationLink(false);
     },
     onError: (error: any) => {
       console.error("Update link error:", error);
@@ -249,6 +300,19 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     enabled: showLeadLink,
   });
 
+  const { data: locations } = useQuery({
+    queryKey: ["customer-locations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customer_locations")
+        .select("id, name, address, customer:customers(name)")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: showLocationLink,
+  });
+
   const groupedDocs = linkedDocs?.reduce((acc, doc) => {
     if (!acc[doc.document_type]) {
       acc[doc.document_type] = [];
@@ -257,6 +321,22 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     return acc;
   }, {} as Record<string, any[]>) || {};
 
+  // Fetch location data if ticket has location_id
+  const { data: ticketLocation } = useQuery({
+    queryKey: ["ticket-location", ticket?.location_id],
+    queryFn: async () => {
+      if (!ticket?.location_id) return null;
+      const { data, error } = await supabase
+        .from("customer_locations")
+        .select("id, name, address, customer:customers(name)")
+        .eq("id", ticket.location_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!ticket?.location_id,
+  });
+
   // Calculate total linked items count
   const totalLinkedCount = useMemo(() => {
     let count = 0;
@@ -264,10 +344,10 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
     if (ticket?.contact) count++;
     if (ticket?.supplier) count++;
     if (ticket?.lead) count++;
-    if (ticket?.appointment?.location) count++; // Add location
+    if (ticketLocation) count++;
     if (linkedDocs) count += linkedDocs.length;
     return count;
-  }, [ticket, linkedDocs]);
+  }, [ticket, ticketLocation, linkedDocs]);
 
   const handleDocumentClick = (docType: string, docId: string) => {
     setSelectedDocument({ type: docType, id: docId });
@@ -332,7 +412,7 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                   ticket?.contact && 'Contact', 
                   ticket?.supplier && 'Supplier',
                   ticket?.lead && 'Lead',
-                  ticket?.appointment?.location && 'Location',
+                  ticketLocation && 'Location',
                   linkedDocs && linkedDocs.length > 0 && `${linkedDocs.length} doc${linkedDocs.length === 1 ? '' : 's'}`
                 ].filter(Boolean).join(' · ')}
               </div>
@@ -604,10 +684,10 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
               </div>
             </div>
 
-            {/* Location Card - NEW */}
+            {/* Location Card */}
             <div className={cn(
               "group relative overflow-hidden rounded-xl border transition-all duration-200",
-              ticket?.appointment?.location 
+              ticketLocation 
                 ? "bg-gradient-to-br from-background to-primary/5 border-primary/30 shadow-sm hover:shadow-md hover:border-primary/50" 
                 : "bg-card border-border hover:border-primary/20 hover:shadow-sm"
             )}>
@@ -616,24 +696,76 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                   <div className="flex items-center gap-2.5">
                     <div className={cn(
                       "flex items-center justify-center h-8 w-8 rounded-lg transition-colors",
-                      ticket?.appointment?.location ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                      ticketLocation ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
                     )}>
                       <MapPin className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-semibold">Location</span>
                   </div>
+                  {ticket?.pipeline?.name === "Requests" && !ticketLocation && (
+                    <Button 
+                      variant="ghost"
+                      size="sm" 
+                      className="h-7 px-2.5 text-xs font-medium"
+                      onClick={() => autoLinkFromMarkupsMutation.mutate()}
+                      disabled={autoLinkFromMarkupsMutation.isPending}
+                    >
+                      Auto-Link
+                    </Button>
+                  )}
+                  {!ticket?.pipeline?.name?.includes("Requests") && (
+                    <Button 
+                      variant={showLocationLink ? "secondary" : "ghost"}
+                      size="sm" 
+                      className="h-7 px-2.5 text-xs font-medium"
+                      onClick={() => setShowLocationLink(!showLocationLink)}
+                    >
+                      {showLocationLink ? "Cancel" : ticketLocation ? "Change" : "+ Link"}
+                    </Button>
+                  )}
                 </div>
                 
-                {ticket?.appointment?.location ? (
-                  <div className="p-2 rounded-lg bg-background/50">
-                    <p className="text-sm font-medium text-foreground">{ticket.appointment.location.name}</p>
-                    {ticket.appointment.location.address && (
-                      <p className="text-xs text-muted-foreground mt-1">{ticket.appointment.location.address}</p>
-                    )}
+                {showLocationLink ? (
+                  <SelectWithSearch
+                    value={ticket?.location_id || ""}
+                    onValueChange={(value) => {
+                      updateTicketLinkMutation.mutate({ field: "location_id", value: value || null });
+                    }}
+                    options={[
+                      { value: "", label: "None" },
+                      ...(locations?.map((location) => ({
+                        value: location.id,
+                        label: `${location.name}${location.customer?.name ? ` - ${location.customer.name}` : ''}`,
+                      })) || [])
+                    ]}
+                    placeholder="Select location..."
+                    searchPlaceholder="Search locations..."
+                  />
+                ) : ticketLocation ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{ticketLocation.name}</p>
+                      {ticketLocation.address && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{ticketLocation.address}</p>
+                      )}
+                      {ticketLocation.customer?.name && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{ticketLocation.customer.name}</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => updateTicketLinkMutation.mutate({ field: "location_id", value: null })}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Link this request to an appointment to see its location
+                    {ticket?.pipeline?.name === "Requests" 
+                      ? "Click Auto-Link to link location from floor plan markups" 
+                      : "Link a location to this ticket"}
                   </p>
                 )}
               </div>
