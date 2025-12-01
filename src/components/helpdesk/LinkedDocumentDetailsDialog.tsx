@@ -41,7 +41,7 @@ export function LinkedDocumentDetailsDialog({
         invoice: "*, customer:customers(name)",
         project: "*, customer:customers(name)",
         task: "*",
-        appointment: "*, service_order:service_orders(work_order_number, customer:customers(name)), assigned_user:profiles!appointments_assigned_to_fkey(first_name, last_name)",
+        appointment: "*, service_order:service_orders(work_order_number, customer:customers(name))",
       };
 
       const tableName = tableMap[documentType];
@@ -54,6 +54,23 @@ export function LinkedDocumentDetailsDialog({
         .maybeSingle();
 
       if (error) throw error;
+      
+      // Fetch assigned user separately for appointments
+      if (data && documentType === "appointment") {
+        const appointmentData = data as any;
+        if (appointmentData.assigned_to) {
+          const { data: assignedUser } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', appointmentData.assigned_to)
+            .maybeSingle();
+          
+          if (assignedUser) {
+            appointmentData.assigned_user = assignedUser;
+          }
+        }
+      }
+      
       return data as any;
     },
     enabled: open && !!documentType && !!documentId,
