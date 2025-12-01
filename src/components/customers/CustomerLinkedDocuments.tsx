@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatCurrency } from "@/lib/utils";
 
 interface CustomerLinkedDocumentsProps {
   customerId: string;
@@ -261,7 +262,7 @@ export default function CustomerLinkedDocuments({ customerId }: CustomerLinkedDo
           <div>
             <div className="font-medium">{quote.quote_number}</div>
             <div className="text-sm text-muted-foreground">
-              ${quote.total_amount?.toFixed(2)} • {formatDistanceToNow(new Date(quote.created_at), { addSuffix: true })}
+              {formatCurrency(quote.total_amount)} • {formatDistanceToNow(new Date(quote.created_at), { addSuffix: true })}
             </div>
             <div className="flex gap-2 mt-1">
               {getStatusBadge(quote.status)}
@@ -279,7 +280,7 @@ export default function CustomerLinkedDocuments({ customerId }: CustomerLinkedDo
           <div>
             <div className="font-medium">{invoice.invoice_number}</div>
             <div className="text-sm text-muted-foreground">
-              ${invoice.total_amount?.toFixed(2)} • {formatDistanceToNow(new Date(invoice.invoice_date), { addSuffix: true })}
+              {formatCurrency(invoice.total_amount)} • {formatDistanceToNow(new Date(invoice.invoice_date), { addSuffix: true })}
             </div>
             <div className="flex gap-2 mt-1">
               {getStatusBadge(invoice.status)}

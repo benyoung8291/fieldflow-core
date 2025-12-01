@@ -2,6 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, addDays, addWeeks, addMonths, addYears, isBefore } from "date-fns";
 import { Calendar } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface FutureServiceOrdersTabProps {
   contractLineItems: any[];
@@ -153,7 +154,7 @@ export function FutureServiceOrdersTab({ contractLineItems }: FutureServiceOrder
               </TableCell>
               <TableCell>{order.estimatedHours || '-'}h</TableCell>
               <TableCell className="text-right font-medium">
-                ${order.amount.toFixed(2)}
+                {formatCurrency(order.amount)}
               </TableCell>
             </TableRow>
           ))}

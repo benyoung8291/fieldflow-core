@@ -10,6 +10,7 @@ import { Loader2, Plus, Trash2, Paperclip } from "lucide-react";
 import QuickLocationDialog from "@/components/customers/QuickLocationDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -561,7 +562,7 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm items-center gap-2">
                 <span className="text-muted-foreground">Tax Rate (%):</span>
@@ -577,11 +578,11 @@ export function InlineServiceOrderForm({ parsedData, ticket, onSuccess, onCancel
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax Amount:</span>
-                <span className="font-medium">${tax_amount.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(tax_amount)}</span>
               </div>
               <div className="flex justify-between text-base font-semibold pt-1 border-t">
                 <span>Total:</span>
-                <span>${total_amount.toFixed(2)}</span>
+                <span>{formatCurrency(total_amount)}</span>
               </div>
             </div>
           </div>
