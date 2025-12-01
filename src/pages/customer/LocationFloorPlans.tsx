@@ -605,7 +605,7 @@ export default function LocationFloorPlans() {
   }
 
   return (
-    <CustomerPortalLayout>
+    <CustomerPortalLayout fullWidth={!!selectedPlan}>
       <div className="space-y-6 pb-20 md:pb-0">
         <div className="flex items-center gap-4">
           <Button
@@ -654,73 +654,74 @@ export default function LocationFloorPlans() {
           )
         ) : (
           <>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold truncate">
+                {selectedFloorPlan?.name}
+              </h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsFullscreen(true)}
+                  title="Focus Mode"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedPlan(null);
+                    setMarkups([]);
+                  }}
+                >
+                  Back to Plans
+                </Button>
+                <Button
+                  onClick={() => {
+                    const incompleteMarkups = markups.filter(m => !m.notes?.trim());
+                    if (incompleteMarkups.length > 0) {
+                      toast.error("Please add a description to all markups");
+                      return;
+                    }
+                    setTaskTitle("Add to next service");
+                    setTaskDescription("");
+                    setShowCreateDialog(true);
+                  }}
+                  disabled={
+                    markups.length === 0 || 
+                    uploadingPhotos.size > 0 || 
+                    profileLoading ||
+                    !profile?.tenant_id || 
+                    !profile?.customer_id
+                  }
+                >
+                  {profileLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : uploadingPhotos.size > 0 ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    `Create Request (${markups.length})`
+                  )}
+                </Button>
+              </div>
+            </div>
+            
             {profileError && (
-              <div className="bg-destructive/10 text-destructive text-sm p-4 rounded-lg mb-4">
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg mb-2">
                 Failed to load profile. Please refresh the page.
               </div>
             )}
             
-            <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-10rem)] rounded-2xl border overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-8rem)] rounded-2xl border overflow-hidden">
               {/* Main Floor Plan Viewer */}
               <ResizablePanel defaultSize={75} minSize={50}>
-                <div className="h-full p-4 flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold truncate">
-                      {selectedFloorPlan?.name}
-                    </h2>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setIsFullscreen(true)}
-                        title="Focus Mode"
-                      >
-                        <Maximize2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedPlan(null);
-                          setMarkups([]);
-                        }}
-                      >
-                        Back to Plans
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          const incompleteMarkups = markups.filter(m => !m.notes?.trim());
-                          if (incompleteMarkups.length > 0) {
-                            toast.error("Please add a description to all markups");
-                            return;
-                          }
-                          setTaskTitle("Add to next service");
-                          setTaskDescription("");
-                          setShowCreateDialog(true);
-                        }}
-                        disabled={
-                          markups.length === 0 || 
-                          uploadingPhotos.size > 0 || 
-                          profileLoading ||
-                          !profile?.tenant_id || 
-                          !profile?.customer_id
-                        }
-                      >
-                        {profileLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Loading...
-                          </>
-                        ) : uploadingPhotos.size > 0 ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          `Create Request (${markups.length})`
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                <div className="h-full p-2 flex flex-col">
                   <div className="flex-1 min-h-0">
                     <FloorPlanViewer
                       pdfUrl={floorPlanUrl || ""}
@@ -739,7 +740,7 @@ export default function LocationFloorPlans() {
               {/* Collapsible Sidebar */}
               <ResizablePanel defaultSize={25} minSize={15} maxSize={40} collapsible collapsedSize={4}>
                 <div className="h-full p-4 overflow-auto">
-                  <h3 className="text-lg font-semibold mb-4">Markups ({markups.length})</h3>
+                  <h3 className="font-semibold mb-4">Markups ({markups.length})</h3>
                   <FloorPlanMarkupList
                     markups={markups}
                     onMarkupUpdate={updateMarkupNote}
