@@ -1196,7 +1196,7 @@ export default function ServiceContractDetails() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Work Order #</TableHead>
+                        <TableHead>Service Order #</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Created</TableHead>
@@ -1205,7 +1205,7 @@ export default function ServiceContractDetails() {
                     <TableBody>
                       {serviceOrders.map((order: any) => (
                         <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/service-orders/${order.id}`)}>
-                          <TableCell className="font-medium">{order.work_order_number}</TableCell>
+                          <TableCell className="font-medium">{order.order_number}</TableCell>
                           <TableCell>{order.description}</TableCell>
                           <TableCell><Badge>{order.status}</Badge></TableCell>
                           <TableCell>{format(parseISO(order.created_at), "PP")}</TableCell>
