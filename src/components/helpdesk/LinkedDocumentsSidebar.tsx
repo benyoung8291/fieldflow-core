@@ -343,8 +343,10 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
         <TabsContent value="documents" className="flex-1 mt-0 p-0 data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:overflow-hidden">
           <ScrollArea className="h-full w-full">
             <div className="p-4 pb-8 space-y-4">
-              {/* AI Thread Summary */}
-              <ThreadSummaryCard ticketId={ticketId} />
+              {/* AI Thread Summary - Only show for non-Requests pipelines */}
+              {ticket?.pipeline?.name !== "Requests" && (
+                <ThreadSummaryCard ticketId={ticketId} />
+              )}
               
               {/* Request Completion Review (only for Requests pipeline) */}
               {ticket?.pipeline?.name === "Requests" && (

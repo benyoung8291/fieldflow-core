@@ -40,14 +40,14 @@ export function MarkupResponsePanel({ markups, ticketId, onResponseSubmitted }: 
   const selectedMarkup = markups.find(m => m.id === selectedMarkupId);
 
   return (
-    <Card className="border-primary/20">
-      <CardHeader>
+    <Card className="border-primary/20 h-full flex flex-col">
+      <CardHeader className="shrink-0">
         <CardTitle className="text-base flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Markup Responses
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1 overflow-auto">
         {markups.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             No markups on this request

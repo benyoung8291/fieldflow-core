@@ -25,8 +25,10 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
           query = supabase.from("service_orders" as any).select(selectFields).order("order_number", { ascending: false });
           break;
         case "appointment":
-          selectFields = "id, title, customer_id";
-          query = supabase.from("appointments").select(selectFields).order("created_at", { ascending: false });
+          selectFields = "id, title, customer_id, start_time";
+          query = supabase.from("appointments").select(selectFields)
+            .in("status", ["draft", "published"])
+            .order("start_time", { ascending: false });
           break;
         case "quote":
           selectFields = "id, quote_number, customer_id";
