@@ -281,10 +281,13 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     );
   };
 
+  // Check if we're on a quote detail page to enable collaborative editing
+  const isQuoteDetailPage = location.pathname.match(/^\/quotes\/[a-f0-9-]+$/);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Remote Cursors Overlay - DISABLED for performance */}
-      {false && !disablePresence && <RemoteCursors />}
+      {/* Remote Cursors - enabled for quote detail pages for collaborative editing */}
+      {isQuoteDetailPage && !disablePresence && <RemoteCursors />}
       
       {/* Sidebar - Desktop only, completely hidden in mobile view */}
       {!isMobile && (

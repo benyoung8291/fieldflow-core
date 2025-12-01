@@ -34,6 +34,7 @@ import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimel
 import ServiceOrderProfitLossCard from "@/components/service-orders/ServiceOrderProfitLossCard";
 import ProjectPurchaseOrdersTab from "@/components/projects/ProjectPurchaseOrdersTab";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -69,6 +70,14 @@ export default function ProjectDetails() {
 
       return { ...data, customer, creator };
     },
+  });
+
+  // Track presence on this project
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "projects",
+    documentName: project?.name ? `Project: ${project.name}` : undefined,
   });
 
   const { data: serviceOrders } = useQuery({
