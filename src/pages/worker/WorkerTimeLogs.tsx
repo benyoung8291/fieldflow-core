@@ -7,6 +7,7 @@ import { Clock, MapPin, Calendar, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
+import { WorkerHeader } from "@/components/worker/WorkerHeader";
 
 const statusConfig = {
   pending: {
@@ -77,11 +78,7 @@ export default function WorkerTimeLogs() {
   return (
     <div ref={containerRef} className="min-h-screen bg-background pb-20">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
-      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3">
-          <h1 className="text-lg font-bold">My Time Logs</h1>
-        </div>
-      </header>
+      <WorkerHeader title="My Time Logs" />
 
       <div className="px-4 pt-4 space-y-3">
 

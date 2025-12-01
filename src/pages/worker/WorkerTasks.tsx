@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 import { statusConfig, priorityConfig, isTaskOverdue } from "@/lib/taskUtils";
+import { WorkerHeader } from "@/components/worker/WorkerHeader";
 
 export default function WorkerTasks() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -124,11 +125,7 @@ export default function WorkerTasks() {
   return (
     <div ref={containerRef} className="min-h-screen bg-background pb-20">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPulling} />
-      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3">
-          <h1 className="text-lg font-bold">My Tasks</h1>
-        </div>
-      </header>
+      <WorkerHeader title="My Tasks" />
 
       <div className="px-4 pt-4 space-y-4">
         <div className="flex items-center justify-between">

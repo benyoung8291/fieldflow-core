@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AUSTRALIAN_STATES } from '@/lib/constants/australianStates';
-import { ChevronLeft, User, Briefcase, Mail, Phone, Save } from 'lucide-react';
+import { User, Briefcase, Mail, Phone, Save } from 'lucide-react';
+import { WorkerHeader } from "@/components/worker/WorkerHeader";
 import { toast } from 'sonner';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
@@ -142,25 +143,7 @@ export default function WorkerProfile() {
     <div ref={containerRef} className="min-h-screen bg-background pb-32">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       
-      {/* Header */}
-      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/worker/dashboard')}
-              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <p className="text-xs font-medium opacity-90">Settings</p>
-              <h1 className="text-base font-bold">My Profile</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <WorkerHeader title="My Profile" subtitle="Settings" showBack />
 
       <div className="p-4 space-y-4 pb-8">
         {/* Personal Information */}
