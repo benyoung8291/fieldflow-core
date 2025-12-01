@@ -165,8 +165,7 @@ export function FloorPlanCard({ floorPlan, markups }: FloorPlanCardProps) {
       
       <div 
         ref={containerRef}
-        className="relative w-full bg-muted/50 overflow-hidden"
-        style={{ height: "500px" }}
+        className="relative w-full h-full min-h-[400px] bg-muted/50 overflow-hidden"
         onWheel={handleWheel}
       >
         <div

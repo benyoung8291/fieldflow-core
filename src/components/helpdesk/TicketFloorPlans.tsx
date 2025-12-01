@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { FloorPlanCard } from "./FloorPlanCard";
 import { MarkupResponsePanel } from "./MarkupResponsePanel";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TicketFloorPlansProps {
   ticketId: string;
@@ -62,24 +64,36 @@ export function TicketFloorPlans({ ticketId }: TicketFloorPlansProps) {
   }, {} as Record<string, any>);
 
   return (
-    <div className="space-y-4">
-      {/* Floor Plans with Markups */}
-      {Object.values(floorPlanGroups).map((group: any) => (
-        <FloorPlanCard
-          key={group.floorPlan.id}
-          floorPlan={group.floorPlan}
-          markups={group.markups}
-        />
-      ))}
-
-      {/* Markup Response Panel */}
-      <MarkupResponsePanel
-        markups={markupsData || []}
-        ticketId={ticketId}
-        onResponseSubmitted={() => {
-          // Refetch markups after response submitted
-        }}
-      />
-    </div>
+    <ResizablePanelGroup direction="vertical" className="min-h-[600px]">
+      <ResizablePanel defaultSize={60} minSize={30}>
+        <ScrollArea className="h-full">
+          <div className="space-y-4 p-4">
+            {Object.values(floorPlanGroups).map((group: any) => (
+              <FloorPlanCard
+                key={group.floorPlan.id}
+                floorPlan={group.floorPlan}
+                markups={group.markups}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      </ResizablePanel>
+      
+      <ResizableHandle withHandle />
+      
+      <ResizablePanel defaultSize={40} minSize={20}>
+        <ScrollArea className="h-full">
+          <div className="p-4">
+            <MarkupResponsePanel
+              markups={markupsData || []}
+              ticketId={ticketId}
+              onResponseSubmitted={() => {
+                // Refetch markups after response submitted
+              }}
+            />
+          </div>
+        </ScrollArea>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }

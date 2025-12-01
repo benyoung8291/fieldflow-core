@@ -61,10 +61,40 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
       const selectColumns = selectMap[documentType];
       if (!tableName || !selectColumns) return [];
 
-      const { data, error } = await supabase
+      const searchFieldMap: Record<string, string> = {
+        service_order: "work_order_number",
+        appointment: "title",
+        quote: "quote_number",
+        invoice: "invoice_number",
+        project: "name",
+        task: "title",
+      };
+
+      let query = supabase
         .from(tableName as any)
-        .select(selectColumns)
-        .limit(20);
+        .select(selectColumns);
+
+      // Add search filter
+      if (searchQuery) {
+        const searchField = searchFieldMap[documentType];
+        if (searchField) {
+          query = query.ilike(searchField, `%${searchQuery}%`);
+        }
+      }
+
+      // For appointments, filter to show relevant status and order by start_time
+      if (documentType === "appointment") {
+        query = query
+          .in("status", ["draft", "published"])
+          .order("start_time", { ascending: false });
+      } else {
+        // Order others by creation or relevant field
+        query = query.order("created_at", { ascending: false });
+      }
+
+      query = query.limit(50);
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return data || [];
