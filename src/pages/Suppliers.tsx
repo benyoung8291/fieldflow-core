@@ -12,6 +12,7 @@ import { SupplierImportDialog } from "@/components/suppliers/SupplierImportDialo
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { usePagination } from "@/hooks/usePagination";
+import { PermissionButton } from "@/components/permissions";
 import {
   Table,
   TableBody,
@@ -170,13 +171,16 @@ export default function Suppliers() {
             <p className="text-muted-foreground">Manage your suppliers</p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <PermissionButton
+              module="suppliers"
+              permission="import"
               variant="outline" 
               onClick={() => setImportDialogOpen(true)}
+              hideIfNoPermission={true}
             >
               <Upload className="mr-2 h-4 w-4" />
               Import CSV
-            </Button>
+            </PermissionButton>
 
             <Button 
               variant="outline" 
@@ -187,10 +191,15 @@ export default function Suppliers() {
               {validatingAbns ? "Validating..." : "Validate All ABNs"}
             </Button>
 
-            <Button onClick={handleCreateVendor}>
+            <PermissionButton
+              module="suppliers"
+              permission="create"
+              onClick={handleCreateVendor}
+              hideIfNoPermission={true}
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Supplier
-            </Button>
+            </PermissionButton>
           </div>
         </div>
 

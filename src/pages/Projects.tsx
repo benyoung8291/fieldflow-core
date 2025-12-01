@@ -17,6 +17,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
 import { useGenericPresence } from "@/hooks/useGenericPresence";
+import { PermissionButton } from "@/components/permissions";
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -117,10 +118,15 @@ export default function Projects() {
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
             <p className="text-muted-foreground">Manage and track your projects</p>
           </div>
-          <Button onClick={handleCreateProject}>
+          <PermissionButton
+            module="projects"
+            permission="create"
+            onClick={handleCreateProject}
+            hideIfNoPermission={true}
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Project
-          </Button>
+          </PermissionButton>
         </div>
 
         <div className="relative">

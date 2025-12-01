@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 export default function Leads() {
   const navigate = useNavigate();
@@ -134,10 +135,15 @@ export default function Leads() {
             <h1 className="text-3xl font-bold">Leads</h1>
             <p className="text-muted-foreground">Manage potential customers</p>
           </div>
-          <Button onClick={() => { setSelectedLeadId(undefined); setDialogOpen(true); }}>
+          <PermissionButton
+            module="leads"
+            permission="create"
+            onClick={() => { setSelectedLeadId(undefined); setDialogOpen(true); }}
+            hideIfNoPermission={true}
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Lead
-          </Button>
+          </PermissionButton>
         </div>
 
         {stats && !isMobile && (
@@ -310,7 +316,9 @@ export default function Leads() {
                       {lead.source || "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
+                      <PermissionButton
+                        module="leads"
+                        permission="edit"
                         variant="outline"
                         size="sm"
                         onClick={(e) => {
@@ -318,9 +326,10 @@ export default function Leads() {
                           setSelectedLeadId(lead.id);
                           setDialogOpen(true);
                         }}
+                        hideIfNoPermission={true}
                       >
                         Edit
-                      </Button>
+                      </PermissionButton>
                     </TableCell>
                   </TableRow>
                 ))}

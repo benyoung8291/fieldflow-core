@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
 import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
+import { PermissionButton } from "@/components/permissions";
 
 export default function Contacts() {
   const navigate = useNavigate();
@@ -153,10 +154,16 @@ export default function Contacts() {
               <Archive className="h-4 w-4 mr-2" />
               {showArchived ? "Show Active" : "Show Archived"}
             </Button>
-            <Button onClick={handleAdd}>
+            <PermissionButton
+              module="contacts"
+              permission="create"
+              onClick={handleAdd}
+              hideIfNoPermission={true}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add New Contact
-            </Button>
+            </PermissionButton>
+          </div>
           </div>
         </div>
 

@@ -26,6 +26,7 @@ import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicat
 import { usePagination } from "@/hooks/usePagination";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
+import { PermissionButton } from "@/components/permissions";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",

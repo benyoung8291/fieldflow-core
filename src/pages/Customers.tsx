@@ -21,6 +21,7 @@ import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicat
 import { usePagination } from "@/hooks/usePagination";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -182,14 +183,27 @@ export default function Customers() {
             <PresenceIndicator users={onlineUsers} />
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" className="gap-2">
+            <PermissionButton
+              module="customers"
+              permission="import"
+              onClick={() => setIsImportDialogOpen(true)}
+              variant="outline"
+              className="gap-2"
+              hideIfNoPermission={true}
+            >
               <Upload className="h-4 w-4" />
               Import CSV
-            </Button>
-            <Button onClick={handleAddNew} className="gap-2">
+            </PermissionButton>
+            <PermissionButton
+              module="customers"
+              permission="create"
+              onClick={handleAddNew}
+              className="gap-2"
+              hideIfNoPermission={true}
+            >
               <Plus className="h-4 w-4" />
               New Customer
-            </Button>
+            </PermissionButton>
           </div>
         </div>
 
@@ -397,16 +411,19 @@ export default function Customers() {
                           )}
                         </td>
                         <td className="py-4 px-4">
-                          <Button
+                          <PermissionButton
+                            module="customers"
+                            permission="edit"
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEdit(customer);
                             }}
+                            hideIfNoPermission={true}
                           >
                             Edit
-                          </Button>
+                          </PermissionButton>
                         </td>
                       </tr>
                     ))}

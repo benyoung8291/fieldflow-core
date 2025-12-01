@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { ExpenseDialog } from "@/components/expenses/ExpenseDialog";
 import { usePagination } from "@/hooks/usePagination";
+import { PermissionButton } from "@/components/permissions";
 
 export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,10 +98,15 @@ export default function Expenses() {
               Manage and track business expenses
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <PermissionButton
+            module="expenses"
+            permission="create"
+            onClick={() => setIsDialogOpen(true)}
+            hideIfNoPermission={true}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Expense
-          </Button>
+          </PermissionButton>
         </div>
 
         <Card className="p-4">

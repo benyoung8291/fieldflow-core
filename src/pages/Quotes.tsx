@@ -35,6 +35,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
 import { useGenericPresence } from "@/hooks/useGenericPresence";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -343,10 +344,15 @@ export default function Quotes() {
             <h1 className="text-3xl font-bold text-foreground">Quotes & Estimates</h1>
             <p className="text-muted-foreground">Create and manage customer quotes</p>
           </div>
-          <Button onClick={handleCreateQuote}>
+          <PermissionButton
+            module="quotes"
+            permission="create"
+            onClick={handleCreateQuote}
+            hideIfNoPermission={true}
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Quote
-          </Button>
+          </PermissionButton>
         </div>
 
         {!isMobile && (
@@ -451,10 +457,15 @@ export default function Quotes() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">No quotes found</p>
-              <Button onClick={handleCreateQuote}>
+              <PermissionButton
+                module="quotes"
+                permission="create"
+                onClick={handleCreateQuote}
+                hideIfNoPermission={true}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Quote
-              </Button>
+              </PermissionButton>
             </CardContent>
           </Card>
         ) : isMobile ? (
@@ -538,22 +549,28 @@ export default function Quotes() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => handleDuplicate(quote, e)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => handleArchive(quote, e)}>
-                              <Archive className="mr-2 h-4 w-4" />
-                              {quote.is_archived ? "Unarchive" : "Archive"}
-                            </DropdownMenuItem>
-                            {quote.status === "draft" && (
-                              <DropdownMenuItem 
-                                onClick={(e) => handleDeleteClick(quote, e)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                            <PermissionGate module="quotes" permission="create">
+                              <DropdownMenuItem onClick={(e) => handleDuplicate(quote, e)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplicate
                               </DropdownMenuItem>
+                            </PermissionGate>
+                            <PermissionGate module="quotes" permission="edit">
+                              <DropdownMenuItem onClick={(e) => handleArchive(quote, e)}>
+                                <Archive className="mr-2 h-4 w-4" />
+                                {quote.is_archived ? "Unarchive" : "Archive"}
+                              </DropdownMenuItem>
+                            </PermissionGate>
+                            {quote.status === "draft" && (
+                              <PermissionGate module="quotes" permission="delete">
+                                <DropdownMenuItem 
+                                  onClick={(e) => handleDeleteClick(quote, e)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </PermissionGate>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

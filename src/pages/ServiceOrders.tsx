@@ -40,6 +40,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useGenericPresence } from "@/hooks/useGenericPresence";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -326,10 +327,16 @@ export default function ServiceOrders() {
           </div>
           <div className="flex items-center gap-3">
             <PresenceIndicator users={onlineUsers} />
-            <Button onClick={handleCreate} className="gap-2">
+            <PermissionButton
+              module="service_orders"
+              permission="create"
+              onClick={handleCreate}
+              className="gap-2"
+              hideIfNoPermission={true}
+            >
               <Plus className="h-4 w-4" />
               New Order
-            </Button>
+            </PermissionButton>
           </div>
         </div>
 

@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import DraggableTaskCard from "@/components/tasks/DraggableTaskCard";
 import CompleteDropZone from "@/components/tasks/CompleteDropZone";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 export default function Tasks() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -1101,13 +1102,18 @@ export default function Tasks() {
                 </Button>
               </div>
             </div>
-            <Button onClick={() => {
-            setSelectedTask(null);
-            setIsDialogOpen(true);
-          }}>
+            <PermissionButton
+              module="tasks"
+              permission="create"
+              onClick={() => {
+                setSelectedTask(null);
+                setIsDialogOpen(true);
+              }}
+              hideIfNoPermission={true}
+            >
               <Plus className="h-4 w-4 mr-2" />
               New Task
-            </Button>
+            </PermissionButton>
           </div>
         </div>
 

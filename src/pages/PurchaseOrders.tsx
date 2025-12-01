@@ -11,6 +11,7 @@ import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderD
 import { useNavigate } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
 import { useQuery } from "@tanstack/react-query";
+import { PermissionButton } from "@/components/permissions";
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
@@ -126,10 +127,15 @@ export default function PurchaseOrders() {
           <h1 className="text-3xl font-bold">Purchase Orders</h1>
           <p className="text-muted-foreground">Manage purchase orders and supplier invoices</p>
         </div>
-        <Button onClick={handleCreateNew}>
+        <PermissionButton
+          module="purchase_orders"
+          permission="create"
+          onClick={handleCreateNew}
+          hideIfNoPermission={true}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Purchase Order
-        </Button>
+        </PermissionButton>
       </div>
 
       <div className="flex items-center gap-4">

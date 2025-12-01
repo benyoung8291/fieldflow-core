@@ -18,6 +18,7 @@ import ImportContractDialog from "@/components/contracts/ImportContractDialog";
 import GenerateServiceOrdersDialog from "@/components/contracts/GenerateServiceOrdersDialog";
 import DashboardLayout from "@/components/DashboardLayout";
 import { FileSpreadsheet } from "lucide-react";
+import { PermissionButton } from "@/components/permissions";
 
 export default function ServiceContracts() {
   const navigate = useNavigate();
@@ -194,26 +195,38 @@ export default function ServiceContracts() {
             <p className="text-muted-foreground">Manage active contracts and forecast revenue</p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <PermissionButton
+              module="service_contracts"
+              permission="create"
               variant="outline" 
               onClick={() => setIsGenerateDialogOpen(true)} 
               className="gap-2"
+              hideIfNoPermission={true}
             >
               <RefreshCw className="h-4 w-4" />
               Generate Orders
-            </Button>
-            <Button 
+            </PermissionButton>
+            <PermissionButton
+              module="service_contracts"
+              permission="import"
               variant="outline" 
               onClick={() => setIsImportDialogOpen(true)} 
               className="gap-2"
+              hideIfNoPermission={true}
             >
               <FileSpreadsheet className="h-4 w-4" />
               Import from Spreadsheet
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            </PermissionButton>
+            <PermissionButton
+              module="service_contracts"
+              permission="create"
+              onClick={() => setIsCreateDialogOpen(true)} 
+              className="gap-2"
+              hideIfNoPermission={true}
+            >
               <Plus className="h-4 w-4" />
               New Contract
-            </Button>
+            </PermissionButton>
           </div>
         </div>
 
