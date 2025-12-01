@@ -19,7 +19,7 @@ type MailboxFolder =
   | "all";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Link2, MessageSquare, BarChart3, Menu, Inbox, Send, FileText, Archive, Trash2, AlertOctagon, Star, FolderOpen, Check } from "lucide-react";
+import { RefreshCw, Filter, Link2, MessageSquare, BarChart3, Menu, Inbox, Send, FileText, Archive, Trash2, AlertOctagon, Star, FolderOpen, Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -286,7 +286,7 @@ export default function HelpDesk() {
     },
   });
 
-  const { data: ticket, error: ticketError } = useQuery({
+  const { data: ticket, error: ticketError, isLoading: isTicketLoading } = useQuery({
     queryKey: ["helpdesk-ticket", selectedTicketId],
     queryFn: async () => {
       if (!selectedTicketId) return null;
@@ -680,7 +680,11 @@ export default function HelpDesk() {
           {/* Middle: Timeline View */}
           <ResizablePanel defaultSize={47} minSize={35} className="relative bg-muted/20">
             {selectedTicketId ? (
-              ticketError || (selectedTicketId && !ticket && !ticketError) ? (
+              selectedTicketId && isTicketLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : ticketError || (selectedTicketId && !ticket) ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center space-y-4 px-8 max-w-md animate-fade-in">
                     <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
