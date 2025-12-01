@@ -89,6 +89,7 @@ export default function CustomerRequests() {
           location:customer_locations(name, customer_location_id)
         `)
         .eq("created_by", user.id)
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
