@@ -113,6 +113,9 @@ export default function HelpDesk() {
     const ticketId = searchParams.get("ticket");
     if (ticketId !== selectedTicketId) {
       if (ticketId) {
+        // Invalidate any stale cache first
+        queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
+        
         // Check if the ticket is archived and enable filter if needed
         const checkAndSelectTicket = async () => {
           const { data: ticketData, error } = await supabase
@@ -137,11 +140,15 @@ export default function HelpDesk() {
           if (ticketData.is_archived) {
             setFilterArchived(true);
           }
+          
+          // Only set selected ticket ID AFTER successful check
+          setSelectedTicketId(ticketId);
         };
         
         checkAndSelectTicket();
+      } else {
+        setSelectedTicketId(null);
       }
-      setSelectedTicketId(ticketId);
     }
   }, [searchParams.get("ticket")]);
 
@@ -311,6 +318,8 @@ export default function HelpDesk() {
   });
 
   const handleSelectTicket = (ticketId: string) => {
+    // Invalidate any stale cache for this specific ticket
+    queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
     // Update URL first - this is the source of truth
     setSearchParams({ ticket: ticketId }, { replace: true });
   };
