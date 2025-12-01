@@ -137,15 +137,30 @@ export function TicketList({
   });
 
   const { data: users } = useQuery({
-    queryKey: ["users-for-assignment"],
+    queryKey: ["users-for-assignment", pipelineId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .order("first_name");
-      if (error) throw error;
-      return data as any[];
+      if (!currentUser) return [];
+
+      if (pipelineId) {
+        // Get only users assigned to this pipeline
+        const { data, error } = await supabase
+          .from("helpdesk_pipeline_users")
+          .select("user_id, profiles:user_id(id, first_name, last_name)")
+          .eq("pipeline_id", pipelineId);
+        
+        if (error) throw error;
+        return data?.map(d => d.profiles).filter(Boolean) as any[];
+      } else {
+        // No pipeline selected - get all users (existing behavior)
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .order("first_name");
+        if (error) throw error;
+        return data as any[];
+      }
     },
+    enabled: !!currentUser,
   });
 
   const archiveTicketMutation = useMutation({
