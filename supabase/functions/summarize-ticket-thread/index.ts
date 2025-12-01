@@ -30,9 +30,20 @@ serve(async (req: Request) => {
       .from("helpdesk_tickets")
       .select("subject, status, priority")
       .eq("id", ticketId)
-      .single();
+      .maybeSingle();
 
-    if (ticketError) throw ticketError;
+    if (ticketError) {
+      console.error("Error fetching ticket:", ticketError);
+      throw new Error("Error fetching ticket");
+    }
+
+    if (!ticket) {
+      console.log("Ticket not found:", ticketId);
+      return new Response(
+        JSON.stringify({ error: "Ticket not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
 
     // Fetch all messages in chronological order
     const { data: messages, error: messagesError } = await supabase
