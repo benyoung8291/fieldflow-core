@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -12,17 +14,22 @@ interface QuickContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: string;
-  onContactCreated: (contactId: string) => void;
+  locationId?: string;
+  assignAsRole?: 'site_contact' | 'facility_manager' | null;
+  onContactCreated: (contactId: string, role?: 'site_contact' | 'facility_manager' | null) => void;
 }
 
 export default function QuickContactDialog({
   open,
   onOpenChange,
   customerId,
+  locationId,
+  assignAsRole,
   onContactCreated,
 }: QuickContactDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'site_contact' | 'facility_manager' | null>(assignAsRole || null);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -32,6 +39,13 @@ export default function QuickContactDialog({
     mobile: "",
     notes: "",
   });
+
+  // Sync selectedRole when assignAsRole prop changes
+  useEffect(() => {
+    if (open) {
+      setSelectedRole(assignAsRole || null);
+    }
+  }, [open, assignAsRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,8 +83,33 @@ export default function QuickContactDialog({
 
       if (error) throw error;
 
-      toast({ title: "Contact created successfully" });
-      onContactCreated(data.id);
+      // If locationId and role are provided, update the location
+      if (locationId && selectedRole) {
+        const updateField = selectedRole === 'site_contact' ? 'site_contact_id' : 'facility_manager_contact_id';
+        const { error: locationError } = await supabase
+          .from("customer_locations")
+          .update({ [updateField]: data.id })
+          .eq("id", locationId);
+
+        if (locationError) {
+          console.error("Error updating location contact:", locationError);
+          // Don't throw - contact was created successfully
+          toast({ 
+            title: "Contact created", 
+            description: "Contact created but couldn't assign role. Please assign manually.",
+            variant: "default" 
+          });
+        } else {
+          toast({ 
+            title: "Contact created and assigned", 
+            description: `${formData.first_name} ${formData.last_name} has been assigned as ${selectedRole === 'site_contact' ? 'Site Contact' : 'Facility Manager'}`
+          });
+        }
+      } else {
+        toast({ title: "Contact created successfully" });
+      }
+
+      onContactCreated(data.id, selectedRole);
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
@@ -94,6 +133,7 @@ export default function QuickContactDialog({
       mobile: "",
       notes: "",
     });
+    setSelectedRole(assignAsRole || null);
   };
 
   return (
@@ -104,6 +144,38 @@ export default function QuickContactDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {locationId && (
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+              <Label>Assign Contact Role (Optional)</Label>
+              <Select 
+                value={selectedRole || "none"} 
+                onValueChange={(value) => setSelectedRole(value === "none" ? null : value as 'site_contact' | 'facility_manager')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No specific role</SelectItem>
+                  <SelectItem value="site_contact">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">Site</Badge>
+                      Site Contact
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="facility_manager">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Facility</Badge>
+                      Facility Manager
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Assign this contact to a specific role for the selected location
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>First Name *</Label>
