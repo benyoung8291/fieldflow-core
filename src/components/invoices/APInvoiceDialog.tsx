@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
+import { formatCurrency } from "@/lib/utils";
 
 interface APInvoiceDialogProps {
   open: boolean;
@@ -623,7 +624,7 @@ export default function APInvoiceDialog({
                             <Label className="text-xs">Line Total</Label>
                             <Input
                               type="text"
-                              value={`$${item.line_total.toFixed(2)}`}
+                              value={formatCurrency(item.line_total)}
                               className="h-8"
                               disabled
                             />
@@ -642,7 +643,7 @@ export default function APInvoiceDialog({
                     <div className="flex justify-between items-center pt-3 border-t">
                       <span className="font-semibold">Total:</span>
                       <span className="text-lg font-bold">
-                        ${lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0).toFixed(2)}
+                        {formatCurrency(lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0))}
                       </span>
                     </div>
                   </div>

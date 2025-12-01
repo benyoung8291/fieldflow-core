@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/utils";
 
 const formSchema = z.object({
   receipt_date: z.string(),
@@ -341,7 +342,7 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
               <div className="flex-1">
                 <span className="text-sm font-semibold text-warning">Cost Variance Detected</span>
                 <p className="text-xs text-warning/80 mt-1">
-                  {variance > 0 ? "Increase" : "Decrease"} of ${Math.abs(variance).toFixed(2)} from original PO
+                  {variance > 0 ? "Increase" : "Decrease"} of {formatCurrency(Math.abs(variance))} from original PO
                 </p>
               </div>
             </div>
@@ -479,7 +480,7 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
                               />
                             ) : (
                               <span className={hasLineVariance ? "text-warning font-semibold" : ""}>
-                                ${item.unit_price.toFixed(2)}
+                                {formatCurrency(item.unit_price)}
                               </span>
                             )}
                           </TableCell>
@@ -501,7 +502,7 @@ export function ReceiptDialog({ open, onOpenChange, purchaseOrder, onSuccess }: 
                             />
                           </TableCell>
                           <TableCell className={hasLineVariance ? "text-warning font-semibold" : ""}>
-                            ${lineTotal.toFixed(2)}
+                            {formatCurrency(lineTotal)}
                           </TableCell>
                           {editMode && (
                             <TableCell>

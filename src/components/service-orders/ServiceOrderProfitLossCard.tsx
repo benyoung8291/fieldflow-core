@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServiceOrderProfitLossCardProps {
   totalRevenue: number;
@@ -40,7 +41,7 @@ export default function ServiceOrderProfitLossCard({
           <div className="flex justify-between items-center mb-1">
             <span className="text-xs font-medium text-muted-foreground">Revenue</span>
             <span className="text-sm font-bold">
-              ${totalRevenue.toFixed(2)}
+              {formatCurrency(totalRevenue)}
             </span>
           </div>
           <Progress value={100} className="h-1.5" />
@@ -54,7 +55,7 @@ export default function ServiceOrderProfitLossCard({
           <div className="flex justify-between items-center">
             <span className="text-xs">Materials</span>
             <span className="text-xs font-medium">
-              ${costOfMaterials.toFixed(2)}
+              {formatCurrency(costOfMaterials)}
             </span>
           </div>
           
@@ -62,7 +63,7 @@ export default function ServiceOrderProfitLossCard({
           <div className="flex justify-between items-center">
             <span className="text-xs">Labor</span>
             <span className="text-xs font-medium">
-              ${costOfLabor.toFixed(2)}
+              {formatCurrency(costOfLabor)}
             </span>
           </div>
           
@@ -71,7 +72,7 @@ export default function ServiceOrderProfitLossCard({
             <div className="flex justify-between items-center">
               <span className="text-xs">Est. Labor</span>
               <span className="text-xs font-medium">
-                ${estimatedLaborCost.toFixed(2)}
+                {formatCurrency(estimatedLaborCost)}
               </span>
             </div>
           )}
@@ -81,7 +82,7 @@ export default function ServiceOrderProfitLossCard({
             <div className="flex justify-between items-center">
               <span className="text-xs">AP Invoices</span>
               <span className="text-xs font-medium">
-                ${apInvoiceCosts.toFixed(2)}
+                {formatCurrency(apInvoiceCosts)}
               </span>
             </div>
           )}
@@ -91,7 +92,7 @@ export default function ServiceOrderProfitLossCard({
             <div className="flex justify-between items-center">
               <span className="text-xs">Other</span>
               <span className="text-xs font-medium">
-                ${otherCosts.toFixed(2)}
+                {formatCurrency(otherCosts)}
               </span>
             </div>
           )}
@@ -101,7 +102,7 @@ export default function ServiceOrderProfitLossCard({
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Pending</span>
               <span className="text-xs font-medium text-muted-foreground">
-                ${pendingPOCosts.toFixed(2)}
+                {formatCurrency(pendingPOCosts)}
               </span>
             </div>
           )}
@@ -110,7 +111,7 @@ export default function ServiceOrderProfitLossCard({
           <div className="flex justify-between items-center pt-1.5 border-t">
             <span className="text-xs font-medium">Total</span>
             <span className="text-xs font-bold">
-              ${actualCost.toFixed(2)}
+              {formatCurrency(actualCost)}
             </span>
           </div>
         </div>
@@ -130,7 +131,7 @@ export default function ServiceOrderProfitLossCard({
                   isPositive ? "text-success" : "text-destructive"
                 }`}
               >
-                ${Math.abs(grossProfit).toFixed(2)}
+                {formatCurrency(Math.abs(grossProfit))}
               </span>
             </div>
           </div>
