@@ -8,9 +8,10 @@ import { QuickMarkupDialog } from "@/components/customer/QuickMarkupDialog";
 
 interface CustomerPortalLayoutProps {
   children: ReactNode;
+  fullWidth?: boolean;
 }
 
-export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
+export function CustomerPortalLayout({ children, fullWidth = false }: CustomerPortalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [showQuickMarkup, setShowQuickMarkup] = useState(false);
@@ -89,7 +90,7 @@ export function CustomerPortalLayout({ children }: CustomerPortalLayoutProps) {
       </aside>
 
       {/* Main Content with breathing room */}
-      <main className="px-6 py-8 pb-24 md:pb-8 md:ml-64 max-w-7xl">
+      <main className={`px-6 py-8 pb-24 md:pb-8 md:ml-64 ${!fullWidth ? 'max-w-7xl' : ''}`}>
         {children}
       </main>
 
