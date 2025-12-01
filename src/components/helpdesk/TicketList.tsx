@@ -92,7 +92,8 @@ export function TicketList({
           contact:contacts(first_name, last_name),
           pipeline:helpdesk_pipelines(name, color),
           assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
-          email_account:helpdesk_email_accounts(id, email_address)
+          email_account:helpdesk_email_accounts(id, email_address),
+          appointment:appointments(id, appointment_number)
         `)
         .eq("is_archived", filterArchived);
 
@@ -551,10 +552,14 @@ export function TicketList({
                   </span>
                 </div>
 
-                {/* Assignment Row */}
+                {/* Assignment Row - Show appointment number for Requests pipeline */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium">
-                    {ticket.assigned_user ? (
+                    {isRequestsPipeline && ticket.appointment?.appointment_number ? (
+                      <span className="text-primary">
+                        Appointment: {ticket.appointment.appointment_number}
+                      </span>
+                    ) : ticket.assigned_user ? (
                       <span className="text-primary">
                         Assigned to {ticket.assigned_user.first_name} {ticket.assigned_user.last_name}
                       </span>
