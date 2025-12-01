@@ -72,9 +72,9 @@ serve(async (req) => {
           const userId = adminUser?.user_id || '00000000-0000-0000-0000-000000000000';
 
           const { data, error } = await supabase.rpc('generate_service_orders_from_contracts', {
+            p_tenant_id: tenant.id,
             p_start_date: startDate,
             p_end_date: endDate,
-            p_tenant_id: tenant.id,
             p_user_id: userId
           });
 
@@ -186,9 +186,9 @@ serve(async (req) => {
     console.log("📞 Calling database function...");
     
     const { data, error } = await supabase.rpc('generate_service_orders_from_contracts', {
+      p_tenant_id: profile.tenant_id,
       p_start_date: startDate,
       p_end_date: endDate,
-      p_tenant_id: profile.tenant_id,
       p_user_id: user.id
     });
 

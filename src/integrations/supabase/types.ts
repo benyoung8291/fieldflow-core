@@ -9129,15 +9129,6 @@ export type Database = {
             Args: {
               p_end_date: string
               p_start_date: string
-              p_tenant_id: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_end_date: string
-              p_start_date: string
               p_user_id: string
             }
             Returns: Json
