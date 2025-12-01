@@ -124,18 +124,25 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
         return (
           <div key={item.id}>
             <Popover open={openPopover === item.id} onOpenChange={(open) => setOpenPopover(open ? item.id : null)}>
-              <PopoverTrigger asChild>
-                <button
-                  onClick={() => setOpenPopover(openPopover === item.id ? null : item.id)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
-                    openPopover === item.id && "bg-sidebar-accent",
-                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
-                </button>
-              </PopoverTrigger>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <button
+                      onClick={() => setOpenPopover(openPopover === item.id ? null : item.id)}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
+                        openPopover === item.id && "bg-sidebar-accent",
+                        "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                    </button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
               <PopoverContent 
                 side="right" 
                 align="start" 
