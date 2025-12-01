@@ -188,14 +188,20 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
         }
       }
 
-      // Fetch linked projects (for service orders)
+      // Fetch linked projects and contracts (for service orders)
       if (documentType === "service_order") {
         const { data: order } = await supabase
           .from("service_orders")
-          .select("project_id, projects(id, name, status, created_at, created_by)")
+          .select(`
+            project_id, 
+            contract_id,
+            projects(id, name, status, created_at, created_by),
+            service_contracts(id, contract_number, title, status, created_at, created_by)
+          `)
           .eq("id", documentId)
           .single();
 
+        // Add linked project
         if (order?.project_id && order.projects) {
           const project = order.projects as any;
           const createdBy = await getUserName(project.created_by);
@@ -208,6 +214,22 @@ export function LinkedDocumentsTimeline({ documentType, documentId }: LinkedDocu
             createdBy,
             status: project.status,
             route: `/projects/${project.id}`,
+          });
+        }
+
+        // Add linked service contract
+        if (order?.contract_id && order.service_contracts) {
+          const contract = order.service_contracts as any;
+          const createdBy = await getUserName(contract.created_by);
+          allDocuments.push({
+            id: contract.id,
+            type: "Service Contract",
+            number: contract.contract_number,
+            title: contract.title,
+            createdAt: new Date(contract.created_at),
+            createdBy,
+            status: contract.status,
+            route: `/service-contracts/${contract.id}`,
           });
         }
       }
