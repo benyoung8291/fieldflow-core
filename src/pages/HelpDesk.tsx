@@ -291,7 +291,8 @@ export default function HelpDesk() {
     queryFn: async () => {
       if (!selectedTicketId) return null;
       
-      const { data, error } = await supabase
+      // Fetch core ticket data without appointments to prevent RLS blocking
+      const { data: ticketData, error } = await supabase
         .from("helpdesk_tickets" as any)
         .select(`
           *,
@@ -299,20 +300,33 @@ export default function HelpDesk() {
           contact:contacts(id, first_name, last_name, email),
           assigned_user:profiles!helpdesk_tickets_assigned_to_fkey(id, first_name, last_name),
           email_account:helpdesk_email_accounts(id, email_address),
-          pipeline:helpdesk_pipelines(id, name),
-          appointment:appointments(
-            id,
-            title,
-            start_time,
-            end_time,
-            location:customer_locations(id, name, address)
-          )
+          pipeline:helpdesk_pipelines(id, name)
         `)
         .eq("id", selectedTicketId)
         .maybeSingle();
 
       if (error) throw error;
-      return data as any;
+      if (!ticketData) return null;
+
+      // Separately fetch appointment data if ticket has one (prevents RLS failures from blocking ticket view)
+      let appointment = null;
+      if ((ticketData as any).appointment_id) {
+        const { data: appointmentData } = await supabase
+          .from("appointments")
+          .select(`
+            id,
+            title,
+            start_time,
+            end_time,
+            location:customer_locations(id, name, address)
+          `)
+          .eq("id", (ticketData as any).appointment_id)
+          .maybeSingle();
+        
+        appointment = appointmentData;
+      }
+
+      return { ...(ticketData as any), appointment };
     },
     enabled: !!selectedTicketId,
   });
