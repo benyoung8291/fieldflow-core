@@ -80,10 +80,13 @@ export default function ServiceContracts() {
 
           // Calculate next date based on frequency
           switch (item.recurrence_frequency) {
+            case "daily":
+              currentDate = addWeeks(currentDate, 1/7);
+              break;
             case "weekly":
               currentDate = addWeeks(currentDate, 1);
               break;
-            case "fortnightly":
+            case "bi_weekly":
               currentDate = addWeeks(currentDate, 2);
               break;
             case "monthly":
@@ -92,7 +95,10 @@ export default function ServiceContracts() {
             case "quarterly":
               currentDate = addMonths(currentDate, 3);
               break;
-            case "yearly":
+            case "semi_annually":
+              currentDate = addMonths(currentDate, 6);
+              break;
+            case "annually":
               currentDate = addMonths(currentDate, 12);
               break;
             default:

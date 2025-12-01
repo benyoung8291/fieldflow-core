@@ -222,17 +222,22 @@ export default function ImportContractLineItemsDialog({
     if (normalized.includes("6") && normalized.includes("month")) return "semi_annually";
     if (normalized.includes("six") && normalized.includes("month")) return "semi_annually";
     if (normalized.includes("semi") && normalized.includes("annual")) return "semi_annually";
-    if (normalized.includes("fortnight") || normalized.includes("bi") && normalized.includes("week")) return "bi_weekly";
+    if (normalized.includes("fortnight") || (normalized.includes("bi") && normalized.includes("week"))) return "bi_weekly";
     
     // Then check generic patterns
-    if (normalized.includes("month")) return "monthly";
-    if (normalized.includes("week")) return "weekly";
-    if (normalized.includes("year") || normalized.includes("annual")) return "annually";
     if (normalized.includes("day") || normalized.includes("daily")) return "daily";
+    if (normalized.includes("week") && !normalized.includes("bi")) return "weekly";
+    if (normalized.includes("month")) return "monthly";
     if (normalized.includes("quarter")) return "quarterly";
+    if (normalized.includes("year") || normalized.includes("annual")) return "annually";
+    if (normalized.includes("one") && normalized.includes("time")) return "one_time";
     
-    // Default to the normalized value if it's already clean
-    return normalized;
+    // Check if it's already a valid enum value
+    const validValues = ["one_time", "daily", "weekly", "bi_weekly", "monthly", "quarterly", "semi_annually", "annually"];
+    if (validValues.includes(normalized)) return normalized;
+    
+    // Default to monthly if unrecognized
+    return "monthly";
   };
 
   const handleImport = async () => {
