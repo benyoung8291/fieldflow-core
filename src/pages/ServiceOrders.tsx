@@ -200,6 +200,26 @@ export default function ServiceOrders() {
   const totalCount = ordersResponse?.count || 0;
   const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
+  // Fetch stats independently of pagination
+  const { data: stats = { total: 0, draft: 0, scheduled: 0, inProgress: 0, completed: 0 } } = useQuery({
+    queryKey: ["service_orders_stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("status");
+      
+      if (error) throw error;
+      
+      return {
+        total: data?.length || 0,
+        draft: data?.filter((o) => o.status === "draft").length || 0,
+        scheduled: data?.filter((o) => o.status === "scheduled").length || 0,
+        inProgress: data?.filter((o) => o.status === "in_progress").length || 0,
+        completed: data?.filter((o) => o.status === "completed").length || 0,
+      };
+    },
+  });
+
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
       await refetch();
@@ -259,14 +279,6 @@ export default function ServiceOrders() {
       setEditingOrderId(undefined);
     }
   }, [dialogOpen]);
-
-  const stats = {
-    total: orders.length,
-    draft: orders.filter((o: any) => o.status === "draft").length,
-    scheduled: orders.filter((o: any) => o.status === "scheduled").length,
-    inProgress: orders.filter((o: any) => o.status === "in_progress").length,
-    completed: orders.filter((o: any) => o.status === "completed").length,
-  };
 
   return (
     <DashboardLayout>

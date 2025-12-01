@@ -117,6 +117,27 @@ export default function Quotes() {
   const totalCount = quotesResponse?.count || 0;
   const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
+  // Fetch stats independently of pagination
+  const { data: stats = { total: 0, draft: 0, sent: 0, approved: 0, totalValue: 0 } } = useQuery({
+    queryKey: ["quotes_stats", showArchived],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quotes")
+        .select("status, total_amount")
+        .eq("is_archived", showArchived);
+      
+      if (error) throw error;
+      
+      return {
+        total: data?.length || 0,
+        draft: data?.filter((q) => q.status === "draft").length || 0,
+        sent: data?.filter((q) => q.status === "sent").length || 0,
+        approved: data?.filter((q) => q.status === "approved").length || 0,
+        totalValue: data?.reduce((sum, q) => sum + (q.total_amount || 0), 0) || 0,
+      };
+    },
+  });
+
   const { containerRef, isPulling, isRefreshing, pullDistance, threshold } = usePullToRefresh({
     onRefresh: async () => {
       await refetch();
@@ -319,14 +340,6 @@ export default function Quotes() {
         variant: "destructive",
       });
     }
-  };
-
-  const stats = {
-    total: quotes?.length || 0,
-    draft: quotes?.filter((q) => q.status === "draft").length || 0,
-    sent: quotes?.filter((q) => q.status === "sent").length || 0,
-    approved: quotes?.filter((q) => q.status === "approved").length || 0,
-    totalValue: quotes?.reduce((sum, q) => sum + (q.total_amount || 0), 0) || 0,
   };
 
   return (
