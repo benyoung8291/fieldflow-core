@@ -154,7 +154,7 @@ export default function ServiceOrders() {
           created_at,
           preferred_date,
           customers!service_orders_customer_id_fkey(name),
-          customer_locations!service_orders_location_id_fkey(name),
+          customer_locations!service_orders_customer_location_id_fkey(name),
           appointments(count),
           purchase_orders(count),
           invoices(count)

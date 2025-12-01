@@ -121,7 +121,7 @@ export default function ServiceOrderDetails() {
         .select(`
           *,
           customers!service_orders_customer_id_fkey(name, email, phone),
-          customer_locations!service_orders_location_id_fkey(name, address, city, state, postcode),
+          customer_locations!service_orders_customer_location_id_fkey(name, address, city, state, postcode),
           service_contracts!service_orders_contract_id_fkey(id, contract_number, title),
           projects(id, name)
         `)
@@ -329,6 +329,26 @@ export default function ServiceOrderDetails() {
         () => {
           console.log('[ServiceOrderDetails] Service order updated, refreshing');
           queryClient.invalidateQueries({ queryKey: ["service_order", id] });
+          queryClient.invalidateQueries({ queryKey: ["service-order-line-items", id] });
+          queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
+          queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", id] });
+        }
+      )
+      .subscribe();
+
+    // Listen for appointment changes linked to this service order
+    const appointmentsChannel = supabase
+      .channel(`appointments-for-so-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `service_order_id=eq.${id}`
+        },
+        () => {
+          console.log('[ServiceOrderDetails] Appointments changed, refreshing');
           queryClient.invalidateQueries({ queryKey: ["service-order-appointments", id] });
           queryClient.invalidateQueries({ queryKey: ["service-order-appointments-v2", id] });
         }
@@ -337,6 +357,7 @@ export default function ServiceOrderDetails() {
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(appointmentsChannel);
     };
   }, [id, queryClient]);
 
