@@ -8968,6 +8968,7 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      can_view_workers_module: { Args: { _user_id: string }; Returns: boolean }
       check_variance_requires_approval: {
         Args: { p_invoice_id: string; p_total_variance: number }
         Returns: boolean

@@ -110,7 +110,7 @@ export const usePermissions = () => {
   );
 
   const isAdmin = useMemo(() => 
-    userRoles?.some((r) => r.role === "tenant_admin") || false,
+    userRoles?.some((r) => r.role === "tenant_admin" || r.role === "super_admin") || false,
     [userRoles]
   );
 
@@ -125,7 +125,7 @@ export const usePermissions = () => {
   );
 
   const hasPermission = (module: Module, permission: Permission, conditions?: PermissionConditions): boolean => {
-    // Tenant admins and management have all permissions
+    // Super admins, tenant admins, and management have all permissions
     if (isAdmin || isManagement) {
       return true;
     }
