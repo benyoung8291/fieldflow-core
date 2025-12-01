@@ -590,11 +590,6 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Floor Plans Display - Show marked up floor plans for requests */}
-      <div className="shrink-0">
-        <TicketFloorPlans ticketId={ticketId} />
-      </div>
-      
       {/* Enhanced Header with Clear Hierarchy */}
       <div className="px-5 py-4 border-b bg-gradient-to-r from-background via-background to-muted/10 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 sticky top-0 z-10 shadow-sm">
         <div className="flex items-start justify-between gap-4">
@@ -646,6 +641,11 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           </div>
           {ticket && <TicketActionsMenu ticket={ticket} />}
         </div>
+      </div>
+
+      {/* Floor Plans Display - Show marked up floor plans for requests */}
+      <div className="shrink-0">
+        <TicketFloorPlans ticketId={ticketId} />
       </div>
 
       {/* Timeline - Optimized */}
