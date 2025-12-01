@@ -63,10 +63,13 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { usePresence } from "@/hooks/usePresence";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 import { useDocumentRealtime } from "@/hooks/useDocumentRealtime";
 import { useCollaborativeField } from "@/hooks/useCollaborativeField";
+import { useQuoteCollaboration } from "@/hooks/useQuoteCollaboration";
 import FieldPresenceWrapper from "@/components/presence/FieldPresenceWrapper";
 import PresencePanel from "@/components/presence/PresencePanel";
+import { CollaborativeFieldEditor } from "@/components/quotes/CollaborativeFieldEditor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,7 +94,7 @@ export default function QuoteDetails() {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   
-  // Real-time collaboration setup
+  // Legacy field-level presence (keep for existing FieldPresenceWrapper usage)
   const { 
     onlineUsers, 
     startTyping, 
@@ -154,6 +157,22 @@ export default function QuoteDetails() {
       return { ...quoteData, customer, creator };
     },
   });
+
+  // Document-level presence tracking for Team Activity panel
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "quotes",
+    documentName: quote?.quote_number ? `Quote ${quote.quote_number}` : undefined,
+  });
+
+  // Real-time collaboration for Google Docs-like editing
+  const {
+    fieldEditors,
+    broadcastFieldFocus,
+    broadcastFieldBlur,
+    broadcastFieldChange,
+  } = useQuoteCollaboration(id);
 
   const { data: lineItems, isLoading: lineItemsLoading } = useQuery({
     queryKey: ["quote-line-items", id],

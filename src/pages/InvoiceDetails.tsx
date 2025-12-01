@@ -27,6 +27,7 @@ import { Package } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -68,6 +69,14 @@ export default function InvoiceDetails() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Track presence on this invoice
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "invoices",
+    documentName: invoice?.invoice_number ? `Invoice ${invoice.invoice_number}` : undefined,
   });
 
   // Fetch accounting integration for Acumatica link

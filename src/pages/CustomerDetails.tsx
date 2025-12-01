@@ -22,6 +22,7 @@ import { DeleteCustomerDialog } from "@/components/customers/DeleteCustomerDialo
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -83,6 +84,14 @@ export default function CustomerDetails() {
       return data;
     },
     enabled: !!id,
+  });
+
+  // Track presence on this customer
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "customers",
+    documentName: customer?.name ? `Customer: ${customer.name}` : undefined,
   });
 
   const { data: contacts = [], refetch: refetchContacts } = useQuery({

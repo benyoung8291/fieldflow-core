@@ -16,13 +16,20 @@ interface PresenceData {
   current_path: string;
   document_id?: string | null;
   document_type?: string | null;
+  document_name?: string | null;
   online_at: string;
 }
 
 interface GroupedUser {
   user_id: string;
   user_name: string;
-  pages: Array<{ page: string; path: string }>;
+  pages: Array<{ 
+    page: string; 
+    path: string;
+    document_id?: string | null;
+    document_type?: string | null;
+    document_name?: string | null;
+  }>;
   online_at: string;
 }
 
@@ -175,20 +182,30 @@ export function ActivityAndUsers({ onlineUsers }: ActivityAndUsersProps) {
     const existingUser = acc.find((u) => u.user_id === user.user_id);
 
     if (existingUser) {
+      // Check if this exact page/document combination exists
       const pageExists = existingUser.pages.some(
-        (p) => p.path === user.current_path
+        (p) => p.path === user.current_path && p.document_id === user.document_id
       );
       if (!pageExists) {
         existingUser.pages.push({
           page: user.current_page,
           path: user.current_path,
+          document_id: user.document_id,
+          document_type: user.document_type,
+          document_name: user.document_name,
         });
       }
     } else {
       acc.push({
         user_id: user.user_id,
         user_name: user.user_name,
-        pages: [{ page: user.current_page, path: user.current_path }],
+        pages: [{
+          page: user.current_page,
+          path: user.current_path,
+          document_id: user.document_id,
+          document_type: user.document_type,
+          document_name: user.document_name,
+        }],
         online_at: user.online_at,
       });
     }
@@ -227,7 +244,7 @@ export function ActivityAndUsers({ onlineUsers }: ActivityAndUsersProps) {
                       {getInitials(user.user_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">
                       {user.user_name}
                     </p>
@@ -242,7 +259,7 @@ export function ActivityAndUsers({ onlineUsers }: ActivityAndUsersProps) {
                               onClick={() => navigate(pageInfo.path)}
                               className="h-auto p-0 text-[10px] text-muted-foreground hover:text-primary"
                             >
-                              {pageInfo.page}
+                              {pageInfo.document_name || pageInfo.page}
                               <ExternalLink className="ml-0.5 h-2.5 w-2.5" />
                             </Button>
                             {index < user.pages.length - 1 && (

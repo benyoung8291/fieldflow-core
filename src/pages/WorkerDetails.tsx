@@ -14,7 +14,7 @@ import WorkerCertificatesTab from "@/components/workers/WorkerCertificatesTab";
 import WorkerLicensesTab from "@/components/workers/WorkerLicensesTab";
 import WorkerTrainingTab from "@/components/workers/WorkerTrainingTab";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
-import { usePresence } from "@/hooks/usePresence";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,14 +29,9 @@ const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "S
 
 export default function WorkerDetails() {
   const { id } = useParams<{ id: string }>();
-  const { onlineUsers, updateCursorPosition } = usePresence({ page: `worker-${id}` });
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
-
-  const updateCursor = (e: React.MouseEvent) => {
-    updateCursorPosition(e.clientX, e.clientY);
-  };
 
   const { data: worker, isLoading } = useQuery({
     queryKey: ["worker", id],
@@ -54,6 +49,14 @@ export default function WorkerDetails() {
       return profile;
     },
     enabled: !!id,
+  });
+
+  // Track presence on this worker
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "workers",
+    documentName: worker ? `Worker: ${worker.first_name} ${worker.last_name}` : undefined,
   });
 
   const { data: payRateCategories = [] } = useQuery({
@@ -164,8 +167,7 @@ export default function WorkerDetails() {
 
   return (
     <DashboardLayout>
-
-      <div className="space-y-6" onMouseMove={updateCursor}>
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
@@ -189,7 +191,6 @@ export default function WorkerDetails() {
             <p className="text-muted-foreground">{worker.email || "No email set"}</p>
           </div>
           <div className="flex items-center gap-2">
-            <PresenceIndicator users={onlineUsers} />
             {isEditing ? (
               <>
                 <Button variant="outline" size="sm" onClick={handleCancel}>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { getSessionId } from "@/utils/sessionId";
 
 interface PresenceData {
   user_id: string;
@@ -169,11 +170,15 @@ export function usePresenceSystem(options: UsePresenceSystemOptions = {}) {
     console.log("[Presence] Initializing for user:", currentUser.name, currentUser.id);
     isInitializedRef.current = true;
 
-    // Create channel with presence config
+    // Generate unique session ID for this browser tab to support multi-tab presence
+    const sessionId = getSessionId();
+    const presenceKey = `${currentUser.id}:${sessionId}`;
+
+    // Create channel with presence config using user_id:session_id as key
     const presenceChannel = supabase.channel("team-presence-global", {
       config: {
         presence: {
-          key: currentUser.id,
+          key: presenceKey,
         },
       },
     });

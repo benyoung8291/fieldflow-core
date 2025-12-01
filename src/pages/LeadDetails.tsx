@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 export default function LeadDetails() {
   const { id } = useParams();
@@ -65,6 +66,14 @@ export default function LeadDetails() {
         } : null
       };
     },
+  });
+
+  // Track presence on this lead
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "leads",
+    documentName: lead?.company_name ? `Lead: ${lead.company_name}` : undefined,
   });
 
   const { data: contacts = [] } = useQuery({

@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -155,6 +156,14 @@ export default function ServiceOrderDetails() {
       
       return { ...data, site_contact: siteContact, facility_manager_contact: facilityManagerContact };
     },
+  });
+
+  // Track presence on this service order
+  usePresenceSystem({
+    trackPresence: true,
+    documentId: id,
+    documentType: "service-orders",
+    documentName: order?.order_number ? `SO ${order.order_number}` : undefined,
   });
 
   const { data: lineItems = [] } = useQuery({
