@@ -58,6 +58,20 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
 
   const linkMutation = useMutation({
     mutationFn: async (documentId: string) => {
+      // Get user and tenant info
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user?.id || "")
+        .single();
+
+      const tenantId = profile?.tenant_id;
+      
+      if (!tenantId) {
+        throw new Error("Unable to determine tenant");
+      }
+
       // Link the document
       const { error } = await supabase
         .from("helpdesk_linked_documents" as any)
@@ -65,6 +79,8 @@ export function DocumentLinkSearch({ docType, ticketId, onLinked, onCustomerCont
           ticket_id: ticketId,
           document_type: docType,
           document_id: documentId,
+          tenant_id: tenantId,
+          created_by: user?.id,
         });
       
       if (error) throw error;
