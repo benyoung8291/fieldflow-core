@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { Loader2, FileText, Calendar, MapPin, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,22 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function CustomerFieldReports() {
   const navigate = useNavigate();
-  const { data: profile } = useQuery({
-    queryKey: ["customer-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("customer_portal_users")
-        .select("customer_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: profile } = useCustomerProfile();
 
   const { data: fieldReports, isLoading } = useQuery({
     queryKey: ["customer-field-reports", profile?.customer_id],

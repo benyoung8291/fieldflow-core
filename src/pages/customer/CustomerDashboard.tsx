@@ -2,6 +2,7 @@ import { CustomerPortalLayout } from "@/components/layout/CustomerPortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { Loader2, MapPin, FileText, Clock, ClipboardList, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -10,22 +11,7 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  const { data: profile } = useQuery({
-    queryKey: ["customer-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("customer_portal_users")
-        .select("*, customers(*)")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: profile } = useCustomerProfile();
 
   const { data: locations, isLoading: locationsLoading } = useQuery({
     queryKey: ["customer-locations", profile?.customer_id],
