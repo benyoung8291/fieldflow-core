@@ -46,23 +46,33 @@ export type UserPermission = {
 };
 
 export const usePermissions = () => {
-  const { data: userRoles, isLoading: rolesLoading } = useQuery({
+  const { data: userRoles, isLoading: rolesLoading, error: rolesError } = useQuery({
     queryKey: ["user-roles"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) {
+        console.warn("[usePermissions] No authenticated user");
+        return [];
+      }
 
       const { data, error } = await supabase
         .from("user_roles")
         .select("role, tenant_id")
         .eq("user_id", user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("[usePermissions] Error fetching roles:", error);
+        throw error;
+      }
+      
+      console.log(`[usePermissions] Loaded ${data?.length || 0} roles:`, data);
       return data || [];
     },
+    retry: 2,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  const { data: permissions, isLoading: permissionsLoading } = useQuery({
+  const { data: permissions, isLoading: permissionsLoading, error: permissionsError } = useQuery({
     queryKey: ["user-permissions", userRoles],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,17 +81,33 @@ export const usePermissions = () => {
       if (!userRoles || userRoles.length === 0) return [];
 
       const roles = userRoles.map((r) => r.role);
+      const tenantIds = userRoles.map((r) => r.tenant_id);
+      
       const { data, error } = await supabase
         .from("role_permissions")
         .select("module, permission, conditions")
         .in("role", roles)
+        .in("tenant_id", tenantIds)
         .eq("is_active", true);
 
-      if (error) throw error;
+      if (error) {
+        console.error("[usePermissions] Error fetching permissions:", error);
+        throw error;
+      }
+      
+      console.log(`[usePermissions] Loaded ${data?.length || 0} permissions for roles:`, roles);
       return data as UserPermission[] || [];
     },
     enabled: !!userRoles && userRoles.length > 0,
+    staleTime: 0, // Always fetch fresh
+    retry: 2,
   });
+
+  const hasLoadedPermissions = useMemo(() => 
+    !rolesLoading && 
+    (userRoles?.length === 0 || (permissions !== undefined)),
+    [rolesLoading, userRoles, permissions]
+  );
 
   const isAdmin = useMemo(() => 
     userRoles?.some((r) => r.role === "tenant_admin") || false,
@@ -158,6 +184,7 @@ export const usePermissions = () => {
     isSupervisor,
     userRoles: userRoles || [],
     permissions: permissions || [],
-    isLoading: rolesLoading || permissionsLoading,
+    isLoading: rolesLoading || permissionsLoading || (!!userRoles && userRoles.length > 0 && !permissions),
+    hasLoadedPermissions,
   };
 };

@@ -14,6 +14,7 @@ export const ROUTE_MODULE_MAP: Record<string, Module | null> = {
   // Core modules
   "/quotes": "quotes",
   "/quote-pipeline": "quotes",
+  "/pipeline": "quotes",
   "/customers": "customers",
   "/leads": "leads",
   "/contacts": "contacts",
