@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw, Plus, ArrowUpDown, Search } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw, Plus, ArrowUpDown, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { format, addMonths, parseISO, addWeeks } from "date-fns";
 import { useState } from "react";
 import RenewContractDialog from "@/components/quotes/RenewContractDialog";
@@ -51,11 +52,11 @@ export default function ServiceContracts() {
     },
   });
 
-  // Calculate upcoming generations for next 12 months
+  // Calculate upcoming generations grouped by service order (date + contract)
   const calculateUpcomingGenerations = () => {
     if (!contracts) return [];
     
-    const generations: any[] = [];
+    const serviceOrdersMap = new Map<string, any>();
     const now = getMelbourneNow();
     const endDate = addMonths(now, 12);
 
@@ -72,15 +73,29 @@ export default function ServiceContracts() {
         
         while (currentDate <= endDate) {
           if (currentDate >= now) {
-            generations.push({
-              date: currentDate,
-              contractId: contract.id,
-              contractNumber: contract.contract_number,
-              customerName: contract.customers?.name,
-              itemDescription: item.description,
+            const key = `${contract.id}-${format(currentDate, "yyyy-MM-dd")}`;
+            
+            if (!serviceOrdersMap.has(key)) {
+              serviceOrdersMap.set(key, {
+                date: currentDate,
+                contractId: contract.id,
+                contractNumber: contract.contract_number,
+                contractTitle: contract.title,
+                customerName: contract.customers?.name,
+                lineItems: [],
+                totalAmount: 0,
+              });
+            }
+            
+            const serviceOrder = serviceOrdersMap.get(key);
+            serviceOrder.lineItems.push({
+              description: item.description,
               amount: item.line_total,
               frequency: item.recurrence_frequency,
+              quantity: item.quantity,
+              unitPrice: item.unit_price,
             });
+            serviceOrder.totalAmount += parseFloat(item.line_total || 0);
           }
 
           // Calculate next date based on frequency
@@ -118,7 +133,7 @@ export default function ServiceContracts() {
       });
     });
 
-    return generations.sort((a, b) => a.date.getTime() - b.date.getTime());
+    return Array.from(serviceOrdersMap.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
   };
 
   // Calculate revenue by month
@@ -145,7 +160,7 @@ export default function ServiceContracts() {
     activeContracts = activeContracts.filter((c: any) => 
       c.contract_number?.toLowerCase().includes(filterLower) ||
       c.customers?.name?.toLowerCase().includes(filterLower) ||
-      c.description?.toLowerCase().includes(filterLower)
+      c.title?.toLowerCase().includes(filterLower)
     );
   }
   
@@ -162,9 +177,9 @@ export default function ServiceContracts() {
         aVal = a.customers?.name || "";
         bVal = b.customers?.name || "";
         break;
-      case "description":
-        aVal = a.description || "";
-        bVal = b.description || "";
+      case "title":
+        aVal = a.title || "";
+        bVal = b.title || "";
         break;
       case "start_date":
         aVal = a.start_date;
@@ -194,7 +209,7 @@ export default function ServiceContracts() {
     }
     return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : (bVal > aVal ? 1 : -1);
   });
-  const upcomingGenerations = calculateUpcomingGenerations().slice(0, 20);
+  const upcomingGenerations = calculateUpcomingGenerations().slice(0, 50);
   const monthlyRevenue = calculateMonthlyRevenue();
   
   // Calculate total annualized value from line items using frequency multipliers
@@ -380,7 +395,7 @@ export default function ServiceContracts() {
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Filter by contract number, customer, or description..."
+                      placeholder="Filter by contract number, customer, or title..."
                       value={filterText}
                       onChange={(e) => setFilterText(e.target.value)}
                       className="pl-8"
@@ -434,16 +449,16 @@ export default function ServiceContracts() {
                     <TableHead 
                       className="cursor-pointer select-none hover:bg-muted/50"
                       onClick={() => {
-                        if (sortBy === "description") {
+                        if (sortBy === "title") {
                           setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                         } else {
-                          setSortBy("description");
+                          setSortBy("title");
                           setSortOrder("asc");
                         }
                       }}
                     >
                       <div className="flex items-center gap-1">
-                        Description
+                        Title
                         <ArrowUpDown className="h-3 w-3" />
                       </div>
                     </TableHead>
@@ -574,7 +589,7 @@ export default function ServiceContracts() {
                       >
                         <TableCell className="font-medium">{contract.contract_number}</TableCell>
                         <TableCell>{contract.customers?.name}</TableCell>
-                        <TableCell className="max-w-xs truncate">{contract.description || "-"}</TableCell>
+                        <TableCell className="max-w-xs truncate">{contract.title || "-"}</TableCell>
                         <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>
                         <TableCell>{contract.end_date ? format(parseISO(contract.end_date), "PP") : "Ongoing"}</TableCell>
                         <TableCell>{nextGenDate ? format(nextGenDate, "PP") : "N/A"}</TableCell>
@@ -596,35 +611,65 @@ export default function ServiceContracts() {
           <Card>
             <CardHeader>
               <CardTitle>Upcoming Service Order Generations</CardTitle>
-              <CardDescription>Scheduled service orders for the next 12 months</CardDescription>
+              <CardDescription>Future service orders grouped by generation date - showing next 50</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Generation Date</TableHead>
-                    <TableHead>Contract</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Frequency</TableHead>
-                    <TableHead>Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {upcomingGenerations.map((gen: any, idx: number) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{format(gen.date, "PP")}</TableCell>
-                      <TableCell>{gen.contractNumber}</TableCell>
-                      <TableCell>{gen.customerName}</TableCell>
-                      <TableCell>{gen.itemDescription}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{gen.frequency}</Badge>
-                      </TableCell>
-                      <TableCell>${parseFloat(gen.amount).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-2">
+                {upcomingGenerations.map((serviceOrder: any, idx: number) => (
+                  <Collapsible key={idx} className="border rounded-lg">
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex-1 grid grid-cols-5 gap-4 items-center">
+                        <div>
+                          <div className="text-sm font-medium">{format(serviceOrder.date, "PP")}</div>
+                          <div className="text-xs text-muted-foreground">{serviceOrder.contractNumber}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm">{serviceOrder.customerName}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-sm truncate">{serviceOrder.contractTitle || "-"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {serviceOrder.lineItems.length} line item{serviceOrder.lineItems.length !== 1 ? "s" : ""}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold">{formatCurrency(serviceOrder.totalAmount)}</div>
+                          <div className="text-xs text-muted-foreground">Ex-GST</div>
+                        </div>
+                      </div>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="ml-2">
+                          <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent>
+                      <div className="border-t px-4 pb-4">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Quantity</TableHead>
+                              <TableHead className="text-right">Unit Price</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {serviceOrder.lineItems.map((item: any, itemIdx: number) => (
+                              <TableRow key={itemIdx}>
+                                <TableCell>{item.description}</TableCell>
+                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                                <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
