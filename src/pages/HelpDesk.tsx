@@ -108,13 +108,26 @@ export default function HelpDesk() {
       if (ticketId) {
         // Check if the ticket is archived and enable filter if needed
         const checkAndSelectTicket = async () => {
-          const { data: ticketData } = await supabase
+          const { data: ticketData, error } = await supabase
             .from("helpdesk_tickets")
             .select("is_archived")
             .eq("id", ticketId)
-            .single();
+            .maybeSingle();
           
-          if (ticketData?.is_archived) {
+          // If ticket doesn't exist, clear the selection and show a toast
+          if (error || !ticketData) {
+            console.log("Ticket not found, clearing selection:", ticketId);
+            setSearchParams({});
+            setSelectedTicketId(null);
+            toast({
+              title: "Ticket not found",
+              description: "The requested ticket doesn't exist or has been deleted.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          if (ticketData.is_archived) {
             setFilterArchived(true);
           }
         };
