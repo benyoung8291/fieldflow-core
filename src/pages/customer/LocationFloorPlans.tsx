@@ -686,6 +686,13 @@ export default function LocationFloorPlans() {
                   Back to Plans
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => setShowShareDialog(true)}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
+                <Button
                   onClick={() => {
                     const incompleteMarkups = markups.filter(m => !m.notes?.trim());
                     if (incompleteMarkups.length > 0) {
