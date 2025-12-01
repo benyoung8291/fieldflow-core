@@ -24,23 +24,23 @@ export function ViewToggleButton() {
     }
   };
 
-  const isOnWorkerDashboard = location.pathname === "/worker/dashboard";
-
   return (
     <Button
-      variant={isOnWorkerDashboard ? "ghost" : "outline"}
+      variant="ghost"
       size="icon"
       onClick={handleToggle}
       className={cn(
-        "h-7 w-7 rounded-lg mobile-tap transition-colors",
-        isOnWorkerDashboard && "text-primary-foreground hover:bg-primary-foreground/15"
+        "h-8 w-8 rounded-full transition-colors",
+        isWorkerView 
+          ? "text-primary-foreground hover:bg-primary-foreground/20" 
+          : "hover:bg-muted"
       )}
       title={isWorkerView ? "Switch to Office" : "Switch to Field"}
     >
       {isWorkerView ? (
-        <Building2 className="h-3.5 w-3.5" />
+        <Building2 className="h-4 w-4" />
       ) : (
-        <Briefcase className="h-3.5 w-3.5" />
+        <Briefcase className="h-4 w-4" />
       )}
     </Button>
   );
