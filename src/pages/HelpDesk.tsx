@@ -343,6 +343,12 @@ export default function HelpDesk() {
   });
 
   const handleSelectTicket = (ticketId: string) => {
+    // Handle clear selection case
+    if (!ticketId) {
+      setSelectedTicketId(null);
+      setSearchParams({}, { replace: true });
+      return;
+    }
     // Invalidate any stale cache for this specific ticket
     queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticketId] });
     // Update URL first - this is the source of truth
