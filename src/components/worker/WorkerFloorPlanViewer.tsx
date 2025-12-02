@@ -2,6 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface Markup {
   id: string;
@@ -9,6 +14,8 @@ interface Markup {
   notes?: string;
   photo_url?: string;
   status?: string;
+  pin_x?: number;
+  pin_y?: number;
 }
 
 interface WorkerFloorPlanViewerProps {
@@ -28,7 +35,28 @@ export function WorkerFloorPlanViewer({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageWidth, setPageWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const fileUrl = floorPlan.file_url || "";
+  const isPDF = fileUrl.toLowerCase().endsWith('.pdf');
+  const imageUrl = floorPlan.image_url || (!isPDF ? floorPlan.file_url : "");
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  };
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setPageWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.2, 3));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.2, 0.5));
@@ -61,18 +89,12 @@ export function WorkerFloorPlanViewer({
   };
 
   const getMarkupStyle = (markup: Markup) => {
-    const data = markup.markup_data;
-    if (!data) return {};
-
-    if (data.type === "pin") {
-      return {
-        position: "absolute" as const,
-        left: `${data.x * 100}%`,
-        top: `${data.y * 100}%`,
-        transform: "translate(-50%, -100%)",
-      };
-    }
-    return {};
+    return {
+      position: "absolute" as const,
+      left: `${markup.pin_x}%`,
+      top: `${markup.pin_y}%`,
+      transform: "translate(-50%, -100%)",
+    };
   };
 
   const getStatusColor = (status?: string) => {
@@ -124,42 +146,54 @@ export function WorkerFloorPlanViewer({
               height: "100%",
             }}
           >
-            <img
-              src={floorPlan.image_url}
-              alt={floorPlan.name}
-              className="w-full h-full object-contain"
-              draggable={false}
-            />
+            {isPDF && fileUrl ? (
+              <Document
+                file={fileUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                className="flex justify-center"
+              >
+                <Page
+                  pageNumber={1}
+                  width={pageWidth}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              </Document>
+            ) : (
+              <img
+                src={imageUrl}
+                alt={floorPlan.name}
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            )}
 
             {/* Markup Pins */}
             {markups.map((markup, index) => {
-              if (markup.markup_data?.type === "pin") {
-                const isSelected = markup.id === selectedMarkupId;
-                return (
-                  <button
-                    key={markup.id}
-                    className={`absolute z-10 transition-all ${
-                      isSelected ? "scale-125" : ""
-                    }`}
-                    style={getMarkupStyle(markup)}
-                    onClick={() => onMarkupClick(markup)}
-                  >
-                    <div className="relative">
-                      <div
-                        className={`w-8 h-8 rounded-full ${getStatusColor(
-                          markup.status
-                        )} flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white`}
-                      >
-                        {index + 1}
-                      </div>
-                      {isSelected && (
-                        <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-75" />
-                      )}
+              const isSelected = markup.id === selectedMarkupId;
+              return (
+                <button
+                  key={markup.id}
+                  className={`absolute z-10 transition-all ${
+                    isSelected ? "scale-125" : ""
+                  }`}
+                  style={getMarkupStyle(markup)}
+                  onClick={() => onMarkupClick(markup)}
+                >
+                  <div className="relative">
+                    <div
+                      className={`w-8 h-8 rounded-full ${getStatusColor(
+                        markup.status
+                      )} flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white`}
+                    >
+                      {index + 1}
                     </div>
-                  </button>
-                );
-              }
-              return null;
+                    {isSelected && (
+                      <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-75" />
+                    )}
+                  </div>
+                </button>
+              );
             })}
           </div>
         </div>

@@ -147,16 +147,18 @@ export function WorkerMarkupResponseCard({
         {/* Customer's Request */}
         <div className="space-y-2">
           <p className="text-sm font-medium">Customer's Request:</p>
-          {markup.notes ? (
-            <p className="text-sm text-muted-foreground">{markup.notes}</p>
+          {(markup.notes || markup.markup_data?.notes) ? (
+            <p className="text-sm text-muted-foreground">
+              {markup.notes || markup.markup_data?.notes}
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground italic">No notes provided</p>
           )}
 
-          {markup.photo_url && (
+          {(markup.photo_url || markup.markup_data?.photo_url) && (
             <div className="mt-2">
               <img
-                src={markup.photo_url}
+                src={markup.photo_url || markup.markup_data?.photo_url}
                 alt="Customer photo"
                 className="w-full rounded-lg border"
               />
