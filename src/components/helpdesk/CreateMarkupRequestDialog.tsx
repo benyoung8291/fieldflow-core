@@ -355,31 +355,6 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
                   </Select>
                 </div>
               )}
-
-              {selectedFloorPlanId && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Request Title *</Label>
-                    <Input
-                      id="title"
-                      value={requestTitle}
-                      onChange={(e) => setRequestTitle(e.target.value)}
-                      placeholder="Brief description of the issue"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={requestDescription}
-                      onChange={(e) => setRequestDescription(e.target.value)}
-                      placeholder="Detailed description of what needs to be done"
-                      rows={3}
-                    />
-                  </div>
-                </>
-              )}
             </div>
           ) : (
             <div className="h-full py-4">
@@ -417,7 +392,32 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
                 <ResizableHandle withHandle />
                 
                 <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-                  <div className="h-full p-4 overflow-auto">
+                  <div className="h-full p-4 overflow-auto space-y-4">
+                    {/* Request Details */}
+                    <div className="space-y-3 pb-4 border-b">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Request Title *</Label>
+                        <Input
+                          id="title"
+                          value={requestTitle}
+                          onChange={(e) => setRequestTitle(e.target.value)}
+                          placeholder="Brief description of the issue"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={requestDescription}
+                          onChange={(e) => setRequestDescription(e.target.value)}
+                          placeholder="Detailed description of what needs to be done"
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Markup List */}
                     <FloorPlanMarkupList
                       markups={markups}
                       onMarkupUpdate={updateMarkupNote}
