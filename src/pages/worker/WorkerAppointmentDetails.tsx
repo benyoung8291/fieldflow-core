@@ -63,6 +63,7 @@ export default function WorkerAppointmentDetails() {
   const [showQuickPhotoCapture, setShowQuickPhotoCapture] = useState(false);
   const [timeLog, setTimeLog] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [workNotes, setWorkNotes] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isPaused, setIsPaused] = useState(false);
@@ -224,8 +225,8 @@ export default function WorkerAppointmentDetails() {
         return;
       }
 
-      // Load time log and attachments in parallel
-      const [logResult, filesResult] = await Promise.all([
+      // Load time log, before photos, and documents in parallel
+      const [logResult, beforePhotosResult, documentsResult] = await Promise.all([
         supabase
           .from('time_logs')
           .select('*')
@@ -237,11 +238,19 @@ export default function WorkerAppointmentDetails() {
           .from('appointment_attachments')
           .select('*')
           .eq('appointment_id', id)
+          .eq('category', 'before_photo')
+          .order('uploaded_at', { ascending: false }),
+        supabase
+          .from('appointment_attachments')
+          .select('*')
+          .eq('appointment_id', id)
+          .neq('category', 'before_photo')
           .order('uploaded_at', { ascending: false })
       ]);
 
       setTimeLog(logResult.data);
-      setAttachments(filesResult.data || []);
+      setAttachments(beforePhotosResult.data || []);
+      setDocuments(documentsResult.data || []);
       
       // Cache time log if exists
       if (logResult.data) {
@@ -1094,7 +1103,7 @@ export default function WorkerAppointmentDetails() {
               <Camera className="h-5 w-5" />
               Before Photos ({attachments.length})
             </CardTitle>
-            <Button onClick={() => setShowPhotoCapture(true)} size="sm">
+            <Button onClick={() => setShowQuickPhotoCapture(true)} size="sm">
               <Camera className="h-4 w-4 mr-2" />
               Add Before Photo
             </Button>
@@ -1132,6 +1141,37 @@ export default function WorkerAppointmentDetails() {
             )}
           </CardContent>
         </Card>
+
+        {/* Documents from Office */}
+        {documents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Documents ({documents.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                    onClick={() => window.open(doc.file_url, '_blank')}
+                  >
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                      {doc.notes && (
+                        <p className="text-xs text-muted-foreground truncate">{doc.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Assigned Workers */}
         {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
@@ -1333,7 +1373,7 @@ export default function WorkerAppointmentDetails() {
             <AlertDialogCancel>Remind Me Later</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
               setShowBeforePhotosPrompt(false);
-              setShowPhotoCapture(true);
+              setShowQuickPhotoCapture(true);
             }}>
               Take Photos Now
             </AlertDialogAction>
