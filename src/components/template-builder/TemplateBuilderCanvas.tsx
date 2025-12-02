@@ -17,7 +17,7 @@ import { fabricDefaultTemplates } from "@/lib/fabricTemplates";
 interface TemplateBuilderCanvasProps {
   templateId?: string;
   templateData?: any;
-  onSave: (json: string, thumbnail: string, name: string, documentType: string) => Promise<void>;
+  onSave: (json: string, thumbnail: string, hiResImage: string, name: string, documentType: string) => Promise<void>;
 }
 
 export const TemplateBuilderCanvas = ({ templateId, templateData, onSave }: TemplateBuilderCanvasProps) => {
@@ -69,14 +69,21 @@ export const TemplateBuilderCanvas = ({ templateId, templateData, onSave }: Temp
       // Serialize canvas to JSON
       const json = canvas.toJSON();
       
-      // Generate thumbnail
+      // Generate low-res thumbnail for preview
       const thumbnail = canvas.toDataURL({
         format: 'png',
         quality: 0.8,
         multiplier: 0.5,
       });
 
-      await onSave(JSON.stringify(json), thumbnail, templateName, documentType);
+      // Generate HIGH-RESOLUTION image for PDF background
+      const hiResImage = canvas.toDataURL({
+        format: 'png',
+        multiplier: 3,  // 3x resolution for crisp printing
+        quality: 1,     // Maximum quality
+      });
+
+      await onSave(JSON.stringify(json), thumbnail, hiResImage, templateName, documentType);
     } catch (error) {
       console.error("Save error:", error);
       toast({

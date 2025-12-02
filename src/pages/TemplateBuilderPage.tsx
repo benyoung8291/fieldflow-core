@@ -40,7 +40,13 @@ export default function TemplateBuilderPage() {
     fetchTemplate();
   }, [id]);
 
-  const handleSave = async (json: string, thumbnail: string, name: string, documentType: string) => {
+  const handleSave = async (
+    json: string, 
+    thumbnail: string, 
+    hiResImage: string,  // NEW: High-resolution image for PDF backgrounds
+    name: string, 
+    documentType: string
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -55,30 +61,32 @@ export default function TemplateBuilderPage() {
 
       if (id) {
         // Update existing template
-        const { error } = await supabase
-          .from("pdf_templates")
-          .update({
-            name,
-            document_type: documentType,
-            template_json: JSON.parse(json),
-            thumbnail_url: thumbnail,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", id);
+      const { error } = await supabase
+        .from("pdf_templates")
+        .update({
+          name,
+          document_type: documentType,
+          template_json: JSON.parse(json),
+          thumbnail_url: thumbnail,
+          template_image_url: hiResImage,  // Store high-res image for PDF generation
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
 
         if (error) throw error;
       } else {
         // Create new template
-        const { error } = await supabase
-          .from("pdf_templates")
-          .insert({
-            tenant_id: profile.tenant_id,
-            name,
-            document_type: documentType,
-            template_json: JSON.parse(json),
-            thumbnail_url: thumbnail,
-            created_by: user.id
-          });
+      const { error } = await supabase
+        .from("pdf_templates")
+        .insert({
+          tenant_id: profile.tenant_id,
+          name,
+          document_type: documentType,
+          template_json: JSON.parse(json),
+          thumbnail_url: thumbnail,
+          template_image_url: hiResImage,  // Store high-res image for PDF generation
+          created_by: user.id
+        });
 
         if (error) throw error;
       }
