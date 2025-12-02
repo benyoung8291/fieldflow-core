@@ -563,7 +563,7 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
                   <div className="p-3 border-b">
                     <h4 className="font-semibold text-xs">Workers & Times</h4>
                   </div>
-                  <ScrollArea className="max-h-64">
+                  <ScrollArea className="h-64">
                     <div className="p-3 space-y-2">
                       {selectedData.logs.map((log: TimeLog) => {
                         const profile = log.profiles || log.worker;
