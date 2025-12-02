@@ -10,9 +10,12 @@ export default function ViewFieldReport() {
   const { appointmentId, reportId } = useParams();
   const navigate = useNavigate();
 
-  const { data: report, isLoading } = useQuery({
-    queryKey: ['field-report', reportId],
+  console.log('ViewFieldReport - reportId:', reportId, 'appointmentId:', appointmentId);
+
+  const { data: report, isLoading, error } = useQuery({
+    queryKey: ['field-report-view', reportId],
     enabled: !!reportId,
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('field_reports')
@@ -26,14 +29,19 @@ export default function ViewFieldReport() {
         .eq('id', reportId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Field report fetch error:', error);
+        throw error;
+      }
+      console.log('Field report fetched successfully:', data);
       return data;
     },
   });
 
-  const { data: photos = [] } = useQuery({
-    queryKey: ['field-report-photos', reportId],
-    enabled: !!reportId,
+  const { data: photos = [], error: photosError } = useQuery({
+    queryKey: ['field-report-photos-view', reportId],
+    enabled: !!reportId && !!report,
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('field_report_photos')
@@ -41,10 +49,43 @@ export default function ViewFieldReport() {
         .eq('field_report_id', reportId)
         .order('display_order');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Field report photos fetch error:', error);
+        throw error;
+      }
+      console.log('Field report photos fetched:', data?.length || 0, 'photos');
       return data;
     },
   });
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background pb-32">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Field Report</h1>
+          </div>
+        </header>
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-6 gap-4">
+          <div className="text-destructive text-center">
+            <p className="font-semibold">Error loading field report</p>
+            <p className="text-sm mt-2">{error.message}</p>
+          </div>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
