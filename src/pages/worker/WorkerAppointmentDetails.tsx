@@ -31,6 +31,7 @@ import {
   Square,
   Image as ImageIcon,
   FileText,
+  X,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -832,6 +833,38 @@ export default function WorkerAppointmentDetails() {
     }
   };
 
+  const handleDeleteBeforePhoto = async (attachmentId: string, fileUrl: string) => {
+    try {
+      // Extract file path from URL for storage deletion
+      const urlParts = fileUrl.split('/');
+      const bucketPath = urlParts.slice(urlParts.indexOf('appointment-attachments') + 1).join('/');
+      
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('appointment-attachments')
+        .remove([bucketPath]);
+      
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+      }
+      
+      // Delete from database
+      const { error } = await supabase
+        .from('appointment_attachments')
+        .delete()
+        .eq('id', attachmentId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      toast.success('Photo deleted');
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast.error('Failed to delete photo');
+    }
+  };
+
   const formatDuration = (clockIn: string) => {
     const start = new Date(clockIn);
     const diffMs = currentTime.getTime() - start.getTime();
@@ -1112,7 +1145,7 @@ export default function WorkerAppointmentDetails() {
             {attachments.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
                 {attachments.map((file) => (
-                  <div key={file.id} className="relative rounded-lg overflow-hidden border">
+                  <div key={file.id} className="relative rounded-lg overflow-hidden border group">
                     <img
                       src={file.file_url}
                       alt={file.file_name}
@@ -1126,8 +1159,16 @@ export default function WorkerAppointmentDetails() {
                         }
                       }}
                     />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeleteBeforePhoto(file.id, file.file_url)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                     <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-2">
-                      <p className="text-xs truncate">{file.category}</p>
+                      <p className="text-xs truncate">Before Photo</p>
                     </div>
                   </div>
                 ))}
