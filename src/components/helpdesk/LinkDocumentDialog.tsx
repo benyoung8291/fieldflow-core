@@ -186,6 +186,14 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
 
       if (error) throw error;
 
+      // If linking an appointment, also update the ticket's appointment_id for worker app visibility
+      if (documentType === "appointment") {
+        await supabase
+          .from("helpdesk_tickets")
+          .update({ appointment_id: documentId })
+          .eq("id", ticketId);
+      }
+
       // Auto-link related documents
       if (documentType === "service_order") {
         // Link appointments for this service order
