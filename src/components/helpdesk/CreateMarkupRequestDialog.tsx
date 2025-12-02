@@ -31,19 +31,22 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
   const [uploadingPhotos, setUploadingPhotos] = useState<Set<string>>(new Set());
 
   // Fetch current user
-  const { data: currentUser } = useQuery({
+  const { data: currentUser, error: userError } = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("tenant_id")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      return { ...user, tenant_id: profile?.tenant_id };
+      if (error) throw error;
+      if (!profile?.tenant_id) throw new Error("Profile not found or missing tenant information");
+
+      return { ...user, tenant_id: profile.tenant_id };
     },
   });
 
@@ -285,6 +288,27 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
     markups.length > 0 &&
     markups.every(m => m.notes?.trim()) &&
     uploadingPhotos.size === 0;
+
+  if (userError) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Error</DialogTitle>
+          </DialogHeader>
+          <div className="text-destructive">
+            <p>Failed to load user profile: {userError.message}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Please contact support if this issue persists.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleClose}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
