@@ -91,7 +91,7 @@ export default function WorkerRequestDetails() {
   const totalCount = ticket.ticket_markups?.length || 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b p-4">
         <Button
@@ -115,7 +115,7 @@ export default function WorkerRequestDetails() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 pb-24 space-y-4">
         {/* Request Details */}
         <Card>
           <CardHeader>
