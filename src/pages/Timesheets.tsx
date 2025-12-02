@@ -16,6 +16,7 @@ import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
 import AppointmentTimeLogsMap from "@/components/time-logs/AppointmentTimeLogsMap";
 import TimeLogsSplitView from "@/components/time-logs/TimeLogsSplitView";
 import { getAppointmentLocation } from "@/lib/appointmentLocation";
+import { UnprocessedTimeLogsTable } from "@/components/timesheets/UnprocessedTimeLogsTable";
 
 export default function Timesheets() {
   const navigate = useNavigate();
@@ -425,41 +426,10 @@ export default function Timesheets() {
 
               {/* All Logs Tab */}
               <TabsContent value="all-logs" className="mt-4">
-                {unprocessedLogs.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No unprocessed time logs for this week</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {unprocessedLogs.map((log: any) => (
-                      <div 
-                        key={log.id} 
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                        onClick={() => navigate(`/time-logs?appointment=${log.appointment_id}`)}
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">
-                            {log.profiles?.first_name} {log.profiles?.last_name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {log.appointments?.title || 'Unknown appointment'}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(log.clock_in), "MMM d, h:mm a")} - 
-                            {log.clock_out ? format(new Date(log.clock_out), "h:mm a") : 'In Progress'}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <div className="font-bold">{log.total_hours?.toFixed(2)}h</div>
-                          </div>
-                          <DistanceWarningBadge distance={log.clockInDistance} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <UnprocessedTimeLogsTable 
+                  timeLogs={unprocessedLogs} 
+                  selectedWeek={selectedWeek}
+                />
               </TabsContent>
 
               {/* Split View Tab */}
