@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DistanceWarningBadge from "./DistanceWarningBadge";
+import { getAppointmentLocation } from "@/lib/appointmentLocation";
 
 interface TimeLog {
   id: string;
@@ -170,10 +171,11 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
 
           // Calculate distance if appointment location available
           let distanceText = "";
-          if (appointment?.location_lat && appointment?.location_lng) {
+          const logAppointmentLocation = getAppointmentLocation(appointment);
+          if (logAppointmentLocation) {
             const distance = calculateDistance(
-              appointment.location_lat,
-              appointment.location_lng,
+              logAppointmentLocation.lat,
+              logAppointmentLocation.lng,
               log.latitude,
               log.longitude
             );
