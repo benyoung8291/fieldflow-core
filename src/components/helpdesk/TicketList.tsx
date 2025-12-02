@@ -233,7 +233,7 @@ export function TicketList({
     },
     onSuccess: (deletedIds) => {
       // Optimistically remove deleted tickets from cache immediately
-      queryClient.setQueryData(["helpdesk-tickets"], (oldData: any[] | undefined) => {
+      queryClient.setQueryData(["helpdesk-tickets", filterArchived], (oldData: any[] | undefined) => {
         if (!oldData) return oldData;
         return oldData.filter(ticket => !deletedIds.includes(ticket.id));
       });
