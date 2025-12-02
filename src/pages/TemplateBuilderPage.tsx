@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { TemplateBuilderCanvas } from "@/components/template-builder/TemplateBuilderCanvas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function TemplateBuilderPage() {
   const { id } = useParams();
@@ -108,14 +109,20 @@ export default function TemplateBuilderPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading template...</p>
+      <DashboardLayout>
+        <div className="h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading template...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
-  return <TemplateBuilderCanvas templateId={id} templateData={templateData} onSave={handleSave} />;
+  return (
+    <DashboardLayout noPadding>
+      <TemplateBuilderCanvas templateId={id} templateData={templateData} onSave={handleSave} />
+    </DashboardLayout>
+  );
 }
