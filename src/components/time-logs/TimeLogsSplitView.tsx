@@ -132,14 +132,15 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
           throw new Error("Google Maps API key not configured");
         }
 
+        // Create loader instance
         const loader = new Loader({
           apiKey,
           version: "weekly",
-          libraries: ["maps", "marker"],
         });
 
-        // @ts-ignore - Loader API varies by version
-        const google = await loader.load();
+        // Load the library and import maps
+        await loader.importLibrary("maps");
+        await loader.importLibrary("marker");
 
       // Determine map center
       const appointment = selectedData.appointment;
@@ -162,7 +163,7 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
         mapInstance.current = new google.maps.Map(container, {
           center: { lat: centerLat, lng: centerLng },
           zoom: 15,
-          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapId: "time-logs-map",
         });
       } else {
         mapInstance.current.setCenter({ lat: centerLat, lng: centerLng });
@@ -301,14 +302,17 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
       if (!selectedData) return;
 
       const initMaximizedMap = async () => {
+        // Load Google Maps API
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) return;
+        
         const loader = new Loader({
-          apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+          apiKey,
           version: "weekly",
-          libraries: ["maps", "marker"],
         });
 
-        // @ts-ignore
-        const google = await loader.load();
+        await loader.importLibrary("maps");
+        await loader.importLibrary("marker");
 
         const appointment = selectedData.appointment;
         const appointmentLocation = getAppointmentLocation(appointment);
@@ -328,7 +332,7 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
         maximizedMapInstanceRef.current = new google.maps.Map(maximizedMapRef.current!, {
           center: { lat: centerLat, lng: centerLng },
           zoom: 15,
-          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapId: "time-logs-maximized-map",
         });
 
         const map = maximizedMapInstanceRef.current;
