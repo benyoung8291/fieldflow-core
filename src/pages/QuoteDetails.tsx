@@ -53,6 +53,7 @@ import {
 import InlineQuoteLineItems from "@/components/quotes/InlineQuoteLineItems";
 import QuotePDFDialog from "@/components/quotes/QuotePDFDialog";
 import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
+import { PDFDownloadAction } from "@/components/pdf/PDFDownloadAction";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import AuditTimeline from "@/components/audit/AuditTimeline";
@@ -320,6 +321,23 @@ export default function QuoteDetails() {
       if (error && error.code !== 'PGRST116') throw error;
       return (data as any)?.default_margin_percentage || 30;
     },
+  });
+
+  // Fetch PDF template for hybrid PDF generation
+  const { data: pdfTemplate } = useQuery({
+    queryKey: ["pdf-template-quote", quote?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pdf_templates")
+        .select("*")
+        .eq("document_type", "quote")
+        .eq("is_default", true)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!quote,
   });
 
   // Initialize edited fields when quote loads
@@ -1117,8 +1135,9 @@ export default function QuoteDetails() {
 
   // Secondary action buttons (always available unless draft)
   if (!isDraft) {
+    // Add legacy PDF download (edge function)
     actionButtons.push({
-      label: "Download PDF",
+      label: "Download PDF (Legacy)",
       icon: <Download className="h-4 w-4" />,
       onClick: () => setPdfDialogOpen(true),
       variant: "outline",
@@ -1687,6 +1706,43 @@ export default function QuoteDetails() {
 
       {quote && (
         <>
+          {/* Hybrid PDF Download Button - Uses Fabric.js template as background */}
+          {pdfTemplate?.template_image_url && lineItems && (
+            <div className="fixed bottom-6 right-6 z-50">
+              <PDFDownloadAction
+                templateImage={pdfTemplate.template_image_url}
+                data={{
+                  documentNumber: quote.quote_number || '',
+                  documentDate: format(new Date(quote.created_at), "dd/MM/yyyy"),
+                  customerName: quote.customer?.name || "N/A",
+                  lineItems: lineItems.flatMap(item => [
+                    {
+                      description: item.description,
+                      quantity: parseFloat(item.quantity),
+                      unit_price: parseFloat(item.unit_price),
+                      line_total: item.line_total,
+                    },
+                    ...(item.subItems?.map(sub => ({
+                      description: `  → ${sub.description}`,
+                      quantity: parseFloat(sub.quantity),
+                      unit_price: parseFloat(sub.unit_price),
+                      line_total: sub.line_total,
+                    })) || [])
+                  ]),
+                  subtotal: quote.subtotal || 0,
+                  tax: quote.tax_amount || 0,
+                  total: quote.total_amount || 0,
+                  notes: quote.notes || undefined,
+                  termsConditions: quote.terms_conditions || undefined,
+                }}
+                documentType="quote"
+                filename={`Quote-${quote.quote_number}.pdf`}
+                variant="default"
+                className="shadow-lg"
+              />
+            </div>
+          )}
+
           <QuotePDFDialog
             open={pdfDialogOpen} 
             onOpenChange={(open) => {

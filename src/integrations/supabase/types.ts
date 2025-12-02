@@ -4414,6 +4414,7 @@ export type Database = {
           is_default: boolean | null
           name: string
           page_settings: Json
+          template_image_url: string | null
           template_json: Json
           tenant_id: string
           thumbnail_url: string | null
@@ -4428,6 +4429,7 @@ export type Database = {
           is_default?: boolean | null
           name: string
           page_settings?: Json
+          template_image_url?: string | null
           template_json?: Json
           tenant_id: string
           thumbnail_url?: string | null
@@ -4442,6 +4444,7 @@ export type Database = {
           is_default?: boolean | null
           name?: string
           page_settings?: Json
+          template_image_url?: string | null
           template_json?: Json
           tenant_id?: string
           thumbnail_url?: string | null
