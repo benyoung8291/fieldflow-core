@@ -13,8 +13,8 @@ export default function DistanceWarningBadge({
 }: DistanceWarningBadgeProps) {
   if (distance === null) {
     return (
-      <Badge variant="outline" className="text-xs bg-muted">
-        No location
+      <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
+        No GPS data
       </Badge>
     );
   }

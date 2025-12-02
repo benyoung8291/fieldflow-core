@@ -42,25 +42,40 @@ export default function AppointmentTimeLogsMap({
       // @ts-ignore - Loader API varies by version
       const google = await loader.load();
 
+      // Determine map center - use appointment location or first worker location
+      let centerLat = appointmentLocation.lat;
+      let centerLng = appointmentLocation.lng;
+      
+      if (!centerLat || !centerLng) {
+        // Find first worker location
+        const firstWorkerLog = timeLogs.find(log => log.latitude && log.longitude);
+        if (firstWorkerLog) {
+          centerLat = firstWorkerLog.latitude!;
+          centerLng = firstWorkerLog.longitude!;
+        }
+      }
+
       const mapInstance = new google.maps.Map(mapRef.current!, {
-        center: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
+        center: { lat: centerLat, lng: centerLng },
         zoom: 15,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
       });
 
-      // Add appointment location marker (blue)
-      new google.maps.Marker({
-        position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
-        map: mapInstance,
-        title: "Appointment Location",
-        label: {
-          text: "📍",
-          fontSize: "20px",
-        },
-        icon: {
-          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-        },
-      });
+      // Add appointment location marker (blue) if available
+      if (appointmentLocation.lat && appointmentLocation.lng) {
+        new google.maps.Marker({
+          position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
+          map: mapInstance,
+          title: "Appointment Location",
+          label: {
+            text: "📍",
+            fontSize: "20px",
+          },
+          icon: {
+            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          },
+        });
+      }
 
       // Add worker clock-in/out markers
       timeLogs.forEach((log) => {
@@ -105,7 +120,9 @@ export default function AppointmentTimeLogsMap({
 
       // Fit bounds to show all markers
       const bounds = new google.maps.LatLngBounds();
-      bounds.extend({ lat: appointmentLocation.lat, lng: appointmentLocation.lng });
+      if (appointmentLocation.lat && appointmentLocation.lng) {
+        bounds.extend({ lat: appointmentLocation.lat, lng: appointmentLocation.lng });
+      }
       timeLogs.forEach((log) => {
         if (log.latitude && log.longitude) {
           bounds.extend({ lat: log.latitude, lng: log.longitude });
@@ -114,7 +131,9 @@ export default function AppointmentTimeLogsMap({
           bounds.extend({ lat: log.check_out_lat, lng: log.check_out_lng });
         }
       });
-      mapInstance.fitBounds(bounds);
+      if (!bounds.isEmpty()) {
+        mapInstance.fitBounds(bounds);
+      }
     };
 
     initializeMap();
@@ -133,6 +152,13 @@ export default function AppointmentTimeLogsMap({
           <DialogTitle>Appointment Location Verification - All Workers</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Warning if appointment location missing */}
+          {(!appointmentLocation.lat || !appointmentLocation.lng) && (
+            <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg text-sm text-warning">
+              <strong>Note:</strong> Appointment GPS location not available. Distances cannot be calculated.
+            </div>
+          )}
+
           {/* Legend */}
           <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg border text-sm">
             <div className="flex items-center gap-2">
@@ -156,7 +182,7 @@ export default function AppointmentTimeLogsMap({
               {timeLogs.map((log) => {
                 const workerName = `${log.worker.first_name} ${log.worker.last_name}`;
                 const checkInDistance =
-                  log.latitude && log.longitude
+                  appointmentLocation.lat && appointmentLocation.lng && log.latitude && log.longitude
                     ? calculateDistance(
                         appointmentLocation.lat,
                         appointmentLocation.lng,
@@ -165,7 +191,7 @@ export default function AppointmentTimeLogsMap({
                       )
                     : null;
                 const checkOutDistance =
-                  log.check_out_lat && log.check_out_lng
+                  appointmentLocation.lat && appointmentLocation.lng && log.check_out_lat && log.check_out_lng
                     ? calculateDistance(
                         appointmentLocation.lat,
                         appointmentLocation.lng,
