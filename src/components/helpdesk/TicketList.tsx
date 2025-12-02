@@ -229,13 +229,39 @@ export function TicketList({
         .delete()
         .in("id", ticketIds);
       if (error) throw error;
+      return ticketIds; // Return deleted IDs for use in onSuccess
     },
-    onSuccess: (_, ticketIds) => {
-      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+    onSuccess: (deletedIds) => {
+      // Optimistically remove deleted tickets from cache immediately
+      queryClient.setQueryData(["helpdesk-tickets"], (oldData: any[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.filter(ticket => !deletedIds.includes(ticket.id));
+      });
+      
+      // If the currently selected ticket was deleted, select the next one
+      if (selectedTicketId && deletedIds.includes(selectedTicketId)) {
+        const remainingTickets = filteredTickets?.filter(t => !deletedIds.includes(t.id)) || [];
+        const currentIndex = filteredTickets?.findIndex(t => t.id === selectedTicketId) || 0;
+        
+        // Find next ticket (prefer the one at same index, or previous if at end)
+        const nextTicket = remainingTickets[currentIndex] || remainingTickets[currentIndex - 1] || null;
+        
+        if (nextTicket) {
+          onSelectTicket(nextTicket.id);
+        } else {
+          // No tickets left - clear selection
+          onSelectTicket('');
+        }
+      }
+      
       setSelectedTicketIds(new Set());
+      
+      // Also invalidate to ensure we're fully in sync
+      queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+      
       toast({
         title: "Tickets deleted",
-        description: `${ticketIds.length} ticket(s) permanently deleted`,
+        description: `${deletedIds.length} ticket(s) permanently deleted`,
       });
     },
     onError: (error) => {
