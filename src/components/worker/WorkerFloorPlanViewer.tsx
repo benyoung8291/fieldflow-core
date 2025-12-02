@@ -39,6 +39,7 @@ export function WorkerFloorPlanViewer({
   const [contentDimensions, setContentDimensions] = useState({ width: 0, height: 0 });
   const [touchStartDistance, setTouchStartDistance] = useState<number>(0);
   const [initialScale, setInitialScale] = useState<number>(1);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -53,11 +54,13 @@ export function WorkerFloorPlanViewer({
   const handlePageLoad = useCallback((page: any) => {
     const { width, height } = page;
     setContentDimensions({ width, height });
+    setImageLoaded(true);
   }, []);
 
   const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setContentDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    setImageLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -231,7 +234,7 @@ export function WorkerFloorPlanViewer({
               )}
 
               {/* Markup Pins */}
-              {markups.map((markup, index) => {
+              {imageLoaded && markups.map((markup, index) => {
                 const isSelected = markup.id === selectedMarkupId;
                 return (
                   <button
