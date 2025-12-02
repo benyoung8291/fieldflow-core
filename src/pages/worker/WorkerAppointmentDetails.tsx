@@ -600,6 +600,8 @@ export default function WorkerAppointmentDetails() {
           clock_out: timestamp,
           notes: clockOutNotes,
           status: 'completed',
+          check_out_lat: position?.coords.latitude || null,
+          check_out_lng: position?.coords.longitude || null,
         })
         .eq('id', timeLog.id);
 
