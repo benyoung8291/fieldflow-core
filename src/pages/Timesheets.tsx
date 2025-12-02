@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfWeek, addWeeks, subWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar, Clock, FileText, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, FileText, MapPin, Map } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardLayout from "@/components/DashboardLayout";
 import { CreateTimesheetDialog } from "@/components/timesheets/CreateTimesheetDialog";
@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { calculateDistance } from "@/lib/distance";
 import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
 import AppointmentTimeLogsMap from "@/components/time-logs/AppointmentTimeLogsMap";
+import TimeLogsSplitView from "@/components/time-logs/TimeLogsSplitView";
 
 export default function Timesheets() {
   const navigate = useNavigate();
@@ -284,10 +285,14 @@ export default function Timesheets() {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="by-worker">By Worker</TabsTrigger>
                 <TabsTrigger value="by-appointment">By Appointment</TabsTrigger>
                 <TabsTrigger value="all-logs">All Logs</TabsTrigger>
+                <TabsTrigger value="split-view">
+                  <Map className="h-4 w-4 mr-2" />
+                  Map View
+                </TabsTrigger>
               </TabsList>
 
               {/* By Worker Tab */}
@@ -441,6 +446,11 @@ export default function Timesheets() {
                     ))}
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Split View Tab */}
+              <TabsContent value="split-view" className="mt-4">
+                <TimeLogsSplitView timeLogs={timeLogs} />
               </TabsContent>
             </Tabs>
           </CardContent>
