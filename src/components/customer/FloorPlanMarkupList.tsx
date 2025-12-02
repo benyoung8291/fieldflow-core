@@ -115,11 +115,14 @@ export function FloorPlanMarkupList({
         id: `upload-${markupId}`
       });
       onMarkupPhotoUpdate(markupId, publicUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing image:', error);
-      toast.error("Failed to process image", {
+      const errorMessage = error?.message || 'Unknown error occurred';
+      toast.error(`Failed to upload photo: ${errorMessage}`, {
         id: `upload-${markupId}`
       });
+      // Clear the failed upload state
+      onMarkupPhotoUpdate(markupId, null);
     }
   };
   const getPhotoPreview = (photo: File | string | undefined): string | null => {

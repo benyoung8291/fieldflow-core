@@ -158,84 +158,95 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
         throw new Error("Please select customer, location, and floor plan");
       }
 
-      // Create helpdesk ticket
-      const { data: ticket, error: ticketError } = await supabase
-        .from("helpdesk_tickets")
-        .insert([{
-          subject: requestTitle,
-          customer_id: selectedCustomerId,
-          location_id: selectedLocationId,
-          tenant_id: currentUser.tenant_id,
-          pipeline_id: requestsPipeline.id,
-          status: "new",
-          priority: "medium",
-        }])
-        .select()
-        .single();
+      let ticketId: string | null = null;
 
-      if (ticketError) throw ticketError;
-
-      // Create initial message with description if provided
-      if (requestDescription) {
-        const { error: messageError } = await supabase
-          .from("helpdesk_messages")
+      try {
+        // Create helpdesk ticket
+        const { data: ticket, error: ticketError } = await supabase
+          .from("helpdesk_tickets")
           .insert([{
-            ticket_id: ticket.id,
+            subject: requestTitle,
+            customer_id: selectedCustomerId,
+            location_id: selectedLocationId,
             tenant_id: currentUser.tenant_id,
-            body: requestDescription,
-            message_type: "note",
-            is_internal: false,
-            is_from_customer: false,
-          }]);
+            pipeline_id: requestsPipeline.id,
+            status: "new",
+            priority: "medium",
+          }])
+          .select()
+          .single();
 
-        if (messageError) {
-          console.error("Error creating message:", messageError);
+        if (ticketError) throw ticketError;
+        ticketId = ticket.id;
+
+        // Create initial message with description if provided
+        if (requestDescription) {
+          const { error: messageError } = await supabase
+            .from("helpdesk_messages")
+            .insert([{
+              ticket_id: ticket.id,
+              tenant_id: currentUser.tenant_id,
+              body: requestDescription,
+              message_type: "note",
+              is_internal: false,
+              is_from_customer: false,
+            }]);
+
+          if (messageError) {
+            console.error("Error creating message:", messageError);
+          }
         }
+
+        // Create markup records
+        const markupInserts = markups.map((markup) => {
+          const photoUrl = typeof markup.photo === 'string' ? markup.photo : undefined;
+
+          if (markup.type === "pin") {
+            return {
+              ticket_id: ticket.id,
+              floor_plan_id: selectedFloorPlanId,
+              tenant_id: currentUser.tenant_id,
+              pin_x: markup.x,
+              pin_y: markup.y,
+              markup_data: {
+                type: "pin",
+                notes: markup.notes,
+                photo_url: photoUrl,
+              },
+            };
+          } else {
+            const centerX = markup.bounds.x + markup.bounds.width / 2;
+            const centerY = markup.bounds.y + markup.bounds.height / 2;
+            return {
+              ticket_id: ticket.id,
+              floor_plan_id: selectedFloorPlanId,
+              tenant_id: currentUser.tenant_id,
+              pin_x: centerX,
+              pin_y: centerY,
+              markup_data: {
+                type: "zone",
+                bounds: markup.bounds,
+                notes: markup.notes,
+                photo_url: photoUrl,
+              },
+            };
+          }
+        });
+
+        const { error: markupError } = await supabase
+          .from("ticket_markups")
+          .insert(markupInserts as any);
+
+        if (markupError) throw markupError;
+
+        return ticket;
+      } catch (error) {
+        // Clean up: delete the ticket if markups failed
+        if (ticketId) {
+          await supabase.from("helpdesk_tickets").delete().eq("id", ticketId);
+        }
+        throw error;
       }
-
-      // Create markup records
-      const markupInserts = markups.map((markup) => {
-        const photoUrl = typeof markup.photo === 'string' ? markup.photo : undefined;
-
-        if (markup.type === "pin") {
-          return {
-            ticket_id: ticket.id,
-            floor_plan_id: selectedFloorPlanId,
-            tenant_id: currentUser.tenant_id,
-            pin_x: markup.x,
-            pin_y: markup.y,
-            markup_data: {
-              type: "pin",
-              notes: markup.notes,
-              photo_url: photoUrl,
-            },
-          };
-        } else {
-          const centerX = markup.bounds.x + markup.bounds.width / 2;
-          const centerY = markup.bounds.y + markup.bounds.height / 2;
-          return {
-            ticket_id: ticket.id,
-            floor_plan_id: selectedFloorPlanId,
-            tenant_id: currentUser.tenant_id,
-            pin_x: centerX,
-            pin_y: centerY,
-            markup_data: {
-              type: "zone",
-              bounds: markup.bounds,
-              notes: markup.notes,
-              photo_url: photoUrl,
-            },
-          };
-        }
-      });
-
-      const { error: markupError } = await supabase
-        .from("ticket_markups")
-        .insert(markupInserts as any);
-
-      if (markupError) throw markupError;
-
-      return ticket;
     },
     onSuccess: () => {
       toast.success("Markup request created successfully!");
