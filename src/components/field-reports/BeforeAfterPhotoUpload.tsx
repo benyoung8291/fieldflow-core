@@ -63,6 +63,7 @@ export default function BeforeAfterPhotoUpload({
         .from('appointment_attachments')
         .select('*')
         .eq('appointment_id', appointmentId)
+        .eq('category', 'before_photo')
         .order('uploaded_at', { ascending: true });
 
       if (error) throw error;
