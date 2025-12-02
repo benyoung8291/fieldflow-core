@@ -19,13 +19,7 @@ export default function ViewFieldReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('field_reports')
-        .select(`
-          *,
-          profiles:created_by (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .eq('id', reportId)
         .single();
 
