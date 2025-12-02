@@ -332,7 +332,7 @@ export default function QuoteDetails() {
         .select("*")
         .eq("document_type", "quote")
         .eq("is_default", true)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -1140,6 +1140,16 @@ export default function QuoteDetails() {
       icon: <Mail className="h-4 w-4" />,
       onClick: () => {
         setEmailMode(true);
+        setPdfDialogOpen(true);
+      },
+      variant: "outline",
+    });
+    
+    actionButtons.push({
+      label: "Download PDF",
+      icon: <Download className="h-4 w-4" />,
+      onClick: () => {
+        setEmailMode(false);
         setPdfDialogOpen(true);
       },
       variant: "outline",
