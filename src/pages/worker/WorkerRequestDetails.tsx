@@ -26,16 +26,18 @@ export default function WorkerRequestDetails() {
           subject,
           status,
           created_at,
-          ticket_markups (
-            id,
-            markup_data,
-            notes,
-            photo_url,
-            status,
-            response_notes,
-            response_photos,
-            floor_plan_id
-          )
+        ticket_markups (
+          id,
+          markup_data,
+          notes,
+          photo_url,
+          status,
+          response_notes,
+          response_photos,
+          floor_plan_id,
+          pin_x,
+          pin_y
+        )
         `)
         .eq("id", ticketId)
         .single();
