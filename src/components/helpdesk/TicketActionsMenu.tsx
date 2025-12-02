@@ -40,7 +40,8 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
     },
   });
 
-  const { data: appointments } = useQuery({
+  // Fetch appointments without nested join
+  const { data: appointmentsRaw } = useQuery({
     queryKey: ["appointments-for-assignment", ticket.customer_id, ticket.location_id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -50,24 +51,58 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
           title,
           start_time,
           appointment_number,
-          service_order:service_orders(customer_id, customer_location_id)
+          service_order_id
         `)
         .in("status", ["published", "checked_in"])
         .order("start_time", { ascending: true })
         .limit(50);
       
       if (error) throw error;
-      
-      // Return all appointments - let RLS handle tenant filtering
-      // The useMemo will organize them by location/customer relevance
       return data || [];
     },
     enabled: true,
   });
 
+  // Extract service order IDs from appointments
+  const serviceOrderIds = useMemo(() => 
+    appointmentsRaw?.map(apt => apt.service_order_id).filter(Boolean) || [],
+    [appointmentsRaw]
+  );
+
+  // Fetch service orders separately
+  const { data: serviceOrders } = useQuery({
+    queryKey: ["service-orders-for-appointments", serviceOrderIds],
+    queryFn: async () => {
+      if (serviceOrderIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from("service_orders")
+        .select("id, customer_id, customer_location_id")
+        .in("id", serviceOrderIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: serviceOrderIds.length > 0,
+  });
+
+  // Combine appointments with their service order data
+  const appointments = useMemo(() => {
+    if (!appointmentsRaw) return [];
+    
+    const soMap = new Map(serviceOrders?.map(so => [so.id, so]) || []);
+    
+    return appointmentsRaw.map(apt => ({
+      ...apt,
+      service_order: apt.service_order_id ? soMap.get(apt.service_order_id) : null
+    }));
+  }, [appointmentsRaw, serviceOrders]);
+
   // Separate and sort appointments by location relevance
   const { locationAppointments, otherAppointments } = useMemo(() => {
-    if (!appointments) return { locationAppointments: [], otherAppointments: [] };
+    if (!appointments || appointments.length === 0) {
+      return { locationAppointments: [], otherAppointments: [] };
+    }
     
     const locationMatched: any[] = [];
     const customerMatched: any[] = [];
