@@ -18,6 +18,9 @@ import { format, parseISO } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { useQueryClient } from "@tanstack/react-query";
 
+// Map ID from environment variable for modern Google Maps styling
+const GOOGLE_MAPS_MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || "";
+
 interface TimeLog {
   id: string;
   worker_id: string;
@@ -152,12 +155,29 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
 
       if (!centerLat || !centerLng) return;
 
-      // Create or update map
+      // Create or update map with modern styling
       if (!mapInstance.current) {
-        mapInstance.current = new google.maps.Map(container, {
+        mapInstance.current = new Map(container, {
           center: { lat: centerLat, lng: centerLng },
           zoom: 15,
-          mapId: "time-logs-map",
+          mapId: GOOGLE_MAPS_MAP_ID,
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          gestureHandling: "greedy",
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "transit",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
         });
       } else {
         mapInstance.current.setCenter({ lat: centerLat, lng: centerLng });
@@ -168,15 +188,17 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
       // Clear existing markers
       const bounds = new google.maps.LatLngBounds();
 
-      // Add appointment location marker (blue)
+      // Add appointment location marker (blue) with modern styling
       if (appointmentLocation) {
-        new google.maps.Marker({
-          position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
+        const appointmentPin = document.createElement('div');
+        appointmentPin.className = 'flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg border-2 border-white';
+        appointmentPin.textContent = '📍';
+        
+        new AdvancedMarkerElement({
           map: map,
+          position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
           title: "Appointment Location",
-          icon: {
-            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-          },
+          content: appointmentPin,
         });
         bounds.extend({ lat: appointmentLocation.lat, lng: appointmentLocation.lng });
       }
@@ -186,21 +208,17 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
         const profile = log.profiles || log.worker;
         const workerName = profile ? `${profile.first_name} ${profile.last_name}` : "Unknown";
 
-        // Clock-in marker (green)
+        // Clock-in marker (green) with modern styling
         if (log.latitude && log.longitude) {
-          const marker = new google.maps.Marker({
-            position: { lat: log.latitude, lng: log.longitude },
+          const clockInPin = document.createElement('div');
+          clockInPin.className = 'flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white text-xs font-bold shadow-lg border-2 border-white cursor-pointer hover:scale-110 transition-transform';
+          clockInPin.textContent = 'IN';
+
+          const marker = new AdvancedMarkerElement({
             map: map,
+            position: { lat: log.latitude, lng: log.longitude },
             title: `${workerName} - Clock In`,
-            label: {
-              text: "IN",
-              color: "white",
-              fontSize: "10px",
-              fontWeight: "bold",
-            },
-            icon: {
-              url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-            },
+            content: clockInPin,
           });
 
           let distanceText = "";
@@ -221,28 +239,24 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
             </div>`,
           });
 
-          marker.addListener("click", () => {
-            infoWindow.open(map, marker);
+          clockInPin.addEventListener("click", () => {
+            infoWindow.open({ map, anchor: marker });
           });
 
           bounds.extend({ lat: log.latitude, lng: log.longitude });
         }
 
-        // Clock-out marker (red)
+        // Clock-out marker (red) with modern styling
         if (log.check_out_lat && log.check_out_lng) {
-          const marker = new google.maps.Marker({
-            position: { lat: log.check_out_lat, lng: log.check_out_lng },
+          const clockOutPin = document.createElement('div');
+          clockOutPin.className = 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg border-2 border-white cursor-pointer hover:scale-110 transition-transform';
+          clockOutPin.textContent = 'OUT';
+
+          const marker = new AdvancedMarkerElement({
             map: map,
+            position: { lat: log.check_out_lat, lng: log.check_out_lng },
             title: `${workerName} - Clock Out`,
-            label: {
-              text: "OUT",
-              color: "white",
-              fontSize: "10px",
-              fontWeight: "bold",
-            },
-            icon: {
-              url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-            },
+            content: clockOutPin,
           });
 
           let distanceText = "";
@@ -263,8 +277,8 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
             </div>`,
           });
 
-          marker.addListener("click", () => {
-            infoWindow.open(map, marker);
+          clockOutPin.addEventListener("click", () => {
+            infoWindow.open({ map, anchor: marker });
           });
 
           bounds.extend({ lat: log.check_out_lat, lng: log.check_out_lng });
@@ -319,24 +333,43 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
 
         if (!centerLat || !centerLng) return;
 
-        maximizedMapInstanceRef.current = new google.maps.Map(maximizedMapRef.current!, {
+        maximizedMapInstanceRef.current = new Map(maximizedMapRef.current!, {
           center: { lat: centerLat, lng: centerLng },
           zoom: 15,
-          mapId: "time-logs-maximized-map",
+          mapId: GOOGLE_MAPS_MAP_ID,
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          gestureHandling: "greedy",
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "transit",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
         });
 
         const map = maximizedMapInstanceRef.current;
         const bounds = new google.maps.LatLngBounds();
 
-        // Add appointment location marker
+        // Add appointment location marker with modern styling
         if (appointmentLocation) {
-          new google.maps.Marker({
-            position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
+          const appointmentPin = document.createElement('div');
+          appointmentPin.className = 'flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg border-2 border-white';
+          appointmentPin.textContent = '📍';
+          
+          new AdvancedMarkerElement({
             map: map,
+            position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
             title: "Appointment Location",
-            icon: {
-              url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-            },
+            content: appointmentPin,
           });
           bounds.extend({ lat: appointmentLocation.lat, lng: appointmentLocation.lng });
         }
@@ -347,12 +380,15 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
           const workerName = profile ? `${profile.first_name} ${profile.last_name}` : "Unknown";
 
           if (log.latitude && log.longitude) {
-            const marker = new google.maps.Marker({
-              position: { lat: log.latitude, lng: log.longitude },
+            const clockInPin = document.createElement('div');
+            clockInPin.className = 'flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white text-xs font-bold shadow-lg border-2 border-white cursor-pointer hover:scale-110 transition-transform';
+            clockInPin.textContent = 'IN';
+
+            const marker = new AdvancedMarkerElement({
               map: map,
+              position: { lat: log.latitude, lng: log.longitude },
               title: `${workerName} - Clock In`,
-              label: { text: "IN", color: "white", fontSize: "10px", fontWeight: "bold" },
-              icon: { url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png" },
+              content: clockInPin,
             });
 
             let distanceText = "";
@@ -370,17 +406,22 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
               content: `<div style="padding: 8px;"><strong>${workerName}</strong><br>Clock In${distanceText}</div>`,
             });
 
-            marker.addListener("click", () => infoWindow.open(map, marker));
+            clockInPin.addEventListener("click", () => {
+              infoWindow.open({ map, anchor: marker });
+            });
             bounds.extend({ lat: log.latitude, lng: log.longitude });
           }
 
           if (log.check_out_lat && log.check_out_lng) {
-            const marker = new google.maps.Marker({
-              position: { lat: log.check_out_lat, lng: log.check_out_lng },
+            const clockOutPin = document.createElement('div');
+            clockOutPin.className = 'flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg border-2 border-white cursor-pointer hover:scale-110 transition-transform';
+            clockOutPin.textContent = 'OUT';
+
+            const marker = new AdvancedMarkerElement({
               map: map,
+              position: { lat: log.check_out_lat, lng: log.check_out_lng },
               title: `${workerName} - Clock Out`,
-              label: { text: "OUT", color: "white", fontSize: "10px", fontWeight: "bold" },
-              icon: { url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png" },
+              content: clockOutPin,
             });
 
             let distanceText = "";
@@ -398,7 +439,9 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
               content: `<div style="padding: 8px;"><strong>${workerName}</strong><br>Clock Out${distanceText}</div>`,
             });
 
-            marker.addListener("click", () => infoWindow.open(map, marker));
+            clockOutPin.addEventListener("click", () => {
+              infoWindow.open({ map, anchor: marker });
+            });
             bounds.extend({ lat: log.check_out_lat, lng: log.check_out_lng });
           }
         });
