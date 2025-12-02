@@ -15,7 +15,7 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   
   const hasAppointmentLocation = timeLog.appointments?.location_lat && timeLog.appointments?.location_lng;
-  const hasCheckInLocation = timeLog.check_in_lat && timeLog.check_in_lng;
+  const hasCheckInLocation = timeLog.latitude && timeLog.longitude;
   const hasCheckOutLocation = timeLog.check_out_lat && timeLog.check_out_lng;
 
   if (!hasAppointmentLocation && !hasCheckInLocation && !hasCheckOutLocation) {
@@ -44,8 +44,8 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
     checkInDistance = calculateDistance(
       timeLog.appointments.location_lat,
       timeLog.appointments.location_lng,
-      timeLog.check_in_lat,
-      timeLog.check_in_lng
+      timeLog.latitude,
+      timeLog.longitude
     );
   }
 
@@ -60,8 +60,8 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
 
   const getDistanceColor = (distance: number | null) => {
     if (!distance) return "text-muted-foreground";
-    if (distance <= 100) return "text-success";
-    if (distance <= 500) return "text-warning";
+    if (distance <= 500) return "text-success";
+    if (distance <= 2000) return "text-warning";
     return "text-destructive";
   };
 
@@ -81,7 +81,7 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
       const center = hasAppointmentLocation
         ? { lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng }
         : hasCheckInLocation
-        ? { lat: timeLog.check_in_lat, lng: timeLog.check_in_lng }
+        ? { lat: timeLog.latitude, lng: timeLog.longitude }
         : { lat: timeLog.check_out_lat, lng: timeLog.check_out_lng };
 
       const mapInstance = new google.maps.Map(mapRef.current!, {
@@ -112,7 +112,7 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
       // Add check-in marker (green)
       if (hasCheckInLocation) {
         new google.maps.Marker({
-          position: { lat: timeLog.check_in_lat, lng: timeLog.check_in_lng },
+          position: { lat: timeLog.latitude, lng: timeLog.longitude },
           map: mapInstance,
           title: "Check In Location",
           label: {
@@ -149,7 +149,7 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
         bounds.extend({ lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng });
       }
       if (hasCheckInLocation) {
-        bounds.extend({ lat: timeLog.check_in_lat, lng: timeLog.check_in_lng });
+        bounds.extend({ lat: timeLog.latitude, lng: timeLog.longitude });
       }
       if (hasCheckOutLocation) {
         bounds.extend({ lat: timeLog.check_out_lat, lng: timeLog.check_out_lng });
@@ -202,8 +202,8 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
               {hasCheckInLocation ? (
                 <>
                   <div className="text-sm text-muted-foreground">
-                    Lat: {timeLog.check_in_lat.toFixed(6)}<br />
-                    Lng: {timeLog.check_in_lng.toFixed(6)}
+                    Lat: {timeLog.latitude.toFixed(6)}<br />
+                    Lng: {timeLog.longitude.toFixed(6)}
                   </div>
                   {checkInDistance !== null && (
                     <Badge variant="outline" className={`text-xs ${getDistanceColor(checkInDistance)}`}>

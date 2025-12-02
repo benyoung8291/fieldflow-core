@@ -39,6 +39,7 @@ const ServiceContracts = lazy(() => import("./pages/ServiceContracts"));
 const ServiceContractDetails = lazy(() => import("./pages/ServiceContractDetails"));
 const Timesheets = lazy(() => import("./pages/Timesheets"));
 const TimesheetDetails = lazy(() => import("./pages/TimesheetDetails"));
+const TimeLogs = lazy(() => import("./pages/TimeLogs"));
 const Scheduler = lazy(() => import("./pages/Scheduler"));
 const Appointments = lazy(() => import("./pages/Appointments"));
 const AppointmentDetails = lazy(() => import("./pages/AppointmentDetails"));
@@ -349,6 +350,7 @@ const App = () => {
             <Route path="/service-contracts/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/service-contracts")}><ServiceContractDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/timesheets" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/timesheets")}><Timesheets /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/timesheets/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/timesheets")}><TimesheetDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/time-logs" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/timesheets")}><TimeLogs /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/scheduler" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/scheduler")}><Scheduler /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/appointments" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/appointments")}><Appointments /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/appointments/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/appointments")}><AppointmentDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />

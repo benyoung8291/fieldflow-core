@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, Clock, MapPin, FileText, Send, CheckCircle, Download } from "lucide-react";
 import TimesheetMapView from "@/components/timesheets/TimesheetMapView";
+import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
+import { calculateDistance } from "@/lib/distance";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
@@ -439,7 +441,7 @@ export default function TimesheetDetails() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Appointment</TableHead>
@@ -447,6 +449,7 @@ export default function TimesheetDetails() {
                       <TableHead>Clock In</TableHead>
                       <TableHead>Clock Out</TableHead>
                       <TableHead className="text-right">Hours</TableHead>
+                      <TableHead>Distance</TableHead>
                       <TableHead>Status</TableHead>
                       {timesheet.status === "draft" && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
@@ -502,6 +505,21 @@ export default function TimesheetDetails() {
                             <span className="font-medium">
                               {(log.total_hours || 0).toFixed(2)}h
                             </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {log.appointments?.location_lat && log.appointments?.location_lng && log.latitude && log.longitude ? (
+                            <DistanceWarningBadge 
+                              distance={calculateDistance(
+                                log.appointments.location_lat,
+                                log.appointments.location_lng,
+                                log.latitude,
+                                log.longitude
+                              )} 
+                              showIcon={false}
+                            />
+                          ) : (
+                            <Badge variant="outline" className="text-xs">No data</Badge>
                           )}
                         </TableCell>
                         <TableCell>
