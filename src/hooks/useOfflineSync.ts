@@ -79,6 +79,11 @@ export const useOfflineSync = () => {
               status: 'completed',
             };
 
+            if (location) {
+              updateData.check_out_lat = location.latitude;
+              updateData.check_out_lng = location.longitude;
+            }
+
             if (notes) {
               updateData.notes = notes;
             }
