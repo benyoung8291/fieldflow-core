@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 import { PermissionProtectedRoute } from "@/components/PermissionProtectedRoute";
 import { SupervisorProtectedRoute } from "@/components/SupervisorProtectedRoute";
 import { getRouteModule } from "@/config/routePermissions";
+import { APP_VERSION } from "@/lib/version";
 
 // Lazy load all pages for code splitting and faster initial load
 const UserManagement = lazy(() => import("./pages/UserManagement"));
@@ -225,6 +226,26 @@ const App = () => {
   useOfflineSync();
   useOfflineSyncOffice();
   useRealtimeNotifications();
+
+  // Version-based force update detection
+  useEffect(() => {
+    const storedVersion = localStorage.getItem('app_version');
+    const currentVersion = APP_VERSION;
+    
+    if (storedVersion && storedVersion !== currentVersion) {
+      console.log(`Version changed: ${storedVersion} → ${currentVersion}`);
+      // Clear all caches and reload
+      Promise.all([
+        'caches' in window
+          ? caches.keys().then(names => Promise.all(names.map(name => caches.delete(name))))
+          : Promise.resolve()
+      ]).then(() => {
+        window.location.reload();
+      });
+    }
+    
+    localStorage.setItem('app_version', currentVersion);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
