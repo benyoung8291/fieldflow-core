@@ -7,11 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { MapPin, Phone, Mail, Edit, Plus, ExternalLink, Navigation, FileUp, Archive, Merge } from "lucide-react";
+import { MapPin, Phone, Mail, Edit, Plus, ExternalLink, Navigation, FileUp, Archive, Merge, ArrowRightLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CustomerLocationDialog from "./CustomerLocationDialog";
 import ImportLocationsDialog from "./ImportLocationsDialog";
 import MergeLocationsDialog from "./MergeLocationsDialog";
+import MoveLocationDialog from "./MoveLocationDialog";
 import GeocodeProgressDialog from "./GeocodeProgressDialog";
 import { geocodeCustomerLocationsWithProgress, type LocationProgress } from "@/utils/geocodeCustomerLocations";
 
@@ -27,7 +28,9 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [locationToMove, setLocationToMove] = useState<any>(null);
   const [isGeocodingLocations, setIsGeocodingLocations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedForMerge, setSelectedForMerge] = useState<string[]>([]);
@@ -189,6 +192,16 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
         ? prev.filter((id) => id !== locationId)
         : [...prev, locationId]
     );
+  };
+
+  const handleMoveLocation = (location: any) => {
+    setLocationToMove(location);
+    setIsMoveDialogOpen(true);
+  };
+
+  const handleMoveLocationComplete = () => {
+    setLocationToMove(null);
+    queryClient.invalidateQueries({ queryKey: ["customer-locations", customerId, showArchived] });
   };
 
   const location1 = locations?.find((loc) => loc.id === selectedForMerge[0]);
@@ -362,13 +375,23 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
                         <Edit className="h-4 w-4" />
                       </Button>
                       {!location.archived && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleArchiveLocation(location.id)}
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleMoveLocation(location)}
+                            title="Move to another customer"
+                          >
+                            <ArrowRightLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleArchiveLocation(location.id)}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>
@@ -409,6 +432,14 @@ export default function CustomerLocationsTab({ customerId, tenantId }: CustomerL
         onConfirmLocation={handleConfirmLocation}
         onSkipLocation={handleSkipLocation}
         isComplete={geocodeComplete}
+      />
+
+      <MoveLocationDialog
+        open={isMoveDialogOpen}
+        onOpenChange={setIsMoveDialogOpen}
+        location={locationToMove}
+        currentCustomerId={customerId}
+        onMoveComplete={handleMoveLocationComplete}
       />
     </div>
   );
