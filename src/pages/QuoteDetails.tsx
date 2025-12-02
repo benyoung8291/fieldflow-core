@@ -1135,14 +1135,6 @@ export default function QuoteDetails() {
 
   // Secondary action buttons (always available unless draft)
   if (!isDraft) {
-    // Add legacy PDF download (edge function)
-    actionButtons.push({
-      label: "Download PDF (Legacy)",
-      icon: <Download className="h-4 w-4" />,
-      onClick: () => setPdfDialogOpen(true),
-      variant: "outline",
-    });
-    
     actionButtons.push({
       label: "Email to Customer",
       icon: <Mail className="h-4 w-4" />,
@@ -1706,11 +1698,11 @@ export default function QuoteDetails() {
 
       {quote && (
         <>
-          {/* Hybrid PDF Download Button - Uses Fabric.js template as background */}
-          {pdfTemplate?.template_image_url && lineItems && (
+          {/* Hybrid PDF Download Button - Uses Fabric.js template with data fields */}
+          {pdfTemplate?.template_json && lineItems && (
             <div className="fixed bottom-6 right-6 z-50">
               <PDFDownloadAction
-                templateImage={pdfTemplate.template_image_url}
+                templateJson={pdfTemplate.template_json}
                 data={{
                   documentNumber: quote.quote_number || '',
                   documentDate: format(new Date(quote.created_at), "dd/MM/yyyy"),
@@ -1740,6 +1732,21 @@ export default function QuoteDetails() {
                 variant="default"
                 className="shadow-lg"
               />
+            </div>
+          )}
+
+          {/* Fallback message if no template configured */}
+          {!pdfTemplate && lineItems && (
+            <div className="fixed bottom-6 right-6 z-50">
+              <Button
+                variant="outline"
+                disabled
+                className="shadow-lg"
+                onClick={() => navigate("/settings?tab=templates")}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Configure PDF Template in Settings
+              </Button>
             </div>
           )}
 

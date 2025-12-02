@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Download } from "lucide-react";
 import { PDFDocument } from "./PDFDocument";
 import { toast } from "sonner";
+import { generateTemplateWithData } from "@/lib/fabricDataFieldReplacer";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 interface PDFDownloadActionProps {
-  templateImage: string;
+  templateJson: any;
   data: {
     documentNumber: string;
     documentDate: string;
@@ -32,7 +34,7 @@ interface PDFDownloadActionProps {
 }
 
 export const PDFDownloadAction = ({ 
-  templateImage, 
+  templateJson, 
   data, 
   documentType,
   filename,
@@ -40,13 +42,27 @@ export const PDFDownloadAction = ({
   className,
 }: PDFDownloadActionProps) => {
   const [generating, setGenerating] = useState(false);
+  const { data: companySettings } = useCompanySettings();
 
   const handleDownload = async () => {
+    if (!companySettings) {
+      toast.error("Company settings not loaded");
+      return;
+    }
+
     setGenerating(true);
     try {
+      // Generate template with data fields replaced
+      const populatedImage = await generateTemplateWithData(
+        templateJson,
+        data,
+        companySettings,
+        documentType
+      );
+
       const blob = await pdf(
         <PDFDocument 
-          templateImage={templateImage} 
+          templateImage={populatedImage} 
           data={data} 
           documentType={documentType} 
         />
