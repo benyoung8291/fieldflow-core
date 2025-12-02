@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MoreVertical, Archive, Tag, UserPlus, CheckCircle2, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -41,7 +41,7 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
   });
 
   const { data: appointments } = useQuery({
-    queryKey: ["appointments-for-assignment", ticket.customer_id],
+    queryKey: ["appointments-for-assignment", ticket.customer_id, ticket.location_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
@@ -50,11 +50,11 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
           title,
           start_time,
           appointment_number,
-          service_order:service_orders(customer_id)
+          service_order:service_orders(customer_id, customer_location_id)
         `)
         .in("status", ["published", "checked_in"])
         .order("start_time", { ascending: true })
-        .limit(20);
+        .limit(50);
       
       if (error) throw error;
       
@@ -68,6 +68,27 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
     },
     enabled: true,
   });
+
+  // Separate and sort appointments by location relevance
+  const { locationAppointments, otherAppointments } = useMemo(() => {
+    if (!appointments) return { locationAppointments: [], otherAppointments: [] };
+    
+    const locationMatched: any[] = [];
+    const others: any[] = [];
+    
+    appointments.forEach((apt: any) => {
+      if (ticket.location_id && apt.service_order?.customer_location_id === ticket.location_id) {
+        locationMatched.push(apt);
+      } else {
+        others.push(apt);
+      }
+    });
+    
+    return {
+      locationAppointments: locationMatched,
+      otherAppointments: others
+    };
+  }, [appointments, ticket.location_id]);
 
   const handleArchive = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -300,23 +321,58 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
               Unassign
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {appointments?.length === 0 && (
+            
+            {/* Location-matched appointments section */}
+            {locationAppointments.length > 0 && (
+              <>
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">
+                  At this location
+                </div>
+                {locationAppointments.map((apt: any) => (
+                  <DropdownMenuItem 
+                    key={apt.id} 
+                    onClick={() => handleAssignToAppointment(apt.id)}
+                    className="flex flex-col items-start"
+                  >
+                    <span className="font-medium">{apt.appointment_number || apt.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseISO(apt.start_time), 'MMM d, h:mm a')}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+                {otherAppointments.length > 0 && <DropdownMenuSeparator />}
+              </>
+            )}
+            
+            {/* Other appointments section */}
+            {otherAppointments.length > 0 && (
+              <>
+                {locationAppointments.length > 0 && (
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">
+                    Other appointments
+                  </div>
+                )}
+                {otherAppointments.map((apt: any) => (
+                  <DropdownMenuItem 
+                    key={apt.id} 
+                    onClick={() => handleAssignToAppointment(apt.id)}
+                    className="flex flex-col items-start"
+                  >
+                    <span className="font-medium">{apt.appointment_number || apt.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseISO(apt.start_time), 'MMM d, h:mm a')}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+            
+            {/* No appointments message */}
+            {locationAppointments.length === 0 && otherAppointments.length === 0 && (
               <div className="px-2 py-1 text-sm text-muted-foreground">
                 No appointments found
               </div>
             )}
-            {appointments?.map((apt: any) => (
-              <DropdownMenuItem 
-                key={apt.id} 
-                onClick={() => handleAssignToAppointment(apt.id)}
-                className="flex flex-col items-start"
-              >
-                <span className="font-medium">{apt.appointment_number || apt.title}</span>
-                <span className="text-xs text-muted-foreground">
-                  {format(parseISO(apt.start_time), 'MMM d, h:mm a')}
-                </span>
-              </DropdownMenuItem>
-            ))}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
