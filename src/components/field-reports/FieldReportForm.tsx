@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SignaturePad from '@/components/worker/SignaturePad';
 import BeforeAfterPhotoUpload from './BeforeAfterPhotoUpload';
-import { Save } from 'lucide-react';
+import { Save, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface FieldReportFormProps {
   appointmentId?: string;
@@ -19,6 +20,7 @@ interface FieldReportFormProps {
   serviceOrderId?: string;
   reportId?: string; // For editing existing reports
   onSave?: () => void;
+  beforePhotosCount?: number;
 }
 
 interface PhotoPair {
@@ -43,7 +45,8 @@ export default function FieldReportForm({
   locationId,
   serviceOrderId,
   reportId,
-  onSave
+  onSave,
+  beforePhotosCount = 0
 }: FieldReportFormProps) {
   const [loading, setLoading] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
@@ -763,6 +766,19 @@ export default function FieldReportForm({
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Before Photos Warning */}
+            {beforePhotosCount === 0 && !isApproved && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No Before Photos Found</AlertTitle>
+                <AlertDescription>
+                  Before photos should be uploaded before creating a field report. 
+                  These photos document the initial condition and are required for before/after comparisons.
+                  Please go back to the appointment and upload before photos first.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Approved Notice */}
             {isApproved && (
               <div className="bg-success/10 border border-success/20 rounded-lg p-4">
