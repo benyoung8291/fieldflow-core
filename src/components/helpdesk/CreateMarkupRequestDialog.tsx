@@ -32,8 +32,9 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
 
   // Fetch current user
   const { data: currentUser, error: userError } = useQuery({
-    queryKey: ["current-user"],
+    queryKey: ["current-user-for-markup-request"],
     queryFn: async () => {
+      console.log('Fetching current user for markup request...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -46,8 +47,12 @@ export function CreateMarkupRequestDialog({ open, onOpenChange }: CreateMarkupRe
       if (error) throw error;
       if (!profile?.tenant_id) throw new Error("Profile not found or missing tenant information");
 
+      console.log('Current user tenant_id:', profile.tenant_id);
       return { ...user, tenant_id: profile.tenant_id };
     },
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Fetch customers
