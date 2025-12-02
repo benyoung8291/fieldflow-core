@@ -4,15 +4,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfWeek, addWeeks, subWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar, Clock, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, FileText, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardLayout from "@/components/DashboardLayout";
 import { CreateTimesheetDialog } from "@/components/timesheets/CreateTimesheetDialog";
 import { useNavigate } from "react-router-dom";
+import { calculateDistance } from "@/lib/distance";
+import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
+import AppointmentTimeLogsMap from "@/components/time-logs/AppointmentTimeLogsMap";
 
 export default function Timesheets() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("by-worker");
   
   // Pay week is Thu-Wed, so week starts on Thursday
   const getPayWeekStart = (date: Date) => {
@@ -68,7 +73,9 @@ export default function Timesheets() {
           appointments (
             id,
             title,
-            location_address
+            location_address,
+            location_lat,
+            location_lng
           )
         `)
         .gte("clock_in", selectedWeek.toISOString())
@@ -85,11 +92,38 @@ export default function Timesheets() {
           .select("id, first_name, last_name")
           .in("id", workerIds);
 
-        // Map profiles to time logs
-        return data.map(log => ({
-          ...log,
-          profiles: profiles?.find(p => p.id === log.worker_id)
-        })) as any[];
+        // Map profiles to time logs and calculate distances
+        return data.map(log => {
+          const appointment = log.appointments as any;
+          let clockInDistance = null;
+          let clockOutDistance = null;
+
+          if (appointment?.location_lat && appointment?.location_lng) {
+            if (log.latitude && log.longitude) {
+              clockInDistance = calculateDistance(
+                appointment.location_lat,
+                appointment.location_lng,
+                log.latitude,
+                log.longitude
+              );
+            }
+            if (log.check_out_lat && log.check_out_lng) {
+              clockOutDistance = calculateDistance(
+                appointment.location_lat,
+                appointment.location_lng,
+                log.check_out_lat,
+                log.check_out_lng
+              );
+            }
+          }
+
+          return {
+            ...log,
+            profiles: profiles?.find(p => p.id === log.worker_id),
+            clockInDistance,
+            clockOutDistance,
+          };
+        }) as any[];
       }
 
       return data || [];
@@ -112,6 +146,21 @@ export default function Timesheets() {
     }
     acc[workerId].logs.push(log);
     acc[workerId].totalHours += log.total_hours || 0;
+    return acc;
+  }, {} as Record<string, any>);
+
+  // Group unprocessed logs by appointment
+  const logsByAppointment = unprocessedLogs.reduce((acc: any, log: any) => {
+    const appointmentId = log.appointment_id;
+    if (!acc[appointmentId]) {
+      acc[appointmentId] = {
+        appointment: log.appointments,
+        logs: [],
+        totalHours: 0,
+      };
+    }
+    acc[appointmentId].logs.push(log);
+    acc[appointmentId].totalHours += log.total_hours || 0;
     return acc;
   }, {} as Record<string, any>);
 
@@ -225,7 +274,7 @@ export default function Timesheets() {
           </Card>
         )}
 
-        {/* Unprocessed Time Logs Summary */}
+        {/* Unprocessed Time Logs Summary with Tabs */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -234,36 +283,166 @@ export default function Timesheets() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {Object.keys(logsByWorker).length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No unprocessed time logs for this week</p>
-                <p className="text-sm mt-2">All time logs have been added to timesheets</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(logsByWorker).map(([workerId, data]: [string, any]) => (
-                  <div key={workerId} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {data.worker?.first_name} {data.worker?.last_name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {data.logs.length} time log{data.logs.length !== 1 ? 's' : ''} ready to process
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold">
-                          {data.totalHours.toFixed(2)}h
-                        </div>
-                        <p className="text-xs text-muted-foreground">Total Hours</p>
-                      </div>
-                    </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="by-worker">By Worker</TabsTrigger>
+                <TabsTrigger value="by-appointment">By Appointment</TabsTrigger>
+                <TabsTrigger value="all-logs">All Logs</TabsTrigger>
+              </TabsList>
+
+              {/* By Worker Tab */}
+              <TabsContent value="by-worker" className="mt-4">
+                {Object.keys(logsByWorker).length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No unprocessed time logs for this week</p>
+                    <p className="text-sm mt-2">All time logs have been added to timesheets</p>
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(logsByWorker).map(([workerId, data]: [string, any]) => (
+                      <div key={workerId} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-lg">
+                              {data.worker?.first_name} {data.worker?.last_name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {data.logs.length} time log{data.logs.length !== 1 ? 's' : ''} ready to process
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold">
+                              {data.totalHours.toFixed(2)}h
+                            </div>
+                            <p className="text-xs text-muted-foreground">Total Hours</p>
+                          </div>
+                        </div>
+                        {/* Show distance warnings */}
+                        <div className="space-y-2">
+                          {data.logs.map((log: any) => (
+                            <div key={log.id} className="flex items-center gap-2 text-sm">
+                              <span className="text-muted-foreground">
+                                {log.appointments?.title || 'Unknown appointment'}
+                              </span>
+                              <DistanceWarningBadge distance={log.clockInDistance} showIcon={false} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* By Appointment Tab */}
+              <TabsContent value="by-appointment" className="mt-4">
+                {Object.keys(logsByAppointment).length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No unprocessed time logs for this week</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(logsByAppointment).map(([appointmentId, data]: [string, any]) => {
+                      const appointment = data.appointment as any;
+                      return (
+                        <div key={appointmentId} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg">
+                                {appointment?.title || 'Unknown Appointment'}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {appointment?.location_address || 'No address'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {data.logs.length} worker{data.logs.length !== 1 ? 's' : ''} • {data.totalHours.toFixed(2)}h total
+                              </p>
+                            </div>
+                            {appointment?.location_lat && appointment?.location_lng && (
+                              <AppointmentTimeLogsMap
+                                appointmentLocation={{
+                                  lat: appointment.location_lat,
+                                  lng: appointment.location_lng,
+                                  address: appointment.location_address || '',
+                                }}
+                                timeLogs={data.logs.map((log: any) => ({
+                                  id: log.id,
+                                  worker: {
+                                    first_name: log.profiles?.first_name || '',
+                                    last_name: log.profiles?.last_name || '',
+                                  },
+                                  latitude: log.latitude,
+                                  longitude: log.longitude,
+                                  check_out_lat: log.check_out_lat,
+                                  check_out_lng: log.check_out_lng,
+                                }))}
+                              />
+                            )}
+                          </div>
+                          {/* Show workers and distances */}
+                          <div className="space-y-2">
+                            {data.logs.map((log: any) => (
+                              <div key={log.id} className="flex items-center justify-between text-sm border-t pt-2">
+                                <span className="font-medium">
+                                  {log.profiles?.first_name} {log.profiles?.last_name}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">
+                                    {log.total_hours?.toFixed(2)}h
+                                  </span>
+                                  <DistanceWarningBadge distance={log.clockInDistance} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* All Logs Tab */}
+              <TabsContent value="all-logs" className="mt-4">
+                {unprocessedLogs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No unprocessed time logs for this week</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {unprocessedLogs.map((log: any) => (
+                      <div 
+                        key={log.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                        onClick={() => navigate(`/time-logs?appointment=${log.appointment_id}`)}
+                      >
+                        <div className="flex-1">
+                          <div className="font-medium">
+                            {log.profiles?.first_name} {log.profiles?.last_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {log.appointments?.title || 'Unknown appointment'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(log.clock_in), "MMM d, h:mm a")} - 
+                            {log.clock_out ? format(new Date(log.clock_out), "h:mm a") : 'In Progress'}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="font-bold">{log.total_hours?.toFixed(2)}h</div>
+                          </div>
+                          <DistanceWarningBadge distance={log.clockInDistance} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
