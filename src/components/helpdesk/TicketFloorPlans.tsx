@@ -64,19 +64,31 @@ export function TicketFloorPlans({ ticketId }: TicketFloorPlansProps) {
   }, {} as Record<string, any>);
 
   return (
-    <ResizablePanelGroup direction="vertical" className="h-full min-h-[400px]">
+    <ResizablePanelGroup direction="vertical" className="h-full">
       <ResizablePanel defaultSize={60} minSize={30}>
-        <ScrollArea className="h-full">
-          <div className="space-y-4 p-4">
-            {Object.values(floorPlanGroups).map((group: any) => (
-              <FloorPlanCard
-                key={group.floorPlan.id}
-                floorPlan={group.floorPlan}
-                markups={group.markups}
-              />
-            ))}
-          </div>
-        </ScrollArea>
+        <div className="h-full p-4">
+          {Object.values(floorPlanGroups).length === 1 ? (
+            // Single floor plan - fill available space
+            <FloorPlanCard
+              key={Object.values(floorPlanGroups)[0].floorPlan.id}
+              floorPlan={Object.values(floorPlanGroups)[0].floorPlan}
+              markups={Object.values(floorPlanGroups)[0].markups}
+            />
+          ) : (
+            // Multiple floor plans - use ScrollArea
+            <ScrollArea className="h-full">
+              <div className="space-y-4">
+                {Object.values(floorPlanGroups).map((group: any) => (
+                  <FloorPlanCard
+                    key={group.floorPlan.id}
+                    floorPlan={group.floorPlan}
+                    markups={group.markups}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
       </ResizablePanel>
       
       <ResizableHandle withHandle />
