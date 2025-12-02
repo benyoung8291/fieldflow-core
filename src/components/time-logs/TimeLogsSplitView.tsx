@@ -5,7 +5,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { calculateDistance, formatDistance, getDistanceWarningLevel } from "@/lib/distance";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, Users, Clock, Maximize2, Edit2, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, MELBOURNE_TZ } from "@/lib/utils";
 import DistanceWarningBadge from "./DistanceWarningBadge";
 import { getAppointmentLocation } from "@/lib/appointmentLocation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TimeLog {
   id: string;
@@ -66,6 +68,7 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
   const maximizedMapRef = useRef<HTMLDivElement>(null);
   const maximizedMapInstanceRef = useRef<google.maps.Map | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Group time logs by appointment
   const logsByAppointment = timeLogs.reduce((acc: any, log: TimeLog) => {
@@ -397,17 +400,30 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
 
   const handleEditTimeLog = (log: TimeLog) => {
     setEditingLogId(log.id);
-    setEditClockIn(log.clock_in ? format(parseISO(log.clock_in), "yyyy-MM-dd'T'HH:mm") : "");
-    setEditClockOut(log.clock_out ? format(parseISO(log.clock_out), "yyyy-MM-dd'T'HH:mm") : "");
+    // Convert UTC to Melbourne time for display in the input
+    setEditClockIn(log.clock_in 
+      ? formatInTimeZone(new Date(log.clock_in), MELBOURNE_TZ, "yyyy-MM-dd'T'HH:mm") 
+      : "");
+    setEditClockOut(log.clock_out 
+      ? formatInTimeZone(new Date(log.clock_out), MELBOURNE_TZ, "yyyy-MM-dd'T'HH:mm") 
+      : "");
   };
 
   const handleSaveTimeLog = async (logId: string) => {
     try {
+      // Convert Melbourne local time input to UTC ISO string for database
+      const clockInUTC = editClockIn 
+        ? fromZonedTime(new Date(editClockIn), MELBOURNE_TZ).toISOString() 
+        : null;
+      const clockOutUTC = editClockOut 
+        ? fromZonedTime(new Date(editClockOut), MELBOURNE_TZ).toISOString() 
+        : null;
+
       const { error } = await supabase
         .from("time_logs")
         .update({
-          clock_in: editClockIn,
-          clock_out: editClockOut || null,
+          clock_in: clockInUTC,
+          clock_out: clockOutUTC,
         })
         .eq("id", logId);
 
@@ -419,7 +435,9 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
       });
 
       setEditingLogId(null);
-      window.location.reload(); // Refresh to show updated data
+      
+      // Invalidate queries to refresh data without full page reload
+      queryClient.invalidateQueries({ queryKey: ["time-logs"] });
     } catch (error) {
       console.error("Error updating time log:", error);
       toast({
