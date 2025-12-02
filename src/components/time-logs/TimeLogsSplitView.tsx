@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader } from "@googlemaps/js-api-loader";
 import { calculateDistance, formatDistance, getDistanceWarningLevel } from "@/lib/distance";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, Users, Clock, Maximize2, Edit2, Check, X } from "lucide-react";
 import { cn, MELBOURNE_TZ } from "@/lib/utils";
 import DistanceWarningBadge from "./DistanceWarningBadge";
@@ -63,6 +64,8 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editClockIn, setEditClockIn] = useState("");
   const [editClockOut, setEditClockOut] = useState("");
+  const [mapLoading, setMapLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const maximizedMapRef = useRef<HTMLDivElement>(null);
@@ -119,14 +122,24 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
     if (!selectedData) return;
 
     const initMap = async (container: HTMLDivElement, mapInstance: React.MutableRefObject<google.maps.Map | null>) => {
-      const loader = new Loader({
-        apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-        version: "weekly",
-        libraries: ["maps", "marker"],
-      });
+      try {
+        setMapLoading(true);
+        setMapError(null);
 
-      // @ts-ignore - Loader API varies by version
-      const google = await loader.load();
+        // Check if API key is available
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          throw new Error("Google Maps API key not configured");
+        }
+
+        const loader = new Loader({
+          apiKey,
+          version: "weekly",
+          libraries: ["maps", "marker"],
+        });
+
+        // @ts-ignore - Loader API varies by version
+        const google = await loader.load();
 
       // Determine map center
       const appointment = selectedData.appointment;
@@ -267,6 +280,13 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
       if (!bounds.isEmpty()) {
         map.fitBounds(bounds);
       }
+
+      setMapLoading(false);
+    } catch (error: any) {
+      console.error("Map initialization error:", error);
+      setMapError(error.message || "Failed to load map");
+      setMapLoading(false);
+    }
     };
 
     if (mapRef.current) {
@@ -682,8 +702,25 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
                 </div>
               )}
 
+              {/* Map Error State */}
+              {mapError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-20">
+                  <div className="text-center p-4">
+                    <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{mapError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Map Loading State */}
+              {mapLoading && !mapError && (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              )}
+
               {/* Map */}
-              <div ref={mapRef} className="w-full h-full" />
+              <div ref={mapRef} className="w-full h-full bg-muted" />
             </div>
           </div>
         </div>
@@ -768,7 +805,7 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
             )}
 
             {/* Maximized Map */}
-            <div ref={maximizedMapRef} className="w-full h-full" />
+            <div ref={maximizedMapRef} className="w-full h-full bg-muted" />
           </div>
         </DialogContent>
       </Dialog>
