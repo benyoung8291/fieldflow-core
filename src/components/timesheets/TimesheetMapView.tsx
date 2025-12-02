@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@googlemaps/js-api-loader";
+import { getAppointmentLocation } from "@/lib/appointmentLocation";
 
 interface TimesheetMapViewProps {
   timeLog: any;
@@ -14,11 +15,11 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   
-  const hasAppointmentLocation = timeLog.appointments?.location_lat && timeLog.appointments?.location_lng;
+  const appointmentLocation = getAppointmentLocation(timeLog.appointments);
   const hasCheckInLocation = timeLog.latitude && timeLog.longitude;
   const hasCheckOutLocation = timeLog.check_out_lat && timeLog.check_out_lng;
 
-  if (!hasAppointmentLocation && !hasCheckInLocation && !hasCheckOutLocation) {
+  if (!appointmentLocation && !hasCheckInLocation && !hasCheckOutLocation) {
     return null;
   }
 
@@ -40,19 +41,19 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
   let checkInDistance: number | null = null;
   let checkOutDistance: number | null = null;
 
-  if (hasAppointmentLocation && hasCheckInLocation) {
+  if (appointmentLocation && hasCheckInLocation) {
     checkInDistance = calculateDistance(
-      timeLog.appointments.location_lat,
-      timeLog.appointments.location_lng,
+      appointmentLocation.lat,
+      appointmentLocation.lng,
       timeLog.latitude,
       timeLog.longitude
     );
   }
 
-  if (hasAppointmentLocation && hasCheckOutLocation) {
+  if (appointmentLocation && hasCheckOutLocation) {
     checkOutDistance = calculateDistance(
-      timeLog.appointments.location_lat,
-      timeLog.appointments.location_lng,
+      appointmentLocation.lat,
+      appointmentLocation.lng,
       timeLog.check_out_lat,
       timeLog.check_out_lng
     );
@@ -78,8 +79,8 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
       // @ts-ignore - Loader API varies by version
       const google = await loader.load();
 
-      const center = hasAppointmentLocation
-        ? { lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng }
+      const center = appointmentLocation
+        ? { lat: appointmentLocation.lat, lng: appointmentLocation.lng }
         : hasCheckInLocation
         ? { lat: timeLog.latitude, lng: timeLog.longitude }
         : { lat: timeLog.check_out_lat, lng: timeLog.check_out_lng };
@@ -93,11 +94,11 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
       setMap(mapInstance);
 
       // Add appointment location marker (blue)
-      if (hasAppointmentLocation) {
+      if (appointmentLocation) {
         new google.maps.Marker({
-          position: { lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng },
+          position: { lat: appointmentLocation.lat, lng: appointmentLocation.lng },
           map: mapInstance,
-          title: "Appointment Location",
+          title: "Job Site Location",
           label: {
             text: "A",
             color: "white",
@@ -145,8 +146,8 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
 
       // Fit bounds to show all markers
       const bounds = new google.maps.LatLngBounds();
-      if (hasAppointmentLocation) {
-        bounds.extend({ lat: timeLog.appointments.location_lat, lng: timeLog.appointments.location_lng });
+      if (appointmentLocation) {
+        bounds.extend({ lat: appointmentLocation.lat, lng: appointmentLocation.lng });
       }
       if (hasCheckInLocation) {
         bounds.extend({ lat: timeLog.latitude, lng: timeLog.longitude });
@@ -157,7 +158,7 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
       mapInstance.fitBounds(bounds);
       
       // Adjust zoom if only one marker
-      const markerCount = [hasAppointmentLocation, hasCheckInLocation, hasCheckOutLocation].filter(Boolean).length;
+      const markerCount = [appointmentLocation, hasCheckInLocation, hasCheckOutLocation].filter(Boolean).length;
       if (markerCount === 1) {
         mapInstance.setZoom(16);
       }
@@ -183,16 +184,16 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary" />
-                <span className="font-semibold">Appointment Location</span>
+                <span className="font-semibold">Job Site Location</span>
               </div>
-              {hasAppointmentLocation ? (
+              {appointmentLocation ? (
                 <div className="text-sm text-muted-foreground">
-                  {timeLog.appointments.location_address}
+                  {appointmentLocation.address}
                 </div>
               ) : (
                 <div className="space-y-1">
                   <Badge variant="outline" className="text-xs bg-warning/10 text-warning">
-                    No appointment GPS
+                    No GPS set
                   </Badge>
                   <div className="text-xs text-muted-foreground">
                     Distance cannot be calculated

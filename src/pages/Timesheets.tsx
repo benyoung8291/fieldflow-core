@@ -15,6 +15,7 @@ import { calculateDistance } from "@/lib/distance";
 import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
 import AppointmentTimeLogsMap from "@/components/time-logs/AppointmentTimeLogsMap";
 import TimeLogsSplitView from "@/components/time-logs/TimeLogsSplitView";
+import { getAppointmentLocation } from "@/lib/appointmentLocation";
 
 export default function Timesheets() {
   const navigate = useNavigate();
@@ -76,7 +77,17 @@ export default function Timesheets() {
             title,
             location_address,
             location_lat,
-            location_lng
+            location_lng,
+            service_order:service_orders (
+              id,
+              customer_location:customer_locations (
+                id,
+                address,
+                formatted_address,
+                latitude,
+                longitude
+              )
+            )
           )
         `)
         .gte("clock_in", selectedWeek.toISOString())
@@ -96,22 +107,23 @@ export default function Timesheets() {
         // Map profiles to time logs and calculate distances
         return data.map(log => {
           const appointment = log.appointments as any;
+          const appointmentLocation = getAppointmentLocation(appointment);
           let clockInDistance = null;
           let clockOutDistance = null;
 
-          if (appointment?.location_lat && appointment?.location_lng) {
+          if (appointmentLocation) {
             if (log.latitude && log.longitude) {
               clockInDistance = calculateDistance(
-                appointment.location_lat,
-                appointment.location_lng,
+                appointmentLocation.lat,
+                appointmentLocation.lng,
                 log.latitude,
                 log.longitude
               );
             }
             if (log.check_out_lat && log.check_out_lng) {
               clockOutDistance = calculateDistance(
-                appointment.location_lat,
-                appointment.location_lng,
+                appointmentLocation.lat,
+                appointmentLocation.lng,
                 log.check_out_lat,
                 log.check_out_lng
               );
@@ -365,26 +377,28 @@ export default function Timesheets() {
                                 {data.logs.length} worker{data.logs.length !== 1 ? 's' : ''} • {data.totalHours.toFixed(2)}h total
                               </p>
                             </div>
-                            {appointment?.location_lat && appointment?.location_lng && (
-                              <AppointmentTimeLogsMap
-                                appointmentLocation={{
-                                  lat: appointment.location_lat,
-                                  lng: appointment.location_lng,
-                                  address: appointment.location_address || '',
-                                }}
-                                timeLogs={data.logs.map((log: any) => ({
-                                  id: log.id,
-                                  worker: {
-                                    first_name: log.profiles?.first_name || '',
-                                    last_name: log.profiles?.last_name || '',
-                                  },
-                                  latitude: log.latitude,
-                                  longitude: log.longitude,
-                                  check_out_lat: log.check_out_lat,
-                                  check_out_lng: log.check_out_lng,
-                                }))}
-                              />
-                            )}
+                            {(() => {
+                              const appointmentLocation = getAppointmentLocation(appointment);
+                              if (appointmentLocation) {
+                                return (
+                                  <AppointmentTimeLogsMap
+                                    appointmentLocation={appointmentLocation}
+                                    timeLogs={data.logs.map((log: any) => ({
+                                      id: log.id,
+                                      worker: {
+                                        first_name: log.profiles?.first_name || '',
+                                        last_name: log.profiles?.last_name || '',
+                                      },
+                                      latitude: log.latitude,
+                                      longitude: log.longitude,
+                                      check_out_lat: log.check_out_lat,
+                                      check_out_lng: log.check_out_lng,
+                                    }))}
+                                  />
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           {/* Show workers and distances */}
                           <div className="space-y-2">

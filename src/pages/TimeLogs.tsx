@@ -12,6 +12,7 @@ import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
 import { calculateDistance } from "@/lib/distance";
 import TimesheetMapView from "@/components/timesheets/TimesheetMapView";
 import AppointmentTimeLogsMap from "@/components/time-logs/AppointmentTimeLogsMap";
+import { getAppointmentLocation } from "@/lib/appointmentLocation";
 
 const statusColors = {
   in_progress: "bg-warning/10 text-warning",
@@ -41,7 +42,17 @@ export default function TimeLogs() {
             appointment_number,
             location_address,
             location_lat,
-            location_lng
+            location_lng,
+            service_order:service_orders (
+              id,
+              customer_location:customer_locations (
+                id,
+                address,
+                formatted_address,
+                latitude,
+                longitude
+              )
+            )
           )
         `)
         .order("clock_in", { ascending: false });
