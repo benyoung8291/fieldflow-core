@@ -463,7 +463,7 @@ export default function Timesheets() {
               </TabsContent>
 
               {/* Split View Tab */}
-              <TabsContent value="split-view" className="mt-4">
+              <TabsContent value="split-view" className="mt-4 overflow-hidden">
                 <TimeLogsSplitView timeLogs={timeLogs} />
               </TabsContent>
             </Tabs>
