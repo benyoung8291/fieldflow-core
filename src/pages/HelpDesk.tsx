@@ -4,6 +4,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { TicketList } from "@/components/helpdesk/TicketList";
 import { TicketTimeline } from "@/components/helpdesk/TicketTimeline";
 import { LinkedDocumentsSidebar } from "@/components/helpdesk/LinkedDocumentsSidebar";
+import { CreateMarkupRequestDialog } from "@/components/helpdesk/CreateMarkupRequestDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -49,6 +50,7 @@ export default function HelpDesk() {
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [selectedFolder, setSelectedFolder] = useState<MailboxFolder>("inbox");
+  const [showCreateMarkupDialog, setShowCreateMarkupDialog] = useState(false);
 
   // Track presence for this user showing what ticket they're viewing
   useHelpdeskPresence(selectedTicketId);
@@ -695,6 +697,7 @@ export default function HelpDesk() {
               filterArchived={filterArchived}
               selectedFolder={selectedFolder}
               isRequestsPipeline={isRequestsPipeline}
+              onCreateMarkupRequest={() => setShowCreateMarkupDialog(true)}
             />
           </ResizablePanel>
 
@@ -793,6 +796,11 @@ export default function HelpDesk() {
           )}
         </ResizablePanelGroup>
       </div>
+
+      <CreateMarkupRequestDialog
+        open={showCreateMarkupDialog}
+        onOpenChange={setShowCreateMarkupDialog}
+      />
     </DashboardLayout>
   );
 }

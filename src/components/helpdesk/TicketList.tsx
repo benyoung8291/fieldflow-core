@@ -2,7 +2,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Link2, Archive, UserPlus, Mail, MailOpen, Trash2, Reply, Forward, Flag, FolderInput, CheckSquare, X } from "lucide-react";
+import { Search, Plus, Link2, Archive, UserPlus, Mail, MailOpen, Trash2, Reply, Forward, Flag, FolderInput, CheckSquare, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type MailboxFolder = 
   | "inbox" 
@@ -39,6 +45,7 @@ interface TicketListProps {
   filterArchived?: boolean;
   selectedFolder?: MailboxFolder;
   isRequestsPipeline?: boolean;
+  onCreateMarkupRequest?: () => void;
 }
 
 export function TicketList({ 
@@ -49,7 +56,8 @@ export function TicketList({
   filterUserId = null,
   filterArchived = false,
   selectedFolder = "inbox",
-  isRequestsPipeline = false
+  isRequestsPipeline = false,
+  onCreateMarkupRequest
 }: TicketListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
@@ -421,13 +429,22 @@ export function TicketList({
               className="pl-9 h-9 text-sm bg-muted/50 border-muted-foreground/20 focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
             />
           </div>
-          <Button 
-            size="icon" 
-            variant="outline" 
-            className="h-9 w-9 hover-lift transition-all hover:bg-primary hover:text-primary-foreground"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                size="icon" 
+                variant="outline" 
+                className="h-9 w-9 hover-lift transition-all hover:bg-primary hover:text-primary-foreground"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onCreateMarkupRequest}>
+                Create Markup Request
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
