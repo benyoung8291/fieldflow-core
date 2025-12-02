@@ -75,7 +75,7 @@ export default function TimeLogs() {
 
         return data.map((log) => ({
           ...log,
-          worker: profiles?.find((p) => p.id === log.worker_id),
+          profiles: profiles?.find((p) => p.id === log.worker_id),
         }));
       }
 
@@ -202,7 +202,7 @@ export default function TimeLogs() {
                               <div className="flex-1 space-y-1">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-sm">
-                                    {log.worker?.first_name} {log.worker?.last_name}
+                                    {log.profiles?.first_name} {log.profiles?.last_name}
                                   </span>
                                   <Badge
                                     variant="outline"
@@ -224,11 +224,23 @@ export default function TimeLogs() {
                                 <div className="text-right text-xs space-y-1">
                                   <div className="flex items-center gap-1">
                                     <span className="text-muted-foreground">In:</span>
-                                    <DistanceWarningBadge distance={checkInDistance} showIcon={false} />
+                                    <DistanceWarningBadge 
+                                      distance={checkInDistance} 
+                                      showIcon={false}
+                                      workerLat={log.latitude}
+                                      workerLng={log.longitude}
+                                      hasAppointmentLocation={!!(appointment?.location_lat && appointment?.location_lng)}
+                                    />
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <span className="text-muted-foreground">Out:</span>
-                                    <DistanceWarningBadge distance={checkOutDistance} showIcon={false} />
+                                    <DistanceWarningBadge 
+                                      distance={checkOutDistance} 
+                                      showIcon={false}
+                                      workerLat={log.check_out_lat}
+                                      workerLng={log.check_out_lng}
+                                      hasAppointmentLocation={!!(appointment?.location_lat && appointment?.location_lng)}
+                                    />
                                   </div>
                                 </div>
                                 <TimesheetMapView timeLog={log} />
