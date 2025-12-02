@@ -73,6 +73,8 @@ export default defineConfig(({ mode }) => ({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true, // Clean up old caches automatically
+        navigateFallback: '/index.html', // SPA fallback for navigation
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

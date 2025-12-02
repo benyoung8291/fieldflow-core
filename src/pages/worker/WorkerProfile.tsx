@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AUSTRALIAN_STATES } from '@/lib/constants/australianStates';
-import { User, Briefcase, Mail, Phone, Save } from 'lucide-react';
+import { User, Briefcase, Mail, Phone, Save, RefreshCw } from 'lucide-react';
 import { WorkerHeader } from "@/components/worker/WorkerHeader";
 import { toast } from 'sonner';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/worker/PullToRefreshIndicator';
 import { APP_VERSION } from '@/lib/version';
+import { usePWAUpdate } from '@/hooks/usePWAUpdate';
 
 interface ProfileData {
   id: string;
@@ -40,10 +41,22 @@ export default function WorkerProfile() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [worker, setWorker] = useState<WorkerData | null>(null);
+  const { checkForUpdates } = usePWAUpdate();
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
 
   const { containerRef, isRefreshing, pullDistance } = usePullToRefresh({
     onRefresh: loadData,
   });
+
+  const handleCheckForUpdates = async () => {
+    setCheckingUpdates(true);
+    toast.info('Checking for updates...');
+    await checkForUpdates();
+    setTimeout(() => {
+      setCheckingUpdates(false);
+      toast.success('You have the latest version');
+    }, 1500);
+  };
 
   useEffect(() => {
     loadData();
@@ -347,6 +360,26 @@ export default function WorkerProfile() {
             <>
               <Save className="h-4 w-4 mr-2" />
               Save Changes
+            </>
+          )}
+        </Button>
+
+        {/* Check for Updates Button */}
+        <Button
+          onClick={handleCheckForUpdates}
+          disabled={checkingUpdates}
+          variant="outline"
+          className="w-full h-12 text-base font-semibold shadow-sm"
+        >
+          {checkingUpdates ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Checking...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Check for Updates
             </>
           )}
         </Button>
