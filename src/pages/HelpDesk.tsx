@@ -361,10 +361,12 @@ export default function HelpDesk() {
           queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
         });
       
-      // Also mark as read in Microsoft (fire and forget)
-      supabase.functions.invoke("microsoft-mark-read", {
-        body: { ticketId: selectedTicketId }
-      });
+      // Also mark as read in Microsoft (fire and forget) - only for email-based tickets
+      if (ticket.email_account_id) {
+        supabase.functions.invoke("microsoft-mark-read", {
+          body: { ticketId: selectedTicketId }
+        });
+      }
     }
   }, [selectedTicketId, ticket]);
 
