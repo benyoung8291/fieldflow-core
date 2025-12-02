@@ -46,15 +46,15 @@ export default function BeforeAfterPhotoUpload({
     }
   }, [initialPairs]);
 
-  // Load before photos from appointment attachments if appointmentId provided
-  // BUT only if we don't already have initialPairs (from draft restore)
+  // ALWAYS load before photos from appointment when appointmentId is provided
+  // Then merge with any existing after photos from draft (initialPairs)
   useEffect(() => {
-    if (appointmentId && initialPairs.length === 0) {
-      loadBeforePhotos();
+    if (appointmentId) {
+      loadBeforePhotosAndMerge();
     }
   }, [appointmentId]);
 
-  const loadBeforePhotos = async () => {
+  const loadBeforePhotosAndMerge = async () => {
     if (!appointmentId) return;
     
     try {
@@ -69,6 +69,7 @@ export default function BeforeAfterPhotoUpload({
       if (error) throw error;
 
       if (attachments && attachments.length > 0) {
+        // Create pairs from before photos
         const loadedPairs: PhotoPair[] = attachments.map((attachment) => ({
           id: attachment.id,
           before: {
@@ -78,6 +79,15 @@ export default function BeforeAfterPhotoUpload({
             fileName: attachment.file_name,
           },
         }));
+        
+        // Merge with any existing after photos from initialPairs (draft data)
+        if (initialPairs.length > 0) {
+          initialPairs.forEach((existingPair, index) => {
+            if (existingPair.after && loadedPairs[index]) {
+              loadedPairs[index].after = existingPair.after;
+            }
+          });
+        }
         
         setPairs(loadedPairs);
         onPhotosChange(loadedPairs);
