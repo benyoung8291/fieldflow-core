@@ -124,8 +124,8 @@ export function FloorPlanCard({ floorPlan, markups }: FloorPlanCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden">
-      <div className="p-4 border-b bg-muted/30">
+    <Card className="overflow-hidden h-full flex flex-col">
+      <div className="p-4 border-b bg-muted/30 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -165,7 +165,7 @@ export function FloorPlanCard({ floorPlan, markups }: FloorPlanCardProps) {
       
       <div 
         ref={containerRef}
-        className="relative w-full h-full min-h-[400px] bg-muted/50 overflow-hidden"
+        className="relative w-full flex-1 min-h-[300px] bg-muted/50 overflow-hidden"
         onWheel={handleWheel}
       >
         <div
