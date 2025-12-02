@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader } from "@googlemaps/js-api-loader";
+import { importLibrary } from "@googlemaps/js-api-loader";
 import { calculateDistance, formatDistance, getDistanceWarningLevel } from "@/lib/distance";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -132,15 +132,9 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
           throw new Error("Google Maps API key not configured");
         }
 
-        // Create loader instance
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-        });
-
-        // Load the library and import maps
-        await loader.importLibrary("maps");
-        await loader.importLibrary("marker");
+        // Import Google Maps libraries using functional API
+        const { Map } = await importLibrary("maps") as google.maps.MapsLibrary;
+        const { AdvancedMarkerElement } = await importLibrary("marker") as google.maps.MarkerLibrary;
 
       // Determine map center
       const appointment = selectedData.appointment;
@@ -306,13 +300,9 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
         const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
         if (!apiKey) return;
         
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-        });
-
-        await loader.importLibrary("maps");
-        await loader.importLibrary("marker");
+        // Import Google Maps libraries using functional API
+        const { Map } = await importLibrary("maps") as google.maps.MapsLibrary;
+        const { AdvancedMarkerElement } = await importLibrary("marker") as google.maps.MarkerLibrary;
 
         const appointment = selectedData.appointment;
         const appointmentLocation = getAppointmentLocation(appointment);
