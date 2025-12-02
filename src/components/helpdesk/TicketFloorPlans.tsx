@@ -64,7 +64,7 @@ export function TicketFloorPlans({ ticketId }: TicketFloorPlansProps) {
   }, {} as Record<string, any>);
 
   return (
-    <ResizablePanelGroup direction="vertical" className="min-h-[600px]">
+    <ResizablePanelGroup direction="vertical" className="h-full min-h-[400px]">
       <ResizablePanel defaultSize={60} minSize={30}>
         <ScrollArea className="h-full">
           <div className="space-y-4 p-4">

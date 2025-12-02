@@ -39,6 +39,21 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
   const [showCheckboxEditor, setShowCheckboxEditor] = useState(false);
   const navigate = useNavigate();
 
+  // Check if ticket has floor plan markups
+  const { data: markupsData } = useQuery({
+    queryKey: ["ticket-markups", ticketId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_markups")
+        .select("id")
+        .eq("ticket_id", ticketId);
+      if (error) throw error;
+      return data;
+    },
+  });
+  
+  const hasFloorPlanMarkups = markupsData && markupsData.length > 0;
+
   const { data: messages, isLoading } = useQuery({
     queryKey: ["helpdesk-messages", ticketId],
     queryFn: async () => {
@@ -644,12 +659,16 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
       </div>
 
       {/* Floor Plans Display - Show marked up floor plans for requests */}
-      <div className="shrink-0">
+      <div className={cn(
+        hasFloorPlanMarkups ? "flex-1 min-h-0 overflow-hidden" : "shrink-0"
+      )}>
         <TicketFloorPlans ticketId={ticketId} />
       </div>
 
       {/* Timeline - Optimized */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className={cn(
+        hasFloorPlanMarkups ? "shrink-0 border-t" : "flex-1 min-h-0 overflow-hidden"
+      )}>
         <ScrollArea className="h-full p-3">
           {isLoading ? (
             <div className="text-center text-muted-foreground text-sm py-8">
