@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MoreVertical, Archive, Tag, UserPlus, CheckCircle2 } from "lucide-react";
+import { MoreVertical, Archive, Tag, UserPlus, CheckCircle2, Calendar } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,35 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: appointments } = useQuery({
+    queryKey: ["appointments-for-assignment", ticket.customer_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+          id,
+          title,
+          start_time,
+          appointment_number,
+          service_order:service_orders(customer_id)
+        `)
+        .in("status", ["published", "checked_in"])
+        .order("start_time", { ascending: true })
+        .limit(20);
+      
+      if (error) throw error;
+      
+      // Filter to matching customer if applicable
+      if (ticket.customer_id && data) {
+        return data.filter((apt: any) => 
+          apt.service_order?.customer_id === ticket.customer_id
+        );
+      }
+      return data || [];
+    },
+    enabled: true,
   });
 
   const handleArchive = async () => {
@@ -183,6 +213,30 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
     queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticket.id] });
   };
 
+  const handleAssignToAppointment = async (appointmentId: string | null) => {
+    const { error } = await supabase
+      .from("helpdesk_tickets")
+      .update({ appointment_id: appointmentId })
+      .eq("id", ticket.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign to appointment",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: appointmentId ? "Assigned to appointment" : "Unassigned from appointment",
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["helpdesk-tickets"] });
+    queryClient.invalidateQueries({ queryKey: ["helpdesk-ticket", ticket.id] });
+    queryClient.invalidateQueries({ queryKey: ["appointment-requests"] });
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -230,6 +284,37 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
             {users?.map((user) => (
               <DropdownMenuItem key={user.id} onClick={() => handleAssignUser(user.id)}>
                 {user.first_name} {user.last_name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {/* Assign to Appointment */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Calendar className="h-4 w-4 mr-2" />
+            Assign to Appointment
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-64 overflow-y-auto">
+            <DropdownMenuItem onClick={() => handleAssignToAppointment(null)}>
+              Unassign
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {appointments?.length === 0 && (
+              <div className="px-2 py-1 text-sm text-muted-foreground">
+                No appointments found
+              </div>
+            )}
+            {appointments?.map((apt: any) => (
+              <DropdownMenuItem 
+                key={apt.id} 
+                onClick={() => handleAssignToAppointment(apt.id)}
+                className="flex flex-col items-start"
+              >
+                <span className="font-medium">{apt.appointment_number || apt.title}</span>
+                <span className="text-xs text-muted-foreground">
+                  {format(parseISO(apt.start_time), 'MMM d, h:mm a')}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuSubContent>

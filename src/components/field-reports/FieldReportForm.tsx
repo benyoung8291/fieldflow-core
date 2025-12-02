@@ -97,8 +97,9 @@ export default function FieldReportForm({
           if (existingReport) {
             setDraftReportId(existingReport.id);
             setIsApproved(existingReport.status === 'approved');
-            setFormData({
-              worker_name: existingReport.worker_name,
+            setFormData(prev => ({
+              ...prev,
+              worker_name: existingReport.worker_name || prev.worker_name,
               service_date: existingReport.service_date,
               arrival_time: existingReport.arrival_time,
               appointment_id: existingReport.appointment_id || '',
@@ -119,7 +120,7 @@ export default function FieldReportForm({
               customer_signature_data: existingReport.customer_signature_data || '',
               customer_signature_name: existingReport.customer_signature_name || '',
               customer_signature_date: existingReport.customer_signature_date || '',
-            });
+            }));
             
             // Load photos from database
             const { data: photos } = await supabase
@@ -180,8 +181,9 @@ export default function FieldReportForm({
           if (existingDraft) {
             // Load the draft report data
             setDraftReportId(existingDraft.id);
-            setFormData({
-              worker_name: existingDraft.worker_name,
+            setFormData(prev => ({
+              ...prev,
+              worker_name: existingDraft.worker_name || prev.worker_name,
               service_date: existingDraft.service_date,
               arrival_time: existingDraft.arrival_time,
               appointment_id: existingDraft.appointment_id || '',
@@ -202,7 +204,7 @@ export default function FieldReportForm({
               customer_signature_data: existingDraft.customer_signature_data || '',
               customer_signature_name: existingDraft.customer_signature_name || '',
               customer_signature_date: existingDraft.customer_signature_date || '',
-            });
+            }));
             
             // Load photos from database
             const { data: photos } = await supabase
@@ -512,9 +514,12 @@ export default function FieldReportForm({
     return () => clearTimeout(timeoutId);
   }, [formData, photoPairs, storageKey, draftReportId, customerId, locationId]);
 
-  // Auto-populate logged-in user name
+  // Auto-populate logged-in user name (only if not already set)
   useEffect(() => {
     const loadUserName = async () => {
+      // Skip if worker_name is already populated
+      if (formData.worker_name) return;
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -524,12 +529,12 @@ export default function FieldReportForm({
           .single();
         if (profile?.first_name) {
           const fullName = `${profile.first_name} ${profile.last_name || ''}`.trim();
-          setFormData(prev => ({ ...prev, worker_name: fullName }));
+          setFormData(prev => prev.worker_name ? prev : { ...prev, worker_name: fullName });
         }
       }
     };
     loadUserName();
-  }, []);
+  }, [formData.worker_name]);
 
   const handleSubmit = async () => {
     try {
