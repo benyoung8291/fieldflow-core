@@ -4406,12 +4406,17 @@ export type Database = {
       }
       pdf_templates: {
         Row: {
+          content_zones: Json | null
           created_at: string | null
           created_by: string
           document_type: string
+          field_mappings: Json | null
+          footer_config: Json | null
+          header_config: Json | null
           id: string
           include_sub_items: boolean | null
           is_default: boolean | null
+          line_items_config: Json | null
           name: string
           page_settings: Json
           template_image_url: string | null
@@ -4421,12 +4426,17 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          content_zones?: Json | null
           created_at?: string | null
           created_by: string
           document_type: string
+          field_mappings?: Json | null
+          footer_config?: Json | null
+          header_config?: Json | null
           id?: string
           include_sub_items?: boolean | null
           is_default?: boolean | null
+          line_items_config?: Json | null
           name: string
           page_settings?: Json
           template_image_url?: string | null
@@ -4436,12 +4446,17 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          content_zones?: Json | null
           created_at?: string | null
           created_by?: string
           document_type?: string
+          field_mappings?: Json | null
+          footer_config?: Json | null
+          header_config?: Json | null
           id?: string
           include_sub_items?: boolean | null
           is_default?: boolean | null
+          line_items_config?: Json | null
           name?: string
           page_settings?: Json
           template_image_url?: string | null
