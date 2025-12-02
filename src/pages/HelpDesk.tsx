@@ -233,11 +233,19 @@ export default function HelpDesk() {
   useEffect(() => {
     if (pipelines && pipelines.length > 0) {
       const lastPipelineId = localStorage.getItem('helpdeskLastPipeline');
+      const requestsPipeline = pipelines.find(p => p.name === "Requests");
+      
       if (lastPipelineId && lastPipelineId !== 'all') {
         // Verify the pipeline still exists
         const pipelineExists = pipelines.some(p => p.id === lastPipelineId);
         if (pipelineExists) {
           setSelectedPipelineId(lastPipelineId);
+          
+          // For Requests pipeline, always default to "All" filter
+          if (requestsPipeline && lastPipelineId === requestsPipeline.id) {
+            setFilterAssignment('all');
+            setFilterUserId(null);
+          }
         }
       }
     }
@@ -249,10 +257,11 @@ export default function HelpDesk() {
     if (selectedPipelineId !== null) {
       localStorage.setItem('helpdeskLastPipeline', selectedPipelineId);
       
-      // Check if this is the "Requests" pipeline
+      // Check if this is the "Requests" pipeline - always show All Users
       const requestsPipeline = pipelines?.find(p => p.name === "Requests");
       if (requestsPipeline && selectedPipelineId === requestsPipeline.id) {
         setFilterAssignment('all');
+        setFilterUserId(null); // Clear user filter for Requests
       }
     } else {
       localStorage.setItem('helpdeskLastPipeline', 'all');
