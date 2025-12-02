@@ -10,6 +10,9 @@ import { Save, X, Edit2, AlertTriangle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import DeleteTimeLogDialog from "@/components/time-logs/DeleteTimeLogDialog";
+import DistanceWarningBadge from "@/components/time-logs/DistanceWarningBadge";
+import { calculateDistance } from "@/lib/distance";
+import TimesheetMapView from "@/components/timesheets/TimesheetMapView";
 
 interface TimeLogsTableProps {
   appointmentId: string;
@@ -39,7 +42,15 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
         .from("time_logs")
         .select(`
           *,
-          edited_by_user:profiles!time_logs_edited_by_fkey(first_name, last_name)
+          edited_by_user:profiles!time_logs_edited_by_fkey(first_name, last_name),
+          appointments (
+            id,
+            title,
+            appointment_number,
+            location_address,
+            location_lat,
+            location_lng
+          )
         `)
         .eq("appointment_id", appointmentId)
         .order("clock_in", { ascending: false });
@@ -177,7 +188,8 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                 </>
               )}
               <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Status</th>
-              {isSupervisorOrAbove && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-24">Actions</th>}
+              <th className="text-left py-2 px-2 font-medium text-[10px] uppercase">Distance</th>
+              {isSupervisorOrAbove && <th className="text-right py-2 px-2 font-medium text-[10px] uppercase w-32">Actions</th>}
             </tr>
           </thead>
         <tbody className="divide-y divide-border/50">
@@ -185,6 +197,20 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
             const isEditing = editingId === log.id;
             const hasLocationDenied = log.notes && log.notes.includes('LOCATION PERMISSIONS DENIED');
             const hasLocationUnavailable = log.notes && log.notes.includes('LOCATION NOT AVAILABLE') && !log.notes.includes('DENIED');
+
+            // Calculate distance from appointment location
+            const checkInDistance =
+              log.appointments?.location_lat &&
+              log.appointments?.location_lng &&
+              log.latitude &&
+              log.longitude
+                ? calculateDistance(
+                    log.appointments.location_lat,
+                    log.appointments.location_lng,
+                    log.latitude,
+                    log.longitude
+                  )
+                : null;
 
             return (
               <>
@@ -287,6 +313,9 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                       </Badge>
                     )}
                   </td>
+                  <td className="py-2 px-2">
+                    <DistanceWarningBadge distance={checkInDistance} showIcon={false} />
+                  </td>
                   {isSupervisorOrAbove && (
                     <td className="py-2 px-2 text-right">
                       {isEditing ? (
@@ -313,6 +342,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                         </div>
                       ) : (
                         <div className="flex gap-1 justify-end">
+                          <TimesheetMapView timeLog={log} />
                           <Button
                             variant="ghost"
                             size="sm"
@@ -338,7 +368,7 @@ export default function TimeLogsTable({ appointmentId, hideFinancials = false }:
                 </tr>
                 {(hasLocationDenied || hasLocationUnavailable) && (
                   <tr key={`${log.id}-location-warning`} className="bg-muted/20">
-                    <td colSpan={isSupervisorOrAbove ? (hideFinancials ? 5 : 8) : (hideFinancials ? 4 : 7)} className="py-2 px-2">
+                    <td colSpan={isSupervisorOrAbove ? (hideFinancials ? 6 : 9) : (hideFinancials ? 5 : 8)} className="py-2 px-2">
                       {hasLocationDenied && (
                         <Badge variant="destructive" className="text-[9px] flex items-center gap-1 w-fit">
                           <AlertTriangle className="h-3 w-3" />
