@@ -58,12 +58,8 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
       
       if (error) throw error;
       
-      // Filter to matching customer if applicable
-      if (ticket.customer_id && data) {
-        return data.filter((apt: any) => 
-          apt.service_order?.customer_id === ticket.customer_id
-        );
-      }
+      // Return all appointments - let RLS handle tenant filtering
+      // The useMemo will organize them by location/customer relevance
       return data || [];
     },
     enabled: true,
@@ -74,21 +70,32 @@ export function TicketActionsMenu({ ticket }: TicketActionsMenuProps) {
     if (!appointments) return { locationAppointments: [], otherAppointments: [] };
     
     const locationMatched: any[] = [];
+    const customerMatched: any[] = [];
     const others: any[] = [];
     
     appointments.forEach((apt: any) => {
-      if (ticket.location_id && apt.service_order?.customer_location_id === ticket.location_id) {
+      const isCustomerMatch = !ticket.customer_id || 
+        apt.service_order?.customer_id === ticket.customer_id;
+      const isLocationMatch = ticket.location_id && 
+        apt.service_order?.customer_location_id === ticket.location_id;
+      
+      if (isLocationMatch && isCustomerMatch) {
+        // Best match: same location AND same customer
         locationMatched.push(apt);
+      } else if (isCustomerMatch) {
+        // Good match: same customer, different location
+        customerMatched.push(apt);
       } else {
+        // Other appointments in tenant
         others.push(apt);
       }
     });
     
     return {
       locationAppointments: locationMatched,
-      otherAppointments: others
+      otherAppointments: [...customerMatched, ...others] // Customer matched first, then others
     };
-  }, [appointments, ticket.location_id]);
+  }, [appointments, ticket.customer_id, ticket.location_id]);
 
   const handleArchive = async () => {
     const { data: { user } } = await supabase.auth.getUser();
