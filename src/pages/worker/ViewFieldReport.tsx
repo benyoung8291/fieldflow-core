@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -49,21 +48,47 @@ export default function ViewFieldReport() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-background pb-32">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Field Report</h1>
+          </div>
+        </header>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Loading field report...</div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (!report) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-background pb-32">
+        <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+              className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg font-bold">Field Report</h1>
+          </div>
+        </header>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Field report not found</div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
@@ -71,20 +96,25 @@ export default function ViewFieldReport() {
   const afterPhotos = photos.filter(p => p.photo_type === 'after');
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-4xl mx-auto p-6">
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-background pb-32">
+      <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(`/appointments/${appointmentId}`)}
+            onClick={() => navigate(`/worker/appointments/${appointmentId}`)}
+            className="h-9 w-9 rounded-full text-primary-foreground hover:bg-primary-foreground/20 -ml-1"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{report.report_number}</h1>
-            <p className="text-muted-foreground">Field Report Details</p>
-          </div>
+          <h1 className="text-lg font-bold">Field Report</h1>
+        </div>
+      </header>
+
+      <div className="space-y-6 max-w-4xl mx-auto p-6">
+        <div>
+          <h2 className="text-2xl font-bold">{report.report_number}</h2>
+          <p className="text-muted-foreground">Field Report Details</p>
         </div>
 
         <Card>
@@ -203,6 +233,6 @@ export default function ViewFieldReport() {
           </Card>
         )}
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
