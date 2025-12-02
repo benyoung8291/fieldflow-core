@@ -26,6 +26,20 @@ export default function WorkerFieldReport() {
     },
   });
 
+  const { data: beforePhotosCount = 0 } = useQuery({
+    queryKey: ['before-photos-count', id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('appointment_attachments')
+        .select('*', { count: 'exact', head: true })
+        .eq('appointment_id', id!)
+        .eq('category', 'before_photo');
+
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
   return (
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground sticky top-0 z-20 shadow-sm">
@@ -47,6 +61,7 @@ export default function WorkerFieldReport() {
         customerId={appointment?.service_order?.customer_id}
         locationId={appointment?.service_order?.location_id}
         serviceOrderId={appointment?.service_order?.id}
+        beforePhotosCount={beforePhotosCount}
         onSave={() => navigate(`/worker/appointments/${id}`)}
       />
     </div>

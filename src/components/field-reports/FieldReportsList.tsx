@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface FieldReportsListProps {
   appointmentId: string;
@@ -153,11 +154,17 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
         const canDelete = isCreator && isDraft;
 
         return (
-          <Card key={report.id} className="hover:bg-muted/50 transition-colors">
+          <Card 
+            key={report.id} 
+            className={cn(
+              "hover:bg-muted/50 transition-colors",
+              isCreator && "border-primary/50 bg-primary/5"
+            )}
+          >
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h4 className="font-medium truncate">{report.report_number}</h4>
                     <Badge 
                       variant={report.status === 'submitted' ? 'default' : 'secondary'}
@@ -168,6 +175,11 @@ export default function FieldReportsList({ appointmentId, onReportStateChange }:
                     {isLocked && (
                       <Badge variant="outline" className="text-xs">
                         Approved
+                      </Badge>
+                    )}
+                    {isCreator && (
+                      <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                        Your Report
                       </Badge>
                     )}
                   </div>

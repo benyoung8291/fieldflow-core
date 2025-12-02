@@ -7,6 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ArrowLeft,
   Calendar,
   Clock,
@@ -17,7 +27,6 @@ import {
   MessageSquare,
   Navigation,
   Camera,
-  FileSignature,
   Play,
   Square,
   Image as ImageIcon,
@@ -27,7 +36,6 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import PhotoCapture from '@/components/worker/PhotoCapture';
 import QuickPhotoCapture from '@/components/worker/QuickPhotoCapture';
-import SignaturePad from '@/components/worker/SignaturePad';
 import { LocationPermissionHelp } from '@/components/worker/LocationPermissionHelp';
 import { cacheAppointments } from '@/lib/offlineSync';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -53,13 +61,13 @@ export default function WorkerAppointmentDetails() {
   const [processing, setProcessing] = useState(false);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [showQuickPhotoCapture, setShowQuickPhotoCapture] = useState(false);
-  const [showSignature, setShowSignature] = useState(false);
   const [timeLog, setTimeLog] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [workNotes, setWorkNotes] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isPaused, setIsPaused] = useState(false);
   const [showRequestNotification, setShowRequestNotification] = useState(false);
+  const [showBeforePhotosPrompt, setShowBeforePhotosPrompt] = useState(false);
 
   const { containerRef, isRefreshing: isPulling, pullDistance } = usePullToRefresh({
     onRefresh: async () => {
@@ -445,6 +453,11 @@ export default function WorkerAppointmentDetails() {
       console.log('[Clock In] Clock-in completed successfully!');
       toast.success(`Clocked in successfully at your location!`);
       
+      // Prompt for before photos if none exist
+      if (attachments.length === 0) {
+        setShowBeforePhotosPrompt(true);
+      }
+      
       // Check if there are linked requests and show notification
       if (linkedRequests && linkedRequests.length > 0) {
         setShowRequestNotification(true);
@@ -687,65 +700,6 @@ export default function WorkerAppointmentDetails() {
     }
   };
 
-  const handleCompleteAppointment = () => {
-    setShowSignature(true);
-  };
-
-  const handleSaveSignature = async (signatureData: string) => {
-    setProcessing(true);
-    try {
-      // Convert data URL to blob
-      const response = await fetch(signatureData);
-      const blob = await response.blob();
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      const fileName = `signature_${Date.now()}.png`;
-      const filePath = `${profile?.tenant_id}/${id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('appointment-files')
-        .upload(filePath, blob);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('appointment-files')
-        .getPublicUrl(filePath);
-
-      await supabase.from('appointment_attachments').insert({
-        tenant_id: profile?.tenant_id,
-        appointment_id: id,
-        file_name: fileName,
-        file_url: publicUrl,
-        file_type: 'image/png',
-        category: 'signature',
-        notes: 'Customer signature',
-        uploaded_by: user.id,
-      });
-
-      await supabase
-        .from('appointments')
-        .update({ status: 'completed' })
-        .eq('id', id);
-
-      toast.success('Job completed successfully!');
-      setShowSignature(false);
-      loadAppointmentData();
-    } catch (error) {
-      console.error('Error saving signature:', error);
-      toast.error('Failed to save signature');
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const handleQuickPhotoSave = async (file: File) => {
     try {
@@ -1133,6 +1087,52 @@ export default function WorkerAppointmentDetails() {
           </Card>
         )}
 
+        {/* Before Photos & Documentation */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Before Photos ({attachments.length})
+            </CardTitle>
+            <Button onClick={() => setShowPhotoCapture(true)} size="sm">
+              <Camera className="h-4 w-4 mr-2" />
+              Add Before Photo
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {attachments.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {attachments.map((file) => (
+                  <div key={file.id} className="relative rounded-lg overflow-hidden border">
+                    <img
+                      src={file.file_url}
+                      alt={file.file_name}
+                      className="w-full h-32 object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Image failed to load:', file.file_url);
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="w-full h-32 flex items-center justify-center bg-muted"><p class="text-xs text-muted-foreground">Image unavailable</p></div>';
+                        }
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-2">
+                      <p className="text-xs truncate">{file.category}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No before photos yet</p>
+                <p className="text-xs mt-1">Add photos showing the condition before work starts</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Assigned Workers */}
         {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
           <Card>
@@ -1194,51 +1194,6 @@ export default function WorkerAppointmentDetails() {
           </Card>
         )}
 
-        {/* Before Photos & Documentation */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="h-5 w-5" />
-              Before Photos ({attachments.length})
-            </CardTitle>
-            <Button onClick={() => setShowPhotoCapture(true)} size="sm">
-              <Camera className="h-4 w-4 mr-2" />
-              Add Before Photo
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {attachments.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {attachments.map((file) => (
-                  <div key={file.id} className="relative rounded-lg overflow-hidden border">
-                    <img
-                      src={file.file_url}
-                      alt={file.file_name}
-                      className="w-full h-32 object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        console.error('Image failed to load:', file.file_url);
-                        const parent = e.currentTarget.parentElement;
-                        if (parent) {
-                          parent.innerHTML = '<div class="w-full h-32 flex items-center justify-center bg-muted"><p class="text-xs text-muted-foreground">Image unavailable</p></div>';
-                        }
-                      }}
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-2">
-                      <p className="text-xs truncate">{file.category}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No before photos yet</p>
-                <p className="text-xs mt-1">Add photos showing the condition before work starts</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Customer Requests */}
         {linkedRequests && linkedRequests.length > 0 && (
@@ -1307,7 +1262,7 @@ export default function WorkerAppointmentDetails() {
                 const userReport = fieldReports.find((r: any) => r.created_by === currentUser?.id);
                 if (!userReport) return 'Create Field Report';
                 const isLocked = userReport.approved_at && userReport.pdf_url;
-                if (userReport.status === 'draft') return 'Finish Field Report';
+                if (userReport.status === 'draft') return 'Continue Draft Report';
                 if (userReport.status === 'submitted' && !isLocked) return 'Edit Submitted Report';
                 return 'View Field Report';
               })()}
@@ -1325,18 +1280,6 @@ export default function WorkerAppointmentDetails() {
             appointmentId={appointment.id}
             onComplete={loadAppointmentData}
           />
-        )}
-
-        {/* Complete Job */}
-        {timeLog && !timeLog.clock_out && !isCompleted && (
-          <Button
-            onClick={handleCompleteAppointment}
-            size="lg"
-            className="w-full"
-          >
-            <FileSignature className="h-5 w-5 mr-2" />
-            Complete Job & Get Signature
-          </Button>
         )}
 
         {/* Time Logs */}
@@ -1376,12 +1319,27 @@ export default function WorkerAppointmentDetails() {
         />
       )}
 
-      {showSignature && (
-        <SignaturePad
-          onSave={handleSaveSignature}
-          onClose={() => setShowSignature(false)}
-        />
-      )}
+      {/* Before Photos Prompt Dialog */}
+      <AlertDialog open={showBeforePhotosPrompt} onOpenChange={setShowBeforePhotosPrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Don't Forget Before Photos!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Before photos help document the condition of the work area before you start. 
+              They're important for field reports and provide a record of the initial state.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Remind Me Later</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowBeforePhotosPrompt(false);
+              setShowPhotoCapture(true);
+            }}>
+              Take Photos Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Request Notification Dialog */}
       <WorkerRequestNotification
