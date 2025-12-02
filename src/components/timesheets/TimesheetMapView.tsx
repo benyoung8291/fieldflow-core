@@ -190,7 +190,14 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
                   {timeLog.appointments.location_address}
                 </div>
               ) : (
-                <Badge variant="outline" className="text-xs">No location data</Badge>
+                <div className="space-y-1">
+                  <Badge variant="outline" className="text-xs bg-warning/10 text-warning">
+                    No appointment GPS
+                  </Badge>
+                  <div className="text-xs text-muted-foreground">
+                    Distance cannot be calculated
+                  </div>
+                </div>
               )}
             </div>
 
@@ -201,18 +208,25 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
               </div>
               {hasCheckInLocation ? (
                 <>
-                  <div className="text-sm text-muted-foreground">
-                    Lat: {timeLog.latitude.toFixed(6)}<br />
-                    Lng: {timeLog.longitude.toFixed(6)}
+                  <div className="text-sm text-muted-foreground font-mono">
+                    {timeLog.latitude.toFixed(6)}, {timeLog.longitude.toFixed(6)}
                   </div>
-                  {checkInDistance !== null && (
+                  {checkInDistance !== null ? (
                     <Badge variant="outline" className={`text-xs ${getDistanceColor(checkInDistance)}`}>
-                      {checkInDistance.toFixed(0)}m from site
+                      {checkInDistance >= 1000
+                        ? `${(checkInDistance / 1000).toFixed(2)} km`
+                        : `${Math.round(checkInDistance)} m`} from site
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      GPS captured
                     </Badge>
                   )}
                 </>
               ) : (
-                <Badge variant="outline" className="text-xs">No location captured</Badge>
+                <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive">
+                  No GPS captured
+                </Badge>
               )}
             </div>
 
@@ -223,18 +237,25 @@ export default function TimesheetMapView({ timeLog }: TimesheetMapViewProps) {
               </div>
               {hasCheckOutLocation ? (
                 <>
-                  <div className="text-sm text-muted-foreground">
-                    Lat: {timeLog.check_out_lat.toFixed(6)}<br />
-                    Lng: {timeLog.check_out_lng.toFixed(6)}
+                  <div className="text-sm text-muted-foreground font-mono">
+                    {timeLog.check_out_lat.toFixed(6)}, {timeLog.check_out_lng.toFixed(6)}
                   </div>
-                  {checkOutDistance !== null && (
+                  {checkOutDistance !== null ? (
                     <Badge variant="outline" className={`text-xs ${getDistanceColor(checkOutDistance)}`}>
-                      {checkOutDistance.toFixed(0)}m from site
+                      {checkOutDistance >= 1000
+                        ? `${(checkOutDistance / 1000).toFixed(2)} km`
+                        : `${Math.round(checkOutDistance)} m`} from site
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      GPS captured
                     </Badge>
                   )}
                 </>
               ) : (
-                <Badge variant="outline" className="text-xs">No location captured</Badge>
+                <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
+                  No GPS captured
+                </Badge>
               )}
             </div>
           </div>

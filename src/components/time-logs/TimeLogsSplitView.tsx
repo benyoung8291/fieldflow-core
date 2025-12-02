@@ -6,6 +6,7 @@ import { calculateDistance, formatDistance, getDistanceWarningLevel } from "@/li
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import DistanceWarningBadge from "./DistanceWarningBadge";
 
 interface TimeLog {
   id: string;
@@ -17,6 +18,10 @@ interface TimeLog {
   check_out_lng: number | null;
   total_hours: number | null;
   profiles?: {
+    first_name: string;
+    last_name: string;
+  };
+  worker?: {
     first_name: string;
     last_name: string;
   };
@@ -143,7 +148,8 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
 
       // Add worker clock-in/out markers
       selectedData.logs.forEach((log: TimeLog) => {
-        const workerName = log.profiles ? `${log.profiles.first_name} ${log.profiles.last_name}` : "Unknown";
+        const profile = log.profiles || log.worker;
+        const workerName = profile ? `${profile.first_name} ${profile.last_name}` : "Unknown";
 
         // Clock-in marker (green)
         if (log.latitude && log.longitude) {
@@ -356,8 +362,9 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
                   <h4 className="font-semibold text-xs mb-2">Workers</h4>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {selectedData.logs.map((log: TimeLog) => {
-                      const workerName = log.profiles
-                        ? `${log.profiles.first_name} ${log.profiles.last_name}`
+                      const profile = log.profiles || log.worker;
+                      const workerName = profile
+                        ? `${profile.first_name} ${profile.last_name}`
                         : "Unknown";
                       
                       const appointment = log.appointments;
@@ -381,18 +388,13 @@ export default function TimeLogsSplitView({ timeLogs }: TimeLogsSplitViewProps) 
                       return (
                         <div key={log.id} className="flex items-center justify-between text-xs pb-1.5 border-b">
                           <span className="font-medium truncate mr-2">{workerName}</span>
-                          {checkInDistance !== null ? (
-                            <Badge
-                              variant="outline"
-                              className={cn("text-[9px]", level && levelColors[level])}
-                            >
-                              {formatDistance(checkInDistance)}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[9px] text-muted-foreground">
-                              No GPS
-                            </Badge>
-                          )}
+                          <DistanceWarningBadge 
+                            distance={checkInDistance}
+                            showIcon={false}
+                            workerLat={log.latitude}
+                            workerLng={log.longitude}
+                            hasAppointmentLocation={!!(appointment?.location_lat && appointment?.location_lng)}
+                          />
                         </div>
                       );
                     })}

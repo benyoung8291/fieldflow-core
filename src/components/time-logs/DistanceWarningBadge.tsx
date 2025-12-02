@@ -5,12 +5,28 @@ import { formatDistance, getDistanceWarningLevel } from "@/lib/distance";
 interface DistanceWarningBadgeProps {
   distance: number | null;
   showIcon?: boolean;
+  workerLat?: number | null;
+  workerLng?: number | null;
+  hasAppointmentLocation?: boolean;
 }
 
 export default function DistanceWarningBadge({ 
   distance, 
-  showIcon = true 
+  showIcon = true,
+  workerLat,
+  workerLng,
+  hasAppointmentLocation = true,
 }: DistanceWarningBadgeProps) {
+  // If worker has GPS but appointment doesn't, show worker coordinates
+  if (distance === null && workerLat != null && workerLng != null && !hasAppointmentLocation) {
+    return (
+      <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
+        {workerLat.toFixed(3)}, {workerLng.toFixed(3)}
+      </Badge>
+    );
+  }
+
+  // No GPS data at all
   if (distance === null) {
     return (
       <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
