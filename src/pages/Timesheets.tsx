@@ -80,7 +80,7 @@ export default function Timesheets() {
             location_lng,
             service_order:service_orders (
               id,
-              customer_location:customer_locations (
+              customer_location:customer_locations!service_orders_customer_location_id_fkey (
                 id,
                 address,
                 formatted_address,
