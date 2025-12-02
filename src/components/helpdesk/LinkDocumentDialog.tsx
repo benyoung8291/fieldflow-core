@@ -85,7 +85,7 @@ export function LinkDocumentDialog({ ticketId, open: controlledOpen, onOpenChang
       // For appointments, filter to show relevant status and order by start_time
       if (documentType === "appointment") {
         query = query
-          .in("status", ["draft", "published"])
+          .in("status", ["draft", "published", "checked_in"])
           .order("start_time", { ascending: false });
       } else {
         // Order others by creation or relevant field
