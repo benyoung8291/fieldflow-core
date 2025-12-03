@@ -41,7 +41,6 @@ const REQUIRED_FIELDS = [
 
 const OPTIONAL_FIELDS = [
   { value: "line_total", label: "Line Total" },
-  { value: "next_date", label: "Next Generation Date" },
   { value: "location_id", label: "Location ID" },
   { value: "key_number", label: "Key Number" },
   { value: "ignore", label: "-- Ignore Column --" },
@@ -111,9 +110,6 @@ export default function ImportContractLineItemsDialog({
               matchingColumn = header;
               break;
             } else if (field.value === "first_date" && (normalizedHeader.includes("firstdate") || normalizedHeader.includes("startdate") || normalizedHeader.includes("start") || normalizedHeader.includes("first"))) {
-              matchingColumn = header;
-              break;
-            } else if (field.value === "next_date" && (normalizedHeader.includes("nextdate") || normalizedHeader.includes("next"))) {
               matchingColumn = header;
               break;
             } else if (field.value === "location_name" && (normalizedHeader.includes("locationname") || normalizedHeader === "location" || normalizedHeader.includes("site"))) {
@@ -327,7 +323,6 @@ export default function ImportContractLineItemsDialog({
         const estimatedHours = parseFloat(String(mappedRow.estimated_hours || "0").replace(/[^0-9.-]/g, "")) || 0;
         
         const firstDate = parseDate(mappedRow.first_date, contractStartDate);
-        const nextDate = mappedRow.next_date ? parseDate(mappedRow.next_date, contractStartDate) : firstDate;
 
         lineItems.push({
           contract_id: contractId,
@@ -340,7 +335,7 @@ export default function ImportContractLineItemsDialog({
           estimated_hours: estimatedHours,
           recurrence_frequency: parseFrequency(mappedRow.frequency),
           first_generation_date: firstDate,
-          next_generation_date: nextDate,
+          next_generation_date: null, // Let database trigger set this correctly
           location_id: locationId,
           key_number: mappedRow.key_number || null,
           is_active: true,
@@ -429,7 +424,6 @@ export default function ImportContractLineItemsDialog({
               <p className="text-sm font-medium mt-3">Optional Columns:</p>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>Line Total</li>
-                <li>Next Generation Date</li>
                 <li>Location ID (customer location ID)</li>
                 <li>Key Number</li>
               </ul>
