@@ -9435,6 +9435,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_workers_module: { Args: { _user_id: string }; Returns: boolean }
+      channel_has_no_members: {
+        Args: { p_channel_id: string }
+        Returns: boolean
+      }
       check_variance_requires_approval: {
         Args: { p_invoice_id: string; p_total_variance: number }
         Returns: boolean
@@ -9679,6 +9683,19 @@ export type Database = {
         Args: { _pipeline_id: string; _user_id: string }
         Returns: boolean
       }
+      is_channel_admin: {
+        Args: { p_channel_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_channel_member: {
+        Args: { p_channel_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_channel_owner: {
+        Args: { p_channel_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_public_channel: { Args: { p_channel_id: string }; Returns: boolean }
       is_super_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_supervisor_or_above: {
         Args: { check_user_id: string }
