@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Home, Calendar, Clock, MoreHorizontal, FileText, User, CalendarClock, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -15,7 +15,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 
 interface NavItem {
   icon: typeof Home;
@@ -38,7 +37,6 @@ const moreNavItems: NavItem[] = [
 ];
 
 export const WorkerMobileBottomNav = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -117,9 +115,9 @@ export const WorkerMobileBottomNav = () => {
           const isActive = isActivePath(item.path);
           
           return (
-            <button
+            <Link
               key={item.path}
-              onClick={() => navigate(item.path)}
+              to={item.path}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all mobile-tap flex-1 touch-manipulation",
                 isActive
@@ -141,7 +139,7 @@ export const WorkerMobileBottomNav = () => {
               <span className={cn("text-[11px] transition-all", isActive ? "font-bold" : "font-medium")}>
                 {item.label}
               </span>
-            </button>
+            </Link>
           );
         })}
         
@@ -162,13 +160,10 @@ export const WorkerMobileBottomNav = () => {
                 const isActive = isActivePath(item.path);
                 
                 return (
-                  <Button
+                  <Link
                     key={item.path}
-                    variant="ghost"
-                    onClick={() => {
-                      navigate(item.path);
-                      setIsMoreMenuOpen(false);
-                    }}
+                    to={item.path}
+                    onClick={() => setIsMoreMenuOpen(false)}
                     className={cn(
                       "flex flex-col items-center justify-center h-32 gap-3 rounded-3xl mobile-tap p-4",
                       isActive
@@ -183,7 +178,7 @@ export const WorkerMobileBottomNav = () => {
                       <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />
                     </div>
                     <span className={cn("text-sm text-center leading-tight", isActive ? "font-bold" : "font-medium")}>{item.label}</span>
-                  </Button>
+                  </Link>
                 );
               })}
             </div>
