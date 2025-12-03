@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CreateChannelDialog } from "./dialogs/CreateChannelDialog";
+import { NewDMDialog } from "./dialogs/NewDMDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -22,6 +24,8 @@ export function ChatSidebar() {
   const [channelsOpen, setChannelsOpen] = useState(true);
   const [dmsOpen, setDmsOpen] = useState(true);
   const [notificationBannerDismissed, setNotificationBannerDismissed] = useState(false);
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [newDMOpen, setNewDMOpen] = useState(false);
   const notificationPermission = useNotificationPermission();
 
   // Check if notification banner was previously dismissed
@@ -152,10 +156,7 @@ export function ChatSidebar() {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => {
-                    // TODO: Open create channel dialog
-                    console.log("Create channel clicked");
-                  }}
+                  onClick={() => setCreateChannelOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -211,10 +212,7 @@ export function ChatSidebar() {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => {
-                    // TODO: Open new DM dialog
-                    console.log("New DM clicked");
-                  }}
+                  onClick={() => setNewDMOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -257,6 +255,10 @@ export function ChatSidebar() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Dialogs */}
+      <CreateChannelDialog open={createChannelOpen} onOpenChange={setCreateChannelOpen} />
+      <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen} />
     </div>
   );
 }

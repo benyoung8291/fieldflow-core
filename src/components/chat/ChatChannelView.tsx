@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
+import { ChannelSettingsDialog } from "./dialogs/ChannelSettingsDialog";
 import { cn } from "@/lib/utils";
 
 interface ChatChannelViewProps {
@@ -32,6 +33,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   // Message action states
   const [editingMessage, setEditingMessage] = useState<MessageWithProfile | null>(null);
   const [replyingTo, setReplyingTo] = useState<MessageWithProfile | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   // Enable notifications and typing for this channel
   useChatNotifications(channelId);
@@ -136,12 +138,15 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
           <span>{members.length}</span>
         </div>
 
-        {/* Info Button (Mobile) */}
-        {isMobile && !isEmbedded && (
-          <Button variant="ghost" size="icon" className="flex-shrink-0">
-            <Info className="h-5 w-5" />
-          </Button>
-        )}
+        {/* Info Button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="flex-shrink-0"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Info className="h-5 w-5" />
+        </Button>
       </div>
 
       {/* Message List */}
@@ -156,6 +161,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
       <TypingIndicator typingUsers={typingUsers} />
 
       {/* Message Input */}
+      {/* Message Input */}
       <ChatInput 
         channelId={channel.id} 
         onTyping={broadcastTyping}
@@ -163,6 +169,13 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
         replyingTo={replyingTo}
         onCancelEdit={handleCancelEdit}
         onCancelReply={handleCancelReply}
+      />
+
+      {/* Channel Settings Dialog */}
+      <ChannelSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        channel={channel}
       />
     </div>
   );

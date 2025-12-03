@@ -402,3 +402,103 @@ export function useToggleReaction() {
     },
   });
 }
+
+export function useAddMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ channelId, userId }: { channelId: string; userId: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      const { data, error } = await supabase
+        .from("chat_channel_members")
+        .insert({
+          channel_id: channelId,
+          user_id: userId,
+          tenant_id: profile.tenant_id,
+          role: "member",
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("[Chat] Error adding member:", error);
+        throw error;
+      }
+
+      return { ...data, channelId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
+      queryClient.invalidateQueries({ queryKey: ["chat-channel-members", data.channelId] });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ channelId, userId }: { channelId: string; userId: string }) => {
+      const { error } = await supabase
+        .from("chat_channel_members")
+        .delete()
+        .eq("channel_id", channelId)
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("[Chat] Error removing member:", error);
+        throw error;
+      }
+
+      return { channelId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
+      queryClient.invalidateQueries({ queryKey: ["chat-channel-members", data.channelId] });
+    },
+  });
+}
+
+export function useUpdateChannelDetails() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      channelId,
+      name,
+      description,
+    }: {
+      channelId: string;
+      name: string;
+      description: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from("chat_channels")
+        .update({ name, description })
+        .eq("id", channelId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("[Chat] Error updating channel:", error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
+      queryClient.invalidateQueries({ queryKey: ["chat-channel", data.id] });
+    },
+  });
+}
