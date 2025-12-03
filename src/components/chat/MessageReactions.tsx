@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Smile, Plus } from "lucide-react";
+import { Smile } from "lucide-react";
 import { useAddReaction, useRemoveReaction } from "@/hooks/chat/useChatOperations";
 import { ChatReaction } from "@/types/chat";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ interface MessageReactionsProps {
   isCurrentUser: boolean;
 }
 
-const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👀"];
 
 interface GroupedReaction {
   emoji: string;
@@ -107,18 +107,23 @@ export function MessageReactions({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" side="top" align={isCurrentUser ? "end" : "start"}>
           <div className="flex items-center gap-1">
-            {COMMON_EMOJIS.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleToggleReaction(emoji)}
-                className="h-8 w-8 rounded hover:bg-muted flex items-center justify-center text-lg transition-colors"
-              >
-                {emoji}
-              </button>
-            ))}
-            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
-              <Plus className="h-4 w-4" />
-            </Button>
+            {QUICK_EMOJIS.map((emoji) => {
+              const hasReacted = reactions.some(
+                (r) => r.emoji === emoji && r.user_id === currentUserId
+              );
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => handleToggleReaction(emoji)}
+                  className={cn(
+                    "h-8 w-8 rounded flex items-center justify-center text-lg transition-colors",
+                    hasReacted ? "bg-primary/20" : "hover:bg-muted"
+                  )}
+                >
+                  {emoji}
+                </button>
+              );
+            })}
           </div>
         </PopoverContent>
       </Popover>

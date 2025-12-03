@@ -1,10 +1,13 @@
-import { Outlet, useParams } from "react-router-dom";
+import { Outlet, useParams, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatSidebar } from "./ChatSidebar";
+import { ChatEmptyState } from "./ChatEmptyState";
 
 export function ChatLayout() {
   const isMobile = useIsMobile();
   const { channelId } = useParams();
+  const location = useLocation();
+  const isWorkerApp = location.pathname.startsWith("/worker");
 
   // Mobile: Show sidebar OR content, not both
   if (isMobile) {
@@ -31,7 +34,7 @@ export function ChatLayout() {
         <ChatSidebar />
       </div>
       <div className="flex-1">
-        <Outlet />
+        {channelId ? <Outlet /> : <ChatEmptyState />}
       </div>
     </div>
   );

@@ -105,12 +105,7 @@ export function MessageList({ channelId, currentUserId, onReply, onEdit }: Messa
   }
 
   if (messages.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-        <p className="text-muted-foreground">No messages yet</p>
-        <p className="text-sm text-muted-foreground">Be the first to send a message!</p>
-      </div>
-    );
+    return null; // Let parent component handle empty state with channel context
   }
 
   return (

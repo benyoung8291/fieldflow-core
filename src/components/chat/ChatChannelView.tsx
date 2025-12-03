@@ -1,18 +1,24 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Hash, Lock, Users, Info } from "lucide-react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { ArrowLeft, Hash, Lock, MessageCircle, Users, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels";
 import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
 import { useChatTyping } from "@/hooks/chat/useChatTyping";
+import { useDMChannelName } from "@/hooks/chat/useDMChannelName";
+import { useChatPresence } from "@/hooks/chat/useChatPresence";
+import { useChannelMessages } from "@/hooks/chat/useChannelMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageWithProfile } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
+import { ChatEmptyState } from "./ChatEmptyState";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChannelSettingsDialog } from "./dialogs/ChannelSettingsDialog";
+import { OnlineIndicator } from "./OnlineIndicator";
 import { cn } from "@/lib/utils";
 
 interface ChatChannelViewProps {
@@ -25,10 +31,17 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   const channelId = propChannelId || paramChannelId;
   const isEmbedded = !!propChannelId;
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { data: channel, isLoading: channelLoading } = useChatChannel(channelId || null);
   const { data: members = [] } = useChannelMembers(channelId || null);
+  const { data: messages = [] } = useChannelMessages(channelId || "");
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  
+  // DM specific hooks
+  const isDM = channel?.type === "dm";
+  const { data: dmInfo } = useDMChannelName(isDM ? channelId || null : null);
+  const { isUserOnline } = useChatPresence();
   
   // Message action states
   const [editingMessage, setEditingMessage] = useState<MessageWithProfile | null>(null);
@@ -38,6 +51,10 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   // Enable notifications and typing for this channel
   useChatNotifications(channelId);
   const { typingUsers, broadcastTyping } = useChatTyping(channelId);
+  
+  // Determine back navigation path based on current app context
+  const isWorkerApp = location.pathname.startsWith("/worker");
+  const backPath = isWorkerApp ? "/worker/chat" : "/chat";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -100,7 +117,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
           This channel may have been deleted or you don't have access.
         </p>
         {!isEmbedded && (
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/chat")}>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(backPath)}>
             Back to channels
           </Button>
         )}
@@ -108,7 +125,18 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
     );
   }
 
-  const ChannelIcon = channel.type === "private" ? Lock : Hash;
+  // Determine display name and icon
+  const displayName = isDM && dmInfo ? dmInfo.otherUserName : (channel.name || "Direct Message");
+  const isOtherUserOnline = isDM && dmInfo?.otherUserId ? isUserOnline(dmInfo.otherUserId) : false;
+  const ChannelIcon = channel.type === "private" ? Lock : channel.type === "dm" ? MessageCircle : Hash;
+
+  // Get initials for DM avatar
+  const dmInitials = dmInfo?.otherUserName
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?";
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
@@ -116,27 +144,45 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
       <div className="flex h-14 flex-shrink-0 items-center gap-3 border-b px-4">
         {/* Mobile Back Button */}
         {isMobile && !isEmbedded && (
-          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate("/chat")}>
+          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate(backPath)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
 
-        {/* Channel Icon */}
-        <ChannelIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+        {/* Channel/DM Icon or Avatar */}
+        {isDM ? (
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={dmInfo?.otherUserAvatar || undefined} />
+              <AvatarFallback className="text-xs">{dmInitials}</AvatarFallback>
+            </Avatar>
+            <OnlineIndicator
+              isOnline={isOtherUserOnline}
+              size="sm"
+              className="absolute -bottom-0.5 -right-0.5"
+            />
+          </div>
+        ) : (
+          <ChannelIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+        )}
 
         {/* Channel Name & Description */}
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold truncate">{channel.name || "Direct Message"}</h2>
-          {channel.description && (
+          <h2 className="font-semibold truncate">{displayName}</h2>
+          {isDM && isOtherUserOnline ? (
+            <p className="text-xs text-emerald-500">Online</p>
+          ) : channel.description ? (
             <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
-          )}
+          ) : null}
         </div>
 
-        {/* Member Count */}
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <Users className="h-4 w-4" />
-          <span>{members.length}</span>
-        </div>
+        {/* Member Count (hide for DMs) */}
+        {!isDM && (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Users className="h-4 w-4" />
+            <span>{members.length}</span>
+          </div>
+        )}
 
         {/* Info Button */}
         <Button 
@@ -149,18 +195,21 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
         </Button>
       </div>
 
-      {/* Message List */}
-      <MessageList 
-        channelId={channel.id} 
-        currentUserId={currentUserId}
-        onReply={handleReply}
-        onEdit={handleEdit}
-      />
+      {/* Message List or Empty State */}
+      {messages.length === 0 ? (
+        <ChatEmptyState channel={channel} channelName={displayName} />
+      ) : (
+        <MessageList 
+          channelId={channel.id} 
+          currentUserId={currentUserId}
+          onReply={handleReply}
+          onEdit={handleEdit}
+        />
+      )}
 
       {/* Typing Indicator */}
       <TypingIndicator typingUsers={typingUsers} />
 
-      {/* Message Input */}
       {/* Message Input */}
       <ChatInput 
         channelId={channel.id} 
