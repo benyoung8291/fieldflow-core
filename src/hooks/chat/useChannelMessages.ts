@@ -15,6 +15,7 @@ export function useChannelMessages(channelId: string | null) {
     queryFn: async (): Promise<MessageWithProfile[]> => {
       if (!channelId) return [];
 
+      // Fetch messages including soft-deleted ones for reply context
       const { data, error } = await supabase
         .from("chat_messages")
         .select(`
@@ -29,7 +30,6 @@ export function useChannelMessages(channelId: string | null) {
           reactions:chat_reactions(*)
         `)
         .eq("channel_id", channelId)
-        .is("deleted_at", null)
         .order("created_at", { ascending: true })
         .limit(MESSAGES_LIMIT);
 
@@ -38,7 +38,22 @@ export function useChannelMessages(channelId: string | null) {
         throw error;
       }
 
-      return (data as MessageWithProfile[]) || [];
+      // Create a map for quick lookup
+      const messageMap = new Map<string, MessageWithProfile>();
+      (data || []).forEach((msg) => {
+        messageMap.set(msg.id, msg as MessageWithProfile);
+      });
+
+      // Attach reply_to data
+      const messagesWithReplies = (data || []).map((msg) => {
+        const message = msg as MessageWithProfile;
+        if (message.reply_to_id && messageMap.has(message.reply_to_id)) {
+          message.reply_to = messageMap.get(message.reply_to_id) || null;
+        }
+        return message;
+      });
+
+      return messagesWithReplies;
     },
     enabled: !!channelId,
   });
@@ -85,7 +100,17 @@ export function useChannelMessages(channelId: string | null) {
                 if (!old) return [newMessage as MessageWithProfile];
                 // Avoid duplicates
                 if (old.some((m) => m.id === newMessage.id)) return old;
-                return [...old, newMessage as MessageWithProfile];
+                
+                // Attach reply_to if available
+                const messageWithProfile = newMessage as MessageWithProfile;
+                if (messageWithProfile.reply_to_id) {
+                  const replyTo = old.find((m) => m.id === messageWithProfile.reply_to_id);
+                  if (replyTo) {
+                    messageWithProfile.reply_to = replyTo;
+                  }
+                }
+                
+                return [...old, messageWithProfile];
               }
             );
           }
@@ -108,7 +133,7 @@ export function useChannelMessages(channelId: string | null) {
               if (!old) return old;
               return old.map((msg) =>
                 msg.id === payload.new.id
-                  ? { ...msg, ...payload.new, profile: msg.profile }
+                  ? { ...msg, ...payload.new, profile: msg.profile, reply_to: msg.reply_to }
                   : msg
               );
             }

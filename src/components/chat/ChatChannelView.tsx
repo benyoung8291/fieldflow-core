@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Hash, Lock, Users, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -6,6 +6,7 @@ import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels"
 import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
 import { useChatTyping } from "@/hooks/chat/useChatTyping";
 import { supabase } from "@/integrations/supabase/client";
+import { MessageWithProfile } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageList } from "./MessageList";
@@ -28,6 +29,10 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   const { data: members = [] } = useChannelMembers(channelId || null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   
+  // Message action states
+  const [editingMessage, setEditingMessage] = useState<MessageWithProfile | null>(null);
+  const [replyingTo, setReplyingTo] = useState<MessageWithProfile | null>(null);
+  
   // Enable notifications and typing for this channel
   useChatNotifications(channelId);
   const { typingUsers, broadcastTyping } = useChatTyping(channelId);
@@ -38,6 +43,24 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
         setCurrentUserId(data.user.id);
       }
     });
+  }, []);
+
+  const handleReply = useCallback((message: MessageWithProfile) => {
+    setEditingMessage(null);
+    setReplyingTo(message);
+  }, []);
+
+  const handleEdit = useCallback((message: MessageWithProfile) => {
+    setReplyingTo(null);
+    setEditingMessage(message);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
   }, []);
 
   if (channelLoading) {
@@ -122,13 +145,25 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
       </div>
 
       {/* Message List */}
-      <MessageList channelId={channel.id} currentUserId={currentUserId} />
+      <MessageList 
+        channelId={channel.id} 
+        currentUserId={currentUserId}
+        onReply={handleReply}
+        onEdit={handleEdit}
+      />
 
       {/* Typing Indicator */}
       <TypingIndicator typingUsers={typingUsers} />
 
       {/* Message Input */}
-      <ChatInput channelId={channel.id} onTyping={broadcastTyping} />
+      <ChatInput 
+        channelId={channel.id} 
+        onTyping={broadcastTyping}
+        editingMessage={editingMessage}
+        replyingTo={replyingTo}
+        onCancelEdit={handleCancelEdit}
+        onCancelReply={handleCancelReply}
+      />
     </div>
   );
 }

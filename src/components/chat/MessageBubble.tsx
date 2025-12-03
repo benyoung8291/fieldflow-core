@@ -3,9 +3,10 @@ import { format } from "date-fns";
 import { MessageWithProfile } from "@/types/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, CornerDownRight } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MessageReactions } from "./MessageReactions";
+import { MessageActions } from "./MessageActions";
 
 interface MessageBubbleProps {
   message: MessageWithProfile;
@@ -13,9 +14,21 @@ interface MessageBubbleProps {
   isContinuous: boolean;
   currentUserId: string;
   channelId: string;
+  onReply?: (message: MessageWithProfile) => void;
+  onEdit?: (message: MessageWithProfile) => void;
+  onScrollToMessage?: (messageId: string) => void;
 }
 
-export function MessageBubble({ message, isCurrentUser, isContinuous, currentUserId, channelId }: MessageBubbleProps) {
+export function MessageBubble({ 
+  message, 
+  isCurrentUser, 
+  isContinuous, 
+  currentUserId, 
+  channelId,
+  onReply,
+  onEdit,
+  onScrollToMessage,
+}: MessageBubbleProps) {
   const [showTimestamp, setShowTimestamp] = useState(false);
 
   const senderName = message.profile
@@ -26,11 +39,56 @@ export function MessageBubble({ message, isCurrentUser, isContinuous, currentUse
     ? `${message.profile.first_name?.[0] || ""}${message.profile.last_name?.[0] || ""}`.toUpperCase() || "?"
     : "?";
 
+  const isDeleted = !!message.deleted_at;
+
   const isImage = (fileType: string | null) => fileType?.startsWith("image/");
 
   const imageAttachments = message.attachments?.filter((a) => isImage(a.file_type)) || [];
   const fileAttachments = message.attachments?.filter((a) => !isImage(a.file_type)) || [];
   const hasReactions = message.reactions && message.reactions.length > 0;
+
+  const replyToMessage = message.reply_to;
+  const replyToSenderName = replyToMessage?.profile
+    ? `${replyToMessage.profile.first_name || ""} ${replyToMessage.profile.last_name || ""}`.trim() || "Unknown"
+    : "Unknown";
+
+  const handleReplyClick = () => {
+    if (replyToMessage && onScrollToMessage) {
+      onScrollToMessage(replyToMessage.id);
+    }
+  };
+
+  // Render deleted message
+  if (isDeleted) {
+    return (
+      <div
+        className={cn(
+          "group flex gap-2",
+          isCurrentUser ? "flex-row-reverse" : "flex-row",
+          isContinuous ? "mt-0.5" : "mt-3"
+        )}
+      >
+        <div className="w-8 flex-shrink-0">
+          {!isContinuous && (
+            <Avatar className="h-8 w-8 opacity-50">
+              <AvatarImage src={message.profile?.avatar_url || undefined} alt={senderName} />
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+          )}
+        </div>
+        <div className={cn("flex max-w-[70%] flex-col", isCurrentUser ? "items-end" : "items-start")}>
+          {!isContinuous && !isCurrentUser && (
+            <span className="mb-1 text-xs font-medium text-muted-foreground opacity-50">{senderName}</span>
+          )}
+          <div className={cn(
+            "rounded-2xl px-3 py-2 bg-muted/50 border border-dashed border-muted-foreground/20"
+          )}>
+            <p className="text-sm italic text-muted-foreground">This message was deleted</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -41,6 +99,7 @@ export function MessageBubble({ message, isCurrentUser, isContinuous, currentUse
       )}
       onMouseEnter={() => setShowTimestamp(true)}
       onMouseLeave={() => setShowTimestamp(false)}
+      id={`message-${message.id}`}
     >
       {/* Avatar */}
       <div className="w-8 flex-shrink-0">
@@ -59,28 +118,74 @@ export function MessageBubble({ message, isCurrentUser, isContinuous, currentUse
           <span className="mb-1 text-xs font-medium text-muted-foreground">{senderName}</span>
         )}
 
-        {/* Text Bubble */}
-        {message.content && (
-          <div
+        {/* Reply Context */}
+        {replyToMessage && (
+          <button
+            onClick={handleReplyClick}
             className={cn(
-              "relative rounded-2xl px-3 py-2",
-              isCurrentUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-              isContinuous && isCurrentUser && "rounded-tr-md",
-              isContinuous && !isCurrentUser && "rounded-tl-md"
+              "mb-1 flex items-start gap-2 rounded-lg border-l-2 border-primary/50 bg-muted/50 px-2 py-1.5 text-left transition-colors hover:bg-muted",
+              "max-w-full"
             )}
           >
-            <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
-            <span
+            <CornerDownRight className="h-3 w-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-medium text-muted-foreground">
+                {replyToSenderName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {replyToMessage.deleted_at ? "This message was deleted" : replyToMessage.content}
+              </p>
+            </div>
+          </button>
+        )}
+
+        {/* Text Bubble with Actions */}
+        <div className="flex items-start gap-1">
+          {isCurrentUser && (
+            <MessageActions
+              message={message}
+              isCurrentUser={isCurrentUser}
+              channelId={channelId}
+              onReply={() => onReply?.(message)}
+              onEdit={() => onEdit?.(message)}
+            />
+          )}
+
+          {message.content && (
+            <div
               className={cn(
-                "mt-1 block text-right text-[10px] transition-opacity",
-                isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground",
-                showTimestamp ? "opacity-100" : "opacity-0"
+                "relative rounded-2xl px-3 py-2",
+                isCurrentUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                isContinuous && isCurrentUser && "rounded-tr-md",
+                isContinuous && !isCurrentUser && "rounded-tl-md"
               )}
             >
-              {format(new Date(message.created_at), "h:mm a")}
-            </span>
-          </div>
-        )}
+              <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+              <span
+                className={cn(
+                  "mt-1 flex items-center justify-end gap-1 text-[10px] transition-opacity",
+                  isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground",
+                  showTimestamp ? "opacity-100" : "opacity-0"
+                )}
+              >
+                {format(new Date(message.created_at), "h:mm a")}
+                {message.is_edited && (
+                  <span className="text-[9px]">(edited)</span>
+                )}
+              </span>
+            </div>
+          )}
+
+          {!isCurrentUser && (
+            <MessageActions
+              message={message}
+              isCurrentUser={isCurrentUser}
+              channelId={channelId}
+              onReply={() => onReply?.(message)}
+              onEdit={() => onEdit?.(message)}
+            />
+          )}
+        </div>
 
         {/* Image Attachments */}
         {imageAttachments.length > 0 && (
@@ -154,8 +259,8 @@ export function MessageBubble({ message, isCurrentUser, isContinuous, currentUse
           />
         )}
 
-        {/* Edited indicator */}
-        {message.is_edited && (
+        {/* Edited indicator (shown outside bubble if no content in bubble) */}
+        {message.is_edited && !message.content && (
           <span className="mt-0.5 text-[10px] text-muted-foreground">(edited)</span>
         )}
       </div>
