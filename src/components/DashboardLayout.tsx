@@ -387,8 +387,9 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
           <MobileHeader />
           <main className="flex-1 overflow-hidden pt-14">
             <div className={cn(
-              "px-4 py-4 h-full overflow-y-auto",
-              "pb-20" // Bottom padding for bottom nav with safe area
+              "h-full overflow-y-auto",
+              !noPadding && "px-4 py-4",
+              !noPadding && "pb-20" // Bottom padding for bottom nav with safe area
             )}>
               {children}
             </div>
