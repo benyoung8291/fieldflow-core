@@ -75,6 +75,7 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         cleanupOutdatedCaches: true, // Clean up old caches automatically
         navigateFallback: '/index.html', // SPA fallback for navigation
+        importScripts: ['/custom-sw.js'], // Import custom service worker for push notifications
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

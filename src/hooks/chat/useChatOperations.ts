@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatChannelType } from "@/types/chat";
+import { sendChatPushNotification } from "./useSendPushNotification";
 
 interface AttachmentInput {
   file_name: string;
@@ -142,6 +143,18 @@ export function useSendMessage() {
     // Always refetch after error or success
     onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
+    },
+    onSuccess: (data, variables) => {
+      // Send push notifications to other channel members (non-blocking)
+      if (data?.profile) {
+        const senderName = `${data.profile.first_name || ''} ${data.profile.last_name || ''}`.trim() || 'Someone';
+        sendChatPushNotification(
+          variables.channelId,
+          data.user_id,
+          senderName,
+          variables.content
+        );
+      }
     },
   });
 }
