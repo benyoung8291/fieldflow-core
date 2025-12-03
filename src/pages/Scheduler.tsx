@@ -636,9 +636,22 @@ export default function Scheduler() {
 
       return { previousAppointments };
     },
-    onSuccess: () => {
+    onSuccess: (_, { appointmentId }) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["service-orders-for-calendar"] });
+      
+      // Add to undo stack for move operations
+      setUndoStack(prev => [...prev.slice(-4), {
+        type: 'appointment-move' as const,
+        data: { appointmentId }
+      }]);
+      
+      toast.success("Appointment moved", {
+        action: {
+          label: "Undo",
+          onClick: () => handleUndo()
+        }
+      });
     },
     onError: (error: any, variables, context) => {
       if (context?.previousAppointments) {
@@ -843,13 +856,28 @@ export default function Scheduler() {
 
       if (error) throw error;
     },
+    onMutate: async (appointmentId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+      
+      // Optimistically remove the appointment
+      queryClient.setQueryData(["appointments"], (old: any) => 
+        (old || []).filter((apt: any) => apt.id !== appointmentId)
+      );
+      
+      return { previousAppointments };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["service-orders-for-calendar"] });
       toast.success("Appointment deleted");
       setViewDetailsAppointmentId(null);
     },
-    onError: (error: any) => {
+    onError: (error: any, _, context) => {
+      // Rollback on error
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(["appointments"], context.previousAppointments);
+      }
       toast.error(error.message || "Failed to delete appointment");
     },
   });
