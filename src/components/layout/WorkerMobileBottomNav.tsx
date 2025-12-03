@@ -92,6 +92,10 @@ export const WorkerMobileBottomNav = () => {
   // Only show on worker app routes (not on auth page)
   if (!location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
 
+  // Hide when in an active chat conversation for immersive experience
+  const isInChatChannel = /^\/worker\/chat\/[^/]+$/.test(location.pathname);
+  if (isInChatChannel) return null;
+
   // Wait for access check to complete to prevent flash of wrong menu
   if (isLoading) return null;
   

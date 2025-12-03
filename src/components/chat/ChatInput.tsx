@@ -211,8 +211,8 @@ export function ChatInput({
       className={cn(
         "px-4 pb-4 pt-2 transition-colors",
         isDragOver && "bg-primary/5",
-        // Add extra bottom padding for mobile full screen to clear the bottom nav
-        isMobileFullScreen && "pb-24"
+        // Safe area padding for iOS devices with home indicator
+        isMobileFullScreen && "pb-safe"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

@@ -13,19 +13,17 @@ export default function WorkerChat() {
   if (isMobile) {
     if (channelId) {
       // On mobile with a channel selected, show full-screen chat
-      // Use fixed positioning to overlay above the bottom nav
+      // Bottom nav is hidden so we use full viewport height
       return (
-        <div className="fixed inset-0 z-40 flex flex-col bg-background">
+        <div className="flex h-[100dvh] flex-col bg-background">
           <ChatChannelView className="flex-1 min-h-0" isMobileFullScreen />
         </div>
       );
     }
-    // On mobile without a channel, show the sidebar with proper bottom padding for nav
+    // On mobile without a channel, show the sidebar with bottom padding for nav
     return (
-      <div className="flex h-[calc(100dvh-5rem)] flex-col pb-20">
-        <div className="flex-1 overflow-hidden">
-          <ChatSidebar />
-        </div>
+      <div className="flex h-[100dvh] flex-col pb-20">
+        <ChatSidebar />
       </div>
     );
   }
