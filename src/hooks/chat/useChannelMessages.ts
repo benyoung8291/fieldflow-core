@@ -1,14 +1,25 @@
-import { useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageWithProfile } from "@/types/chat";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
 const MESSAGES_LIMIT = 50;
 
+interface ConnectionState {
+  isConnected: boolean;
+  isReconnecting: boolean;
+}
+
 export function useChannelMessages(channelId: string | null) {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>({
+    isConnected: true,
+    isReconnecting: false,
+  });
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
 
   const query = useQuery({
     queryKey: ["chat-messages", channelId],
@@ -58,8 +69,15 @@ export function useChannelMessages(channelId: string | null) {
     enabled: !!channelId,
   });
 
-  useEffect(() => {
+  // Setup realtime subscription with auto-reconnect
+  const setupRealtimeSubscription = useCallback(() => {
     if (!channelId) return;
+
+    // Clean up existing subscription
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
 
     console.log(`[Chat] Setting up realtime for channel: ${channelId}`);
 
@@ -75,6 +93,16 @@ export function useChannelMessages(channelId: string | null) {
         },
         async (payload) => {
           console.log("[Chat] New message received:", payload);
+          
+          // Check if this is an optimistic message that's now confirmed
+          const existingMessages = queryClient.getQueryData<MessageWithProfile[]>(
+            ["chat-messages", channelId]
+          );
+          
+          // If we already have this message (optimistic), just update it
+          if (existingMessages?.some((m) => m.id === payload.new.id)) {
+            return;
+          }
           
           // Fetch the complete message with profile
           const { data: newMessage } = await supabase
@@ -98,19 +126,21 @@ export function useChannelMessages(channelId: string | null) {
               ["chat-messages", channelId],
               (old) => {
                 if (!old) return [newMessage as MessageWithProfile];
-                // Avoid duplicates
-                if (old.some((m) => m.id === newMessage.id)) return old;
+                // Avoid duplicates and remove optimistic placeholder
+                const filtered = old.filter(
+                  (m) => m.id !== newMessage.id && !m.id.startsWith("temp-")
+                );
                 
                 // Attach reply_to if available
                 const messageWithProfile = newMessage as MessageWithProfile;
                 if (messageWithProfile.reply_to_id) {
-                  const replyTo = old.find((m) => m.id === messageWithProfile.reply_to_id);
+                  const replyTo = filtered.find((m) => m.id === messageWithProfile.reply_to_id);
                   if (replyTo) {
                     messageWithProfile.reply_to = replyTo;
                   }
                 }
                 
-                return [...old, messageWithProfile];
+                return [...filtered, messageWithProfile];
               }
             );
           }
@@ -160,11 +190,44 @@ export function useChannelMessages(channelId: string | null) {
           );
         }
       )
-      .subscribe((status) => {
-        console.log(`[Chat] Realtime subscription status: ${status}`);
+      .subscribe((status, err) => {
+        console.log(`[Chat] Realtime subscription status: ${status}`, err);
+        
+        if (status === "SUBSCRIBED") {
+          setConnectionState({ isConnected: true, isReconnecting: false });
+          reconnectAttempts.current = 0;
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setConnectionState({ isConnected: false, isReconnecting: false });
+          
+          // Auto-reconnect with exponential backoff
+          if (reconnectAttempts.current < maxReconnectAttempts) {
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+            reconnectAttempts.current++;
+            
+            setConnectionState({ isConnected: false, isReconnecting: true });
+            console.log(`[Chat] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
+            
+            setTimeout(() => {
+              setupRealtimeSubscription();
+            }, delay);
+          }
+        } else if (status === "CLOSED") {
+          setConnectionState({ isConnected: false, isReconnecting: false });
+        }
       });
 
     channelRef.current = channel;
+  }, [channelId, queryClient]);
+
+  // Manual reconnect function
+  const reconnect = useCallback(() => {
+    reconnectAttempts.current = 0;
+    setConnectionState({ isConnected: false, isReconnecting: true });
+    setupRealtimeSubscription();
+  }, [setupRealtimeSubscription]);
+
+  useEffect(() => {
+    setupRealtimeSubscription();
 
     return () => {
       console.log(`[Chat] Cleaning up realtime for channel: ${channelId}`);
@@ -173,7 +236,57 @@ export function useChannelMessages(channelId: string | null) {
         channelRef.current = null;
       }
     };
-  }, [channelId, queryClient]);
+  }, [channelId, setupRealtimeSubscription]);
 
-  return query;
+  return {
+    ...query,
+    connectionState,
+    reconnect,
+  };
+}
+
+// Hook for loading older messages (infinite scroll)
+export function useOlderMessages(channelId: string | null, oldestMessageId: string | null) {
+  return useQuery({
+    queryKey: ["chat-messages-older", channelId, oldestMessageId],
+    queryFn: async (): Promise<MessageWithProfile[]> => {
+      if (!channelId || !oldestMessageId) return [];
+
+      // Get the timestamp of the oldest message
+      const { data: oldestMsg } = await supabase
+        .from("chat_messages")
+        .select("created_at")
+        .eq("id", oldestMessageId)
+        .single();
+
+      if (!oldestMsg) return [];
+
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select(`
+          *,
+          profile:profiles!chat_messages_user_id_fkey(
+            id,
+            first_name,
+            last_name,
+            avatar_url
+          ),
+          attachments:chat_attachments(*),
+          reactions:chat_reactions(*)
+        `)
+        .eq("channel_id", channelId)
+        .lt("created_at", oldestMsg.created_at)
+        .order("created_at", { ascending: false })
+        .limit(MESSAGES_LIMIT);
+
+      if (error) {
+        console.error("[Chat] Error fetching older messages:", error);
+        throw error;
+      }
+
+      // Reverse to get chronological order
+      return (data || []).reverse() as MessageWithProfile[];
+    },
+    enabled: false, // Manual trigger only
+  });
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useLayoutEffect, useCallback, useState } from "react";
 import { format, isToday, isYesterday, isSameDay, differenceInMinutes } from "date-fns";
-import { useChannelMessages } from "@/hooks/chat/useChannelMessages";
 import { useUpdateLastRead } from "@/hooks/chat/useChatOperations";
 import { MessageWithProfile } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
 import { UnreadDivider } from "./UnreadDivider";
+import { MessageSkeleton } from "./MessageSkeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
@@ -13,6 +13,9 @@ interface MessageListProps {
   channelId: string;
   currentUserId: string;
   lastReadAt?: string;
+  messages: MessageWithProfile[];
+  isLoading: boolean;
+  error: Error | null;
   onReply?: (message: MessageWithProfile) => void;
   onEdit?: (message: MessageWithProfile) => void;
   onImageClick?: (images: Array<{ url: string; name: string }>, index: number) => void;
@@ -52,11 +55,13 @@ export function MessageList({
   channelId, 
   currentUserId, 
   lastReadAt,
+  messages,
+  isLoading,
+  error,
   onReply, 
   onEdit,
   onImageClick,
 }: MessageListProps) {
-  const { data: messages = [], isLoading, error } = useChannelMessages(channelId);
   const updateLastRead = useUpdateLastRead();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -130,9 +135,9 @@ export function MessageList({
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <ScrollArea className="flex-1">
+        <MessageSkeleton count={8} />
+      </ScrollArea>
     );
   }
 
