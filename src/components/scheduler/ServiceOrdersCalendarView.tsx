@@ -1,13 +1,24 @@
+import { useState } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isWithinInterval } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DroppableAppointmentCard from "./DroppableAppointmentCard";
 import CreateAppointmentButton from "./CreateAppointmentButton";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, ArrowUpDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
@@ -19,6 +30,8 @@ interface ServiceOrdersCalendarViewProps {
   onRemoveWorker: (appointmentId: string, workerId: string) => void;
 }
 
+type SortOption = "requires_appointment" | "name" | "number";
+
 export default function ServiceOrdersCalendarView({
   currentDate,
   appointments,
@@ -28,6 +41,7 @@ export default function ServiceOrdersCalendarView({
   onCreateAppointment,
   onRemoveWorker,
 }: ServiceOrdersCalendarViewProps) {
+  const [sortBy, setSortBy] = useState<SortOption>("requires_appointment");
   // Fetch service orders with appointments and line items
   const { data: serviceOrders = [] } = useQuery({
     queryKey: ["service-orders-for-calendar", stateFilter],
@@ -96,14 +110,23 @@ export default function ServiceOrdersCalendarView({
       };
     })
     .sort((a, b) => {
-      // Sort fulfilled orders to bottom, then by preferred_date
-      if (a.isFulfilled !== b.isFulfilled) {
-        return a.isFulfilled ? 1 : -1;
+      switch (sortBy) {
+        case "name":
+          return (a.title || "").localeCompare(b.title || "");
+        case "number":
+          return (a.order_number || "").localeCompare(b.order_number || "");
+        case "requires_appointment":
+        default:
+          // Unfulfilled first (requires appointment), then fulfilled
+          if (a.isFulfilled !== b.isFulfilled) {
+            return a.isFulfilled ? 1 : -1;
+          }
+          // Secondary sort by preferred_date
+          if (!a.preferred_date && !b.preferred_date) return 0;
+          if (!a.preferred_date) return 1;
+          if (!b.preferred_date) return -1;
+          return new Date(a.preferred_date).getTime() - new Date(b.preferred_date).getTime();
       }
-      if (!a.preferred_date && !b.preferred_date) return 0;
-      if (!a.preferred_date) return 1;
-      if (!b.preferred_date) return -1;
-      return new Date(a.preferred_date).getTime() - new Date(b.preferred_date).getTime();
     });
 
   const getAppointmentsForDay = (serviceOrderId: string, day: Date) => {
@@ -141,7 +164,29 @@ export default function ServiceOrdersCalendarView({
       <div className="min-w-[800px]">
         {/* Header Row - Days */}
         <div className="grid grid-cols-8 gap-px bg-border flex-shrink-0 bg-background pb-px border-b">
-          <div className="font-semibold text-sm p-2 bg-background">Service Order</div>
+          <div className="font-semibold text-sm p-2 bg-background">
+            <div className="flex items-center gap-1">
+              <span>Service Order</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <ArrowUpDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                    <DropdownMenuRadioItem value="requires_appointment">
+                      Requires Appointment
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="number">Service Order Number</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
           {days.map(day => (
             <div key={day.toISOString()} className="text-center font-semibold text-sm p-2 bg-background">
               <div>{format(day, "EEE")}</div>
@@ -167,11 +212,13 @@ export default function ServiceOrdersCalendarView({
                     <Badge variant="outline" className="text-xs w-fit">
                       {order.order_number}
                     </Badge>
+                  </div>
+                  <div className="font-semibold text-sm truncate flex items-center gap-1.5">
+                    {order.title}
                     {order.isFulfilled && (
-                      <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-500 flex-shrink-0" />
                     )}
                   </div>
-                  <div className="font-semibold text-sm truncate">{order.title}</div>
                   {order.customers && (
                     <div className="text-xs text-muted-foreground truncate">
                       {order.customers.name}
