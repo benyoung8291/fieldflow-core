@@ -23,6 +23,7 @@ interface Worker {
   last_name: string | null;
   email?: string;
   phone: string | null;
+  state: string | null;
   is_active: boolean;
   pay_rate_category: {
     name: string;
@@ -65,6 +66,7 @@ export default function Workers() {
           last_name,
           email,
           phone,
+          state,
           is_active,
           pay_rate_category:pay_rate_categories(name, hourly_rate)
         `)
@@ -196,6 +198,7 @@ export default function Workers() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>State</TableHead>
                     <TableHead>Pay Rate</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -213,6 +216,7 @@ export default function Workers() {
                       </TableCell>
                       <TableCell>{worker.email}</TableCell>
                       <TableCell>{worker.phone || "-"}</TableCell>
+                      <TableCell>{worker.state || "-"}</TableCell>
                       <TableCell>
                         {worker.pay_rate_category ? (
                           <div className="flex flex-col">
