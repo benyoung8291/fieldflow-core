@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useWorkersCache } from "@/hooks/useWorkersCache";
-import { useChatChannels, useChannelMembers } from "@/hooks/chat/useChatChannels";
+import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useCreateChannel, useJoinChannel } from "@/hooks/chat";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
