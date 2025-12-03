@@ -20,6 +20,9 @@ import { Badge } from "@/components/ui/badge";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import WorkerSuggestions from "./WorkerSuggestions";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
+import { formatInTimeZone } from "date-fns-tz/formatInTimeZone";
+import { fromZonedTime } from "date-fns-tz";
+import { MELBOURNE_TZ } from "@/lib/utils";
 
 interface AppointmentDialogProps {
   open: boolean;
@@ -104,7 +107,8 @@ export default function AppointmentDialog({
         resetForm();
         setCreateNewServiceOrder(!defaultServiceOrderId);
         if (defaultDate) {
-          const dateStr = defaultDate.toISOString().slice(0, 16);
+          // Format defaultDate in Melbourne timezone for the datetime-local input
+          const dateStr = formatInTimeZone(defaultDate, MELBOURNE_TZ, "yyyy-MM-dd'T'HH:mm");
           setFormData(prev => ({ ...prev, start_time: dateStr }));
         }
       }
@@ -187,12 +191,20 @@ export default function AppointmentDialog({
     if (error) {
       toast({ title: "Error fetching appointment", variant: "destructive" });
     } else if (data) {
+      // Convert UTC times to Melbourne timezone for display
+      const startTimeFormatted = data.start_time 
+        ? formatInTimeZone(new Date(data.start_time), MELBOURNE_TZ, "yyyy-MM-dd'T'HH:mm")
+        : "";
+      const endTimeFormatted = data.end_time 
+        ? formatInTimeZone(new Date(data.end_time), MELBOURNE_TZ, "yyyy-MM-dd'T'HH:mm")
+        : "";
+      
       setFormData({
         service_order_id: data.service_order_id || "",
         title: data.title || "",
         description: data.description || "",
-        start_time: data.start_time?.slice(0, 16) || "",
-        end_time: data.end_time?.slice(0, 16) || "",
+        start_time: startTimeFormatted,
+        end_time: endTimeFormatted,
         status: data.status || "draft",
         location_address: data.location_address || "",
         location_lat: data.location_lat?.toString() || "",
@@ -200,6 +212,19 @@ export default function AppointmentDialog({
         gps_check_in_radius: data.gps_check_in_radius?.toString() || "100",
         notes: data.notes || "",
       });
+      
+      // Store recurrence info for editing checks
+      setIsRecurring(data.is_recurring || false);
+      setParentAppointmentId(data.parent_appointment_id);
+      
+      if (data.is_recurring) {
+        setRecurrenceConfig({
+          pattern: data.recurrence_pattern,
+          frequency: data.recurrence_frequency,
+          endDate: data.recurrence_end_date ? new Date(data.recurrence_end_date) : null,
+          daysOfWeek: data.recurrence_days_of_week,
+        });
+      }
       
       // Fetch assigned workers
       const { data: workers } = await supabase
@@ -377,8 +402,9 @@ export default function AppointmentDialog({
         service_order_id: serviceOrderId,
         title: formData.title,
         description: formData.description,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
+        // Convert Melbourne local time to UTC for database storage
+        start_time: formData.start_time ? fromZonedTime(formData.start_time, MELBOURNE_TZ).toISOString() : null,
+        end_time: formData.end_time ? fromZonedTime(formData.end_time, MELBOURNE_TZ).toISOString() : null,
         status: formData.status,
         location_address: formData.location_address,
         location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
