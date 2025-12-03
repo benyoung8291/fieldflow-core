@@ -139,35 +139,29 @@ export default function SchedulerMonthView({
 
               {/* Appointments */}
               <div className="space-y-1">
-                {dayAppointments.slice(0, 3).map(apt => (
-                  <AppointmentContextMenu
-                    key={apt.id}
-                    appointment={apt}
-                    onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
-                  >
-                    <div
-                      className={cn(
-                        "px-2 py-1 rounded text-[10px] cursor-pointer hover:shadow-sm transition-shadow truncate",
-                        apt.status === "draft" && "bg-muted text-muted-foreground",
-                        apt.status === "published" && "bg-info/10 text-info",
-                        apt.status === "checked_in" && "bg-warning/10 text-warning",
-                        apt.status === "completed" && "bg-success/10 text-success",
-                        apt.status === "cancelled" && "bg-destructive/10 text-destructive"
-                      )}
-                      title={apt.title}
+                {dayAppointments.slice(0, 3).map(apt => {
+                  const statusColor = apt.status === "draft" ? "gray" 
+                    : apt.status === "published" ? "blue"
+                    : apt.status === "checked_in" ? "yellow"
+                    : apt.status === "completed" ? "green"
+                    : apt.status === "cancelled" ? "red" : "gray";
+                  
+                  return (
+                    <AppointmentContextMenu
+                      key={apt.id}
+                      appointment={apt}
+                      onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
                     >
-                      <div className="flex items-center gap-1">
-                        <div 
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                            statusColors[apt.status as keyof typeof statusColors]
-                          )}
-                        />
-                        <span className="truncate">{apt.title}</span>
-                      </div>
-                    </div>
-                  </AppointmentContextMenu>
-                ))}
+                      <DraggableAppointment
+                        appointment={apt}
+                        statusColor={statusColor}
+                        onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                        onViewHistory={() => {}}
+                        showFullDetails={false}
+                      />
+                    </AppointmentContextMenu>
+                  );
+                })}
                 {dayAppointments.length > 3 && (
                   <div className="text-[10px] text-muted-foreground text-center pt-1">
                     +{dayAppointments.length - 3} more

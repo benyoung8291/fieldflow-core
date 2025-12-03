@@ -28,7 +28,7 @@ import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, DragCancelEvent } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, DragCancelEvent, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
 import DraggableWorker from "@/components/scheduler/DraggableWorker";
 import { CapacityPlanningViewLazy } from "@/components/scheduler/CapacityPlanningViewLazy";
@@ -61,6 +61,15 @@ export default function Scheduler() {
   const [successWeek, setSuccessWeek] = useState<Date | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Configure drag sensors with auto-scroll support
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
   const { checkConflict, checkAvailability } = useAppointmentConflicts();
@@ -1429,6 +1438,15 @@ export default function Scheduler() {
       )}
 
       <DndContext 
+        sensors={sensors}
+        autoScroll={{
+          enabled: true,
+          acceleration: 15,
+          threshold: {
+            x: 0.1,
+            y: 0.1,
+          },
+        }}
         onDragEnd={handleDragEnd} 
         onDragStart={handleDragStart}
         onDragCancel={handleDragCancel}
