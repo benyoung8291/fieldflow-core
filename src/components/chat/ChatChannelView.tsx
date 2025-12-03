@@ -28,9 +28,10 @@ import { cn } from "@/lib/utils";
 interface ChatChannelViewProps {
   channelId?: string;
   className?: string;
+  isMobileFullScreen?: boolean;
 }
 
-export function ChatChannelView({ channelId: propChannelId, className }: ChatChannelViewProps) {
+export function ChatChannelView({ channelId: propChannelId, className, isMobileFullScreen }: ChatChannelViewProps) {
   const { channelId: paramChannelId } = useParams();
   const channelId = propChannelId || paramChannelId;
   const isEmbedded = !!propChannelId;
@@ -304,6 +305,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
         replyingTo={replyingTo}
         onCancelEdit={handleCancelEdit}
         onCancelReply={handleCancelReply}
+        isMobileFullScreen={isMobileFullScreen}
       />
 
       {/* Channel Settings Dialog */}
