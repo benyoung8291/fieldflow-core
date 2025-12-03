@@ -12,6 +12,25 @@ interface DayCellProps {
   isWeekend: boolean;
 }
 
+const PERIOD_LABELS: Record<string, { short: string; full: string }> = {
+  morning: { short: "M", full: "Morning" },
+  afternoon: { short: "A", full: "Afternoon" },
+  evening: { short: "E", full: "Evening" },
+  anytime: { short: "All", full: "Anytime" },
+};
+
+function formatPeriodLabels(periods: string[]): string {
+  if (!periods || periods.length === 0) return "";
+  if (periods.includes("anytime")) return "All";
+  return periods.map(p => PERIOD_LABELS[p]?.short || p.charAt(0).toUpperCase()).join("+");
+}
+
+function formatPeriodFullNames(periods: string[]): string {
+  if (!periods || periods.length === 0) return "";
+  if (periods.includes("anytime")) return "Anytime";
+  return periods.map(p => PERIOD_LABELS[p]?.full || p).join(", ");
+}
+
 function formatTime(time: string | null): string {
   if (!time) return "";
   const [hours] = time.split(":");
@@ -52,6 +71,7 @@ export function DayCell({ availability, isToday, isWeekend }: DayCellProps) {
     availableHours,
     assignedHours,
     isSeasonalOverride,
+    seasonalPeriods,
   } = availability;
 
   const assignedPercentage = getAssignedPercentage(availableHours, assignedHours);
@@ -61,16 +81,23 @@ export function DayCell({ availability, isToday, isWeekend }: DayCellProps) {
       return <span className="text-[10px] font-bold">OFF</span>;
     }
 
+    // Show period labels for seasonal overrides
+    if (isAvailable && isSeasonalOverride && seasonalPeriods && seasonalPeriods.length > 0) {
+      return (
+        <div className="flex flex-col items-center justify-center">
+          <span className="text-[10px] font-bold leading-none">
+            {formatPeriodLabels(seasonalPeriods)}
+          </span>
+        </div>
+      );
+    }
+
+    // Regular schedule - show time
     if (isAvailable && startTime) {
       return (
-        <div className="flex flex-col items-center justify-center gap-0.5">
-          <span className="text-[10px] font-medium leading-none">
-            {formatTime(startTime)}
-          </span>
-          {isSeasonalOverride && (
-            <span className="text-[8px] opacity-70">★</span>
-          )}
-        </div>
+        <span className="text-[10px] font-medium leading-none">
+          {formatTime(startTime)}
+        </span>
       );
     }
 
@@ -96,8 +123,13 @@ export function DayCell({ availability, isToday, isWeekend }: DayCellProps) {
       return (
         <div className="text-center space-y-1">
           <div className="font-semibold">
-            {isSeasonalOverride ? "Seasonal Availability" : "Available"}
+            {isSeasonalOverride ? "Seasonal Override" : "Available"}
           </div>
+          {isSeasonalOverride && seasonalPeriods && seasonalPeriods.length > 0 && (
+            <div className="text-sm font-medium">
+              {formatPeriodFullNames(seasonalPeriods)}
+            </div>
+          )}
           <div className="text-sm">
             {formatFullTime(startTime)} - {formatFullTime(endTime)}
           </div>
