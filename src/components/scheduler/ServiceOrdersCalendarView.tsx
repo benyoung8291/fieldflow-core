@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import DroppableTimeSlot from "./DroppableTimeSlot";
 import DroppableAppointmentCard from "./DroppableAppointmentCard";
 import CreateAppointmentButton from "./CreateAppointmentButton";
+import { CheckCircle } from "lucide-react";
 
 interface ServiceOrdersCalendarViewProps {
   currentDate: Date;
@@ -61,6 +62,16 @@ export default function ServiceOrdersCalendarView({
   const weekEnd = endOfWeek(currentDate);
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  // Helper function to calculate scheduled hours from appointments
+  const calculateScheduledHours = (orderAppointments: any[]) => {
+    return orderAppointments.reduce((total, apt) => {
+      const start = new Date(apt.start_time);
+      const end = new Date(apt.end_time);
+      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return total + hours;
+    }, 0);
+  };
+
   // Group appointments by service order and calculate summaries
   const appointmentsByServiceOrder = serviceOrders
     .map(order => {
@@ -72,14 +83,23 @@ export default function ServiceOrdersCalendarView({
             .join(", ") + (lineItems.length > 3 ? "..." : "")
         : "";
 
+      const orderAppointments = appointments.filter(apt => apt.service_order_id === order.id);
+      const scheduledHours = calculateScheduledHours(orderAppointments);
+      const isFulfilled = order.estimated_hours ? scheduledHours >= order.estimated_hours : false;
+
       return {
         ...order,
-        appointments: appointments.filter(apt => apt.service_order_id === order.id),
+        appointments: orderAppointments,
         lineItemsSummary,
+        scheduledHours,
+        isFulfilled,
       };
     })
     .sort((a, b) => {
-      // Sort by preferred_date, with orders without a date at the bottom
+      // Sort fulfilled orders to bottom, then by preferred_date
+      if (a.isFulfilled !== b.isFulfilled) {
+        return a.isFulfilled ? 1 : -1;
+      }
       if (!a.preferred_date && !b.preferred_date) return 0;
       if (!a.preferred_date) return 1;
       if (!b.preferred_date) return -1;
@@ -133,13 +153,24 @@ export default function ServiceOrdersCalendarView({
         {/* Service Order Rows */}
         <div className="space-y-px bg-border">
           {appointmentsByServiceOrder.map(order => (
-            <div key={order.id} className="grid grid-cols-8 gap-px bg-border">
+            <div key={order.id} className={cn(
+              "grid grid-cols-8 gap-px bg-border",
+              order.isFulfilled && "opacity-60"
+            )}>
               {/* Service Order Info */}
-              <Card className="p-2 flex flex-col justify-center bg-background border-0">
+              <Card className={cn(
+                "p-2 flex flex-col justify-center border-0",
+                order.isFulfilled ? "bg-green-50 dark:bg-green-950/30" : "bg-background"
+              )}>
                 <div className="space-y-1">
-                  <Badge variant="outline" className="text-xs w-fit">
-                    {order.order_number}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="outline" className="text-xs w-fit">
+                      {order.order_number}
+                    </Badge>
+                    {order.isFulfilled && (
+                      <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                    )}
+                  </div>
                   <div className="font-semibold text-sm truncate">{order.title}</div>
                   {order.customers && (
                     <div className="text-xs text-muted-foreground truncate">
@@ -147,8 +178,12 @@ export default function ServiceOrdersCalendarView({
                     </div>
                   )}
                   {order.estimated_hours && (
-                    <div className="text-xs text-muted-foreground">
-                      Est: {order.estimated_hours}h
+                    <div className={cn(
+                      "text-xs flex items-center gap-1",
+                      order.isFulfilled ? "text-green-600 dark:text-green-500 font-medium" : "text-muted-foreground"
+                    )}>
+                      {order.scheduledHours.toFixed(1)}h / {order.estimated_hours}h
+                      {order.isFulfilled && <span className="text-[10px]">✓</span>}
                     </div>
                   )}
                 </div>
@@ -167,9 +202,12 @@ export default function ServiceOrdersCalendarView({
                     date={day}
                     workerId={null}
                     className={cn(
-                      "min-h-[120px] p-2 bg-background",
-                      isInRange && "bg-yellow-100/60 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800",
-                      isPreferred && "!border-green-500 dark:!border-green-600 !border-2"
+                      "min-h-[120px] p-2",
+                      order.isFulfilled 
+                        ? "bg-muted/50" 
+                        : "bg-background",
+                      !order.isFulfilled && isInRange && "bg-yellow-100/60 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800",
+                      !order.isFulfilled && isPreferred && "!border-green-500 dark:!border-green-600 !border-2"
                     )}
                   >
                     <div className="space-y-2 h-full">
@@ -184,7 +222,7 @@ export default function ServiceOrdersCalendarView({
                             onClick={() => onAppointmentClick(apt.id)}
                           />
                         ))
-                      ) : (
+                      ) : !order.isFulfilled ? (
                         <div className="h-full flex items-center justify-center">
                           <CreateAppointmentButton
                             serviceOrderId={order.id}
@@ -193,7 +231,7 @@ export default function ServiceOrdersCalendarView({
                             onCreateAppointment={onCreateAppointment}
                           />
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </DroppableTimeSlot>
                 );

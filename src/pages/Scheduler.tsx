@@ -555,6 +555,7 @@ export default function Scheduler() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["service-orders-with-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["service-orders-for-calendar"] });
       toast.success("Appointment created successfully");
     },
     onError: (error: any, variables, context) => {
@@ -637,6 +638,7 @@ export default function Scheduler() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["service-orders-for-calendar"] });
     },
     onError: (error: any, variables, context) => {
       if (context?.previousAppointments) {
@@ -843,6 +845,7 @@ export default function Scheduler() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["service-orders-for-calendar"] });
       toast.success("Appointment deleted");
       setViewDetailsAppointmentId(null);
     },
