@@ -1,14 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X } from "lucide-react";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
+import { requestNotificationPermission, useNotificationPermission } from "@/hooks/chat/useChatNotifications";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function ChatSidebar() {
   const navigate = useNavigate();
@@ -18,6 +21,31 @@ export function ChatSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [channelsOpen, setChannelsOpen] = useState(true);
   const [dmsOpen, setDmsOpen] = useState(true);
+  const [notificationBannerDismissed, setNotificationBannerDismissed] = useState(false);
+  const notificationPermission = useNotificationPermission();
+
+  // Check if notification banner was previously dismissed
+  useEffect(() => {
+    const dismissed = localStorage.getItem("chat-notification-banner-dismissed");
+    if (dismissed === "true") {
+      setNotificationBannerDismissed(true);
+    }
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    const permission = await requestNotificationPermission();
+    if (permission === "granted") {
+      toast.success("Notifications enabled!");
+      setNotificationBannerDismissed(true);
+    } else if (permission === "denied") {
+      toast.error("Notifications blocked. Please enable them in your browser settings.");
+    }
+  };
+
+  const handleDismissBanner = () => {
+    setNotificationBannerDismissed(true);
+    localStorage.setItem("chat-notification-banner-dismissed", "true");
+  };
 
   const filteredChannels = useMemo(() => {
     if (!searchQuery.trim()) return channels;
@@ -52,12 +80,41 @@ export function ChatSidebar() {
     }
   };
 
+  const showNotificationBanner =
+    !notificationBannerDismissed &&
+    typeof window !== "undefined" &&
+    "Notification" in window &&
+    notificationPermission === "default";
+
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       {/* Header */}
       <div className="flex h-14 items-center border-b px-4">
         <h2 className="text-lg font-semibold">Messages</h2>
       </div>
+
+      {/* Notification Banner */}
+      {showNotificationBanner && (
+        <Alert className="mx-3 mt-3 border-primary/50 bg-primary/10">
+          <Bell className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between gap-2">
+            <button
+              onClick={handleEnableNotifications}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Enable notifications
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleDismissBanner}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Search */}
       <div className="p-3">

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Hash, Lock, Users } from "lucide-react";
+import { ArrowLeft, Hash, Lock, Users, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels";
+import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +25,9 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   const { data: channel, isLoading: channelLoading } = useChatChannel(channelId || null);
   const { data: members = [] } = useChannelMembers(channelId || null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  // Enable notifications for this channel
+  useChatNotifications(channelId);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -82,22 +86,36 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
     <div className={cn("flex h-full flex-col", className)}>
       {/* Channel Header */}
       <div className="flex h-14 flex-shrink-0 items-center gap-3 border-b px-4">
+        {/* Mobile Back Button */}
         {isMobile && !isEmbedded && (
-          <Button variant="ghost" size="icon" onClick={() => navigate("/chat")}>
+          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate("/chat")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <ChannelIcon className="h-5 w-5 text-muted-foreground" />
+
+        {/* Channel Icon */}
+        <ChannelIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+
+        {/* Channel Name & Description */}
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold truncate">{channel.name || "Direct Message"}</h2>
           {channel.description && (
             <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
           )}
         </div>
+
+        {/* Member Count */}
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <Users className="h-4 w-4" />
           <span>{members.length}</span>
         </div>
+
+        {/* Info Button (Mobile) */}
+        {isMobile && !isEmbedded && (
+          <Button variant="ghost" size="icon" className="flex-shrink-0">
+            <Info className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       {/* Message List */}
