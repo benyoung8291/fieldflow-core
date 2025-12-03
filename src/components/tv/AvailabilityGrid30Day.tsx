@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { WorkerAvailability } from "@/hooks/useWorkerAvailabilityBoard";
 import { DayCell } from "./DayCell";
-import { format, getDay } from "date-fns";
 
 interface Day {
   date: Date;
@@ -28,12 +27,7 @@ export function AvailabilityGrid30Day({
   emptyMessage = "No workers in this category",
 }: AvailabilityGrid30DayProps) {
   if (workers.length === 0) {
-    return (
-      <div className="mb-6">
-        <h2 className="text-xl font-bold mb-3 px-2">{title} (0)</h2>
-        <div className="text-muted-foreground text-center py-4">{emptyMessage}</div>
-      </div>
-    );
+    return null; // Hide empty state groups entirely
   }
 
   // Group days by month for header
@@ -49,8 +43,8 @@ export function AvailabilityGrid30Day({
   });
 
   return (
-    <div className="mb-6">
-      <h2 className="text-xl font-bold mb-3 px-2">
+    <div className="mb-4">
+      <h2 className="text-lg font-bold mb-2 px-2">
         {title} ({workers.length})
       </h2>
       
@@ -58,12 +52,12 @@ export function AvailabilityGrid30Day({
         <div className="min-w-max">
           {/* Month Header Row */}
           <div className="flex border-b border-border">
-            <div className="w-40 shrink-0 bg-card" />
+            <div className="w-28 shrink-0 bg-card" />
             {monthGroups.map((group, idx) => (
               <div
                 key={`${group.month}-${idx}`}
-                className="text-center font-semibold text-sm py-1 bg-muted/50 border-l border-border first:border-l-0"
-                style={{ width: `${group.days.length * 48}px` }}
+                className="text-center font-semibold text-xs py-0.5 bg-muted/50 border-l border-border first:border-l-0"
+                style={{ width: `${group.days.length * 36}px` }}
               >
                 {group.month}
               </div>
@@ -72,12 +66,12 @@ export function AvailabilityGrid30Day({
 
           {/* Day Numbers Row */}
           <div className="flex border-b border-border">
-            <div className="w-40 shrink-0 bg-card" />
+            <div className="w-28 shrink-0 bg-card" />
             {days.map((day) => (
               <div
                 key={day.dateStr}
                 className={cn(
-                  "w-12 text-center text-sm font-medium py-1",
+                  "w-9 text-center text-xs font-medium py-0.5",
                   day.isToday && "bg-primary text-primary-foreground",
                   day.isWeekend && !day.isToday && "bg-muted/50"
                 )}
@@ -89,19 +83,19 @@ export function AvailabilityGrid30Day({
 
           {/* Day Names Row */}
           <div className="flex border-b border-border">
-            <div className="w-40 shrink-0 bg-card text-xs font-medium text-muted-foreground px-2 py-1">
+            <div className="w-28 shrink-0 bg-card text-[10px] font-medium text-muted-foreground px-1 py-0.5">
               Worker
             </div>
             {days.map((day) => (
               <div
                 key={`name-${day.dateStr}`}
                 className={cn(
-                  "w-12 text-center text-xs text-muted-foreground py-1",
+                  "w-9 text-center text-[10px] text-muted-foreground py-0.5",
                   day.isToday && "bg-primary/20 font-medium",
                   day.isWeekend && !day.isToday && "bg-muted/30"
                 )}
               >
-                {day.dayName}
+                {day.dayName.charAt(0)}
               </div>
             ))}
           </div>
@@ -109,11 +103,11 @@ export function AvailabilityGrid30Day({
           {/* Worker Rows */}
           {workers.map((workerAvail) => (
             <div key={workerAvail.worker.id} className="flex border-b border-border/50 hover:bg-muted/20">
-              <div className="w-40 shrink-0 bg-card px-2 py-2 font-medium text-sm truncate border-r border-border">
-                {workerAvail.worker.first_name} {workerAvail.worker.last_name}
+              <div className="w-28 shrink-0 bg-card px-1 py-1 font-medium text-xs truncate border-r border-border">
+                {workerAvail.worker.first_name} {workerAvail.worker.last_name?.charAt(0)}.
               </div>
               {workerAvail.days.map((dayAvail, idx) => (
-                <div key={dayAvail.dateStr} className="w-12">
+                <div key={dayAvail.dateStr} className="w-9">
                   <DayCell
                     availability={dayAvail}
                     isToday={days[idx].isToday}
