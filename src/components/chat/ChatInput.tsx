@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent, DragEvent } from "react";
-import { Paperclip, Send, Loader2, X, Check, Smile, AtSign, Bold, Code, ChevronDown } from "lucide-react";
+import { Paperclip, Send, Loader2, X, Check } from "lucide-react";
 import { useSendMessage, useEditMessage } from "@/hooks/chat/useChatOperations";
 import { useChatStorage } from "@/hooks/chat/useChatStorage";
 import { MessageWithProfile } from "@/types/chat";
@@ -298,7 +298,7 @@ export function ChatInput({
           disabled={isSending}
         />
 
-        {/* Bottom Toolbar - Slack style, simplified on mobile */}
+        {/* Bottom Toolbar - Clean and functional */}
         <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50">
           <div className="flex items-center gap-0.5">
             {!editingMessage && (
@@ -321,59 +321,9 @@ export function ChatInput({
                 />
               </>
             )}
-            {/* Hide less important buttons on mobile full screen */}
-            {!isMobileFullScreen && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  disabled={isSending}
-                >
-                  <Smile className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  disabled={isSending}
-                >
-                  <AtSign className="h-4 w-4" />
-                </Button>
-                <div className="w-px h-4 bg-border mx-1" />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  disabled={isSending}
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  disabled={isSending}
-                >
-                  <Code className="h-4 w-4" />
-                </Button>
-              </>
-            )}
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Shortcut hint - hide on mobile */}
-            {!isMobileFullScreen && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-                disabled
-              >
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            )}
-            
             {/* Send Button */}
             <Button
               size="icon"

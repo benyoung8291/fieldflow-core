@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Hash, Lock, Users, Info, Search, ChevronDown, Star } from "lucide-react";
+import { ArrowLeft, Hash, Lock, Users, Info, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels";
 import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
@@ -213,10 +213,7 @@ export function ChatChannelView({ channelId: propChannelId, className, isMobileF
             <Hash className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           )}
           
-          <button className="flex items-center gap-1 min-w-0 hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors">
-            <h2 className="font-bold text-base truncate">{displayName}</h2>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-          </button>
+          <h2 className="font-bold text-base truncate max-w-[200px]" title={displayName}>{displayName}</h2>
 
           {/* Description/Status - inline on desktop */}
           {!isMobile && (
@@ -233,11 +230,6 @@ export function ChatChannelView({ channelId: propChannelId, className, isMobileF
 
         {/* Right side actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Bookmark/Star */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-            <Star className="h-4 w-4" />
-          </Button>
-
           {/* Member Count (hide for DMs) */}
           {!isDM && (
             <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground">
