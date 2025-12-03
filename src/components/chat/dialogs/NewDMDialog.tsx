@@ -10,10 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface NewDMDialogProps {
   open: boolean;
@@ -40,7 +42,7 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
     });
   }, []);
 
-  // Reset search when popover closes
+  // Reset search when dialog closes
   useEffect(() => {
     if (!open) {
       setSearchQuery("");
@@ -180,57 +182,56 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
   };
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
         {children}
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-[280px] p-0" 
-        align="start" 
-        side="bottom"
-        sideOffset={4}
-      >
-        <div className="p-3 pb-2 border-b">
-          <h4 className="font-medium text-sm mb-2">New message</h4>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[320px] p-0 gap-0">
+        <DialogHeader className="p-4 pb-3 border-b">
+          <DialogTitle className="text-base">New message</DialogTitle>
+        </DialogHeader>
+        
+        <div className="p-3 pb-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search people..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 text-sm"
+              className="h-9 pl-8 text-sm"
               autoFocus
             />
           </div>
         </div>
 
-        <ScrollArea className="max-h-[250px]">
+        <ScrollArea className="max-h-[300px]">
           {workersLoading ? (
-            <div className="flex items-center justify-center py-6">
+            <div className="flex items-center justify-center py-8">
               <span className="text-sm text-muted-foreground">Loading...</span>
             </div>
           ) : filteredWorkers.length === 0 ? (
-            <div className="flex items-center justify-center py-6">
+            <div className="flex items-center justify-center py-8">
               <span className="text-sm text-muted-foreground">
                 {searchQuery ? "No matching users" : "No team members"}
               </span>
             </div>
           ) : (
-            <div className="p-1">
+            <div className="p-2">
               {filteredWorkers.map((worker) => (
                 <button
                   key={worker.id}
                   onClick={() => handleSelectUser(worker)}
                   disabled={isCreating}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+                    "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
+                    "active:bg-accent/80",
                     "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
-                  <Avatar className="h-7 w-7">
+                  <Avatar className="h-9 w-9">
                     <AvatarImage src={undefined} />
-                    <AvatarFallback className="text-xs">
+                    <AvatarFallback className="text-sm">
                       {getInitials(worker.first_name, worker.last_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -240,7 +241,7 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
             </div>
           )}
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
