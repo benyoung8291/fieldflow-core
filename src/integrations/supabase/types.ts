@@ -1053,6 +1053,308 @@ export type Database = {
           },
         ]
       }
+      chat_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          message_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          message_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          message_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_channel_members: {
+        Row: {
+          channel_id: string
+          created_at: string
+          last_read_at: string
+          notifications_enabled: boolean
+          role: Database["public"]["Enums"]["chat_member_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          last_read_at?: string
+          notifications_enabled?: boolean
+          role?: Database["public"]["Enums"]["chat_member_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          last_read_at?: string
+          notifications_enabled?: boolean
+          role?: Database["public"]["Enums"]["chat_member_role"]
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_channel_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channel_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channel_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channel_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_channels: {
+        Row: {
+          context_id: string | null
+          context_type: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          last_message_at: string | null
+          name: string | null
+          tenant_id: string
+          type: Database["public"]["Enums"]["chat_channel_type"]
+          updated_at: string
+        }
+        Insert: {
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          last_message_at?: string | null
+          name?: string | null
+          tenant_id: string
+          type?: Database["public"]["Enums"]["chat_channel_type"]
+          updated_at?: string
+        }
+        Update: {
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          last_message_at?: string | null
+          name?: string | null
+          tenant_id?: string
+          type?: Database["public"]["Enums"]["chat_channel_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_channels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          channel_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_edited: boolean
+          reply_to_id: string | null
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_edited?: boolean
+          reply_to_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_edited?: boolean
+          reply_to_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_reactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_credit_cards: {
         Row: {
           assigned_to: string | null
@@ -9513,6 +9815,8 @@ export type Database = {
         | "completed"
         | "cancelled"
       billing_status: "not_billed" | "partially_billed" | "billed"
+      chat_channel_type: "public" | "private" | "dm" | "context"
+      chat_member_role: "owner" | "admin" | "member"
       customer_portal_role: "full_access" | "supervisor" | "basic"
       permission_type: "view" | "create" | "edit" | "delete"
       recurrence_frequency:
@@ -9719,6 +10023,8 @@ export const Constants = {
         "cancelled",
       ],
       billing_status: ["not_billed", "partially_billed", "billed"],
+      chat_channel_type: ["public", "private", "dm", "context"],
+      chat_member_role: ["owner", "admin", "member"],
       customer_portal_role: ["full_access", "supervisor", "basic"],
       permission_type: ["view", "create", "edit", "delete"],
       recurrence_frequency: [
