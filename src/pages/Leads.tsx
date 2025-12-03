@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 export default function Leads() {
-  const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -250,7 +249,7 @@ export default function Leads() {
                   ...(lead.phone ? [{ label: 'Phone', value: lead.phone }] : []),
                   ...(lead.source ? [{ label: 'Source', value: lead.source }] : []),
                 ]}
-                onClick={() => navigate(`/leads/${lead.id}`)}
+                to={`/leads/${lead.id}`}
               />
             ))
           ) : (
@@ -271,18 +270,17 @@ export default function Leads() {
                   <TableRow
                     key={lead.id}
                     className="cursor-pointer"
-                    onClick={() => navigate(`/leads/${lead.id}`)}
                   >
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{lead.name}</div>
+                      <Link to={`/leads/${lead.id}`} className="block">
+                        <div className="font-medium hover:underline">{lead.name}</div>
                         {lead.company_name && (
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
                             {lead.company_name}
                           </div>
                         )}
-                      </div>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">

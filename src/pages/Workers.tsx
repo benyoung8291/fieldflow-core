@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, MoreVertical, Users, UserCheck, UserX, DollarSign, Settings as SettingsIcon, UserPlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import { usePresence } from "@/hooks/usePresence";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,7 +34,6 @@ interface Worker {
 export default function Workers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "workers-page" });
 
@@ -113,9 +112,11 @@ export default function Workers() {
               <UserPlus className="h-4 w-4 mr-2" />
               Create New Worker
             </PermissionButton>
-            <Button onClick={() => navigate("/settings")} variant="outline">
-              <SettingsIcon className="h-4 w-4 mr-2" />
-              Manage Users
+            <Button asChild variant="outline">
+              <Link to="/settings">
+                <SettingsIcon className="h-4 w-4 mr-2" />
+                Manage Users
+              </Link>
             </Button>
           </div>
         </div>
@@ -209,10 +210,11 @@ export default function Workers() {
                     <TableRow
                       key={worker.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/workers/${worker.id}`)}
                     >
                       <TableCell className="font-medium">
-                        {worker.first_name} {worker.last_name}
+                        <Link to={`/workers/${worker.id}`} className="hover:underline">
+                          {worker.first_name} {worker.last_name}
+                        </Link>
                       </TableCell>
                       <TableCell>{worker.email}</TableCell>
                       <TableCell>{worker.phone || "-"}</TableCell>
@@ -242,11 +244,10 @@ export default function Workers() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/workers/${worker.id}`);
-                            }}>
-                              View Details
+                            <DropdownMenuItem asChild>
+                              <Link to={`/workers/${worker.id}`}>
+                                View Details
+                              </Link>
                             </DropdownMenuItem>
                             <PermissionGate module="workers" permission="delete">
                               <DropdownMenuItem

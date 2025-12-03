@@ -8,13 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
 import { useQuery } from "@tanstack/react-query";
 import { PermissionButton } from "@/components/permissions";
 
 export default function PurchaseOrders() {
-  const navigate = useNavigate();
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -169,11 +168,8 @@ export default function PurchaseOrders() {
       ) : (
         <div className="grid gap-4">
           {filteredPOs.map((po) => (
-            <Card
-              key={po.id}
-              className="p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/purchase-orders/${po.id}`)}
-            >
+            <Link key={po.id} to={`/purchase-orders/${po.id}`} className="block">
+            <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -217,6 +213,7 @@ export default function PurchaseOrders() {
                 </div>
               </div>
             </Card>
+            </Link>
           ))}
         </div>
       )}

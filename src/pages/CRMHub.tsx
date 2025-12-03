@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Users, UserPlus, FileText, Briefcase, Phone, Plus, ClipboardList } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,6 @@ import QuoteHeaderDialog from "@/components/quotes/QuoteHeaderDialog";
 import TaskDialog from "@/components/tasks/TaskDialog";
 
 export default function CRMHub() {
-  const navigate = useNavigate();
   const [isLeadDialogOpen, setIsLeadDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
@@ -138,18 +137,20 @@ export default function CRMHub() {
                   <Button
                     key={page.path}
                     variant="outline"
-                    onClick={() => navigate(page.path)}
+                    asChild
                     className="h-20 flex items-center justify-start gap-4 px-4"
                   >
-                    <div className={`p-3 rounded-lg bg-muted ${page.color}`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex flex-col items-start text-left">
-                      <span className="font-semibold">{page.title}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {page.description}
-                      </span>
-                    </div>
+                    <Link to={page.path}>
+                      <div className={`p-3 rounded-lg bg-muted ${page.color}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <div className="flex flex-col items-start text-left">
+                        <span className="font-semibold">{page.title}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {page.description}
+                        </span>
+                      </div>
+                    </Link>
                   </Button>
                 );
               })}

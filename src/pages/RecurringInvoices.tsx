@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Calendar, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { RecurringInvoiceDialog } from "@/components/invoices/RecurringInvoiceDialog";
 import { format } from "date-fns";
 
 export default function RecurringInvoices() {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -110,9 +109,12 @@ export default function RecurringInvoices() {
                     <tr
                       key={invoice.id}
                       className="border-b hover:bg-muted/50 cursor-pointer"
-                      onClick={() => navigate(`/recurring-invoices/${invoice.id}`)}
                     >
-                      <td className="p-4 font-medium">{invoice.invoice_number_prefix}</td>
+                      <td className="p-4 font-medium">
+                        <Link to={`/recurring-invoices/${invoice.id}`} className="hover:underline">
+                          {invoice.invoice_number_prefix}
+                        </Link>
+                      </td>
                       <td className="p-4">
                         {Array.isArray(invoice.customers) ? (invoice.customers[0] as any)?.name : (invoice.customers as any)?.name}
                       </td>
@@ -145,12 +147,11 @@ export default function RecurringInvoices() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/recurring-invoices/${invoice.id}`);
-                          }}
+                          asChild
                         >
-                          View
+                          <Link to={`/recurring-invoices/${invoice.id}`} onClick={(e) => e.stopPropagation()}>
+                            View
+                          </Link>
                         </Button>
                       </td>
                     </tr>

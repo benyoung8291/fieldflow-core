@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Download } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -18,7 +18,6 @@ import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicat
 import { usePagination } from "@/hooks/usePagination";
 
 export default function InvoicesList() {
-  const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -97,9 +96,11 @@ export default function InvoicesList() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Invoices</h1>
             <p className="text-muted-foreground">Manage and track all customer invoices</p>
           </div>
-          <Button onClick={() => navigate("/invoices/create")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
+          <Button asChild>
+            <Link to="/invoices/create">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Link>
           </Button>
         </div>
 
@@ -154,7 +155,7 @@ export default function InvoicesList() {
                   { label: "Due Date", value: invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "-" },
                   { label: "Amount", value: `$${invoice.total_amount.toFixed(2)}` },
                 ]}
-                onClick={() => navigate(`/invoices/${invoice.id}`)}
+                to={`/invoices/${invoice.id}`}
               />
             ))}
           </div>
@@ -178,9 +179,12 @@ export default function InvoicesList() {
                   <TableRow 
                     key={invoice.id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/invoices/${invoice.id}`)}
                   >
-                    <TableCell className="font-medium font-mono">{invoice.invoice_number}</TableCell>
+                    <TableCell className="font-medium font-mono">
+                      <Link to={`/invoices/${invoice.id}`} className="hover:underline">
+                        {invoice.invoice_number}
+                      </Link>
+                    </TableCell>
                     <TableCell>{invoice.customers?.name}</TableCell>
                     <TableCell>{format(new Date(invoice.invoice_date), "dd MMM yyyy")}</TableCell>
                     <TableCell>
