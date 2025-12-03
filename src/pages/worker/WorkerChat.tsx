@@ -1,4 +1,5 @@
-import { Outlet, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { ChatChannelView } from "@/components/chat/ChatChannelView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
@@ -13,7 +14,7 @@ export default function WorkerChat() {
       // On mobile with a channel selected, show only the message thread
       return (
         <div className="flex h-[calc(100vh-5rem)] flex-col pb-20">
-          <Outlet />
+          <ChatChannelView />
         </div>
       );
     }
@@ -32,7 +33,7 @@ export default function WorkerChat() {
         <ChatSidebar />
       </div>
       <div className="flex-1">
-        {channelId ? <Outlet /> : <ChatEmptyState />}
+        {channelId ? <ChatChannelView /> : <ChatEmptyState />}
       </div>
     </div>
   );

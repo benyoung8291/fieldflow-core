@@ -1,4 +1,5 @@
-import { Outlet, useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
+import { ChatChannelView } from "./ChatChannelView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatEmptyState } from "./ChatEmptyState";
@@ -15,7 +16,7 @@ export function ChatLayout() {
       // On mobile with a channel selected, show only the message thread
       return (
         <div className="flex h-full flex-col">
-          <Outlet />
+          <ChatChannelView />
         </div>
       );
     }
@@ -34,7 +35,7 @@ export function ChatLayout() {
         <ChatSidebar />
       </div>
       <div className="flex-1">
-        {channelId ? <Outlet /> : <ChatEmptyState />}
+        {channelId ? <ChatChannelView /> : <ChatEmptyState />}
       </div>
     </div>
   );
