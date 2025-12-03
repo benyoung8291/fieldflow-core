@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import { useWorkersCache } from "@/hooks/useWorkersCache";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
@@ -18,6 +18,8 @@ interface NewDMDialogProps {
 
 export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/worker") ? "/worker/chat" : "/chat";
   const { data: workers = [], isLoading: workersLoading } = useWorkersCache();
   const { data: channels = [] } = useChatChannels();
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,7 +95,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
 
       if (existingDMId) {
         onOpenChange(false);
-        navigate(`/chat/${existingDMId}`);
+        navigate(`${basePath}/${existingDMId}`);
         return;
       }
 
@@ -144,7 +146,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
 
       toast.success(`Started conversation with ${selectedUser.full_name}`);
       onOpenChange(false);
-      navigate(`/chat/${channel.id}`);
+      navigate(`${basePath}/${channel.id}`);
     } catch (error) {
       console.error("Error creating DM:", error);
       toast.error("Failed to start conversation");

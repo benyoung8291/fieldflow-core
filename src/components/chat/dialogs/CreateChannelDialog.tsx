@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useCreateChannel } from "@/hooks/chat";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ interface CreateChannelDialogProps {
 
 export function CreateChannelDialog({ open, onOpenChange }: CreateChannelDialogProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/worker") ? "/worker/chat" : "/chat";
   const createChannel = useCreateChannel();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -40,7 +42,7 @@ export function CreateChannelDialog({ open, onOpenChange }: CreateChannelDialogP
       toast.success(`Channel "${name}" created successfully`);
       onOpenChange(false);
       resetForm();
-      navigate(`/chat/${channel.id}`);
+      navigate(`${basePath}/${channel.id}`);
     } catch (error) {
       console.error("Error creating channel:", error);
       toast.error("Failed to create channel");
