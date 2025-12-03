@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,17 +10,23 @@ interface ConnectionStatusProps {
 
 export function ConnectionStatus({ isConnected, isReconnecting, onReconnect }: ConnectionStatusProps) {
   const [visible, setVisible] = useState(false);
+  const hasEverConnected = useRef(false);
 
   useEffect(() => {
-    if (!isConnected) {
-      setVisible(true);
-    } else {
+    if (isConnected) {
+      hasEverConnected.current = true;
       // Hide after a short delay when reconnected
       const timer = setTimeout(() => setVisible(false), 2000);
       return () => clearTimeout(timer);
+    } else if (hasEverConnected.current) {
+      // Only show disconnected banner if we've connected at least once
+      setVisible(true);
     }
+    // If never connected, don't show anything (initial connecting state)
   }, [isConnected]);
 
+  // Don't show during initial connection attempts
+  if (!hasEverConnected.current) return null;
   if (!visible && isConnected) return null;
 
   return (
