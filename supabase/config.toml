@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.get-tv-availability-data]
 verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = true
