@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase, Building2, ShoppingCart } from "lucide-react";
+import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase, Building2, ShoppingCart, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getRouteModule } from "@/config/routePermissions";
+import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +27,7 @@ const primaryNavItems: NavItem[] = [
   { icon: Home, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "CRM", path: "/crm-hub" },
   { icon: ClipboardList, label: "Orders", path: "/service-orders" },
-  { icon: FileText, label: "Quotes", path: "/quotes" },
+  { icon: MessageSquare, label: "Chat", path: "/chat" },
 ];
 
 const moreNavItems: NavItem[] = [
@@ -49,6 +50,8 @@ export const MobileBottomNav = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { data: access, isLoading } = useUserAccess();
   const { canView, isLoading: permissionsLoading, hasLoadedPermissions } = usePermissions();
+  const { data: unreadData } = useUnreadMessages();
+  const totalUnread = unreadData?.totalUnread ?? 0;
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
   useEffect(() => {
@@ -108,23 +111,31 @@ export const MobileBottomNav = () => {
       <div className="flex items-center justify-around h-16 px-2">
         {visiblePrimaryNav.map((item) => {
           const Icon = item.icon;
-          const isActive = isActivePath(item.path);
+          const isActive = isActivePath(item.path) || (item.path === "/chat" && location.pathname.startsWith("/chat"));
+          const showBadge = item.path === "/chat" && totalUnread > 0;
           
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1",
+                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1 relative",
                 isActive
                   ? "text-primary scale-105"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
-              <Icon className={cn(
-                "h-5 w-5 transition-transform",
-                isActive && "scale-110"
-              )} />
+              <div className="relative">
+                <Icon className={cn(
+                  "h-5 w-5 transition-transform",
+                  isActive && "scale-110"
+                )} />
+                {showBadge && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
+              </div>
               <span className={cn(
                 "text-[11px] font-medium",
                 isActive && "font-semibold"

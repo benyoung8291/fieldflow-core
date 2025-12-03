@@ -10,6 +10,7 @@ export const ROUTE_MODULE_MAP: Record<string, Module | null> = {
   "/": null,
   "/dashboard": null,
   "/profile": null,
+  "/chat": null,
   
   // Core modules
   "/quotes": "quotes",
