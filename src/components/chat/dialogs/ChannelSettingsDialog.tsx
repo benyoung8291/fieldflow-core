@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Search, UserMinus, UserPlus } from "lucide-react";
 import { ChatChannel, ChatMember } from "@/types/chat";
 import { useChannelMembers } from "@/hooks/chat/useChatChannels";
@@ -37,6 +37,8 @@ interface MemberWithProfile extends ChatMember {
 
 export function ChannelSettingsDialog({ open, onOpenChange, channel }: ChannelSettingsDialogProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/worker") ? "/worker/chat" : "/chat";
   const { data: members = [] } = useChannelMembers(channel.id);
   const { data: workers = [] } = useWorkersCache();
   const leaveChannel = useLeaveChannel();
@@ -108,7 +110,7 @@ export function ChannelSettingsDialog({ open, onOpenChange, channel }: ChannelSe
       await leaveChannel.mutateAsync(channel.id);
       toast.success("You left the channel");
       onOpenChange(false);
-      navigate("/chat");
+      navigate(basePath);
     } catch (error) {
       toast.error("Failed to leave channel");
     }
