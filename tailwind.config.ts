@@ -71,6 +71,18 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        slack: {
+          aubergine: "hsl(var(--slack-aubergine))",
+          "aubergine-light": "hsl(var(--slack-aubergine-light))",
+          hover: "hsl(var(--slack-hover))",
+          active: "hsl(var(--slack-active))",
+          online: "hsl(var(--slack-online))",
+          text: "hsl(var(--slack-text))",
+          "text-muted": "hsl(var(--slack-text-muted))",
+          border: "hsl(var(--slack-border))",
+          avatar: "hsl(var(--slack-avatar))",
+          "avatar-foreground": "hsl(var(--slack-avatar-foreground))",
+        },
       },
       boxShadow: {
         'xs': 'var(--shadow-xs)',

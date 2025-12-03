@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent, DragEvent } from "react";
-import { Paperclip, Send, Loader2, X, Check } from "lucide-react";
+import { Paperclip, Send, Loader2, X, Check, Smile, AtSign, Bold, Code, ChevronDown } from "lucide-react";
 import { useSendMessage, useEditMessage } from "@/hooks/chat/useChatOperations";
 import { useChatStorage } from "@/hooks/chat/useChatStorage";
 import { MessageWithProfile } from "@/types/chat";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ChatAttachmentPreview } from "./ChatAttachmentPreview";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   channelId: string;
+  channelName?: string;
   onTyping?: () => void;
   editingMessage?: MessageWithProfile | null;
   replyingTo?: MessageWithProfile | null;
@@ -24,6 +24,7 @@ interface PendingFile {
 
 export function ChatInput({ 
   channelId, 
+  channelName = "channel",
   onTyping,
   editingMessage,
   replyingTo,
@@ -34,6 +35,7 @@ export function ChatInput({
   const [selectedFiles, setSelectedFiles] = useState<PendingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sendMessage = useSendMessage();
@@ -59,7 +61,7 @@ export function ChatInput({
     setContent(e.target.value);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
     onTyping?.();
   };
@@ -205,136 +207,193 @@ export function ChatInput({
   return (
     <div
       className={cn(
-        "border-t bg-background transition-colors",
-        isDragOver && "bg-primary/5 ring-2 ring-inset ring-primary"
+        "px-5 pb-4 pt-2 transition-colors",
+        isDragOver && "bg-primary/5"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Reply Banner */}
+      {/* Reply Banner - Slack style */}
       {replyingTo && !editingMessage && (
-        <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2">
-          <div className="h-full w-1 rounded-full bg-primary" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">
-              Replying to {replyingTo.profile?.first_name || "User"}
-            </p>
-            <p className="text-sm text-foreground truncate">
-              {truncateText(replyingTo.content)}
-            </p>
-          </div>
+        <div className="flex items-center gap-2 mb-2 py-1.5 text-sm">
+          <div className="h-4 w-0.5 rounded-full bg-primary" />
+          <span className="text-muted-foreground">Replying to</span>
+          <span className="font-medium">{replyingTo.profile?.first_name || "User"}</span>
+          <span className="text-muted-foreground truncate max-w-[200px]">
+            {truncateText(replyingTo.content)}
+          </span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 flex-shrink-0"
+            className="h-5 w-5 flex-shrink-0 ml-auto"
             onClick={onCancelReply}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
         </div>
       )}
 
-      {/* Edit Banner */}
+      {/* Edit Banner - Slack style */}
       {editingMessage && (
-        <div className="flex items-center gap-2 border-b bg-amber-500/10 px-4 py-2">
-          <div className="h-full w-1 rounded-full bg-amber-500" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-              Editing message
-            </p>
-            <p className="text-sm text-foreground truncate">
-              {truncateText(editingMessage.content)}
-            </p>
-          </div>
+        <div className="flex items-center gap-2 mb-2 py-1.5 text-sm">
+          <div className="h-4 w-0.5 rounded-full bg-warning" />
+          <span className="text-warning font-medium">Editing message</span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 flex-shrink-0"
+            className="h-5 w-5 flex-shrink-0 ml-auto"
             onClick={() => {
               onCancelEdit?.();
               setContent("");
             }}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
         </div>
       )}
 
-      {/* Attachment Preview */}
-      {!editingMessage && (
-        <ChatAttachmentPreview
-          files={selectedFiles}
-          onRemove={removeFile}
-          isUploading={isUploading}
-        />
-      )}
-
-      {/* Input Row */}
-      <div className="flex items-end gap-2 p-4">
-        {!editingMessage && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 flex-shrink-0"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSending}
-            >
-              <Paperclip className="h-5 w-5" />
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileSelect}
+      {/* Main Input Container - Slack style rounded box */}
+      <div
+        className={cn(
+          "rounded-lg border transition-all",
+          isFocused || isDragOver
+            ? "border-primary shadow-sm"
+            : "border-border",
+          isDragOver && "ring-2 ring-primary/20"
+        )}
+      >
+        {/* Attachment Preview */}
+        {!editingMessage && selectedFiles.length > 0 && (
+          <div className="border-b">
+            <ChatAttachmentPreview
+              files={selectedFiles}
+              onRemove={removeFile}
+              isUploading={isUploading}
             />
-          </>
+          </div>
         )}
 
-        <Textarea
+        {/* Textarea */}
+        <textarea
           ref={textareaRef}
           value={content}
           onChange={handleContentChange}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder={
             isDragOver 
               ? "Drop files here..." 
               : editingMessage 
                 ? "Edit your message..." 
-                : replyingTo 
-                  ? "Type your reply..." 
-                  : "Type a message..."
+                : `Message #${channelName}`
           }
-          className="min-h-[36px] max-h-[120px] resize-none py-2"
+          className="w-full resize-none bg-transparent px-3 py-3 text-sm placeholder:text-muted-foreground focus:outline-none min-h-[44px] max-h-[200px]"
           rows={1}
           disabled={isSending}
         />
 
-        <Button
-          size="icon"
-          className={cn(
-            "h-9 w-9 flex-shrink-0",
-            editingMessage && "bg-amber-500 hover:bg-amber-600"
-          )}
-          onClick={handleSend}
-          disabled={!canSend || isSending}
-        >
-          {isSending ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : editingMessage ? (
-            <Check className="h-5 w-5" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </Button>
+        {/* Bottom Toolbar - Slack style */}
+        <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50">
+          <div className="flex items-center gap-0.5">
+            {!editingMessage && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isSending}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              disabled={isSending}
+            >
+              <Smile className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              disabled={isSending}
+            >
+              <AtSign className="h-4 w-4" />
+            </Button>
+            <div className="w-px h-4 bg-border mx-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              disabled={isSending}
+            >
+              <Bold className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              disabled={isSending}
+            >
+              <Code className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Shortcut hint */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+              disabled
+            >
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+            
+            {/* Send Button - only visible when there's content */}
+            <Button
+              size="icon"
+              className={cn(
+                "h-7 w-7 transition-all",
+                canSend 
+                  ? editingMessage 
+                    ? "bg-warning hover:bg-warning/90 text-warning-foreground" 
+                    : "bg-slack-online hover:bg-slack-online/90 text-white"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+              onClick={handleSend}
+              disabled={!canSend || isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : editingMessage ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <p className="px-4 pb-2 text-xs text-muted-foreground">
+      {/* Hint text */}
+      <p className="mt-1 text-[11px] text-muted-foreground">
         {editingMessage 
-          ? "Press Enter to save, Escape to cancel"
-          : "Press Enter to send, Shift+Enter for new line"
+          ? "Escape to cancel • Enter to save"
+          : "Shift + Enter for new line"
         }
       </p>
     </div>

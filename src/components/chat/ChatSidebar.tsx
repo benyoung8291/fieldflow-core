@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X, Command, Settings, Users } from "lucide-react";
+import { Hash, Lock, ChevronDown, ChevronRight, Bell, X, Settings, Plus, MessageSquare, Bookmark, Send, Search } from "lucide-react";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 import { useDMChannelNames } from "@/hooks/chat/useDMChannelName";
@@ -8,10 +8,8 @@ import { useChatPresence } from "@/hooks/chat/useChatPresence";
 import { requestNotificationPermission, useNotificationPermission } from "@/hooks/chat/useChatNotifications";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CreateChannelDialog } from "./dialogs/CreateChannelDialog";
@@ -92,21 +90,9 @@ export function ChatSidebar() {
   );
 
   const handleChannelClick = (id: string) => {
-    // Determine if we're in worker app or office app
     const isWorkerApp = location.pathname.startsWith("/worker");
     const basePath = isWorkerApp ? "/worker/chat" : "/chat";
     navigate(`${basePath}/${id}`);
-  };
-
-  const getChannelIcon = (type: string) => {
-    switch (type) {
-      case "private":
-        return <Lock className="h-4 w-4 text-muted-foreground" />;
-      case "dm":
-        return <MessageCircle className="h-4 w-4 text-muted-foreground" />;
-      default:
-        return <Hash className="h-4 w-4 text-muted-foreground" />;
-    }
   };
 
   const showNotificationBanner =
@@ -115,54 +101,83 @@ export function ChatSidebar() {
     "Notification" in window &&
     notificationPermission === "default";
 
+  const totalUnread = unreadData?.totalUnread || 0;
+
   return (
-    <div className="flex h-full flex-col border-r bg-sidebar">
-      {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b px-4">
-        <h2 className="text-lg font-semibold">Messages</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 text-xs text-muted-foreground"
-          onClick={() => setSwitcherOpen(true)}
-        >
-          <Command className="h-3 w-3" />
-          <span>K</span>
-        </Button>
+    <div className="flex h-full flex-col bg-slack-aubergine text-slack-text">
+      {/* Workspace Header */}
+      <div className="flex h-12 items-center justify-between px-4 border-b border-slack-border hover:bg-slack-hover transition-colors">
+        <button className="flex items-center gap-1 font-bold text-lg text-white">
+          <span>Workspace</span>
+          <ChevronDown className="h-4 w-4 opacity-70" />
+        </button>
+        <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slack-text-muted hover:text-white hover:bg-slack-hover"
+                  onClick={() => setSwitcherOpen(true)}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Search (⌘K)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       {/* Notification Banner */}
       {showNotificationBanner && (
-        <Alert className="mx-3 mt-3 border-primary/50 bg-primary/10">
-          <Bell className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between gap-2">
-            <button
-              onClick={handleEnableNotifications}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Enable notifications
-            </button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={handleDismissBanner}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <div className="mx-3 mt-3 flex items-center gap-2 rounded-md bg-slack-active/20 px-3 py-2">
+          <Bell className="h-4 w-4 text-slack-text-muted" />
+          <button
+            onClick={handleEnableNotifications}
+            className="text-sm font-medium text-white hover:underline flex-1 text-left"
+          >
+            Enable notifications
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 text-slack-text-muted hover:text-white"
+            onClick={handleDismissBanner}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
       )}
 
+      {/* Quick Actions - Slack style nav items */}
+      <div className="px-2 py-2 space-y-0.5">
+        <button className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors">
+          <MessageSquare className="h-4 w-4" />
+          <span className="text-sm">Threads</span>
+        </button>
+        <button className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors">
+          <Send className="h-4 w-4" />
+          <span className="text-sm">Drafts & sent</span>
+        </button>
+        <button className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors">
+          <Bookmark className="h-4 w-4" />
+          <span className="text-sm">Saved items</span>
+        </button>
+      </div>
+
       {/* Search */}
-      <div className="p-3">
+      <div className="px-3 py-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slack-text-muted" />
           <Input
-            placeholder="Search channels..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="h-8 pl-8 bg-slack-hover border-none text-white placeholder:text-slack-text-muted text-sm focus-visible:ring-1 focus-visible:ring-slack-active"
           />
         </div>
       </div>
@@ -171,35 +186,35 @@ export function ChatSidebar() {
       <ScrollArea className="flex-1 px-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <span className="text-sm text-muted-foreground">Loading...</span>
+            <span className="text-sm text-slack-text-muted">Loading...</span>
           </div>
         ) : (
           <div className="space-y-4 pb-4">
             {/* Channels Section */}
             <Collapsible open={channelsOpen} onOpenChange={setChannelsOpen}>
-              <div className="flex items-center justify-between px-2">
-                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+              <div className="flex items-center justify-between px-1 group">
+                <CollapsibleTrigger className="flex items-center gap-1 text-sm text-slack-text-muted hover:text-white transition-colors">
                   {channelsOpen ? (
                     <ChevronDown className="h-3 w-3" />
                   ) : (
                     <ChevronRight className="h-3 w-3" />
                   )}
-                  Channels
+                  <span className="font-medium">Channels</span>
                 </CollapsibleTrigger>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-6 w-6 border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-slack-text-muted hover:text-white hover:bg-slack-hover transition-all"
                         onClick={() => setCreateChannelOpen(true)}
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="right">
-                      <p>Create Channel</p>
+                      <p>Add channel</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -208,10 +223,10 @@ export function ChatSidebar() {
                 {publicPrivateChannels.length === 0 ? (
                   <button
                     onClick={() => setCreateChannelOpen(true)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1 text-sm text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Create your first channel</span>
+                    <span>Add a channel</span>
                   </button>
                 ) : (
                   publicPrivateChannels.map((channel) => {
@@ -223,21 +238,25 @@ export function ChatSidebar() {
                         key={channel.id}
                         onClick={() => handleChannelClick(channel.id)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                          "flex w-full items-center gap-2 rounded-md px-3 py-1 text-sm transition-colors",
                           isActive
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                          unreadCount > 0 && "font-semibold text-foreground"
+                            ? "bg-slack-active text-white"
+                            : "text-slack-text-muted hover:bg-slack-hover hover:text-white",
+                          unreadCount > 0 && "text-white font-medium"
                         )}
                       >
-                        {getChannelIcon(channel.type)}
+                        {channel.type === "private" ? (
+                          <Lock className="h-4 w-4 flex-shrink-0" />
+                        ) : (
+                          <Hash className="h-4 w-4 flex-shrink-0" />
+                        )}
                         <span className="flex-1 truncate text-left">
-                          {channel.name || "Unnamed Channel"}
+                          {channel.name || "Unnamed"}
                         </span>
                         {unreadCount > 0 && (
-                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                          <span className="flex-shrink-0 text-xs bg-destructive text-destructive-foreground rounded-full px-1.5 min-w-[18px] text-center">
                             {unreadCount > 99 ? "99+" : unreadCount}
-                          </Badge>
+                          </span>
                         )}
                       </button>
                     );
@@ -248,29 +267,29 @@ export function ChatSidebar() {
 
             {/* Direct Messages Section */}
             <Collapsible open={dmsOpen} onOpenChange={setDmsOpen}>
-              <div className="flex items-center justify-between px-2">
-                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+              <div className="flex items-center justify-between px-1 group">
+                <CollapsibleTrigger className="flex items-center gap-1 text-sm text-slack-text-muted hover:text-white transition-colors">
                   {dmsOpen ? (
                     <ChevronDown className="h-3 w-3" />
                   ) : (
                     <ChevronRight className="h-3 w-3" />
                   )}
-                  Direct Messages
+                  <span className="font-medium">Direct messages</span>
                 </CollapsibleTrigger>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-6 w-6 border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-slack-text-muted hover:text-white hover:bg-slack-hover transition-all"
                         onClick={() => setNewDMOpen(true)}
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="right">
-                      <p>New Message</p>
+                      <p>New message</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -279,9 +298,9 @@ export function ChatSidebar() {
                 {dmChannels.length === 0 ? (
                   <button
                     onClick={() => setNewDMOpen(true)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1 text-sm text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors"
                   >
-                    <Users className="h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                     <span>Start a conversation</span>
                   </button>
                 ) : (
@@ -303,31 +322,33 @@ export function ChatSidebar() {
                         key={channel.id}
                         onClick={() => handleChannelClick(channel.id)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                          "flex w-full items-center gap-2 rounded-md px-3 py-1 text-sm transition-colors",
                           isActive
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                          unreadCount > 0 && "font-semibold text-foreground"
+                            ? "bg-slack-active text-white"
+                            : "text-slack-text-muted hover:bg-slack-hover hover:text-white",
+                          unreadCount > 0 && "text-white font-medium"
                         )}
                       >
-                        <div className="relative">
-                          <Avatar className="h-6 w-6">
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="h-5 w-5">
                             <AvatarImage src={dmInfo?.otherUserAvatar || undefined} />
-                            <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+                            <AvatarFallback className="text-[9px] bg-slack-avatar text-slack-avatar-foreground">
+                              {initials}
+                            </AvatarFallback>
                           </Avatar>
                           <OnlineIndicator
                             isOnline={isOnline}
-                            size="sm"
-                            className="absolute -bottom-0.5 -right-0.5"
+                            size="xs"
+                            className="absolute -bottom-0.5 -right-0.5 border border-slack-aubergine"
                           />
                         </div>
                         <span className="flex-1 truncate text-left">
                           {displayName}
                         </span>
                         {unreadCount > 0 && (
-                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                          <span className="flex-shrink-0 text-xs bg-destructive text-destructive-foreground rounded-full px-1.5 min-w-[18px] text-center">
                             {unreadCount > 99 ? "99+" : unreadCount}
-                          </Badge>
+                          </span>
                         )}
                       </button>
                     );
@@ -340,12 +361,16 @@ export function ChatSidebar() {
       </ScrollArea>
 
       {/* Footer with Settings */}
-      <div className="border-t p-2">
+      <div className="border-t border-slack-border p-2">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-slack-text-muted hover:text-white hover:bg-slack-hover"
+            >
               <Settings className="h-4 w-4" />
-              <span>Chat Settings</span>
+              <span>Settings</span>
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-80 p-0">

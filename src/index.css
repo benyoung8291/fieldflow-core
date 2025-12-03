@@ -93,6 +93,18 @@ All colors MUST be HSL.
   --mobile-nav-height: 64px;
   --mobile-touch-target: 44px;
   --mobile-content-top: 64px;
+  
+  /* Slack Color System */
+  --slack-aubergine: 289 60% 25%;
+  --slack-aubergine-light: 289 55% 30%;
+  --slack-hover: 289 50% 28%;
+  --slack-active: 199 89% 38%;
+  --slack-online: 152 69% 42%;
+  --slack-text: 0 0% 100%;
+  --slack-text-muted: 0 0% 100% / 0.7;
+  --slack-border: 0 0% 100% / 0.1;
+  --slack-avatar: 240 5% 65%;
+  --slack-avatar-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -143,6 +155,18 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: var(--accent-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
+    
+    /* Slack Color System - Dark mode */
+    --slack-aubergine: 289 60% 20%;
+    --slack-aubergine-light: 289 55% 25%;
+    --slack-hover: 289 50% 23%;
+    --slack-active: 199 89% 38%;
+    --slack-online: 152 69% 42%;
+    --slack-text: 0 0% 100%;
+    --slack-text-muted: 0 0% 100% / 0.7;
+    --slack-border: 0 0% 100% / 0.1;
+    --slack-avatar: 240 5% 50%;
+    --slack-avatar-foreground: 0 0% 100%;
   }
 }
 

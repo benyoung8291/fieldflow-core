@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { format } from "date-fns";
 import { MessageWithProfile } from "@/types/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { FileText, Download, CornerDownRight } from "lucide-react";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MessageReactions } from "./MessageReactions";
 import { MessageActions } from "./MessageActions";
 
@@ -31,8 +29,6 @@ export function MessageBubble({
   onScrollToMessage,
   onImageClick,
 }: MessageBubbleProps) {
-  const [showTimestamp, setShowTimestamp] = useState(false);
-
   const senderName = message.profile
     ? `${message.profile.first_name || ""} ${message.profile.last_name || ""}`.trim() || "Unknown"
     : "Unknown";
@@ -42,12 +38,9 @@ export function MessageBubble({
     : "?";
 
   const isDeleted = !!message.deleted_at;
-
   const isImage = (fileType: string | null) => fileType?.startsWith("image/");
-
   const imageAttachments = message.attachments?.filter((a) => isImage(a.file_type)) || [];
   const fileAttachments = message.attachments?.filter((a) => !isImage(a.file_type)) || [];
-  const hasReactions = message.reactions && message.reactions.length > 0;
 
   const replyToMessage = message.reply_to;
   const replyToSenderName = replyToMessage?.profile
@@ -60,33 +53,37 @@ export function MessageBubble({
     }
   };
 
-  // Render deleted message
+  // Render deleted message - Slack style
   if (isDeleted) {
     return (
       <div
         className={cn(
-          "group flex gap-2",
-          isCurrentUser ? "flex-row-reverse" : "flex-row",
-          isContinuous ? "mt-0.5" : "mt-3"
+          "group relative flex px-5 py-1 hover:bg-muted/30",
+          isContinuous ? "mt-0" : "mt-4"
         )}
+        id={`message-${message.id}`}
       >
-        <div className="w-8 flex-shrink-0">
+        {/* Avatar column - always 36px width */}
+        <div className="w-9 flex-shrink-0 mr-2">
           {!isContinuous && (
-            <Avatar className="h-8 w-8 opacity-50">
+            <Avatar className="h-9 w-9">
               <AvatarImage src={message.profile?.avatar_url || undefined} alt={senderName} />
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              <AvatarFallback className="text-xs bg-muted text-muted-foreground">{initials}</AvatarFallback>
             </Avatar>
           )}
         </div>
-        <div className={cn("flex max-w-[70%] flex-col", isCurrentUser ? "items-end" : "items-start")}>
-          {!isContinuous && !isCurrentUser && (
-            <span className="mb-1 text-xs font-medium text-muted-foreground opacity-50">{senderName}</span>
+        
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {!isContinuous && (
+            <div className="flex items-baseline gap-2 mb-0.5">
+              <span className="font-bold text-sm text-muted-foreground">{senderName}</span>
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(message.created_at), "h:mm a")}
+              </span>
+            </div>
           )}
-          <div className={cn(
-            "rounded-2xl px-3 py-2 bg-muted/50 border border-dashed border-muted-foreground/20"
-          )}>
-            <p className="text-sm italic text-muted-foreground">This message was deleted</p>
-          </div>
+          <p className="text-sm italic text-muted-foreground">This message was deleted</p>
         </div>
       </div>
     );
@@ -95,109 +92,78 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "group flex gap-2",
-        isCurrentUser ? "flex-row-reverse" : "flex-row",
-        isContinuous ? "mt-0.5" : "mt-3"
+        "group relative flex px-5 py-1 hover:bg-muted/30 transition-colors",
+        isContinuous ? "mt-0" : "mt-4"
       )}
-      onMouseEnter={() => setShowTimestamp(true)}
-      onMouseLeave={() => setShowTimestamp(false)}
       id={`message-${message.id}`}
     >
-      {/* Avatar */}
-      <div className="w-8 flex-shrink-0">
+      {/* Hover timestamp for continuous messages */}
+      {isContinuous && (
+        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+          {format(new Date(message.created_at), "h:mm")}
+        </span>
+      )}
+
+      {/* Avatar column */}
+      <div className="w-9 flex-shrink-0 mr-2">
         {!isContinuous && (
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-9 w-9">
             <AvatarImage src={message.profile?.avatar_url || undefined} alt={senderName} />
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-slack-avatar text-slack-avatar-foreground">{initials}</AvatarFallback>
           </Avatar>
         )}
       </div>
 
-      {/* Message Content */}
-      <div className={cn("flex max-w-[70%] flex-col", isCurrentUser ? "items-end" : "items-start")}>
-        {/* Name */}
-        {!isContinuous && !isCurrentUser && (
-          <span className="mb-1 text-xs font-medium text-muted-foreground">{senderName}</span>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {/* Name + Timestamp row (only for first message in group) */}
+        {!isContinuous && (
+          <div className="flex items-baseline gap-2 mb-0.5">
+            <span className="font-bold text-sm text-foreground hover:underline cursor-pointer">
+              {senderName}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(message.created_at), "h:mm a")}
+            </span>
+            {message.is_edited && (
+              <span className="text-xs text-muted-foreground">(edited)</span>
+            )}
+          </div>
         )}
 
-        {/* Reply Context */}
+        {/* Reply Context - Slack style */}
         {replyToMessage && (
           <button
             onClick={handleReplyClick}
-            className={cn(
-              "mb-1 flex items-start gap-2 rounded-lg border-l-2 border-primary/50 bg-muted/50 px-2 py-1.5 text-left transition-colors hover:bg-muted",
-              "max-w-full"
-            )}
+            className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <CornerDownRight className="h-3 w-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium text-muted-foreground">
-                {replyToSenderName}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {replyToMessage.deleted_at ? "This message was deleted" : replyToMessage.content}
-              </p>
-            </div>
+            <CornerDownRight className="h-3 w-3 flex-shrink-0" />
+            <Avatar className="h-4 w-4">
+              <AvatarImage src={replyToMessage.profile?.avatar_url || undefined} />
+              <AvatarFallback className="text-[8px]">
+                {replyToMessage.profile?.first_name?.[0] || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="font-medium">{replyToSenderName}</span>
+            <span className="truncate max-w-[200px]">
+              {replyToMessage.deleted_at ? "This message was deleted" : replyToMessage.content}
+            </span>
           </button>
         )}
 
-        {/* Text Bubble with Actions */}
-        <div className="flex items-start gap-1">
-          {isCurrentUser && (
-            <MessageActions
-              message={message}
-              isCurrentUser={isCurrentUser}
-              channelId={channelId}
-              onReply={() => onReply?.(message)}
-              onEdit={() => onEdit?.(message)}
-            />
-          )}
-
-          {message.content && (
-            <div
-              className={cn(
-                "relative rounded-2xl px-3 py-2",
-                isCurrentUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-                isContinuous && isCurrentUser && "rounded-tr-md",
-                isContinuous && !isCurrentUser && "rounded-tl-md"
-              )}
-            >
-              <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
-              <span
-                className={cn(
-                  "mt-1 flex items-center justify-end gap-1 text-[10px] transition-opacity",
-                  isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground",
-                  showTimestamp ? "opacity-100" : "opacity-0"
-                )}
-              >
-                {format(new Date(message.created_at), "h:mm a")}
-                {message.is_edited && (
-                  <span className="text-[9px]">(edited)</span>
-                )}
-              </span>
-            </div>
-          )}
-
-          {!isCurrentUser && (
-            <MessageActions
-              message={message}
-              isCurrentUser={isCurrentUser}
-              channelId={channelId}
-              onReply={() => onReply?.(message)}
-              onEdit={() => onEdit?.(message)}
-            />
-          )}
-        </div>
-
-        {/* Image Attachments */}
-        {imageAttachments.length > 0 && (
-          <div
-            className={cn(
-              "mt-1 grid gap-1",
-              imageAttachments.length === 1 ? "grid-cols-1" : "grid-cols-2",
-              isCurrentUser ? "justify-items-end" : "justify-items-start"
+        {/* Message text */}
+        {message.content && (
+          <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
+            {message.content}
+            {isContinuous && message.is_edited && (
+              <span className="ml-1 text-xs text-muted-foreground">(edited)</span>
             )}
-          >
+          </p>
+        )}
+
+        {/* Image Attachments - Slack style grid */}
+        {imageAttachments.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
             {imageAttachments.map((attachment, idx) => (
               <button
                 key={attachment.id}
@@ -210,26 +176,22 @@ export function MessageBubble({
                     onImageClick(images, idx);
                   }
                 }}
-                className="block overflow-hidden rounded-lg border bg-muted transition-transform hover:scale-[1.02] cursor-pointer"
+                className="block overflow-hidden rounded-lg border border-border/50 transition-all hover:shadow-md cursor-pointer max-w-xs"
               >
-                <div className="w-48">
-                  <AspectRatio ratio={4 / 3}>
-                    <img
-                      src={attachment.file_url}
-                      alt={attachment.file_name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  </AspectRatio>
-                </div>
+                <img
+                  src={attachment.file_url}
+                  alt={attachment.file_name}
+                  className="max-h-[300px] w-auto object-contain"
+                  loading="lazy"
+                />
               </button>
             ))}
           </div>
         )}
 
-        {/* File Attachments */}
+        {/* File Attachments - Slack style */}
         {fileAttachments.length > 0 && (
-          <div className={cn("mt-1 flex flex-col gap-1", isCurrentUser ? "items-end" : "items-start")}>
+          <div className="mt-1 flex flex-col gap-1">
             {fileAttachments.map((attachment) => (
               <a
                 key={attachment.id}
@@ -237,40 +199,44 @@ export function MessageBubble({
                 target="_blank"
                 rel="noopener noreferrer"
                 download={attachment.file_name}
-                className="flex items-center gap-3 rounded-lg border bg-background p-3 transition-colors hover:bg-accent"
+                className="inline-flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 transition-colors hover:bg-muted/50 max-w-sm"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
+                <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="max-w-40 truncate text-sm font-medium">
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate text-sm font-medium text-primary">
                     {attachment.file_name}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : "File"}
                   </span>
                 </div>
-                <Download className="h-4 w-4 text-muted-foreground" />
+                <Download className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </a>
             ))}
           </div>
         )}
 
-        {/* Reactions */}
-        {(hasReactions || true) && (
-          <MessageReactions
-            messageId={message.id}
-            channelId={channelId}
-            reactions={message.reactions || []}
-            currentUserId={currentUserId}
-            isCurrentUser={isCurrentUser}
-          />
-        )}
+        {/* Reactions - Slack style pills */}
+        <MessageReactions
+          messageId={message.id}
+          channelId={channelId}
+          reactions={message.reactions || []}
+          currentUserId={currentUserId}
+          isCurrentUser={isCurrentUser}
+        />
+      </div>
 
-        {/* Edited indicator (shown outside bubble if no content in bubble) */}
-        {message.is_edited && !message.content && (
-          <span className="mt-0.5 text-[10px] text-muted-foreground">(edited)</span>
-        )}
+      {/* Floating action bar - appears on hover */}
+      <div className="absolute right-4 -top-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <MessageActions
+          message={message}
+          isCurrentUser={isCurrentUser}
+          channelId={channelId}
+          onReply={() => onReply?.(message)}
+          onEdit={() => onEdit?.(message)}
+        />
       </div>
     </div>
   );
