@@ -150,13 +150,13 @@ export default function SchedulerMonthView({
                     <AppointmentContextMenu
                       key={apt.id}
                       appointment={apt}
-                      onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                      onDelete={() => handleDeleteClick(apt)}
                     >
                       <DraggableAppointment
                         appointment={apt}
                         statusColor={statusColor}
-                        onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
-                        onViewHistory={() => {}}
+                        onDelete={() => handleDeleteClick(apt)}
+                        onViewHistory={() => onAppointmentClick(apt.id)}
                         showFullDetails={false}
                       />
                     </AppointmentContextMenu>

@@ -447,17 +447,36 @@ export default function Scheduler() {
       endTime: Date; 
       workerId: string | null;
     }) => {
+      // Fetch service order with customer location data
       const { data: serviceOrder } = await supabase
         .from("service_orders")
-        .select("title, description, customer_id")
+        .select(`
+          title, 
+          description, 
+          customer_id,
+          customer_location_id
+        `)
         .eq("id", serviceOrderId)
         .single();
 
-      const { data: customer } = await supabase
-        .from("customers")
-        .select("address")
-        .eq("id", serviceOrder?.customer_id)
-        .single();
+      // Fetch location data from customer_locations if available
+      let locationAddress = null;
+      let locationLat = null;
+      let locationLng = null;
+      
+      if (serviceOrder?.customer_location_id) {
+        const { data: customerLocation } = await supabase
+          .from("customer_locations")
+          .select("formatted_address, address, latitude, longitude")
+          .eq("id", serviceOrder.customer_location_id)
+          .single();
+        
+        if (customerLocation) {
+          locationAddress = customerLocation.formatted_address || customerLocation.address;
+          locationLat = customerLocation.latitude;
+          locationLng = customerLocation.longitude;
+        }
+      }
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -473,7 +492,9 @@ export default function Scheduler() {
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
         assigned_to: workerId,
-        location_address: customer?.address,
+        location_address: locationAddress,
+        location_lat: locationLat,
+        location_lng: locationLng,
         status: "published",
         created_by: (await supabase.auth.getUser()).data.user?.id,
       }).select(`
