@@ -1,9 +1,10 @@
-import { useEffect, useRef, useLayoutEffect, useCallback } from "react";
+import { useEffect, useRef, useLayoutEffect, useCallback, useState } from "react";
 import { format, isToday, isYesterday, isSameDay, differenceInMinutes } from "date-fns";
 import { useChannelMessages } from "@/hooks/chat/useChannelMessages";
 import { useUpdateLastRead } from "@/hooks/chat/useChatOperations";
 import { MessageWithProfile } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
+import { UnreadDivider } from "./UnreadDivider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
@@ -11,8 +12,10 @@ import { Loader2 } from "lucide-react";
 interface MessageListProps {
   channelId: string;
   currentUserId: string;
+  lastReadAt?: string;
   onReply?: (message: MessageWithProfile) => void;
   onEdit?: (message: MessageWithProfile) => void;
+  onImageClick?: (images: Array<{ url: string; name: string }>, index: number) => void;
 }
 
 function formatDateSeparator(date: Date): string {
@@ -45,12 +48,44 @@ function isContinuousMessage(
   return minutesDiff <= 5;
 }
 
-export function MessageList({ channelId, currentUserId, onReply, onEdit }: MessageListProps) {
+export function MessageList({ 
+  channelId, 
+  currentUserId, 
+  lastReadAt,
+  onReply, 
+  onEdit,
+  onImageClick,
+}: MessageListProps) {
   const { data: messages = [], isLoading, error } = useChannelMessages(channelId);
   const updateLastRead = useUpdateLastRead();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
+  const [showUnreadDivider, setShowUnreadDivider] = useState(false);
+  const unreadDividerIndexRef = useRef<number | null>(null);
+
+  // Calculate unread divider position
+  useEffect(() => {
+    if (!lastReadAt || messages.length === 0) {
+      unreadDividerIndexRef.current = null;
+      setShowUnreadDivider(false);
+      return;
+    }
+
+    const lastReadTime = new Date(lastReadAt).getTime();
+    const firstUnreadIndex = messages.findIndex((msg) => {
+      const msgTime = new Date(msg.created_at).getTime();
+      return msgTime > lastReadTime && msg.user_id !== currentUserId;
+    });
+
+    if (firstUnreadIndex > 0) {
+      unreadDividerIndexRef.current = firstUnreadIndex;
+      setShowUnreadDivider(true);
+    } else {
+      unreadDividerIndexRef.current = null;
+      setShowUnreadDivider(false);
+    }
+  }, [messages, lastReadAt, currentUserId]);
 
   // Initial scroll to bottom
   useLayoutEffect(() => {
@@ -71,6 +106,11 @@ export function MessageList({ channelId, currentUserId, onReply, onEdit }: Messa
   useEffect(() => {
     if (channelId && messages.length > 0) {
       updateLastRead.mutate(channelId);
+      // Clear unread divider after marking as read
+      const timer = setTimeout(() => {
+        setShowUnreadDivider(false);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
   }, [channelId, messages.length]);
 
@@ -116,6 +156,7 @@ export function MessageList({ channelId, currentUserId, onReply, onEdit }: Messa
           const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
           const isContinuous = !showDateSeparator && isContinuousMessage(message, previousMessage);
           const isCurrentUser = message.user_id === currentUserId;
+          const showUnread = showUnreadDivider && index === unreadDividerIndexRef.current;
 
           return (
             <div key={message.id}>
@@ -128,6 +169,7 @@ export function MessageList({ channelId, currentUserId, onReply, onEdit }: Messa
                   <Separator className="flex-1" />
                 </div>
               )}
+              {showUnread && <UnreadDivider />}
               <MessageBubble
                 message={message}
                 isCurrentUser={isCurrentUser}
@@ -137,6 +179,7 @@ export function MessageList({ channelId, currentUserId, onReply, onEdit }: Messa
                 onReply={onReply}
                 onEdit={onEdit}
                 onScrollToMessage={handleScrollToMessage}
+                onImageClick={onImageClick}
               />
             </div>
           );

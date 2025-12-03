@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   onReply?: (message: MessageWithProfile) => void;
   onEdit?: (message: MessageWithProfile) => void;
   onScrollToMessage?: (messageId: string) => void;
+  onImageClick?: (images: Array<{ url: string; name: string }>, index: number) => void;
 }
 
 export function MessageBubble({ 
@@ -28,6 +29,7 @@ export function MessageBubble({
   onReply,
   onEdit,
   onScrollToMessage,
+  onImageClick,
 }: MessageBubbleProps) {
   const [showTimestamp, setShowTimestamp] = useState(false);
 
@@ -196,13 +198,19 @@ export function MessageBubble({
               isCurrentUser ? "justify-items-end" : "justify-items-start"
             )}
           >
-            {imageAttachments.map((attachment) => (
-              <a
+            {imageAttachments.map((attachment, idx) => (
+              <button
                 key={attachment.id}
-                href={attachment.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block overflow-hidden rounded-lg border bg-muted transition-transform hover:scale-[1.02]"
+                onClick={() => {
+                  if (onImageClick) {
+                    const images = imageAttachments.map((a) => ({
+                      url: a.file_url,
+                      name: a.file_name,
+                    }));
+                    onImageClick(images, idx);
+                  }
+                }}
+                className="block overflow-hidden rounded-lg border bg-muted transition-transform hover:scale-[1.02] cursor-pointer"
               >
                 <div className="w-48">
                   <AspectRatio ratio={4 / 3}>
@@ -214,7 +222,7 @@ export function MessageBubble({
                     />
                   </AspectRatio>
                 </div>
-              </a>
+              </button>
             ))}
           </div>
         )}

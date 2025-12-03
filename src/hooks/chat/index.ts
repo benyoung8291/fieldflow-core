@@ -7,6 +7,8 @@ export { useChatNotifications, requestNotificationPermission, useNotificationPer
 export { useChatTyping } from "./useChatTyping";
 export { useChatPresence } from "./useChatPresence";
 export { useDMChannelName, useDMChannelNames } from "./useDMChannelName";
+export { useMessageSearch } from "./useMessageSearch";
+export { useChatSettings } from "./useChatSettings";
 export {
   useSendMessage,
   useCreateChannel,
