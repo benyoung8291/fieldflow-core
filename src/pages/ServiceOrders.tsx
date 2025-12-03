@@ -646,7 +646,7 @@ export default function ServiceOrders() {
                           )}
                         </td>
                         <td className="p-3">
-                          <div className="text-sm font-medium text-foreground truncate max-w-[300px]">{order.title}</div>
+                          <div className="text-sm font-medium text-foreground truncate max-w-[400px]" title={order.title}>{order.title}</div>
                         </td>
                         <td className="p-3">
                           <div className="text-sm text-foreground truncate max-w-[200px]">{order.customers?.name || '-'}</div>
