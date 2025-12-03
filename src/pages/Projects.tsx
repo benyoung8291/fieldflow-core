@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import { useGenericPresence } from "@/hooks/useGenericPresence";
 import { PermissionButton } from "@/components/permissions";
 
 export default function Projects() {
-  const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -165,7 +164,7 @@ export default function Projects() {
                 subtitle={project.customer?.name}
                 status={project.status.replace("_", " ")}
                 statusColor={statusColors[project.status]}
-                onClick={() => navigate(`/projects/${project.id}`)}
+                to={`/projects/${project.id}`}
                 metadata={[
                   {
                     label: "Start Date",
@@ -184,11 +183,12 @@ export default function Projects() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {projects?.map((project) => (
-              <Card
+              <Link
                 key={project.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/projects/${project.id}`)}
+                to={`/projects/${project.id}`}
+                className="block"
               >
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-lg line-clamp-2">{project.name}</CardTitle>
@@ -240,6 +240,7 @@ export default function Projects() {
                   )}
                 </CardContent>
               </Card>
+              </Link>
             ))}
           </div>
         )}

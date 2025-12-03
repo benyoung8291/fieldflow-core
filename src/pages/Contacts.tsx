@@ -11,13 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
 import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 import { PermissionButton } from "@/components/permissions";
 
 export default function Contacts() {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
@@ -280,22 +279,23 @@ export default function Contacts() {
                       <TableRow 
                         key={contact.id}
                         className="cursor-pointer"
-                        onClick={() => navigate(`/contacts/${contact.id}`)}
                       >
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {contact.first_name} {contact.last_name}
-                            {contact.is_primary && (
-                              <Badge variant="outline" className="text-xs">
-                                Primary
-                              </Badge>
-                            )}
-                          </div>
-                          {contact.position && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {contact.position}
+                          <Link to={`/contacts/${contact.id}`} className="block">
+                            <div className="flex items-center gap-2 hover:underline">
+                              {contact.first_name} {contact.last_name}
+                              {contact.is_primary && (
+                                <Badge variant="outline" className="text-xs">
+                                  Primary
+                                </Badge>
+                              )}
                             </div>
-                          )}
+                            {contact.position && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {contact.position}
+                              </div>
+                            )}
+                          </Link>
                         </TableCell>
                         <TableCell>
                           <Badge className={getContactTypeColor(contact.contact_type)}>

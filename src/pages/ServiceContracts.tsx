@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MobileDocumentCard } from "@/components/mobile/MobileDocumentCard";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -23,7 +23,6 @@ import { FileSpreadsheet } from "lucide-react";
 import { PermissionButton } from "@/components/permissions";
 
 export default function ServiceContracts() {
-  const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const queryClient = useQueryClient();
   const [renewingContract, setRenewingContract] = useState<any>(null);
@@ -433,7 +432,7 @@ export default function ServiceContracts() {
                       )).toFixed(2)}` 
                     },
                   ]}
-                  onClick={() => navigate(`/service-contracts/${contract.id}`)}
+                  to={`/service-contracts/${contract.id}`}
                 />
               ))}
             </div>
@@ -638,9 +637,12 @@ export default function ServiceContracts() {
                       <TableRow 
                         key={contract.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => navigate(`/service-contracts/${contract.id}`)}
                       >
-                        <TableCell className="font-medium">{contract.contract_number}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link to={`/service-contracts/${contract.id}`} className="hover:underline">
+                            {contract.contract_number}
+                          </Link>
+                        </TableCell>
                         <TableCell>{contract.customers?.name}</TableCell>
                         <TableCell className="max-w-xs truncate">{contract.title || "-"}</TableCell>
                         <TableCell>{format(parseISO(contract.start_date), "PP")}</TableCell>

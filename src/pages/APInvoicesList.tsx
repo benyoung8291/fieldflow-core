@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,6 @@ import APInvoiceDialog from "@/components/invoices/APInvoiceDialog";
 import { usePagination } from "@/hooks/usePagination";
 
 export default function APInvoicesList() {
-  const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -127,7 +126,7 @@ export default function APInvoicesList() {
                     { label: "Amount", value: `$${invoice.total_amount.toFixed(2)}` },
                     { label: "Supplier Invoice #", value: invoice.supplier_invoice_number || "-" },
                   ]}
-                  onClick={() => navigate(`/ap-invoices/${invoice.id}`)}
+                  to={`/ap-invoices/${invoice.id}`}
                 />
               ))}
             </div>
@@ -153,9 +152,12 @@ export default function APInvoicesList() {
                     <TableRow 
                       key={invoice.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/ap-invoices/${invoice.id}`)}
                     >
-                      <TableCell className="font-medium font-mono">{invoice.invoice_number}</TableCell>
+                      <TableCell className="font-medium font-mono">
+                        <Link to={`/ap-invoices/${invoice.id}`} className="hover:underline">
+                          {invoice.invoice_number}
+                        </Link>
+                      </TableCell>
                       <TableCell className="font-mono text-sm">{invoice.supplier_invoice_number || "-"}</TableCell>
                       <TableCell>{invoice.suppliers?.name}</TableCell>
                       <TableCell>{format(new Date(invoice.invoice_date), "dd MMM yyyy")}</TableCell>

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search } from "lucide-react";
 import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ExpenseDialog } from "@/components/expenses/ExpenseDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { PermissionButton } from "@/components/permissions";
@@ -24,7 +24,6 @@ import { PermissionButton } from "@/components/permissions";
 export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const navigate = useNavigate();
   const pagination = usePagination({ initialPageSize: 50 });
 
   const { data: expensesResponse, isLoading, refetch } = useQuery({
@@ -143,9 +142,12 @@ export default function Expenses() {
                 <TableRow
                   key={expense.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/expenses/${expense.id}`)}
                 >
-                  <TableCell className="font-medium">{expense.expense_number}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link to={`/expenses/${expense.id}`} className="hover:underline">
+                      {expense.expense_number}
+                    </Link>
+                  </TableCell>
                   <TableCell>{expense.description}</TableCell>
                   <TableCell>${parseFloat(expense.amount).toFixed(2)}</TableCell>
                   <TableCell>{format(new Date(expense.expense_date), "MMM dd, yyyy")}</TableCell>
