@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X, Command, Settings } from "lucide-react";
+import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X, Command, Settings, Users } from "lucide-react";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 import { useDMChannelNames } from "@/hooks/chat/useDMChannelName";
@@ -19,6 +19,7 @@ import { NewDMDialog } from "./dialogs/NewDMDialog";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { ChannelSwitcher, useChannelSwitcher } from "./ChannelSwitcher";
 import { ChatSettingsPanel } from "./ChatSettingsPanel";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -185,18 +186,33 @@ export function ChatSidebar() {
                   )}
                   Channels
                 </CollapsibleTrigger>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setCreateChannelOpen(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6 border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => setCreateChannelOpen(true)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>Create Channel</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <CollapsibleContent className="mt-1 space-y-0.5">
                 {publicPrivateChannels.length === 0 ? (
-                  <p className="px-2 py-2 text-sm text-muted-foreground">No channels found</p>
+                  <button
+                    onClick={() => setCreateChannelOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create your first channel</span>
+                  </button>
                 ) : (
                   publicPrivateChannels.map((channel) => {
                     const unreadCount = unreadData?.channelUnreadCounts[channel.id] || 0;
@@ -241,18 +257,33 @@ export function ChatSidebar() {
                   )}
                   Direct Messages
                 </CollapsibleTrigger>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setNewDMOpen(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6 border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => setNewDMOpen(true)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>New Message</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <CollapsibleContent className="mt-1 space-y-0.5">
                 {dmChannels.length === 0 ? (
-                  <p className="px-2 py-2 text-sm text-muted-foreground">No direct messages</p>
+                  <button
+                    onClick={() => setNewDMOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>Start a conversation</span>
+                  </button>
                 ) : (
                   dmChannels.map((channel) => {
                     const unreadCount = unreadData?.channelUnreadCounts[channel.id] || 0;
