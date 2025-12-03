@@ -2,6 +2,7 @@
 export { useChatChannels, useChatChannel, useChannelMembers } from "./useChatChannels";
 export { useChannelMessages } from "./useChannelMessages";
 export { useUnreadMessages } from "./useUnreadMessages";
+export { useChatStorage } from "./useChatStorage";
 export {
   useSendMessage,
   useCreateChannel,

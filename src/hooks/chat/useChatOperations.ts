@@ -2,10 +2,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatChannelType } from "@/types/chat";
 
+interface AttachmentInput {
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+}
+
 interface SendMessageParams {
   channelId: string;
   content: string;
   replyToId?: string;
+  attachments?: AttachmentInput[];
 }
 
 interface CreateChannelParams {
@@ -20,7 +28,7 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ channelId, content, replyToId }: SendMessageParams) => {
+    mutationFn: async ({ channelId, content, replyToId, attachments }: SendMessageParams) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("Not authenticated");
 
@@ -32,7 +40,8 @@ export function useSendMessage() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      const { data, error } = await supabase
+      // Create message
+      const { data: message, error: messageError } = await supabase
         .from("chat_messages")
         .insert({
           channel_id: channelId,
@@ -44,15 +53,35 @@ export function useSendMessage() {
         .select()
         .single();
 
-      if (error) {
-        console.error("[Chat] Error sending message:", error);
-        throw error;
+      if (messageError) {
+        console.error("[Chat] Error sending message:", messageError);
+        throw messageError;
       }
 
-      return data;
+      // Create attachments if any
+      if (attachments && attachments.length > 0) {
+        const attachmentRecords = attachments.map((att) => ({
+          message_id: message.id,
+          tenant_id: profile.tenant_id,
+          file_name: att.file_name,
+          file_url: att.file_url,
+          file_type: att.file_type,
+          file_size: att.file_size,
+        }));
+
+        const { error: attachmentError } = await supabase
+          .from("chat_attachments")
+          .insert(attachmentRecords);
+
+        if (attachmentError) {
+          console.error("[Chat] Error creating attachments:", attachmentError);
+          // Don't throw - message was sent, just log attachment failure
+        }
+      }
+
+      return message;
     },
     onSuccess: (_, variables) => {
-      // Invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["chat-messages", variables.channelId] });
       queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
     },
@@ -75,7 +104,6 @@ export function useCreateChannel() {
 
       if (!profile?.tenant_id) throw new Error("No tenant found");
 
-      // Create the channel
       const { data: channel, error: channelError } = await supabase
         .from("chat_channels")
         .insert({
@@ -95,7 +123,6 @@ export function useCreateChannel() {
         throw channelError;
       }
 
-      // Add creator as owner
       const { error: memberError } = await supabase
         .from("chat_channel_members")
         .insert({
@@ -115,8 +142,8 @@ export function useCreateChannel() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
       if (variables.contextType && variables.contextId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ["context-chat-channel", variables.contextType, variables.contextId] 
+        queryClient.invalidateQueries({
+          queryKey: ["context-chat-channel", variables.contextType, variables.contextId],
         });
       }
     },
@@ -240,7 +267,6 @@ export function useDeleteMessage() {
 
   return useMutation({
     mutationFn: async ({ messageId, channelId }: { messageId: string; channelId: string }) => {
-      // Soft delete
       const { error } = await supabase
         .from("chat_messages")
         .update({ deleted_at: new Date().toISOString() })

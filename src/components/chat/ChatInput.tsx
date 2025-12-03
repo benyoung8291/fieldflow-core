@@ -1,28 +1,33 @@
-import { useState, useRef, KeyboardEvent, ChangeEvent } from "react";
-import { Paperclip, Send, X, Loader2 } from "lucide-react";
+import { useState, useRef, KeyboardEvent, ChangeEvent, DragEvent } from "react";
+import { Paperclip, Send, Loader2 } from "lucide-react";
 import { useSendMessage } from "@/hooks/chat/useChatOperations";
+import { useChatStorage } from "@/hooks/chat/useChatStorage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ChatAttachmentPreview } from "./ChatAttachmentPreview";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   channelId: string;
 }
 
-interface PendingAttachment {
+interface PendingFile {
   file: File;
   preview?: string;
 }
 
 export function ChatInput({ channelId }: ChatInputProps) {
   const [content, setContent] = useState("");
-  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<PendingFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sendMessage = useSendMessage();
+  const { uploadFile } = useChatStorage();
 
   const handleContentChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
@@ -36,40 +41,25 @@ export function ChatInput({ channelId }: ChatInputProps) {
     }
   };
 
-  const handleSend = async () => {
-    const trimmedContent = content.trim();
-    if (!trimmedContent && attachments.length === 0) return;
-
-    try {
-      await sendMessage.mutateAsync({
-        channelId,
-        content: trimmedContent || "",
-      });
-
-      setContent("");
-      setAttachments([]);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
-    } catch (error) {
-      console.error("[Chat] Failed to send message:", error);
-    }
-  };
-
-  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newAttachments: PendingAttachment[] = files.map((file) => ({
+  const addFiles = (files: FileList | File[]) => {
+    const newFiles: PendingFile[] = Array.from(files).map((file) => ({
       file,
       preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
     }));
-    setAttachments((prev) => [...prev, ...newAttachments]);
+    setSelectedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      addFiles(e.target.files);
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => {
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => {
       const updated = [...prev];
       if (updated[index].preview) {
         URL.revokeObjectURL(updated[index].preview!);
@@ -79,47 +69,96 @@ export function ChatInput({ channelId }: ChatInputProps) {
     });
   };
 
-  const canSend = content.trim().length > 0 || attachments.length > 0;
-  const isSending = sendMessage.isPending;
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleSend = async () => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent && selectedFiles.length === 0) return;
+
+    try {
+      let attachments: Array<{
+        file_name: string;
+        file_url: string;
+        file_type: string;
+        file_size: number;
+      }> = [];
+
+      // Upload files if any
+      if (selectedFiles.length > 0) {
+        setIsUploading(true);
+        const uploadPromises = selectedFiles.map((pf) => uploadFile(pf.file, channelId));
+        const results = await Promise.all(uploadPromises);
+        
+        attachments = results
+          .filter((r): r is NonNullable<typeof r> => r !== null)
+          .map((r) => ({
+            file_name: r.fileName,
+            file_url: r.url,
+            file_type: r.fileType,
+            file_size: r.fileSize,
+          }));
+      }
+
+      await sendMessage.mutateAsync({
+        channelId,
+        content: trimmedContent || "",
+        attachments: attachments.length > 0 ? attachments : undefined,
+      });
+
+      // Cleanup
+      selectedFiles.forEach((pf) => {
+        if (pf.preview) URL.revokeObjectURL(pf.preview);
+      });
+      setContent("");
+      setSelectedFiles([]);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+    } catch (error) {
+      console.error("[Chat] Failed to send message:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const canSend = content.trim().length > 0 || selectedFiles.length > 0;
+  const isSending = sendMessage.isPending || isUploading;
 
   return (
-    <div className="border-t bg-background p-4">
-      {/* Attachment Preview */}
-      {attachments.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {attachments.map((attachment, index) => (
-            <div
-              key={index}
-              className="relative flex items-center gap-2 rounded-md border bg-muted p-2"
-            >
-              {attachment.preview ? (
-                <img
-                  src={attachment.preview}
-                  alt={attachment.file.name}
-                  className="h-12 w-12 rounded object-cover"
-                />
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded bg-background">
-                  <Paperclip className="h-5 w-5 text-muted-foreground" />
-                </div>
-              )}
-              <span className="max-w-24 truncate text-xs">{attachment.file.name}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 rounded-full"
-                onClick={() => removeAttachment(index)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
-        </div>
+    <div
+      className={cn(
+        "border-t bg-background transition-colors",
+        isDragOver && "bg-primary/5 ring-2 ring-inset ring-primary"
       )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Attachment Preview */}
+      <ChatAttachmentPreview
+        files={selectedFiles}
+        onRemove={removeFile}
+        isUploading={isUploading}
+      />
 
       {/* Input Row */}
-      <div className="flex items-end gap-2">
-        {/* Attachment Button */}
+      <div className="flex items-end gap-2 p-4">
         <Button
           variant="ghost"
           size="icon"
@@ -137,19 +176,17 @@ export function ChatInput({ channelId }: ChatInputProps) {
           onChange={handleFileSelect}
         />
 
-        {/* Text Input */}
         <Textarea
           ref={textareaRef}
           value={content}
           onChange={handleContentChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder={isDragOver ? "Drop files here..." : "Type a message..."}
           className="min-h-[36px] max-h-[120px] resize-none py-2"
           rows={1}
           disabled={isSending}
         />
 
-        {/* Send Button */}
         <Button
           size="icon"
           className="h-9 w-9 flex-shrink-0"
@@ -164,8 +201,7 @@ export function ChatInput({ channelId }: ChatInputProps) {
         </Button>
       </div>
 
-      {/* Helper Text */}
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="px-4 pb-2 text-xs text-muted-foreground">
         Press Enter to send, Shift+Enter for new line
       </p>
     </div>
