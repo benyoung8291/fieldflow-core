@@ -27,7 +27,7 @@ interface NavItem {
 const primaryNavItems: NavItem[] = [
   { icon: Home, label: "Home", path: "/worker/dashboard" },
   { icon: Calendar, label: "Appointments", path: "/worker/appointments" },
-  { icon: MessageSquare, label: "Chat", path: "/chat" },
+  { icon: MessageSquare, label: "Chat", path: "/worker/chat" },
 ];
 
 const moreNavItems: NavItem[] = [
@@ -100,12 +100,12 @@ export const WorkerMobileBottomNav = () => {
   // Only show for users with worker access
   if (!access?.canAccessWorker) return null;
 
-  const isActivePath = (path: string) => location.pathname === path;
+  const isActivePath = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
   // Add badges to nav items
   const navItemsWithBadge = primaryNavItems.map(item => {
     if (item.path === "/worker/tasks") return { ...item, badge: openTasksCount };
-    if (item.path === "/chat") return { ...item, badge: chatUnreadCount };
+    if (item.path === "/worker/chat") return { ...item, badge: chatUnreadCount };
     return item;
   });
 

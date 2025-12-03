@@ -116,6 +116,7 @@ const TemplatesListPage = lazy(() => import("./pages/TemplatesListPage"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const SharedFloorPlanMarkup = lazy(() => import("./pages/public/SharedFloorPlanMarkup"));
 const Chat = lazy(() => import("./pages/Chat"));
+const WorkerChat = lazy(() => import("./pages/worker/WorkerChat"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -428,6 +429,8 @@ const App = () => {
             <Route path="/worker/field-report/:appointmentId/view/:reportId" element={isAuthenticated ? <ProtectedRoute><ViewFieldReport /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/field-report-new" element={isAuthenticated ? <ProtectedRoute><WorkerFieldReportStandalone /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/worker/schedule" element={isAuthenticated ? <ProtectedRoute><WorkerSchedule /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/chat" element={isAuthenticated ? <ProtectedRoute><WorkerChat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker/chat/:channelId" element={isAuthenticated ? <ProtectedRoute><WorkerChat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* Chat Routes */}
             <Route path="/chat" element={isAuthenticated ? <ProtectedRoute><Chat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/chat/:channelId" element={isAuthenticated ? <ProtectedRoute><Chat /></ProtectedRoute> : <Navigate to="/auth" replace />} />

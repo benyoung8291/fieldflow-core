@@ -75,6 +75,7 @@ export const ROUTE_MODULE_MAP: Record<string, Module | null> = {
   "/worker/calendar": null,
   "/worker/profile": null,
   "/worker/field-report": null,
+  "/worker/chat": null,
   
   // Supervisor routes - accessible to supervisors
   "/supervisor": null,
