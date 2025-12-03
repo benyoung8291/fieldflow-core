@@ -1,14 +1,13 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useWorkersCache } from "@/hooks/useWorkersCache";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
-import { useCreateChannel, useJoinChannel } from "@/hooks/chat";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +20,10 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
   const navigate = useNavigate();
   const { data: workers = [], isLoading: workersLoading } = useWorkersCache();
   const { data: channels = [] } = useChatChannels();
-  const createChannel = useCreateChannel();
-  const joinChannel = useJoinChannel();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -34,6 +32,20 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
       }
     });
   }, []);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onOpenChange(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open, onOpenChange]);
 
   // Filter out current user from the list
   const filteredWorkers = useMemo(() => {
@@ -141,77 +153,85 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
     }
   };
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
       setSearchQuery("");
     }
-    onOpenChange(open);
+    onOpenChange(newOpen);
   };
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase() || "?";
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>New Direct Message</DialogTitle>
-          <DialogDescription>
-            Start a conversation with a team member
-          </DialogDescription>
-        </DialogHeader>
+    <div 
+      ref={dropdownRef}
+      className="absolute left-0 top-full mt-1 z-50 w-64 rounded-md border border-border bg-popover shadow-lg"
+    >
+      <div className="flex items-center justify-between p-2 border-b border-border">
+        <span className="text-sm font-medium text-foreground">New message</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => handleOpenChange(false)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search people..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-              autoFocus
-            />
-          </div>
-
-          <ScrollArea className="h-[300px]">
-            {workersLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="text-sm text-muted-foreground">Loading...</span>
-              </div>
-            ) : filteredWorkers.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="text-sm text-muted-foreground">
-                  {searchQuery ? "No matching users found" : "No team members available"}
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filteredWorkers.map((worker) => (
-                  <button
-                    key={worker.id}
-                    onClick={() => handleSelectUser(worker)}
-                    disabled={isCreating}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
-                      "hover:bg-accent hover:text-accent-foreground",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={undefined} />
-                      <AvatarFallback className="text-xs">
-                        {getInitials(worker.first_name, worker.last_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{worker.full_name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+      <div className="p-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search people..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 pl-8 text-sm"
+            autoFocus
+          />
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <ScrollArea className="max-h-[240px]">
+        {workersLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <span className="text-sm text-muted-foreground">Loading...</span>
+          </div>
+        ) : filteredWorkers.length === 0 ? (
+          <div className="flex items-center justify-center py-4">
+            <span className="text-sm text-muted-foreground">
+              {searchQuery ? "No matching users" : "No team members"}
+            </span>
+          </div>
+        ) : (
+          <div className="p-1">
+            {filteredWorkers.map((worker) => (
+              <button
+                key={worker.id}
+                onClick={() => handleSelectUser(worker)}
+                disabled={isCreating}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={undefined} />
+                  <AvatarFallback className="text-[10px]">
+                    {getInitials(worker.first_name, worker.last_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="truncate">{worker.full_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
   );
 }

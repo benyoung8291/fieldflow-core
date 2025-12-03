@@ -155,7 +155,7 @@ export function MessageList({
 
   return (
     <ScrollArea className="flex-1" ref={scrollRef}>
-      <div className="flex flex-col px-4 py-2">
+      <div className="flex flex-col px-4 py-1 space-y-0.5">
         {messages.map((message, index) => {
           const previousMessage = index > 0 ? messages[index - 1] : null;
           const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
