@@ -15,6 +15,7 @@ interface ChatInputProps {
   replyingTo?: MessageWithProfile | null;
   onCancelEdit?: () => void;
   onCancelReply?: () => void;
+  isMobileFullScreen?: boolean;
 }
 
 interface PendingFile {
@@ -30,6 +31,7 @@ export function ChatInput({
   replyingTo,
   onCancelEdit,
   onCancelReply,
+  isMobileFullScreen,
 }: ChatInputProps) {
   const [content, setContent] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<PendingFile[]>([]);
@@ -207,8 +209,10 @@ export function ChatInput({
   return (
     <div
       className={cn(
-        "px-5 pb-4 pt-2 transition-colors",
-        isDragOver && "bg-primary/5"
+        "px-4 pb-4 pt-2 transition-colors",
+        isDragOver && "bg-primary/5",
+        // Add extra bottom padding for mobile full screen to clear the bottom nav
+        isMobileFullScreen && "pb-24"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -294,7 +298,7 @@ export function ChatInput({
           disabled={isSending}
         />
 
-        {/* Bottom Toolbar - Slack style */}
+        {/* Bottom Toolbar - Slack style, simplified on mobile */}
         <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50">
           <div className="flex items-center gap-0.5">
             {!editingMessage && (
@@ -302,7 +306,7 @@ export function ChatInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isSending}
                 >
@@ -317,57 +321,64 @@ export function ChatInput({
                 />
               </>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              disabled={isSending}
-            >
-              <Smile className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              disabled={isSending}
-            >
-              <AtSign className="h-4 w-4" />
-            </Button>
-            <div className="w-px h-4 bg-border mx-1" />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              disabled={isSending}
-            >
-              <Bold className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              disabled={isSending}
-            >
-              <Code className="h-4 w-4" />
-            </Button>
+            {/* Hide less important buttons on mobile full screen */}
+            {!isMobileFullScreen && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  disabled={isSending}
+                >
+                  <Smile className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  disabled={isSending}
+                >
+                  <AtSign className="h-4 w-4" />
+                </Button>
+                <div className="w-px h-4 bg-border mx-1" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  disabled={isSending}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  disabled={isSending}
+                >
+                  <Code className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Shortcut hint */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-              disabled
-            >
-              <ChevronDown className="h-3 w-3" />
-            </Button>
+            {/* Shortcut hint - hide on mobile */}
+            {!isMobileFullScreen && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                disabled
+              >
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            )}
             
-            {/* Send Button - only visible when there's content */}
+            {/* Send Button */}
             <Button
               size="icon"
               className={cn(
-                "h-7 w-7 transition-all",
+                "h-8 w-8 transition-all",
                 canSend 
                   ? editingMessage 
                     ? "bg-warning hover:bg-warning/90 text-warning-foreground" 
@@ -389,13 +400,15 @@ export function ChatInput({
         </div>
       </div>
 
-      {/* Hint text */}
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        {editingMessage 
-          ? "Escape to cancel • Enter to save"
-          : "Shift + Enter for new line"
-        }
-      </p>
+      {/* Hint text - hide on mobile full screen */}
+      {!isMobileFullScreen && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {editingMessage 
+            ? "Escape to cancel • Enter to save"
+            : "Shift + Enter for new line"
+          }
+        </p>
+      )}
     </div>
   );
 }
