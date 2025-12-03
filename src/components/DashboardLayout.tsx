@@ -26,6 +26,7 @@ import { APP_VERSION } from "@/lib/version";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getRouteModule } from "@/config/routePermissions";
 import { useMemo } from "react";
+import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -45,6 +46,8 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
   });
   const { menuItems, isLoading: menuLoading } = useCustomMenu();
   const { canView, isLoading: permissionsLoading, hasLoadedPermissions } = usePermissions();
+  const { data: unreadData } = useUnreadMessages();
+  const totalUnread = unreadData?.totalUnread ?? 0;
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('expandedMenuFolders');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -212,6 +215,11 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
               >
                 <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
                 {item.label}
+                {item.path === "/chat" && totalUnread > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
               </NavLink>
             )}
           </div>
