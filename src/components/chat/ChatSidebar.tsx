@@ -276,35 +276,33 @@ export function ChatSidebar() {
                   )}
                   <span className="font-medium">Direct messages</span>
                 </CollapsibleTrigger>
-                <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen}>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 text-slack-text-muted hover:text-white hover:bg-slack-hover transition-all"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>New message</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </NewDMDialog>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-slack-text-muted hover:text-white hover:bg-slack-hover transition-all"
+                        onClick={() => setNewDMOpen(true)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>New message</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <CollapsibleContent className="mt-1 space-y-0.5">
                 {dmChannels.length === 0 ? (
-                  <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen}>
-                    <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-1 text-sm text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Start a conversation</span>
-                    </button>
-                  </NewDMDialog>
+                  <button
+                    onClick={() => setNewDMOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1 text-sm text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Start a conversation</span>
+                  </button>
                 ) : (
                   dmChannels.map((channel) => {
                     const unreadCount = unreadData?.channelUnreadCounts[channel.id] || 0;
