@@ -16,4 +16,7 @@ export {
   useAddReaction,
   useRemoveReaction,
   useToggleReaction,
+  useAddMember,
+  useRemoveMember,
+  useUpdateChannelDetails,
 } from "./useChatOperations";
