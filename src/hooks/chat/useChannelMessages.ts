@@ -14,12 +14,14 @@ interface ConnectionState {
 export function useChannelMessages(channelId: string | null) {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // Start as "connecting" - don't show disconnected banner during initial connection
   const [connectionState, setConnectionState] = useState<ConnectionState>({
-    isConnected: true,
-    isReconnecting: false,
+    isConnected: false,
+    isReconnecting: true,
   });
+  const hasConnectedOnce = useRef(false);
   const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
+  const maxReconnectAttempts = 3;
 
   const query = useQuery({
     queryKey: ["chat-messages", channelId],
@@ -194,25 +196,37 @@ export function useChannelMessages(channelId: string | null) {
         console.log(`[Chat] Realtime subscription status: ${status}`, err);
         
         if (status === "SUBSCRIBED") {
+          hasConnectedOnce.current = true;
           setConnectionState({ isConnected: true, isReconnecting: false });
           reconnectAttempts.current = 0;
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setConnectionState({ isConnected: false, isReconnecting: false });
-          
           // Auto-reconnect with exponential backoff
           if (reconnectAttempts.current < maxReconnectAttempts) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
             reconnectAttempts.current++;
             
-            setConnectionState({ isConnected: false, isReconnecting: true });
+            // Only show disconnected if we've connected before
+            if (hasConnectedOnce.current) {
+              setConnectionState({ isConnected: false, isReconnecting: true });
+            }
             console.log(`[Chat] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
             
             setTimeout(() => {
               setupRealtimeSubscription();
             }, delay);
+          } else {
+            // Max attempts reached - silently accept (REST API still works)
+            console.log("[Chat] Max reconnect attempts reached, falling back to REST");
+            setConnectionState({ isConnected: true, isReconnecting: false });
           }
         } else if (status === "CLOSED") {
-          setConnectionState({ isConnected: false, isReconnecting: false });
+          // Only show disconnected if we've successfully connected before
+          if (hasConnectedOnce.current) {
+            setConnectionState({ isConnected: false, isReconnecting: false });
+          } else {
+            // Never connected - silently accept
+            setConnectionState({ isConnected: true, isReconnecting: false });
+          }
         }
       });
 

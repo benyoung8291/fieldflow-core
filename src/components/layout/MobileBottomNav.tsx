@@ -93,6 +93,10 @@ export const MobileBottomNav = () => {
   if (!isMobile || !isAuthenticated) return null;
   if (location.pathname.startsWith('/worker') || location.pathname.startsWith('/customer') || location.pathname === '/auth') return null;
   
+  // Hide footer when viewing a specific chat channel (immersive chat experience)
+  const isInChatChannel = /^\/chat\/[a-f0-9-]+$/i.test(location.pathname);
+  if (isInChatChannel) return null;
+  
   // Wait for access check to complete to prevent flash of wrong menu
   if (isLoading || permissionsLoading) return null;
   
