@@ -18,6 +18,7 @@ import { useRealtimeNotifications } from "./hooks/useNotifications";
 import { MobileBottomNav } from "./components/layout/MobileBottomNav";
 import { WorkerMobileBottomNav } from "./components/layout/WorkerMobileBottomNav";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { GlobalChatNotifications } from "@/components/chat/GlobalChatNotifications";
 import { UpdateNotificationBar } from "@/components/UpdateNotificationBar";
 import { Loader2 } from "lucide-react";
 import { PermissionProtectedRoute } from "@/components/PermissionProtectedRoute";
@@ -329,6 +330,7 @@ const App = () => {
               <Sonner />
               <BrowserRouter>
               <UpdateNotificationBar />
+              {isAuthenticated && <GlobalChatNotifications />}
               {isAuthenticated && <OnboardingWizard />}
               <MobileBottomNav />
               <WorkerMobileBottomNav />
