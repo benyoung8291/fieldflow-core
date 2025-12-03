@@ -5,6 +5,8 @@ export { useUnreadMessages } from "./useUnreadMessages";
 export { useChatStorage } from "./useChatStorage";
 export { useChatNotifications, requestNotificationPermission, useNotificationPermission } from "./useChatNotifications";
 export { useChatTyping } from "./useChatTyping";
+export { useChatPresence } from "./useChatPresence";
+export { useDMChannelName, useDMChannelNames } from "./useDMChannelName";
 export {
   useSendMessage,
   useCreateChannel,

@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X } from "lucide-react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X, Command } from "lucide-react";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
+import { useDMChannelNames } from "@/hooks/chat/useDMChannelName";
+import { useChatPresence } from "@/hooks/chat/useChatPresence";
 import { requestNotificationPermission, useNotificationPermission } from "@/hooks/chat/useChatNotifications";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,16 +12,21 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CreateChannelDialog } from "./dialogs/CreateChannelDialog";
 import { NewDMDialog } from "./dialogs/NewDMDialog";
+import { OnlineIndicator } from "./OnlineIndicator";
+import { ChannelSwitcher, useChannelSwitcher } from "./ChannelSwitcher";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function ChatSidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { channelId } = useParams();
   const { data: channels = [], isLoading } = useChatChannels();
   const { data: unreadData } = useUnreadMessages();
+  const { isUserOnline } = useChatPresence();
   const [searchQuery, setSearchQuery] = useState("");
   const [channelsOpen, setChannelsOpen] = useState(true);
   const [dmsOpen, setDmsOpen] = useState(true);
@@ -27,6 +34,14 @@ export function ChatSidebar() {
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [newDMOpen, setNewDMOpen] = useState(false);
   const notificationPermission = useNotificationPermission();
+  const { open: switcherOpen, setOpen: setSwitcherOpen } = useChannelSwitcher();
+
+  // Get DM channel IDs for name lookup
+  const dmChannelIds = useMemo(
+    () => channels.filter((c) => c.type === "dm").map((c) => c.id),
+    [channels]
+  );
+  const { data: dmNames = {} } = useDMChannelNames(dmChannelIds);
 
   // Check if notification banner was previously dismissed
   useEffect(() => {
@@ -54,10 +69,14 @@ export function ChatSidebar() {
   const filteredChannels = useMemo(() => {
     if (!searchQuery.trim()) return channels;
     const query = searchQuery.toLowerCase();
-    return channels.filter((channel) =>
-      channel.name?.toLowerCase().includes(query)
-    );
-  }, [channels, searchQuery]);
+    return channels.filter((channel) => {
+      if (channel.type === "dm") {
+        const dmInfo = dmNames[channel.id];
+        return dmInfo?.otherUserName.toLowerCase().includes(query);
+      }
+      return channel.name?.toLowerCase().includes(query);
+    });
+  }, [channels, searchQuery, dmNames]);
 
   const publicPrivateChannels = useMemo(
     () => filteredChannels.filter((c) => c.type === "public" || c.type === "private" || c.type === "context"),
@@ -70,7 +89,10 @@ export function ChatSidebar() {
   );
 
   const handleChannelClick = (id: string) => {
-    navigate(`/chat/${id}`);
+    // Determine if we're in worker app or office app
+    const isWorkerApp = location.pathname.startsWith("/worker");
+    const basePath = isWorkerApp ? "/worker/chat" : "/chat";
+    navigate(`${basePath}/${id}`);
   };
 
   const getChannelIcon = (type: string) => {
@@ -93,8 +115,17 @@ export function ChatSidebar() {
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       {/* Header */}
-      <div className="flex h-14 items-center border-b px-4">
+      <div className="flex h-14 items-center justify-between border-b px-4">
         <h2 className="text-lg font-semibold">Messages</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 text-xs text-muted-foreground"
+          onClick={() => setSwitcherOpen(true)}
+        >
+          <Command className="h-3 w-3" />
+          <span>K</span>
+        </Button>
       </div>
 
       {/* Notification Banner */}
@@ -224,6 +255,15 @@ export function ChatSidebar() {
                   dmChannels.map((channel) => {
                     const unreadCount = unreadData?.channelUnreadCounts[channel.id] || 0;
                     const isActive = channelId === channel.id;
+                    const dmInfo = dmNames[channel.id];
+                    const displayName = dmInfo?.otherUserName || "Direct Message";
+                    const isOnline = dmInfo?.otherUserId ? isUserOnline(dmInfo.otherUserId) : false;
+                    const initials = displayName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
 
                     return (
                       <button
@@ -237,9 +277,19 @@ export function ChatSidebar() {
                           unreadCount > 0 && "font-semibold text-foreground"
                         )}
                       >
-                        {getChannelIcon(channel.type)}
+                        <div className="relative">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={dmInfo?.otherUserAvatar || undefined} />
+                            <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+                          </Avatar>
+                          <OnlineIndicator
+                            isOnline={isOnline}
+                            size="sm"
+                            className="absolute -bottom-0.5 -right-0.5"
+                          />
+                        </div>
                         <span className="flex-1 truncate text-left">
-                          {channel.name || "Direct Message"}
+                          {displayName}
                         </span>
                         {unreadCount > 0 && (
                           <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
@@ -259,6 +309,7 @@ export function ChatSidebar() {
       {/* Dialogs */}
       <CreateChannelDialog open={createChannelOpen} onOpenChange={setCreateChannelOpen} />
       <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen} />
+      <ChannelSwitcher open={switcherOpen} onOpenChange={setSwitcherOpen} />
     </div>
   );
 }
