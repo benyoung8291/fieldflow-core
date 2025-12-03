@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Hash, Lock, ChevronDown, ChevronRight, Bell, X, Settings, Plus, MessageSquare, Bookmark, Send, Search } from "lucide-react";
+import { Hash, Lock, ChevronDown, ChevronRight, Bell, X, Settings, Plus, Search } from "lucide-react";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 import { useDMChannelNames } from "@/hooks/chat/useDMChannelName";
@@ -106,11 +106,8 @@ export function ChatSidebar() {
   return (
     <div className="flex h-full flex-col bg-slack-aubergine text-slack-text">
       {/* Workspace Header */}
-      <div className="flex h-12 items-center justify-between px-4 border-b border-slack-border hover:bg-slack-hover transition-colors">
-        <button className="flex items-center gap-1 font-bold text-lg text-white">
-          <span>Workspace</span>
-          <ChevronDown className="h-4 w-4 opacity-70" />
-        </button>
+      <div className="flex h-12 items-center justify-between px-4 border-b border-slack-border">
+        <span className="font-bold text-lg text-white">Workspace</span>
         <div className="flex items-center gap-1">
           <TooltipProvider>
             <Tooltip>
@@ -153,21 +150,7 @@ export function ChatSidebar() {
         </div>
       )}
 
-      {/* Quick Actions - Slack style nav items */}
-      <div className="px-2 py-2 space-y-0.5">
-        <button className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors">
-          <MessageSquare className="h-4 w-4" />
-          <span className="text-sm">Threads</span>
-        </button>
-        <button className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors">
-          <Send className="h-4 w-4" />
-          <span className="text-sm">Drafts & sent</span>
-        </button>
-        <button className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-slack-text-muted hover:bg-slack-hover hover:text-white transition-colors">
-          <Bookmark className="h-4 w-4" />
-          <span className="text-sm">Saved items</span>
-        </button>
-      </div>
+      {/* Removed placeholder quick actions - Threads, Drafts, Saved items not implemented */}
 
       {/* Search */}
       <div className="px-3 py-2">
