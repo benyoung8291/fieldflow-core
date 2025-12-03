@@ -199,6 +199,34 @@ export default function AppointmentDialog({
         ? formatInTimeZone(new Date(data.end_time), MELBOURNE_TZ, "yyyy-MM-dd'T'HH:mm")
         : "";
       
+      // Default location data from appointment
+      let locationAddress = data.location_address || "";
+      let locationLat = data.location_lat?.toString() || "";
+      let locationLng = data.location_lng?.toString() || "";
+      
+      // If no location data but has service order, fetch from service order's customer location
+      if (!locationAddress && data.service_order_id) {
+        const { data: serviceOrder } = await supabase
+          .from("service_orders")
+          .select("customer_location_id")
+          .eq("id", data.service_order_id)
+          .single();
+        
+        if (serviceOrder?.customer_location_id) {
+          const { data: customerLocation } = await supabase
+            .from("customer_locations")
+            .select("formatted_address, address, latitude, longitude")
+            .eq("id", serviceOrder.customer_location_id)
+            .single();
+          
+          if (customerLocation) {
+            locationAddress = customerLocation.formatted_address || customerLocation.address || "";
+            locationLat = customerLocation.latitude?.toString() || "";
+            locationLng = customerLocation.longitude?.toString() || "";
+          }
+        }
+      }
+      
       setFormData({
         service_order_id: data.service_order_id || "",
         title: data.title || "",
@@ -206,9 +234,9 @@ export default function AppointmentDialog({
         start_time: startTimeFormatted,
         end_time: endTimeFormatted,
         status: data.status || "draft",
-        location_address: data.location_address || "",
-        location_lat: data.location_lat?.toString() || "",
-        location_lng: data.location_lng?.toString() || "",
+        location_address: locationAddress,
+        location_lat: locationLat,
+        location_lng: locationLng,
         gps_check_in_radius: data.gps_check_in_radius?.toString() || "100",
         notes: data.notes || "",
       });

@@ -93,11 +93,12 @@ export default function SchedulerWeekView({
   };
 
   const handleDeleteClick = (appointment: any) => {
+    setAppointmentToDelete(appointment);
     if (appointment.is_recurring || appointment.parent_appointment_id) {
-      setAppointmentToDelete(appointment);
       setShowRecurringDeleteDialog(true);
     } else {
-      handleDelete(appointment.id, "single");
+      setDeleteType("single");
+      setShowDeleteConfirmDialog(true);
     }
   };
 
@@ -303,13 +304,13 @@ export default function SchedulerWeekView({
                       <AppointmentContextMenu
                         key={apt.id}
                         appointment={apt}
-                        onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                        onDelete={() => handleDeleteClick(apt)}
                       >
                         <DraggableAppointment
                           appointment={apt}
                           statusColor={statusColors[apt.status as keyof typeof statusColors]}
                           onViewHistory={() => onAppointmentClick(apt.id)}
-                          onDelete={!apt.assigned_to ? () => handleDeleteClick(apt) : undefined}
+                          onDelete={() => handleDeleteClick(apt)}
                         />
                       </AppointmentContextMenu>
                     ))}
