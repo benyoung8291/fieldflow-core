@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
-import { useWorkersCache } from "@/hooks/useWorkersCache";
+import { useChatEligibleUsers } from "@/hooks/chat/useChatEligibleUsers";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -20,14 +20,14 @@ import {
 interface NewDMDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const basePath = location.pathname.startsWith("/worker") ? "/worker/chat" : "/chat";
-  const { data: workers = [], isLoading: workersLoading } = useWorkersCache();
+  const { data: users = [], isLoading: usersLoading } = useChatEligibleUsers();
   const { data: channels = [] } = useChatChannels();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -50,19 +50,19 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
   }, [open]);
 
   // Filter out current user from the list
-  const filteredWorkers = useMemo(() => {
-    const availableWorkers = workers.filter((w) => w.id !== currentUserId);
-    
-    if (!searchQuery.trim()) return availableWorkers;
-    
+  const filteredUsers = useMemo(() => {
+    const availableUsers = users.filter((u) => u.id !== currentUserId);
+
+    if (!searchQuery.trim()) return availableUsers;
+
     const query = searchQuery.toLowerCase();
-    return availableWorkers.filter(
-      (w) =>
-        w.first_name?.toLowerCase().includes(query) ||
-        w.last_name?.toLowerCase().includes(query) ||
-        w.full_name?.toLowerCase().includes(query)
+    return availableUsers.filter(
+      (u) =>
+        u.first_name?.toLowerCase().includes(query) ||
+        u.last_name?.toLowerCase().includes(query) ||
+        u.full_name?.toLowerCase().includes(query)
     );
-  }, [workers, searchQuery, currentUserId]);
+  }, [users, searchQuery, currentUserId]);
 
   // Get existing DM channels
   const dmChannels = useMemo(() => channels.filter((c) => c.type === "dm"), [channels]);
@@ -85,13 +85,15 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
     return null;
   };
 
-  const handleSelectUser = async (selectedUser: typeof workers[0]) => {
+  const handleSelectUser = async (selectedUser: (typeof users)[0]) => {
     if (isCreating) return;
     setIsCreating(true);
 
     try {
       // Get session synchronously right before insert to ensure auth.uid() matches
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user?.id) {
         toast.error("Please sign in to start a conversation");
         setIsCreating(false);
@@ -144,22 +146,20 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
       }
 
       // Add both users as members
-      const { error: membersError } = await supabase
-        .from("chat_channel_members")
-        .insert([
-          {
-            channel_id: channel.id,
-            user_id: userId,
-            tenant_id: profile.tenant_id,
-            role: "owner",
-          },
-          {
-            channel_id: channel.id,
-            user_id: selectedUser.id,
-            tenant_id: profile.tenant_id,
-            role: "member",
-          },
-        ]);
+      const { error: membersError } = await supabase.from("chat_channel_members").insert([
+        {
+          channel_id: channel.id,
+          user_id: userId,
+          tenant_id: profile.tenant_id,
+          role: "owner",
+        },
+        {
+          channel_id: channel.id,
+          user_id: selectedUser.id,
+          tenant_id: profile.tenant_id,
+          role: "member",
+        },
+      ]);
 
       if (membersError) {
         console.error("Member creation error:", membersError);
@@ -183,14 +183,12 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[320px] p-0 gap-0">
         <DialogHeader className="p-4 pb-3 border-b">
           <DialogTitle className="text-base">New message</DialogTitle>
         </DialogHeader>
-        
+
         <div className="p-3 pb-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -205,11 +203,11 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
         </div>
 
         <ScrollArea className="max-h-[300px]">
-          {workersLoading ? (
+          {usersLoading ? (
             <div className="flex items-center justify-center py-8">
               <span className="text-sm text-muted-foreground">Loading...</span>
             </div>
-          ) : filteredWorkers.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <span className="text-sm text-muted-foreground">
                 {searchQuery ? "No matching users" : "No team members"}
@@ -217,10 +215,10 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
             </div>
           ) : (
             <div className="p-2">
-              {filteredWorkers.map((worker) => (
+              {filteredUsers.map((user) => (
                 <button
-                  key={worker.id}
-                  onClick={() => handleSelectUser(worker)}
+                  key={user.id}
+                  onClick={() => handleSelectUser(user)}
                   disabled={isCreating}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm transition-colors",
@@ -230,12 +228,12 @@ export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) 
                   )}
                 >
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={undefined} />
+                    <AvatarImage src={user.avatar_url || undefined} />
                     <AvatarFallback className="text-sm">
-                      {getInitials(worker.first_name, worker.last_name)}
+                      {getInitials(user.first_name, user.last_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate font-medium">{worker.full_name}</span>
+                  <span className="truncate font-medium">{user.full_name}</span>
                 </button>
               ))}
             </div>

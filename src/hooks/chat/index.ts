@@ -9,6 +9,7 @@ export { useChatPresence } from "./useChatPresence";
 export { useDMChannelName, useDMChannelNames } from "./useDMChannelName";
 export { useMessageSearch } from "./useMessageSearch";
 export { useChatSettings } from "./useChatSettings";
+export { useChatEligibleUsers } from "./useChatEligibleUsers";
 export {
   useSendMessage,
   useCreateChannel,
