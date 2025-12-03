@@ -564,6 +564,7 @@ export default function ServiceContracts() {
                       </div>
                     </TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Auto Gen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -651,6 +652,11 @@ export default function ServiceContracts() {
                         <TableCell className="font-semibold">{formatCurrency(annualizedValue)}</TableCell>
                         <TableCell>
                           <Badge variant="default">{contract.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={contract.auto_generate ? "default" : "secondary"}>
+                            {contract.auto_generate ? "On" : "Off"}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     );
