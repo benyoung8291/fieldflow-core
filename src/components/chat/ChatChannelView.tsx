@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Hash, Lock, MessageCircle, Users, Info, Search, Settings } from "lucide-react";
+import { ArrowLeft, Hash, Lock, Users, Info, Search, ChevronDown, Star } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels";
 import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
@@ -22,7 +22,6 @@ import { ChannelSettingsDialog } from "./dialogs/ChannelSettingsDialog";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { MessageSearch } from "./MessageSearch";
 import { ImageLightbox } from "./ImageLightbox";
-import { ChatSettingsPanel } from "./ChatSettingsPanel";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +106,6 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
 
   const handleSearchSelect = useCallback((messageId: string) => {
     setSearchOpen(false);
-    // Scroll to message
     setTimeout(() => {
       const element = document.getElementById(`message-${messageId}`);
       if (element) {
@@ -124,7 +122,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   if (channelLoading) {
     return (
       <div className={cn("flex h-full flex-col", className)}>
-        <div className="flex h-14 items-center gap-3 border-b px-4">
+        <div className="flex h-12 items-center gap-3 border-b px-4">
           {isMobile && !isEmbedded && <Skeleton className="h-8 w-8" />}
           <div className="flex-1 space-y-1">
             <Skeleton className="h-5 w-32" />
@@ -135,10 +133,10 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-2">
-                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-9 w-9 rounded-full" />
                 <div className="space-y-1">
                   <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-16 w-64 rounded-2xl" />
+                  <Skeleton className="h-4 w-64" />
                 </div>
               </div>
             ))}
@@ -167,7 +165,6 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   // Determine display name and icon
   const displayName = isDM && dmInfo ? dmInfo.otherUserName : (channel.name || "Direct Message");
   const isOtherUserOnline = isDM && dmInfo?.otherUserId ? isUserOnline(dmInfo.otherUserId) : false;
-  const ChannelIcon = channel.type === "private" ? Lock : channel.type === "dm" ? MessageCircle : Hash;
 
   // Get initials for DM avatar
   const dmInitials = dmInfo?.otherUserName
@@ -178,7 +175,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
     .slice(0, 2) || "?";
 
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div className={cn("flex h-full flex-col bg-background", className)}>
       {/* Connection Status */}
       <ConnectionStatus 
         isConnected={connectionState.isConnected} 
@@ -186,78 +183,97 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
         onReconnect={reconnect}
       />
 
-      {/* Channel Header */}
-      <div className="flex h-14 flex-shrink-0 items-center gap-3 border-b px-4">
+      {/* Channel Header - Slack style */}
+      <div className="flex h-12 flex-shrink-0 items-center gap-2 border-b px-4">
         {/* Mobile Back Button */}
         {isMobile && !isEmbedded && (
-          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate(backPath)}>
+          <Button variant="ghost" size="icon" className="flex-shrink-0 -ml-2" onClick={() => navigate(backPath)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
 
-        {/* Channel/DM Icon or Avatar */}
-        {isDM ? (
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={dmInfo?.otherUserAvatar || undefined} />
-              <AvatarFallback className="text-xs">{dmInitials}</AvatarFallback>
-            </Avatar>
-            <OnlineIndicator
-              isOnline={isOtherUserOnline}
-              size="sm"
-              className="absolute -bottom-0.5 -right-0.5"
-            />
-          </div>
-        ) : (
-          <ChannelIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-        )}
+        {/* Channel Name with Icon */}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {isDM ? (
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={dmInfo?.otherUserAvatar || undefined} />
+                <AvatarFallback className="text-[10px] bg-slack-avatar text-slack-avatar-foreground">{dmInitials}</AvatarFallback>
+              </Avatar>
+              <OnlineIndicator
+                isOnline={isOtherUserOnline}
+                size="xs"
+                className="absolute -bottom-0.5 -right-0.5"
+              />
+            </div>
+          ) : channel.type === "private" ? (
+            <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          ) : (
+            <Hash className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          )}
+          
+          <button className="flex items-center gap-1 min-w-0 hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors">
+            <h2 className="font-bold text-base truncate">{displayName}</h2>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+          </button>
 
-        {/* Channel Name & Description */}
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold truncate">{displayName}</h2>
-          {isDM && isOtherUserOnline ? (
-            <p className="text-xs text-emerald-500">Online</p>
-          ) : channel.description ? (
-            <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
-          ) : null}
+          {/* Description/Status - inline on desktop */}
+          {!isMobile && (
+            <>
+              <div className="w-px h-4 bg-border mx-1" />
+              {isDM && isOtherUserOnline ? (
+                <span className="text-xs text-slack-online flex-shrink-0">Active</span>
+              ) : channel.description ? (
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">{channel.description}</span>
+              ) : null}
+            </>
+          )}
         </div>
 
-        {/* Member Count (hide for DMs) */}
-        {!isDM && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span>{members.length}</span>
-          </div>
-        )}
+        {/* Right side actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Bookmark/Star */}
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+            <Star className="h-4 w-4" />
+          </Button>
 
-        {/* Search Button */}
-        <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="flex-shrink-0">
-              <Search className="h-5 w-5" />
+          {/* Member Count (hide for DMs) */}
+          {!isDM && (
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground">
+              <Users className="h-4 w-4" />
+              <span className="text-sm">{members.length}</span>
             </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-full sm:w-96 p-0">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Search Messages</SheetTitle>
-            </SheetHeader>
-            <MessageSearch
-              channelId={channel.id}
-              onSelectMessage={handleSearchSelect}
-              onClose={() => setSearchOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
+          )}
 
-        {/* Info Button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="flex-shrink-0"
-          onClick={() => setSettingsOpen(true)}
-        >
-          <Info className="h-5 w-5" />
-        </Button>
+          {/* Search Button */}
+          <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                <Search className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:w-96 p-0">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Search Messages</SheetTitle>
+              </SheetHeader>
+              <MessageSearch
+                channelId={channel.id}
+                onSelectMessage={handleSearchSelect}
+                onClose={() => setSearchOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+
+          {/* Info Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Message List or Empty State */}
@@ -281,7 +297,8 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
 
       {/* Message Input */}
       <ChatInput 
-        channelId={channel.id} 
+        channelId={channel.id}
+        channelName={displayName}
         onTyping={broadcastTyping}
         editingMessage={editingMessage}
         replyingTo={replyingTo}

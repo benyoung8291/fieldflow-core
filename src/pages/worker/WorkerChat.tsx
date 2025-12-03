@@ -3,6 +3,7 @@ import { ChatChannelView } from "@/components/chat/ChatChannelView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+import { BottomTabNav } from "@/components/chat/BottomTabNav";
 
 export default function WorkerChat() {
   const isMobile = useIsMobile();
@@ -13,15 +14,18 @@ export default function WorkerChat() {
     if (channelId) {
       // On mobile with a channel selected, show only the message thread
       return (
-        <div className="flex h-[calc(100vh-5rem)] flex-col pb-20">
+        <div className="flex h-[calc(100vh-5rem)] flex-col pb-14">
           <ChatChannelView />
         </div>
       );
     }
-    // On mobile without a channel, show only the sidebar
+    // On mobile without a channel, show the sidebar with bottom nav
     return (
-      <div className="h-[calc(100vh-5rem)] pb-20">
-        <ChatSidebar />
+      <div className="flex h-[calc(100vh-5rem)] flex-col">
+        <div className="flex-1 overflow-hidden">
+          <ChatSidebar />
+        </div>
+        <BottomTabNav />
       </div>
     );
   }
@@ -29,10 +33,10 @@ export default function WorkerChat() {
   // Desktop/Tablet: Two-pane layout
   return (
     <div className="flex h-[calc(100vh-5rem)] pb-20">
-      <div className="w-64 flex-shrink-0 border-r">
+      <div className="w-64 flex-shrink-0">
         <ChatSidebar />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 border-l">
         {channelId ? <ChatChannelView /> : <ChatEmptyState />}
       </div>
     </div>
