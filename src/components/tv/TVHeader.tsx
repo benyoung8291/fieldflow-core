@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Pause, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TVHeaderProps {
   isConnected: boolean;
@@ -10,9 +12,18 @@ interface TVHeaderProps {
   };
   currentPage?: number;
   totalPages?: number;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
 }
 
-export function TVHeader({ isConnected, dateRange, currentPage = 0, totalPages = 2 }: TVHeaderProps) {
+export function TVHeader({ 
+  isConnected, 
+  dateRange, 
+  currentPage = 0, 
+  totalPages = 2,
+  isPaused = false,
+  onTogglePause,
+}: TVHeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -48,6 +59,28 @@ export function TVHeader({ isConnected, dateRange, currentPage = 0, totalPages =
       </div>
 
       <div className="flex items-center gap-6">
+        {/* Pause button */}
+        {onTogglePause && (
+          <Button
+            variant={isPaused ? "default" : "outline"}
+            size="sm"
+            onClick={onTogglePause}
+            className="gap-2"
+          >
+            {isPaused ? (
+              <>
+                <Play className="h-4 w-4" />
+                Resume
+              </>
+            ) : (
+              <>
+                <Pause className="h-4 w-4" />
+                Pause
+              </>
+            )}
+          </Button>
+        )}
+
         {/* Page indicator dots */}
         <div className="flex items-center gap-2">
           {Array.from({ length: totalPages }, (_, i) => (

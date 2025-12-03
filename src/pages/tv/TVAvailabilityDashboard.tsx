@@ -12,15 +12,18 @@ export default function TVAvailabilityDashboard() {
   const { groupedWorkers, days, isLoading, isConnected } = useTVAvailabilityData();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0); // 0 = days 1-30, 1 = days 31-60
+  const [isPaused, setIsPaused] = useState(false);
 
-  // Auto-cycle every 10 seconds
+  // Auto-cycle every 10 seconds (only when not paused)
   useEffect(() => {
+    if (isPaused) return;
+    
     const interval = setInterval(() => {
       setCurrentPage((prev) => (prev === 0 ? 1 : 0));
     }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,6 +113,8 @@ export default function TVAvailabilityDashboard() {
           dateRange={dateRange}
           currentPage={currentPage}
           totalPages={2}
+          isPaused={isPaused}
+          onTogglePause={() => setIsPaused(!isPaused)}
         />
 
         <main className="flex-1 p-3 overflow-auto">
