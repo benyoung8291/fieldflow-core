@@ -60,6 +60,9 @@ export default function DraggableAppointment({
       return;
     }
     pointerDownPos.current = { x: e.clientX, y: e.clientY };
+    
+    // Call dnd-kit's handler to enable dragging
+    listeners?.onPointerDown?.(e as any);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -104,10 +107,10 @@ export default function DraggableAppointment({
         isDragging && "opacity-50 cursor-grabbing",
         !isDragging && "cursor-grab"
       )}
-      {...listeners}
       {...attributes}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
+      onKeyDown={listeners?.onKeyDown as React.KeyboardEventHandler<HTMLDivElement>}
     >
       {/* Duration badge - top right */}
       <div className="absolute top-0.5 right-0.5 bg-muted/70 backdrop-blur-sm text-[9px] font-medium px-1 py-0.5 rounded text-muted-foreground z-10 group-hover:opacity-0 transition-opacity">

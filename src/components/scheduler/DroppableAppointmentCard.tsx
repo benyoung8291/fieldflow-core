@@ -60,6 +60,9 @@ export default function DroppableAppointmentCard({
       return;
     }
     pointerDownPos.current = { x: e.clientX, y: e.clientY };
+    
+    // Call dnd-kit's handler to enable dragging
+    listeners?.onPointerDown?.(e as any);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -83,7 +86,7 @@ export default function DroppableAppointmentCard({
       <Card
         ref={setNodeRef}
         {...attributes}
-        {...listeners}
+        onKeyDown={listeners?.onKeyDown as React.KeyboardEventHandler<HTMLDivElement>}
         className={cn(
           "p-2 hover:shadow-md transition-all group relative hover:border-primary/50 touch-none",
           isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
