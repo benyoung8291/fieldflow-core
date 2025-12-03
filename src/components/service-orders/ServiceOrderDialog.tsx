@@ -140,14 +140,19 @@ export default function ServiceOrderDialog({
   useEffect(() => {
     if (open) {
       fetchCustomers();
-      // Always reset form first to clear any stale data
-      resetForm();
       setIsLocationUserChanged(false); // Reset flag when opening dialog
+      
       if (orderId) {
+        // When editing, fetch order data directly without resetting first
+        // fetchOrder() will populate all data from scratch
         fetchOrder();
-      } else if (customerId) {
-        // Pre-fill customer if provided
-        setFormData(prev => ({ ...prev, customer_id: customerId }));
+      } else {
+        // Only reset form when creating new order
+        resetForm();
+        if (customerId) {
+          // Pre-fill customer if provided
+          setFormData(prev => ({ ...prev, customer_id: customerId }));
+        }
       }
       // Note: leadId is not directly used as service orders are linked to customers
       // If we have a leadId, we'd need to fetch the converted customer or handle differently
@@ -318,6 +323,7 @@ export default function ServiceOrderDialog({
       
       if (orderData) {
         // Now set formData AFTER customer-related data is loaded
+        // Format dates explicitly to YYYY-MM-DD for HTML date inputs
         setFormData({
           customer_id: orderData.customer_id || "",
           customer_location_id: orderData.customer_location_id || "",
@@ -332,9 +338,9 @@ export default function ServiceOrderDialog({
           status: orderData.status || "draft",
           priority: orderData.priority || "normal",
           skill_required: orderData.skill_required || "",
-          preferred_date: orderData.preferred_date || "",
-          preferred_date_start: orderData.preferred_date_start || "",
-          preferred_date_end: orderData.preferred_date_end || "",
+          preferred_date: orderData.preferred_date ? orderData.preferred_date.substring(0, 10) : "",
+          preferred_date_start: orderData.preferred_date_start ? orderData.preferred_date_start.substring(0, 10) : "",
+          preferred_date_end: orderData.preferred_date_end ? orderData.preferred_date_end.substring(0, 10) : "",
           allow_bidding: orderData.allow_bidding || false,
           ready_for_billing: orderData.ready_for_billing || false,
         });
@@ -796,15 +802,21 @@ export default function ServiceOrderDialog({
             </div>
           </DialogHeader>
 
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList>
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="line-items">Line Items</TabsTrigger>
-              {orderId && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
-              {orderId && <TabsTrigger value="appointments">Appointments</TabsTrigger>}
-            </TabsList>
+          {loading && orderId ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">Loading service order...</p>
+            </div>
+          ) : (
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="line-items">Line Items</TabsTrigger>
+                {orderId && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
+                {orderId && <TabsTrigger value="appointments">Appointments</TabsTrigger>}
+              </TabsList>
 
-            <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit}>
               <TabsContent value="details" className="space-y-4 mt-4">
                 <div className="flex gap-2">
                   <Button
@@ -1478,6 +1490,7 @@ export default function ServiceOrderDialog({
               </div>
             </form>
           </Tabs>
+          )}
         </DialogContent>
       </Dialog>
     </>
