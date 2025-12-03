@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { useWorkerAvailabilityBoard, WorkerAvailability } from "@/hooks/useWorkerAvailabilityBoard";
+import { useTVAvailabilityData } from "@/hooks/useTVAvailabilityData";
+import type { WorkerAvailability } from "@/hooks/useWorkerAvailabilityBoard";
 import { TVHeader } from "@/components/tv/TVHeader";
 import { AvailabilityGrid30Day } from "@/components/tv/AvailabilityGrid30Day";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +9,7 @@ import { format, parseISO } from "date-fns";
 import { AlertCircle } from "lucide-react";
 
 export default function TVAvailabilityDashboard() {
-  const { groupedWorkers, days, isLoading, isConnected } = useWorkerAvailabilityBoard();
+  const { groupedWorkers, days, isLoading, isConnected } = useTVAvailabilityData();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0); // 0 = days 1-30, 1 = days 31-60
 
