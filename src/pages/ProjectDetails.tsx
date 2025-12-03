@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Calendar, DollarSign, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2, Mail } from "lucide-react";
+import { Calendar, DollarSign, ClipboardList, FileText, Folder, UserPlus, GitCompare, History, Receipt, Edit, Copy, Trash2, Mail, MessageSquare } from "lucide-react";
 import DocumentDetailLayout, { DocumentAction, FileMenuAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import KeyInfoCard from "@/components/layout/KeyInfoCard";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
@@ -31,6 +31,7 @@ import RelatedInvoicesCard from "@/components/invoices/RelatedInvoicesCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkedHelpdeskTicketsTab } from "@/components/helpdesk/LinkedHelpdeskTicketsTab";
 import { LinkedDocumentsTimeline } from "@/components/audit/LinkedDocumentsTimeline";
+import { ContextChat } from "@/components/chat/ContextChat";
 import ServiceOrderProfitLossCard from "@/components/service-orders/ServiceOrderProfitLossCard";
 import ProjectPurchaseOrdersTab from "@/components/projects/ProjectPurchaseOrdersTab";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
@@ -583,6 +584,12 @@ export default function ProjectDetails() {
       label: "Linked Documents",
       icon: <FileText className="h-4 w-4" />,
       content: <LinkedDocumentsTimeline documentType="project" documentId={id!} />,
+    },
+    {
+      value: "chat",
+      label: "Chat",
+      icon: <MessageSquare className="h-4 w-4" />,
+      content: <ContextChat contextType="project" contextId={id!} title={project?.name || "Project"} />,
     },
     {
       value: "history",

@@ -8,9 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
+import { cn } from "@/lib/utils";
 
-export function ChatChannelView() {
-  const { channelId } = useParams();
+interface ChatChannelViewProps {
+  channelId?: string;
+  className?: string;
+}
+
+export function ChatChannelView({ channelId: propChannelId, className }: ChatChannelViewProps) {
+  const { channelId: paramChannelId } = useParams();
+  const channelId = propChannelId || paramChannelId;
+  const isEmbedded = !!propChannelId;
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { data: channel, isLoading: channelLoading } = useChatChannel(channelId || null);
@@ -27,9 +35,9 @@ export function ChatChannelView() {
 
   if (channelLoading) {
     return (
-      <div className="flex h-full flex-col">
+      <div className={cn("flex h-full flex-col", className)}>
         <div className="flex h-14 items-center gap-3 border-b px-4">
-          {isMobile && <Skeleton className="h-8 w-8" />}
+          {isMobile && !isEmbedded && <Skeleton className="h-8 w-8" />}
           <div className="flex-1 space-y-1">
             <Skeleton className="h-5 w-32" />
             <Skeleton className="h-3 w-48" />
@@ -54,14 +62,16 @@ export function ChatChannelView() {
 
   if (!channel) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+      <div className={cn("flex h-full flex-col items-center justify-center p-8 text-center", className)}>
         <h3 className="text-lg font-semibold">Channel not found</h3>
         <p className="mt-2 text-sm text-muted-foreground">
           This channel may have been deleted or you don't have access.
         </p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate("/chat")}>
-          Back to channels
-        </Button>
+        {!isEmbedded && (
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/chat")}>
+            Back to channels
+          </Button>
+        )}
       </div>
     );
   }
@@ -69,10 +79,10 @@ export function ChatChannelView() {
   const ChannelIcon = channel.type === "private" ? Lock : Hash;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className={cn("flex h-full flex-col", className)}>
       {/* Channel Header */}
       <div className="flex h-14 flex-shrink-0 items-center gap-3 border-b px-4">
-        {isMobile && (
+        {isMobile && !isEmbedded && (
           <Button variant="ghost" size="icon" onClick={() => navigate("/chat")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
