@@ -100,7 +100,7 @@ function calculateHoursFromSchedule(startTime: string | null, endTime: string | 
 export function useWorkerAvailabilityBoard() {
   const queryClient = useQueryClient();
   const today = startOfDay(new Date());
-  const endDate = addDays(today, 29);
+  const endDate = addDays(today, 59); // 60 days for auto-cycling view
 
   // Fetch active workers with worker_state
   const { data: workers = [], isLoading: workersLoading } = useQuery({
@@ -254,9 +254,9 @@ export function useWorkerAvailabilityBoard() {
     };
   }, [queryClient]);
 
-  // Generate 30 days array
+  // Generate 60 days array for auto-cycling view
   const days = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => {
+    return Array.from({ length: 60 }, (_, i) => {
       const date = addDays(today, i);
       return {
         date,
@@ -420,7 +420,7 @@ export function useWorkerAvailabilityBoard() {
         };
       });
 
-      // Filter out workers with no availability in the 30-day window
+      // Filter out workers with no availability in the 60-day window
       const hasAnyAvailability = workerDays.some((d) => d.isAvailable || d.isSeasonalOverride);
       if (!hasAnyAvailability) return;
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useWorkerAvailabilityBoard } from "@/hooks/useWorkerAvailabilityBoard";
+import { useEffect, useState, useMemo } from "react";
+import { useWorkerAvailabilityBoard, WorkerAvailability } from "@/hooks/useWorkerAvailabilityBoard";
 import { TVHeader } from "@/components/tv/TVHeader";
 import { AvailabilityGrid30Day } from "@/components/tv/AvailabilityGrid30Day";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +10,16 @@ import { AlertCircle } from "lucide-react";
 export default function TVAvailabilityDashboard() {
   const { groupedWorkers, days, isLoading, isConnected } = useWorkerAvailabilityBoard();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0); // 0 = days 1-30, 1 = days 31-60
+
+  // Auto-cycle every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPage((prev) => (prev === 0 ? 1 : 0));
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -35,6 +45,39 @@ export default function TVAvailabilityDashboard() {
     };
   }, []);
 
+  // Get the 30 days for the current page
+  const visibleDays = useMemo(() => {
+    const start = currentPage * 30;
+    const end = start + 30;
+    return days.slice(start, end);
+  }, [days, currentPage]);
+
+  // Get date range for header
+  const dateRange = useMemo(() => {
+    if (visibleDays.length === 0) return undefined;
+    return {
+      start: visibleDays[0].date,
+      end: visibleDays[visibleDays.length - 1].date,
+    };
+  }, [visibleDays]);
+
+  // Slice worker days for current view
+  const visibleGroupedWorkers = useMemo(() => {
+    const start = currentPage * 30;
+    const end = start + 30;
+
+    const byState: Record<string, WorkerAvailability[]> = {};
+
+    Object.entries(groupedWorkers.byState).forEach(([state, workers]) => {
+      byState[state] = workers.map((wa) => ({
+        worker: wa.worker,
+        days: wa.days.slice(start, end),
+      }));
+    });
+
+    return { byState, unavailableWorkers: groupedWorkers.unavailableWorkers };
+  }, [groupedWorkers, currentPage]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -50,21 +93,26 @@ export default function TVAvailabilityDashboard() {
   }
 
   // Sort states alphabetically
-  const sortedStates = Object.keys(groupedWorkers.byState).sort();
+  const sortedStates = Object.keys(visibleGroupedWorkers.byState).sort();
 
   // Check if there are any workers at all
   const totalWorkers = sortedStates.reduce(
-    (sum, state) => sum + groupedWorkers.byState[state].length,
+    (sum, state) => sum + visibleGroupedWorkers.byState[state].length,
     0
   );
 
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background flex flex-col">
-        <TVHeader isConnected={isConnected} />
+        <TVHeader 
+          isConnected={isConnected} 
+          dateRange={dateRange}
+          currentPage={currentPage}
+          totalPages={2}
+        />
 
         <main className="flex-1 p-3 overflow-auto">
-          {totalWorkers === 0 && groupedWorkers.unavailableWorkers.length === 0 ? (
+          {totalWorkers === 0 && visibleGroupedWorkers.unavailableWorkers.length === 0 ? (
             <div className="flex items-center justify-center h-64">
               <p className="text-muted-foreground text-lg">No workers with availability found</p>
             </div>
@@ -74,22 +122,22 @@ export default function TVAvailabilityDashboard() {
               {sortedStates.map((state) => (
                 <AvailabilityGrid30Day
                   key={state}
-                  workers={groupedWorkers.byState[state]}
-                  days={days}
+                  workers={visibleGroupedWorkers.byState[state]}
+                  days={visibleDays}
                   title={state}
                 />
               ))}
 
               {/* Workers on Extended Leave */}
-              {groupedWorkers.unavailableWorkers.length > 0 && (
+              {visibleGroupedWorkers.unavailableWorkers.length > 0 && (
                 <div className="mt-4 mb-4">
                   <h2 className="text-lg font-bold mb-2 px-2 flex items-center gap-2 text-destructive">
                     <AlertCircle className="h-4 w-4" />
-                    On Extended Leave ({groupedWorkers.unavailableWorkers.length})
+                    On Extended Leave ({visibleGroupedWorkers.unavailableWorkers.length})
                   </h2>
                   <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {groupedWorkers.unavailableWorkers.map(({ worker, unavailability }) => (
+                      {visibleGroupedWorkers.unavailableWorkers.map(({ worker, unavailability }) => (
                         <div
                           key={worker.id}
                           className="flex items-center gap-2 text-sm bg-card rounded px-2 py-1"

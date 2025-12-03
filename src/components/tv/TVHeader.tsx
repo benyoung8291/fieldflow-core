@@ -4,9 +4,15 @@ import { cn } from "@/lib/utils";
 
 interface TVHeaderProps {
   isConnected: boolean;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  currentPage?: number;
+  totalPages?: number;
 }
 
-export function TVHeader({ isConnected }: TVHeaderProps) {
+export function TVHeader({ isConnected, dateRange, currentPage = 0, totalPages = 2 }: TVHeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -34,10 +40,31 @@ export function TVHeader({ isConnected }: TVHeaderProps) {
         <h1 className="text-3xl font-bold tracking-tight">
           WORKER AVAILABILITY BOARD
         </h1>
+        {dateRange && (
+          <span className="text-lg text-muted-foreground ml-2">
+            {format(dateRange.start, "MMM d")} - {format(dateRange.end, "MMM d, yyyy")}
+          </span>
+        )}
       </div>
 
-      <div className="flex items-center gap-6 text-right">
-        <div>
+      <div className="flex items-center gap-6">
+        {/* Page indicator dots */}
+        <div className="flex items-center gap-2">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <div
+              key={i}
+              className={cn(
+                "w-2.5 h-2.5 rounded-full transition-colors",
+                currentPage === i ? "bg-primary" : "bg-muted"
+              )}
+            />
+          ))}
+          <span className="text-xs text-muted-foreground ml-2">
+            Days {currentPage * 30 + 1}-{(currentPage + 1) * 30}
+          </span>
+        </div>
+
+        <div className="text-right">
           <div className="text-2xl font-semibold">
             {format(currentTime, "EEEE, d MMMM yyyy")}
           </div>
