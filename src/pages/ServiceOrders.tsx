@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -606,7 +607,7 @@ export default function ServiceOrders() {
                     ...(order.work_order_number ? [{ label: 'WO#', value: order.work_order_number }] : []),
                     { label: 'Total', value: `$${order.subtotal?.toFixed(2) || '0.00'}` },
                   ]}
-                  onClick={() => window.location.href = `/service-orders/${order.id}`}
+                  to={`/service-orders/${order.id}`}
                 />
               ))
             )}
@@ -633,10 +634,10 @@ export default function ServiceOrders() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {orders.map((order: any) => (
-                      <tr
+                      <Link
                         key={order.id}
-                        className="hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => window.location.href = `/service-orders/${order.id}`}
+                        to={`/service-orders/${order.id}`}
+                        className="table-row hover:bg-muted/50 cursor-pointer transition-colors"
                       >
                         <td className="p-3">
                           <div className="text-sm font-semibold text-foreground">#{order.order_number}</div>
@@ -685,7 +686,7 @@ export default function ServiceOrders() {
                         <td className="p-3 text-right">
                           <div className="text-sm font-bold">${(order.subtotal || 0).toFixed(2)}</div>
                         </td>
-                      </tr>
+                      </Link>
                     ))}
                   </tbody>
                 </table>

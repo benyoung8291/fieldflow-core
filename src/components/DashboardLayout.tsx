@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { LogOut, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCustomMenu } from "@/hooks/useCustomMenu";
@@ -87,9 +88,6 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     setHoverTimeout(timeout);
   };
 
-  const handleNavigate = (path: string) => {
-    navigate(path);
-  };
 
   // Filter menu items based on permissions
   const filteredMenuItems = useMemo(() => {
@@ -157,15 +155,11 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
                   {children.map((child) => {
                     const childIsActive = child.path && location.pathname === child.path;
                     const ChildIcon = child.iconComponent;
-                    return (
-                      <button
+                    return child.path ? (
+                      <Link
                         key={child.id}
-                        onClick={() => {
-                          if (child.path) {
-                            handleNavigate(child.path);
-                            setOpenPopover(null);
-                          }
-                        }}
+                        to={child.path}
+                        onClick={() => setOpenPopover(null)}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-left",
                           childIsActive
@@ -175,8 +169,8 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
                       >
                         <ChildIcon className="h-4 w-4" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
                         {child.label}
-                      </button>
-                    );
+                      </Link>
+                    ) : null;
                   })}
                 </div>
               </PopoverContent>
@@ -185,6 +179,46 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
         );
       }
 
+      // Non-folder items with paths should be links
+      if (!item.is_folder && item.path) {
+        return (
+          <div key={item.id}>
+            {sidebarCollapsed ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <NavLink
+                    to={item.path}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 justify-center px-2",
+                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground"
+                  >
+                    <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                  </NavLink>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <NavLink
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
+                  "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+                activeClassName="bg-sidebar-primary text-sidebar-primary-foreground"
+              >
+                <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                {item.label}
+              </NavLink>
+            )}
+          </div>
+        );
+      }
+
+      // Folder items stay as buttons for toggling
       return (
         <div key={item.id}>
           <div className="flex items-center gap-2">
@@ -192,18 +226,10 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => {
-                      if (item.is_folder) {
-                        toggleFolder(item.id);
-                      } else if (item.path) {
-                        handleNavigate(item.path);
-                      }
-                    }}
+                    onClick={() => toggleFolder(item.id)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
-                      isActive
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       "justify-center px-2"
                     )}
                   >
@@ -216,25 +242,15 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
               </Tooltip>
             ) : (
               <button
-                onClick={() => {
-                  if (item.is_folder) {
-                    toggleFolder(item.id);
-                  } else if (item.path) {
-                    handleNavigate(item.path);
-                  }
-                }}
+                onClick={() => toggleFolder(item.id)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
               >
-                {item.is_folder && (
-                  <div className="mr-1">
-                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
-                  </div>
-                )}
+                <div className="mr-1">
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
+                </div>
                 <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
                 {item.label}
               </button>
@@ -248,23 +264,21 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
               style={item.color && item.color.trim() ? { borderColor: item.color } : { borderColor: 'hsl(var(--sidebar-border))' }}
             >
               {children.map((child) => {
-                const childIsActive = child.path && location.pathname === child.path;
                 const ChildIcon = child.iconComponent;
-                return (
-                  <button
+                return child.path ? (
+                  <NavLink
                     key={child.id}
-                    onClick={() => child.path && handleNavigate(child.path)}
+                    to={child.path}
                     className={cn(
                       "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left",
-                      childIsActive
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
+                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground"
                   >
                     <ChildIcon className="h-4 w-4" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
                     {child.label}
-                  </button>
-                );
+                  </NavLink>
+                ) : null;
               })}
             </div>
           )}

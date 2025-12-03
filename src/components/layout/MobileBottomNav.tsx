@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Home, Users, ClipboardList, FileText, Receipt, MoreHorizontal, Calendar, Briefcase, Building2, ShoppingCart, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -15,7 +15,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 
 interface NavItem {
   icon: typeof Home;
@@ -44,7 +43,6 @@ const moreNavItems: NavItem[] = [
 ];
 
 export const MobileBottomNav = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -115,9 +113,9 @@ export const MobileBottomNav = () => {
           const showBadge = item.path === "/chat" && totalUnread > 0;
           
           return (
-            <button
+            <Link
               key={item.path}
-              onClick={() => navigate(item.path)}
+              to={item.path}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all mobile-tap flex-1 relative",
                 isActive
@@ -142,7 +140,7 @@ export const MobileBottomNav = () => {
               )}>
                 {item.label}
               </span>
-            </button>
+            </Link>
           );
         })}
         
@@ -166,10 +164,9 @@ export const MobileBottomNav = () => {
                 const isActive = isActivePath(item.path);
                 
                 return (
-                  <Button
+                  <Link
                     key={item.path}
-                    variant="ghost"
-                    onClick={() => navigate(item.path)}
+                    to={item.path}
                     className={cn(
                       "flex flex-col items-center justify-center h-24 gap-2 rounded-2xl mobile-tap",
                       isActive
@@ -179,7 +176,7 @@ export const MobileBottomNav = () => {
                   >
                     <Icon className="h-6 w-6" />
                     <span className="text-xs font-medium text-center leading-tight">{item.label}</span>
-                  </Button>
+                  </Link>
                 );
               })}
             </div>

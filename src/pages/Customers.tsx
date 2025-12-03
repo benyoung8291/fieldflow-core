@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { Plus, Search, Building2, Users, FileText, Upload, CheckCircle2 } from "
 import { Badge } from "@/components/ui/badge";
 import CustomerDialog from "@/components/customers/CustomerDialog";
 import CustomerImportDialog from "@/components/customers/CustomerImportDialog";
-import { useNavigate } from "react-router-dom";
 import { usePresence } from "@/hooks/usePresence";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +24,6 @@ import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
 
 export default function Customers() {
-  const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -163,10 +162,6 @@ export default function Customers() {
   const handleAddNew = () => {
     setSelectedCustomer(null);
     setIsDialogOpen(true);
-  };
-
-  const handleViewDetails = (customerId: string) => {
-    navigate(`/customers/${customerId}`);
   };
 
   return (
@@ -323,7 +318,7 @@ export default function Customers() {
                   { label: "Location", value: customer.city && customer.state ? `${customer.city}, ${customer.state}` : customer.city || customer.state || "-" },
                   { label: "Orders", value: serviceOrderCounts[customer.id] || 0 },
                 ]}
-                onClick={() => handleViewDetails(customer.id)}
+                to={`/customers/${customer.id}`}
               />
             ))}
           </div>
@@ -365,10 +360,10 @@ export default function Customers() {
                   </thead>
                   <tbody>
                     {customers.map((customer) => (
-                      <tr
+                      <Link
                         key={customer.id}
-                        className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => handleViewDetails(customer.id)}
+                        to={`/customers/${customer.id}`}
+                        className="table-row border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
                       >
                         <td className="py-4 px-4">
                           <div>
@@ -432,6 +427,7 @@ export default function Customers() {
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               handleEdit(customer);
                             }}
@@ -440,7 +436,7 @@ export default function Customers() {
                             Edit
                           </PermissionButton>
                         </td>
-                      </tr>
+                      </Link>
                     ))}
                   </tbody>
                 </table>

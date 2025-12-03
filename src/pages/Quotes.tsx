@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicat
 import { usePagination } from "@/hooks/usePagination";
 import { useGenericPresence } from "@/hooks/useGenericPresence";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
+import { LinkBox } from "@/components/ui/link-box";
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -494,104 +495,97 @@ export default function Quotes() {
                   { label: "Total", value: `$${quote.total_amount.toLocaleString()}` },
                   { label: "Valid Until", value: quote.valid_until ? format(new Date(quote.valid_until), "MMM d, yyyy") : "N/A" },
                 ]}
-                onClick={() => navigate(`/quotes/${quote.id}`)}
+                to={`/quotes/${quote.id}`}
               />
             ))}
           </div>
         ) : (
           <div className="space-y-3">
             {quotes?.map((quote) => (
-              <Card
-                key={quote.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/quotes/${quote.id}`)}
-              >
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {quote.quote_number}
-                        </span>
-                        <Badge variant="outline" className={statusColors[quote.status]}>
-                          {quote.status}
-                        </Badge>
-                        {(quote.converted_to_service_order_id || quote.converted_to_project_id || quote.converted_to_contract_id) && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Lock className="h-3 w-3" />
-                            Converted
+              <LinkBox key={quote.id} to={`/quotes/${quote.id}`}>
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-sm text-muted-foreground">
+                            {quote.quote_number}
+                          </span>
+                          <Badge variant="outline" className={statusColors[quote.status]}>
+                            {quote.status}
                           </Badge>
-                        )}
-                        {quote.valid_until && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            Valid until {format(new Date(quote.valid_until), "MMM d, yyyy")}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{quote.title}</h3>
-                        <span className="text-sm text-muted-foreground">•</span>
-                        <span className="text-sm text-muted-foreground">
-                          {quote.customer?.name}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="flex items-center gap-1 text-lg font-bold">
-                          <DollarSign className="h-4 w-4" />
-                          {quote.total_amount.toLocaleString()}
+                          {(quote.converted_to_service_order_id || quote.converted_to_project_id || quote.converted_to_contract_id) && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Lock className="h-3 w-3" />
+                              Converted
+                            </Badge>
+                          )}
+                          {quote.valid_until && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              Valid until {format(new Date(quote.valid_until), "MMM d, yyyy")}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{quote.title}</h3>
+                          <span className="text-sm text-muted-foreground">•</span>
+                          <span className="text-sm text-muted-foreground">
+                            {quote.customer?.name}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/quotes/${quote.id}`);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 text-lg font-bold">
+                            <DollarSign className="h-4 w-4" />
+                            {quote.total_amount.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Link to={`/quotes/${quote.id}`}>
                             <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <PermissionGate module="quotes" permission="create">
-                              <DropdownMenuItem onClick={(e) => handleDuplicate(quote, e)}>
-                                <Copy className="mr-2 h-4 w-4" />
-                                Duplicate
-                              </DropdownMenuItem>
-                            </PermissionGate>
-                            <PermissionGate module="quotes" permission="edit">
-                              <DropdownMenuItem onClick={(e) => handleArchive(quote, e)}>
-                                <Archive className="mr-2 h-4 w-4" />
-                                {quote.is_archived ? "Unarchive" : "Archive"}
-                              </DropdownMenuItem>
-                            </PermissionGate>
-                            {quote.status === "draft" && (
-                              <PermissionGate module="quotes" permission="delete">
-                                <DropdownMenuItem 
-                                  onClick={(e) => handleDeleteClick(quote, e)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                          </Link>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <PermissionGate module="quotes" permission="create">
+                                <DropdownMenuItem onClick={(e) => handleDuplicate(quote, e)}>
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Duplicate
                                 </DropdownMenuItem>
                               </PermissionGate>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <PermissionGate module="quotes" permission="edit">
+                                <DropdownMenuItem onClick={(e) => handleArchive(quote, e)}>
+                                  <Archive className="mr-2 h-4 w-4" />
+                                  {quote.is_archived ? "Unarchive" : "Archive"}
+                                </DropdownMenuItem>
+                              </PermissionGate>
+                              {quote.status === "draft" && (
+                                <PermissionGate module="quotes" permission="delete">
+                                  <DropdownMenuItem 
+                                    onClick={(e) => handleDeleteClick(quote, e)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </PermissionGate>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </LinkBox>
             ))}
           </div>
         )}
