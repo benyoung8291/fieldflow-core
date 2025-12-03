@@ -112,8 +112,13 @@ export function useCreateChannel() {
 
       return channel;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
+      if (variables.contextType && variables.contextId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["context-chat-channel", variables.contextType, variables.contextId] 
+        });
+      }
     },
   });
 }

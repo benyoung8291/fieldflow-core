@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import { parseMarkdown } from "@/utils/markdownParser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, X, Check, CalendarIcon } from "lucide-react";
+import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone, CheckCircle, XCircle, Receipt, Plus, FolderKanban, Copy, Trash2, History, Paperclip, ShoppingCart, UserPlus, X, Check, CalendarIcon, MessageSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -27,6 +27,7 @@ import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { ContactRoleDialog } from "@/components/service-orders/ContactRoleDialog";
 import { formatCurrency } from "@/lib/utils";
 import FieldReportsTab from "@/components/service-orders/FieldReportsTab";
+import { ContextChat } from "@/components/chat/ContextChat";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1640,6 +1641,12 @@ export default function ServiceOrderDetails() {
       label: "Linked Documents",
       icon: <FileText className="h-4 w-4" />,
       content: <LinkedDocumentsTimeline documentType="service_order" documentId={id!} />,
+    },
+    {
+      value: "chat",
+      label: "Chat",
+      icon: <MessageSquare className="h-4 w-4" />,
+      content: <ContextChat contextType="service_order" contextId={id!} title={order?.order_number || "Service Order"} />,
     },
     {
       value: "history",
