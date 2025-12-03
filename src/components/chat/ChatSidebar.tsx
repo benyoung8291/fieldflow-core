@@ -104,7 +104,7 @@ export function ChatSidebar() {
   const totalUnread = unreadData?.totalUnread || 0;
 
   return (
-    <div className="flex h-full flex-col bg-slack-aubergine text-slack-text">
+    <div className="flex h-full flex-col bg-slack-aubergine text-slack-text pb-safe">
       {/* Workspace Header */}
       <div className="flex h-12 items-center justify-between px-4 border-b border-slack-border">
         <span className="font-bold text-lg text-white">Workspace</span>
