@@ -28,9 +28,9 @@ export function ChatLayout() {
     );
   }
 
-  // Desktop: Two-pane layout
+  // Desktop: Two-pane layout - no gap between sidebar and content
   return (
-    <div className="flex h-full">
+    <div className="flex h-full -ml-6 -mr-6 -mb-6">
       <div className="w-64 flex-shrink-0">
         <ChatSidebar />
       </div>

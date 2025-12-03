@@ -267,7 +267,7 @@ export function ChatSidebar() {
 
             {/* Direct Messages Section */}
             <Collapsible open={dmsOpen} onOpenChange={setDmsOpen}>
-              <div className="flex items-center justify-between px-1 group">
+              <div className="flex items-center justify-between px-1 group relative">
                 <CollapsibleTrigger className="flex items-center gap-1 text-sm text-slack-text-muted hover:text-white transition-colors">
                   {dmsOpen ? (
                     <ChevronDown className="h-3 w-3" />
@@ -293,6 +293,7 @@ export function ChatSidebar() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen} />
               </div>
               <CollapsibleContent className="mt-1 space-y-0.5">
                 {dmChannels.length === 0 ? (
@@ -381,7 +382,6 @@ export function ChatSidebar() {
 
       {/* Dialogs */}
       <CreateChannelDialog open={createChannelOpen} onOpenChange={setCreateChannelOpen} />
-      <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen} />
       <ChannelSwitcher open={switcherOpen} onOpenChange={setSwitcherOpen} />
     </div>
   );

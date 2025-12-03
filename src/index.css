@@ -95,8 +95,8 @@ All colors MUST be HSL.
   --mobile-content-top: 64px;
   
   /* Slack Color System */
-  --slack-aubergine: 289 60% 25%;
-  --slack-aubergine-light: 289 55% 30%;
+  --slack-aubergine: 300 34% 37%;
+  --slack-aubergine-light: 300 30% 42%;
   --slack-hover: 289 50% 28%;
   --slack-active: 199 89% 38%;
   --slack-online: 152 69% 42%;
@@ -157,8 +157,8 @@ All colors MUST be HSL.
     --sidebar-ring: var(--primary);
     
     /* Slack Color System - Dark mode */
-    --slack-aubergine: 289 60% 20%;
-    --slack-aubergine-light: 289 55% 25%;
+    --slack-aubergine: 300 34% 37%;
+    --slack-aubergine-light: 300 30% 42%;
     --slack-hover: 289 50% 23%;
     --slack-active: 199 89% 38%;
     --slack-online: 152 69% 42%;
