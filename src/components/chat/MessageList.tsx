@@ -1,4 +1,4 @@
-import { useEffect, useRef, useLayoutEffect } from "react";
+import { useEffect, useRef, useLayoutEffect, useCallback } from "react";
 import { format, isToday, isYesterday, isSameDay, differenceInMinutes } from "date-fns";
 import { useChannelMessages } from "@/hooks/chat/useChannelMessages";
 import { useUpdateLastRead } from "@/hooks/chat/useChatOperations";
@@ -11,6 +11,8 @@ import { Loader2 } from "lucide-react";
 interface MessageListProps {
   channelId: string;
   currentUserId: string;
+  onReply?: (message: MessageWithProfile) => void;
+  onEdit?: (message: MessageWithProfile) => void;
 }
 
 function formatDateSeparator(date: Date): string {
@@ -43,7 +45,7 @@ function isContinuousMessage(
   return minutesDiff <= 5;
 }
 
-export function MessageList({ channelId, currentUserId }: MessageListProps) {
+export function MessageList({ channelId, currentUserId, onReply, onEdit }: MessageListProps) {
   const { data: messages = [], isLoading, error } = useChannelMessages(channelId);
   const updateLastRead = useUpdateLastRead();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -71,6 +73,20 @@ export function MessageList({ channelId, currentUserId }: MessageListProps) {
       updateLastRead.mutate(channelId);
     }
   }, [channelId, messages.length]);
+
+  // Scroll to a specific message and highlight it
+  const handleScrollToMessage = useCallback((messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Add highlight animation
+      element.classList.add("bg-primary/10");
+      element.style.transition = "background-color 0.3s ease";
+      setTimeout(() => {
+        element.classList.remove("bg-primary/10");
+      }, 2000);
+    }
+  }, []);
 
   if (isLoading) {
     return (
@@ -123,6 +139,9 @@ export function MessageList({ channelId, currentUserId }: MessageListProps) {
                 isContinuous={isContinuous}
                 currentUserId={currentUserId}
                 channelId={channelId}
+                onReply={onReply}
+                onEdit={onEdit}
+                onScrollToMessage={handleScrollToMessage}
               />
             </div>
           );

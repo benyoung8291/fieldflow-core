@@ -1,7 +1,8 @@
-import { useState, useRef, KeyboardEvent, ChangeEvent, DragEvent } from "react";
-import { Paperclip, Send, Loader2 } from "lucide-react";
-import { useSendMessage } from "@/hooks/chat/useChatOperations";
+import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent, DragEvent } from "react";
+import { Paperclip, Send, Loader2, X, Check } from "lucide-react";
+import { useSendMessage, useEditMessage } from "@/hooks/chat/useChatOperations";
 import { useChatStorage } from "@/hooks/chat/useChatStorage";
+import { MessageWithProfile } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatAttachmentPreview } from "./ChatAttachmentPreview";
@@ -10,6 +11,10 @@ import { cn } from "@/lib/utils";
 interface ChatInputProps {
   channelId: string;
   onTyping?: () => void;
+  editingMessage?: MessageWithProfile | null;
+  replyingTo?: MessageWithProfile | null;
+  onCancelEdit?: () => void;
+  onCancelReply?: () => void;
 }
 
 interface PendingFile {
@@ -17,7 +22,14 @@ interface PendingFile {
   preview?: string;
 }
 
-export function ChatInput({ channelId, onTyping }: ChatInputProps) {
+export function ChatInput({ 
+  channelId, 
+  onTyping,
+  editingMessage,
+  replyingTo,
+  onCancelEdit,
+  onCancelReply,
+}: ChatInputProps) {
   const [content, setContent] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<PendingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -25,7 +37,23 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sendMessage = useSendMessage();
+  const editMessage = useEditMessage();
   const { uploadFile } = useChatStorage();
+
+  // Pre-fill content when editing
+  useEffect(() => {
+    if (editingMessage) {
+      setContent(editingMessage.content);
+      textareaRef.current?.focus();
+    }
+  }, [editingMessage]);
+
+  // Focus on textarea when replying
+  useEffect(() => {
+    if (replyingTo) {
+      textareaRef.current?.focus();
+    }
+  }, [replyingTo]);
 
   const handleContentChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -33,7 +61,6 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
-    // Broadcast typing event
     onTyping?.();
   };
 
@@ -41,6 +68,14 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+    if (e.key === "Escape") {
+      if (editingMessage) {
+        onCancelEdit?.();
+        setContent("");
+      } else if (replyingTo) {
+        onCancelReply?.();
+      }
     }
   };
 
@@ -92,6 +127,24 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
 
   const handleSend = async () => {
     const trimmedContent = content.trim();
+    
+    // Edit mode
+    if (editingMessage) {
+      if (!trimmedContent) return;
+      try {
+        await editMessage.mutateAsync({ messageId: editingMessage.id, content: trimmedContent });
+        setContent("");
+        onCancelEdit?.();
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
+      } catch (error) {
+        console.error("[Chat] Failed to edit message:", error);
+      }
+      return;
+    }
+
+    // Normal send mode
     if (!trimmedContent && selectedFiles.length === 0) return;
 
     try {
@@ -102,7 +155,6 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
         file_size: number;
       }> = [];
 
-      // Upload files if any
       if (selectedFiles.length > 0) {
         setIsUploading(true);
         const uploadPromises = selectedFiles.map((pf) => uploadFile(pf.file, channelId));
@@ -121,6 +173,7 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
       await sendMessage.mutateAsync({
         channelId,
         content: trimmedContent || "",
+        replyToId: replyingTo?.id,
         attachments: attachments.length > 0 ? attachments : undefined,
       });
 
@@ -130,6 +183,7 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
       });
       setContent("");
       setSelectedFiles([]);
+      onCancelReply?.();
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -141,7 +195,12 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
   };
 
   const canSend = content.trim().length > 0 || selectedFiles.length > 0;
-  const isSending = sendMessage.isPending || isUploading;
+  const isSending = sendMessage.isPending || editMessage.isPending || isUploading;
+
+  const truncateText = (text: string, maxLength: number = 50) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
 
   return (
     <div
@@ -153,38 +212,101 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Reply Banner */}
+      {replyingTo && !editingMessage && (
+        <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2">
+          <div className="h-full w-1 rounded-full bg-primary" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">
+              Replying to {replyingTo.profile?.first_name || "User"}
+            </p>
+            <p className="text-sm text-foreground truncate">
+              {truncateText(replyingTo.content)}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={onCancelReply}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Edit Banner */}
+      {editingMessage && (
+        <div className="flex items-center gap-2 border-b bg-amber-500/10 px-4 py-2">
+          <div className="h-full w-1 rounded-full bg-amber-500" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+              Editing message
+            </p>
+            <p className="text-sm text-foreground truncate">
+              {truncateText(editingMessage.content)}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={() => {
+              onCancelEdit?.();
+              setContent("");
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Attachment Preview */}
-      <ChatAttachmentPreview
-        files={selectedFiles}
-        onRemove={removeFile}
-        isUploading={isUploading}
-      />
+      {!editingMessage && (
+        <ChatAttachmentPreview
+          files={selectedFiles}
+          onRemove={removeFile}
+          isUploading={isUploading}
+        />
+      )}
 
       {/* Input Row */}
       <div className="flex items-end gap-2 p-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 flex-shrink-0"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isSending}
-        >
-          <Paperclip className="h-5 w-5" />
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-        />
+        {!editingMessage && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 flex-shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSending}
+            >
+              <Paperclip className="h-5 w-5" />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+          </>
+        )}
 
         <Textarea
           ref={textareaRef}
           value={content}
           onChange={handleContentChange}
           onKeyDown={handleKeyDown}
-          placeholder={isDragOver ? "Drop files here..." : "Type a message..."}
+          placeholder={
+            isDragOver 
+              ? "Drop files here..." 
+              : editingMessage 
+                ? "Edit your message..." 
+                : replyingTo 
+                  ? "Type your reply..." 
+                  : "Type a message..."
+          }
           className="min-h-[36px] max-h-[120px] resize-none py-2"
           rows={1}
           disabled={isSending}
@@ -192,12 +314,17 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
 
         <Button
           size="icon"
-          className="h-9 w-9 flex-shrink-0"
+          className={cn(
+            "h-9 w-9 flex-shrink-0",
+            editingMessage && "bg-amber-500 hover:bg-amber-600"
+          )}
           onClick={handleSend}
           disabled={!canSend || isSending}
         >
           {isSending ? (
             <Loader2 className="h-5 w-5 animate-spin" />
+          ) : editingMessage ? (
+            <Check className="h-5 w-5" />
           ) : (
             <Send className="h-5 w-5" />
           )}
@@ -205,7 +332,10 @@ export function ChatInput({ channelId, onTyping }: ChatInputProps) {
       </div>
 
       <p className="px-4 pb-2 text-xs text-muted-foreground">
-        Press Enter to send, Shift+Enter for new line
+        {editingMessage 
+          ? "Press Enter to save, Escape to cancel"
+          : "Press Enter to send, Shift+Enter for new line"
+        }
       </p>
     </div>
   );
