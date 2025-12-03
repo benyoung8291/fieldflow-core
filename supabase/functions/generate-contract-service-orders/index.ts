@@ -87,13 +87,18 @@ serve(async (req) => {
               error: error.message
             });
           } else {
-            const ordersCreated = data?.summary?.orders_created || 0;
+            // Transform database response to expected format
+            const ordersCreated = data?.service_orders_created || 0;
             console.log(`✅ Tenant ${tenant.name}: ${ordersCreated} orders created`);
             results.push({
               tenant_id: tenant.id,
               tenant_name: tenant.name,
               success: true,
-              ...data
+              summary: {
+                orders_created: data?.service_orders_created || 0,
+                total_line_items: data?.line_items_created || 0,
+                already_generated: data?.already_generated || 0
+              }
             });
           }
         } catch (error: any) {
@@ -199,12 +204,20 @@ serve(async (req) => {
 
     console.log("✅ Generation complete");
     
-    const ordersCreated = data?.summary?.orders_created || 0;
-    const totalItems = data?.summary?.total_line_items || 0;
-    console.log(`📊 Results: ${ordersCreated} orders created, ${totalItems} items processed`);
+    // Transform database response to expected format
+    const transformedData = {
+      summary: {
+        orders_created: data?.service_orders_created || 0,
+        total_line_items: data?.line_items_created || 0,
+        already_generated: data?.already_generated || 0
+      },
+      success: data?.success || false
+    };
+    
+    console.log(`📊 Results: ${transformedData.summary.orders_created} orders created, ${transformedData.summary.total_line_items} items processed`);
 
     return new Response(
-      JSON.stringify(data || { summary: { orders_created: 0, total_line_items: 0 }, orders: [] }),
+      JSON.stringify(transformedData),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
