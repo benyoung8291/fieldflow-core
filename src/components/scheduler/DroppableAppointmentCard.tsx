@@ -37,7 +37,7 @@ export default function DroppableAppointmentCard({
 
   // Make card draggable for moving between dates
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
-    id: `appointment-drag-${appointment.id}`,
+    id: `appointment-${appointment.id}`,
     data: {
       type: "appointment",
       appointment: appointment,
