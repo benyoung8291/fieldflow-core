@@ -93,7 +93,8 @@ export const WorkerMobileBottomNav = () => {
   if (!location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
 
   // Hide when in an active chat conversation for immersive experience
-  const isInChatChannel = /^\/worker\/chat\/[^/]+$/.test(location.pathname);
+  // Only hide when viewing a specific chat channel (UUID format), show on /worker/chat list
+  const isInChatChannel = /^\/worker\/chat\/[a-f0-9-]{36}$/i.test(location.pathname);
   if (isInChatChannel) return null;
 
   // Wait for access check to complete to prevent flash of wrong menu
