@@ -4,6 +4,7 @@ import { Search, UserMinus, UserPlus } from "lucide-react";
 import { ChatChannel, ChatMember } from "@/types/chat";
 import { useChannelMembers } from "@/hooks/chat/useChatChannels";
 import { useLeaveChannel, useAddMember, useRemoveMember, useUpdateChannelDetails } from "@/hooks/chat";
+import { useChatPresence } from "@/hooks/chat/useChatPresence";
 import { useWorkersCache } from "@/hooks/useWorkersCache";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { OnlineIndicator } from "../OnlineIndicator";
 
 interface ChannelSettingsDialogProps {
   open: boolean;
@@ -41,6 +43,7 @@ export function ChannelSettingsDialog({ open, onOpenChange, channel }: ChannelSe
   const basePath = location.pathname.startsWith("/worker") ? "/worker/chat" : "/chat";
   const { data: members = [] } = useChannelMembers(channel.id);
   const { data: workers = [] } = useWorkersCache();
+  const { isUserOnline } = useChatPresence();
   const leaveChannel = useLeaveChannel();
   const addMember = useAddMember();
   const removeMember = useRemoveMember();
@@ -298,11 +301,18 @@ export function ChannelSettingsDialog({ open, onOpenChange, channel }: ChannelSe
                             "disabled:opacity-50 disabled:cursor-not-allowed"
                           )}
                         >
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">
-                              {getInitials(worker.first_name, worker.last_name)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="relative">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {getInitials(worker.first_name, worker.last_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <OnlineIndicator
+                              isOnline={isUserOnline(worker.id)}
+                              size="xs"
+                              className="absolute -bottom-0.5 -right-0.5"
+                            />
+                          </div>
                           <span className="text-sm">{worker.full_name}</span>
                         </button>
                       ))}
@@ -321,12 +331,19 @@ export function ChannelSettingsDialog({ open, onOpenChange, channel }: ChannelSe
                     className="flex items-center justify-between gap-3 rounded-md px-3 py-2"
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.profile?.avatar_url || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(member.profile?.first_name, member.profile?.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.profile?.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(member.profile?.first_name, member.profile?.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <OnlineIndicator
+                          isOnline={isUserOnline(member.user_id)}
+                          size="xs"
+                          className="absolute -bottom-0.5 -right-0.5"
+                        />
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{getMemberName(member)}</span>
                         {member.role === "owner" && (
