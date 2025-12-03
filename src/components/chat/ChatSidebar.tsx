@@ -381,6 +381,7 @@ export function ChatSidebar() {
 
       {/* Dialogs */}
       <CreateChannelDialog open={createChannelOpen} onOpenChange={setCreateChannelOpen} />
+      <NewDMDialog open={newDMOpen} onOpenChange={setNewDMOpen} />
       <ChannelSwitcher open={switcherOpen} onOpenChange={setSwitcherOpen} />
     </div>
   );
