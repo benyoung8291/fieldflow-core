@@ -118,6 +118,7 @@ const SharedFloorPlanMarkup = lazy(() => import("./pages/public/SharedFloorPlanM
 const Chat = lazy(() => import("./pages/Chat"));
 const WorkerChat = lazy(() => import("./pages/worker/WorkerChat"));
 const TVAvailabilityDashboard = lazy(() => import("./pages/tv/TVAvailabilityDashboard"));
+const TVPinGate = lazy(() => import("./components/tv/TVPinGate").then(m => ({ default: m.TVPinGate })));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -335,6 +336,7 @@ const App = () => {
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/share/floor-plan/:token" element={<SharedFloorPlanMarkup />} />
+                  <Route path="/tv/availability" element={<TVPinGate><TVAvailabilityDashboard /></TVPinGate>} />
                   
                   <Route path="/" element={isAuthenticated ? <RedirectToDefaultRoute /> : <Navigate to="/auth" replace />} />
                   <Route path="/auth" element={<Auth />} />
@@ -436,7 +438,7 @@ const App = () => {
             <Route path="/chat" element={isAuthenticated ? <ProtectedRoute><Chat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/chat/:channelId" element={isAuthenticated ? <ProtectedRoute><Chat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* TV Display Routes */}
-            <Route path="/tv/availability" element={isAuthenticated ? <ProtectedRoute><TVAvailabilityDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            {/* TV Display Routes - Now handled in public routes section with PIN gate */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
