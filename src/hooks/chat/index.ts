@@ -4,6 +4,7 @@ export { useChannelMessages } from "./useChannelMessages";
 export { useUnreadMessages } from "./useUnreadMessages";
 export { useChatStorage } from "./useChatStorage";
 export { useChatNotifications, requestNotificationPermission, useNotificationPermission } from "./useChatNotifications";
+export { useChatTyping } from "./useChatTyping";
 export {
   useSendMessage,
   useCreateChannel,
@@ -14,4 +15,5 @@ export {
   useDeleteMessage,
   useAddReaction,
   useRemoveReaction,
+  useToggleReaction,
 } from "./useChatOperations";

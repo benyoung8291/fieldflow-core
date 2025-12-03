@@ -347,3 +347,58 @@ export function useRemoveReaction() {
     },
   });
 }
+
+export function useToggleReaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ messageId, emoji, channelId }: { messageId: string; emoji: string; channelId: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.user.id)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("No tenant found");
+
+      // Check if user already has this reaction
+      const { data: existingReaction } = await supabase
+        .from("chat_reactions")
+        .select("id")
+        .eq("message_id", messageId)
+        .eq("user_id", user.user.id)
+        .eq("emoji", emoji)
+        .single();
+
+      if (existingReaction) {
+        // Remove reaction
+        const { error } = await supabase
+          .from("chat_reactions")
+          .delete()
+          .eq("id", existingReaction.id);
+
+        if (error) throw error;
+        return { action: "removed" as const, channelId };
+      } else {
+        // Add reaction
+        const { error } = await supabase
+          .from("chat_reactions")
+          .insert({
+            message_id: messageId,
+            user_id: user.user.id,
+            tenant_id: profile.tenant_id,
+            emoji,
+          });
+
+        if (error) throw error;
+        return { action: "added" as const, channelId };
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["chat-messages", data.channelId] });
+    },
+  });
+}

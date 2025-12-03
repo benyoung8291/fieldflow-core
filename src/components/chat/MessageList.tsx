@@ -121,6 +121,8 @@ export function MessageList({ channelId, currentUserId }: MessageListProps) {
                 message={message}
                 isCurrentUser={isCurrentUser}
                 isContinuous={isContinuous}
+                currentUserId={currentUserId}
+                channelId={channelId}
               />
             </div>
           );
