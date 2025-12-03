@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 
 interface DraggableAppointmentProps {
   appointment: any;
@@ -28,10 +28,8 @@ export default function DraggableAppointment({
   onDelete,
   showFullDetails = false,
 }: DraggableAppointmentProps) {
-  const [isDragIntent, setIsDragIntent] = useState(false);
-  const pointerDownPos = useRef<{ x: number; y: number; timestamp: number } | null>(null);
-  const dragThreshold = 8;
-  const dragDelay = 150;
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const clickThreshold = 8;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `appointment-${appointment.id}`,
@@ -40,7 +38,6 @@ export default function DraggableAppointment({
       appointment,
       appointmentId: appointment.id,
     },
-    disabled: !isDragIntent,
   });
 
   const baseStyle = {
@@ -62,20 +59,7 @@ export default function DraggableAppointment({
         (e.target as HTMLElement).closest('[role="menuitem"]')) {
       return;
     }
-    pointerDownPos.current = { x: e.clientX, y: e.clientY, timestamp: Date.now() };
-    setIsDragIntent(false);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!pointerDownPos.current) return;
-    
-    const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
-    const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
-    const timeSinceDown = Date.now() - pointerDownPos.current.timestamp;
-    
-    if ((deltaX > dragThreshold || deltaY > dragThreshold) || timeSinceDown > dragDelay) {
-      setIsDragIntent(true);
-    }
+    pointerDownPos.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -84,9 +68,11 @@ export default function DraggableAppointment({
     const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
     const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
     
-    if (deltaX <= dragThreshold && deltaY <= dragThreshold) {
+    // Only trigger click if pointer didn't move much (not a drag)
+    if (deltaX <= clickThreshold && deltaY <= clickThreshold) {
       if ((e.target as HTMLElement).closest('button') || 
           (e.target as HTMLElement).closest('[role="menuitem"]')) {
+        pointerDownPos.current = null;
         return;
       }
       
@@ -96,6 +82,7 @@ export default function DraggableAppointment({
         e.stopPropagation();
         const url = `/scheduler?appointment=${appointment.id}`;
         window.open(url, '_blank');
+        pointerDownPos.current = null;
         return;
       }
       
@@ -103,7 +90,6 @@ export default function DraggableAppointment({
     }
     
     pointerDownPos.current = null;
-    setIsDragIntent(false);
   };
 
   return (
@@ -114,19 +100,14 @@ export default function DraggableAppointment({
         borderLeftColor: getBorderColor(),
       }}
       className={cn(
-        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none pointer-events-auto",
+        "p-2 rounded text-xs hover:shadow-md transition-shadow group relative bg-card border-l-4 select-none pointer-events-auto touch-none",
         isDragging && "opacity-50 cursor-grabbing",
-        isDragIntent ? "cursor-grab" : "cursor-pointer"
+        !isDragging && "cursor-grab"
       )}
-      {...(isDragIntent ? listeners : {})}
-      {...(isDragIntent ? attributes : {})}
+      {...listeners}
+      {...attributes}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerLeave={() => {
-        pointerDownPos.current = null;
-        setIsDragIntent(false);
-      }}
     >
       {/* Duration badge - top right */}
       <div className="absolute top-0.5 right-0.5 bg-muted/70 backdrop-blur-sm text-[9px] font-medium px-1 py-0.5 rounded text-muted-foreground z-10 group-hover:opacity-0 transition-opacity">

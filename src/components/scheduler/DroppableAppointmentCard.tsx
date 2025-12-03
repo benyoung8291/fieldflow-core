@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import AppointmentHoverCard from "./AppointmentHoverCard";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 
 interface DroppableAppointmentCardProps {
   appointment: any;
@@ -23,10 +23,8 @@ export default function DroppableAppointmentCard({
   onRemoveWorker,
   onClick,
 }: DroppableAppointmentCardProps) {
-  const [isDragIntent, setIsDragIntent] = useState(false);
-  const pointerDownPos = useRef<{ x: number; y: number; timestamp: number } | null>(null);
-  const dragThreshold = 8; // pixels to move before considering it a drag
-  const dragDelay = 150; // milliseconds to hold before drag starts
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const clickThreshold = 8;
 
   // Make card droppable for workers
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -37,7 +35,7 @@ export default function DroppableAppointmentCard({
     },
   });
 
-  // Make card draggable for moving between dates - but only when drag intent is detected
+  // Make card draggable for moving between dates
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: `appointment-drag-${appointment.id}`,
     data: {
@@ -45,7 +43,6 @@ export default function DroppableAppointmentCard({
       appointment: appointment,
       appointmentId: appointment.id,
     },
-    disabled: !isDragIntent,
   });
 
   const setNodeRef = (node: HTMLElement | null) => {
@@ -62,21 +59,7 @@ export default function DroppableAppointmentCard({
     if ((e.target as HTMLElement).closest('[data-no-click]')) {
       return;
     }
-    pointerDownPos.current = { x: e.clientX, y: e.clientY, timestamp: Date.now() };
-    setIsDragIntent(false);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!pointerDownPos.current) return;
-    
-    const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
-    const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
-    const timeSinceDown = Date.now() - pointerDownPos.current.timestamp;
-    
-    // If moved more than threshold OR held for delay time, it's a drag intent
-    if ((deltaX > dragThreshold || deltaY > dragThreshold) || timeSinceDown > dragDelay) {
-      setIsDragIntent(true);
-    }
+    pointerDownPos.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -85,15 +68,14 @@ export default function DroppableAppointmentCard({
     const deltaX = Math.abs(e.clientX - pointerDownPos.current.x);
     const deltaY = Math.abs(e.clientY - pointerDownPos.current.y);
     
-    // If didn't move much, treat as a click
-    if (deltaX <= dragThreshold && deltaY <= dragThreshold) {
+    // Only trigger click if pointer didn't move much (not a drag)
+    if (deltaX <= clickThreshold && deltaY <= clickThreshold) {
       if (!(e.target as HTMLElement).closest('[data-no-click]')) {
         onClick();
       }
     }
     
     pointerDownPos.current = null;
-    setIsDragIntent(false);
   };
 
   return (
@@ -101,20 +83,15 @@ export default function DroppableAppointmentCard({
       <Card
         ref={setNodeRef}
         {...attributes}
-        {...(isDragIntent ? listeners : {})}
+        {...listeners}
         className={cn(
-          "p-2 hover:shadow-md transition-all group relative hover:border-primary/50",
+          "p-2 hover:shadow-md transition-all group relative hover:border-primary/50 touch-none",
           isOver && "ring-2 ring-primary ring-offset-2 bg-primary/5",
           isDragging && "opacity-50 cursor-grabbing",
-          isDragIntent ? "cursor-grab" : "cursor-pointer"
+          !isDragging && "cursor-grab"
         )}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={() => {
-          pointerDownPos.current = null;
-          setIsDragIntent(false);
-        }}
       >
       {isOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
