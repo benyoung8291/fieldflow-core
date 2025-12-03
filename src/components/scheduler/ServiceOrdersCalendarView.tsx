@@ -198,10 +198,7 @@ export default function ServiceOrdersCalendarView({
         {/* Service Order Rows */}
         <div className="space-y-px bg-border">
           {appointmentsByServiceOrder.map(order => (
-            <div key={order.id} className={cn(
-              "grid grid-cols-8 gap-px bg-border",
-              order.isFulfilled && "opacity-60"
-            )}>
+            <div key={order.id} className="grid grid-cols-8 gap-px bg-border">
               {/* Service Order Info */}
               <Card className={cn(
                 "p-2 flex flex-col justify-center border-0",
@@ -250,7 +247,8 @@ export default function ServiceOrdersCalendarView({
                     workerId={null}
                     className={cn(
                       "min-h-[120px] p-2",
-                      order.isFulfilled 
+                      // Only grey out empty cells on fulfilled orders
+                      order.isFulfilled && dayAppointments.length === 0
                         ? "bg-muted/50" 
                         : "bg-background",
                       !order.isFulfilled && isInRange && "bg-yellow-100/60 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800",
