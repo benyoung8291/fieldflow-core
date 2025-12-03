@@ -23,6 +23,7 @@ import { OnlineIndicator } from "./OnlineIndicator";
 import { MessageSearch } from "./MessageSearch";
 import { ImageLightbox } from "./ImageLightbox";
 import { ChatSettingsPanel } from "./ChatSettingsPanel";
+import { ConnectionStatus } from "./ConnectionStatus";
 import { cn } from "@/lib/utils";
 
 interface ChatChannelViewProps {
@@ -39,7 +40,13 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   const isMobile = useIsMobile();
   const { data: channel, isLoading: channelLoading } = useChatChannel(channelId || null);
   const { data: members = [] } = useChannelMembers(channelId || null);
-  const { data: messages = [] } = useChannelMessages(channelId || "");
+  const { 
+    data: messages = [], 
+    isLoading: messagesLoading, 
+    error: messagesError,
+    connectionState,
+    reconnect 
+  } = useChannelMessages(channelId || "");
   const [currentUserId, setCurrentUserId] = useState<string>("");
   
   // DM specific hooks
@@ -172,6 +179,13 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
+      {/* Connection Status */}
+      <ConnectionStatus 
+        isConnected={connectionState.isConnected} 
+        isReconnecting={connectionState.isReconnecting}
+        onReconnect={reconnect}
+      />
+
       {/* Channel Header */}
       <div className="flex h-14 flex-shrink-0 items-center gap-3 border-b px-4">
         {/* Mobile Back Button */}
@@ -247,12 +261,15 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
       </div>
 
       {/* Message List or Empty State */}
-      {messages.length === 0 ? (
+      {messages.length === 0 && !messagesLoading ? (
         <ChatEmptyState channel={channel} channelName={displayName} />
       ) : (
         <MessageList 
           channelId={channel.id} 
           currentUserId={currentUserId}
+          messages={messages}
+          isLoading={messagesLoading}
+          error={messagesError}
           onReply={handleReply}
           onEdit={handleEdit}
           onImageClick={handleImageClick}

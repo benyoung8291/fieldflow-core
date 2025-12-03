@@ -34,7 +34,7 @@ export function useSendMessage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tenant_id")
+        .select("tenant_id, first_name, last_name, avatar_url")
         .eq("id", user.user.id)
         .single();
 
@@ -79,10 +79,68 @@ export function useSendMessage() {
         }
       }
 
-      return message;
+      return { ...message, profile };
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["chat-messages", variables.channelId] });
+    // Optimistic update
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["chat-messages", variables.channelId] });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData(["chat-messages", variables.channelId]);
+
+      // Get current user for optimistic message
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, avatar_url")
+        .eq("id", userData.user?.id || "")
+        .single();
+
+      // Optimistically update to the new value
+      if (profile) {
+        const optimisticMessage = {
+          id: `temp-${Date.now()}`,
+          channel_id: variables.channelId,
+          user_id: profile.id,
+          content: variables.content,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_edited: false,
+          deleted_at: null,
+          reply_to_id: variables.replyToId || null,
+          tenant_id: "",
+          profile: {
+            id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            avatar_url: profile.avatar_url,
+          },
+          attachments: [],
+          reactions: [],
+          reply_to: null,
+          _optimistic: true,
+        };
+
+        queryClient.setQueryData(
+          ["chat-messages", variables.channelId],
+          (old: any[] | undefined) => [...(old || []), optimisticMessage]
+        );
+      }
+
+      return { previousMessages };
+    },
+    // If the mutation fails, use the context returned from onMutate to roll back
+    onError: (err, variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          ["chat-messages", variables.channelId],
+          context.previousMessages
+        );
+      }
+    },
+    // Always refetch after error or success
+    onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({ queryKey: ["chat-channels"] });
     },
   });
