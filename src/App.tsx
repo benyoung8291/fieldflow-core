@@ -117,6 +117,7 @@ const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const SharedFloorPlanMarkup = lazy(() => import("./pages/public/SharedFloorPlanMarkup"));
 const Chat = lazy(() => import("./pages/Chat"));
 const WorkerChat = lazy(() => import("./pages/worker/WorkerChat"));
+const TVAvailabilityDashboard = lazy(() => import("./pages/tv/TVAvailabilityDashboard"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
@@ -434,6 +435,8 @@ const App = () => {
             {/* Chat Routes */}
             <Route path="/chat" element={isAuthenticated ? <ProtectedRoute><Chat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/chat/:channelId" element={isAuthenticated ? <ProtectedRoute><Chat /></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            {/* TV Display Routes */}
+            <Route path="/tv/availability" element={isAuthenticated ? <ProtectedRoute><TVAvailabilityDashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
