@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, Clock, MoreHorizontal, FileText, User, CalendarClock } from "lucide-react";
+import { Home, Calendar, Clock, MoreHorizontal, FileText, User, CalendarClock, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useUserAccess } from "@/hooks/useUserAccess";
+import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +27,7 @@ interface NavItem {
 const primaryNavItems: NavItem[] = [
   { icon: Home, label: "Home", path: "/worker/dashboard" },
   { icon: Calendar, label: "Appointments", path: "/worker/appointments" },
-  { icon: FileText, label: "Tasks", path: "/worker/tasks" },
+  { icon: MessageSquare, label: "Chat", path: "/chat" },
 ];
 
 const moreNavItems: NavItem[] = [
@@ -81,6 +82,9 @@ export const WorkerMobileBottomNav = () => {
     enabled: !!currentUser?.id,
   });
 
+  const { data: unreadData } = useUnreadMessages();
+  const chatUnreadCount = unreadData?.totalUnread || 0;
+
   // Only show on mobile devices
   if (!isMobile) return null;
 
@@ -98,10 +102,12 @@ export const WorkerMobileBottomNav = () => {
 
   const isActivePath = (path: string) => location.pathname === path;
 
-  // Add badge to tasks nav item
-  const navItemsWithBadge = primaryNavItems.map(item => 
-    item.path === "/worker/tasks" ? { ...item, badge: openTasksCount } : item
-  );
+  // Add badges to nav items
+  const navItemsWithBadge = primaryNavItems.map(item => {
+    if (item.path === "/worker/tasks") return { ...item, badge: openTasksCount };
+    if (item.path === "/chat") return { ...item, badge: chatUnreadCount };
+    return item;
+  });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-2xl border-t border-border/40 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_16px_rgba(0,0,0,0.3)] pb-safe">
