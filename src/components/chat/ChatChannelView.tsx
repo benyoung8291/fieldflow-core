@@ -4,11 +4,13 @@ import { ArrowLeft, Hash, Lock, Users, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels";
 import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
+import { useChatTyping } from "@/hooks/chat/useChatTyping";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
+import { TypingIndicator } from "./TypingIndicator";
 import { cn } from "@/lib/utils";
 
 interface ChatChannelViewProps {
@@ -25,9 +27,10 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   const { data: channel, isLoading: channelLoading } = useChatChannel(channelId || null);
   const { data: members = [] } = useChannelMembers(channelId || null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
-
-  // Enable notifications for this channel
+  
+  // Enable notifications and typing for this channel
   useChatNotifications(channelId);
+  const { typingUsers, broadcastTyping } = useChatTyping(channelId);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -121,8 +124,11 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
       {/* Message List */}
       <MessageList channelId={channel.id} currentUserId={currentUserId} />
 
+      {/* Typing Indicator */}
+      <TypingIndicator typingUsers={typingUsers} />
+
       {/* Message Input */}
-      <ChatInput channelId={channel.id} />
+      <ChatInput channelId={channel.id} onTyping={broadcastTyping} />
     </div>
   );
 }

@@ -5,14 +5,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { FileText, Download } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { MessageReactions } from "./MessageReactions";
 
 interface MessageBubbleProps {
   message: MessageWithProfile;
   isCurrentUser: boolean;
   isContinuous: boolean;
+  currentUserId: string;
+  channelId: string;
 }
 
-export function MessageBubble({ message, isCurrentUser, isContinuous }: MessageBubbleProps) {
+export function MessageBubble({ message, isCurrentUser, isContinuous, currentUserId, channelId }: MessageBubbleProps) {
   const [showTimestamp, setShowTimestamp] = useState(false);
 
   const senderName = message.profile
@@ -27,6 +30,7 @@ export function MessageBubble({ message, isCurrentUser, isContinuous }: MessageB
 
   const imageAttachments = message.attachments?.filter((a) => isImage(a.file_type)) || [];
   const fileAttachments = message.attachments?.filter((a) => !isImage(a.file_type)) || [];
+  const hasReactions = message.reactions && message.reactions.length > 0;
 
   return (
     <div
@@ -137,6 +141,17 @@ export function MessageBubble({ message, isCurrentUser, isContinuous }: MessageB
               </a>
             ))}
           </div>
+        )}
+
+        {/* Reactions */}
+        {(hasReactions || true) && (
+          <MessageReactions
+            messageId={message.id}
+            channelId={channelId}
+            reactions={message.reactions || []}
+            currentUserId={currentUserId}
+            isCurrentUser={isCurrentUser}
+          />
         )}
 
         {/* Edited indicator */}

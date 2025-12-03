@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   channelId: string;
+  onTyping?: () => void;
 }
 
 interface PendingFile {
@@ -16,7 +17,7 @@ interface PendingFile {
   preview?: string;
 }
 
-export function ChatInput({ channelId }: ChatInputProps) {
+export function ChatInput({ channelId, onTyping }: ChatInputProps) {
   const [content, setContent] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<PendingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,6 +33,8 @@ export function ChatInput({ channelId }: ChatInputProps) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
+    // Broadcast typing event
+    onTyping?.();
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
