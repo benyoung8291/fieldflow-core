@@ -20,9 +20,9 @@ export default function WorkerChat() {
         </div>
       );
     }
-    // On mobile without a channel, show the sidebar with bottom padding for nav
+    // On mobile without a channel, show the sidebar with height accounting for nav
     return (
-      <div className="flex h-[100dvh] flex-col pb-20">
+      <div className="h-[calc(100dvh-5rem)]">
         <ChatSidebar />
       </div>
     );
