@@ -10,36 +10,37 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface NewDMDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
 }
 
-export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
+export function NewDMDialog({ open, onOpenChange, children }: NewDMDialogProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const basePath = location.pathname.startsWith("/worker") ? "/worker/chat" : "/chat";
   const { data: workers = [], isLoading: workersLoading } = useWorkersCache();
   const { data: channels = [] } = useChatChannels();
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
 
+  // Get current user ID for filtering
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setCurrentUserId(data.user.id);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setCurrentUserId(data.session.user.id);
       }
     });
   }, []);
 
-  // Reset search when dialog closes
+  // Reset search when popover closes
   useEffect(() => {
     if (!open) {
       setSearchQuery("");
@@ -64,7 +65,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
   // Get existing DM channels
   const dmChannels = useMemo(() => channels.filter((c) => c.type === "dm"), [channels]);
 
-  const findExistingDM = async (selectedUserId: string): Promise<string | null> => {
+  const findExistingDM = async (selectedUserId: string, userId: string): Promise<string | null> => {
     // Check each DM channel for membership
     for (const channel of dmChannels) {
       const { data: members } = await supabase
@@ -74,7 +75,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
 
       if (members && members.length === 2) {
         const memberIds = members.map((m) => m.user_id);
-        if (memberIds.includes(currentUserId) && memberIds.includes(selectedUserId)) {
+        if (memberIds.includes(userId) && memberIds.includes(selectedUserId)) {
           return channel.id;
         }
       }
@@ -87,8 +88,17 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
     setIsCreating(true);
 
     try {
+      // Get session synchronously right before insert to ensure auth.uid() matches
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast.error("Please sign in to start a conversation");
+        setIsCreating(false);
+        return;
+      }
+      const userId = session.user.id;
+
       // Check for existing DM
-      const existingDMId = await findExistingDM(selectedUser.id);
+      const existingDMId = await findExistingDM(selectedUser.id, userId);
 
       if (existingDMId) {
         onOpenChange(false);
@@ -100,7 +110,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("tenant_id")
-        .eq("id", currentUserId)
+        .eq("id", userId)
         .single();
 
       if (profileError) {
@@ -110,7 +120,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
 
       if (!profile?.tenant_id) {
         toast.error("Your profile is not properly configured. Please contact support.");
-        console.error("User profile missing tenant_id:", currentUserId);
+        console.error("User profile missing tenant_id:", userId);
         return;
       }
 
@@ -120,7 +130,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
         .insert({
           name: null, // DMs don't have names
           type: "dm",
-          created_by: currentUserId,
+          created_by: userId,
           tenant_id: profile.tenant_id,
         })
         .select()
@@ -137,7 +147,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
         .insert([
           {
             channel_id: channel.id,
-            user_id: currentUserId,
+            user_id: userId,
             tenant_id: profile.tenant_id,
             role: "owner",
           },
@@ -170,50 +180,55 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[340px] p-0">
-        <DialogHeader className="p-4 pb-2">
-          <DialogTitle>New message</DialogTitle>
-        </DialogHeader>
-
-        <div className="px-4 pb-2">
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        {children}
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-[280px] p-0" 
+        align="start" 
+        side="bottom"
+        sideOffset={4}
+      >
+        <div className="p-3 pb-2 border-b">
+          <h4 className="font-medium text-sm mb-2">New message</h4>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search people..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-8 text-sm"
+              className="h-8 pl-8 text-sm"
               autoFocus
             />
           </div>
         </div>
 
-        <ScrollArea className="max-h-[300px] px-2 pb-2">
+        <ScrollArea className="max-h-[250px]">
           {workersLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-6">
               <span className="text-sm text-muted-foreground">Loading...</span>
             </div>
           ) : filteredWorkers.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-6">
               <span className="text-sm text-muted-foreground">
                 {searchQuery ? "No matching users" : "No team members"}
               </span>
             </div>
           ) : (
-            <div className="space-y-0.5">
+            <div className="p-1">
               {filteredWorkers.map((worker) => (
                 <button
                   key={worker.id}
                   onClick={() => handleSelectUser(worker)}
                   disabled={isCreating}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
                     "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage src={undefined} />
                     <AvatarFallback className="text-xs">
                       {getInitials(worker.first_name, worker.last_name)}
@@ -225,7 +240,7 @@ export function NewDMDialog({ open, onOpenChange }: NewDMDialogProps) {
             </div>
           )}
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 }
