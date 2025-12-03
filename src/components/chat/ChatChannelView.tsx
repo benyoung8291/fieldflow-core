@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Hash, Lock, MessageCircle, Users, Info } from "lucide-react";
+import { ArrowLeft, Hash, Lock, MessageCircle, Users, Info, Search, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatChannel, useChannelMembers } from "@/hooks/chat/useChatChannels";
 import { useChatNotifications } from "@/hooks/chat/useChatNotifications";
@@ -13,12 +13,16 @@ import { MessageWithProfile } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChannelSettingsDialog } from "./dialogs/ChannelSettingsDialog";
 import { OnlineIndicator } from "./OnlineIndicator";
+import { MessageSearch } from "./MessageSearch";
+import { ImageLightbox } from "./ImageLightbox";
+import { ChatSettingsPanel } from "./ChatSettingsPanel";
 import { cn } from "@/lib/utils";
 
 interface ChatChannelViewProps {
@@ -47,6 +51,12 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
   const [editingMessage, setEditingMessage] = useState<MessageWithProfile | null>(null);
   const [replyingTo, setReplyingTo] = useState<MessageWithProfile | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  
+  // Lightbox state
+  const [lightboxImages, setLightboxImages] = useState<Array<{ url: string; name: string }>>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   
   // Enable notifications and typing for this channel
   useChatNotifications(channelId);
@@ -80,6 +90,28 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
 
   const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
+  }, []);
+
+  const handleImageClick = useCallback((images: Array<{ url: string; name: string }>, index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  }, []);
+
+  const handleSearchSelect = useCallback((messageId: string) => {
+    setSearchOpen(false);
+    // Scroll to message
+    setTimeout(() => {
+      const element = document.getElementById(`message-${messageId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        element.classList.add("bg-primary/10");
+        element.style.transition = "background-color 0.3s ease";
+        setTimeout(() => {
+          element.classList.remove("bg-primary/10");
+        }, 2000);
+      }
+    }, 100);
   }, []);
 
   if (channelLoading) {
@@ -184,6 +216,25 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
           </div>
         )}
 
+        {/* Search Button */}
+        <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="flex-shrink-0">
+              <Search className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full sm:w-96 p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Search Messages</SheetTitle>
+            </SheetHeader>
+            <MessageSearch
+              channelId={channel.id}
+              onSelectMessage={handleSearchSelect}
+              onClose={() => setSearchOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+
         {/* Info Button */}
         <Button 
           variant="ghost" 
@@ -204,6 +255,7 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
           currentUserId={currentUserId}
           onReply={handleReply}
           onEdit={handleEdit}
+          onImageClick={handleImageClick}
         />
       )}
 
@@ -225,6 +277,14 @@ export function ChatChannelView({ channelId: propChannelId, className }: ChatCha
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         channel={channel}
+      />
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
       />
     </div>
   );

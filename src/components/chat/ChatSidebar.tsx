@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X, Command } from "lucide-react";
+import { Hash, Lock, MessageCircle, Plus, Search, ChevronDown, ChevronRight, Bell, X, Command, Settings } from "lucide-react";
 import { useChatChannels } from "@/hooks/chat/useChatChannels";
 import { useUnreadMessages } from "@/hooks/chat/useUnreadMessages";
 import { useDMChannelNames } from "@/hooks/chat/useDMChannelName";
@@ -13,10 +13,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CreateChannelDialog } from "./dialogs/CreateChannelDialog";
 import { NewDMDialog } from "./dialogs/NewDMDialog";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { ChannelSwitcher, useChannelSwitcher } from "./ChannelSwitcher";
+import { ChatSettingsPanel } from "./ChatSettingsPanel";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -305,6 +307,21 @@ export function ChatSidebar() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Footer with Settings */}
+      <div className="border-t p-2">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+              <Settings className="h-4 w-4" />
+              <span>Chat Settings</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-80 p-0">
+            <ChatSettingsPanel />
+          </SheetContent>
+        </Sheet>
+      </div>
 
       {/* Dialogs */}
       <CreateChannelDialog open={createChannelOpen} onOpenChange={setCreateChannelOpen} />

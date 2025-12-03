@@ -10,6 +10,20 @@ if (typeof window !== "undefined") {
   notificationAudio.preload = "auto";
 }
 
+// Get settings from localStorage
+function getChatSettings() {
+  if (typeof window === "undefined") return { soundEnabled: true, desktopNotifications: true };
+  try {
+    const stored = localStorage.getItem("chat-settings");
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    // Ignore
+  }
+  return { soundEnabled: true, desktopNotifications: true };
+}
+
 export function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!("Notification" in window)) {
     console.log("[Chat] Notifications not supported");
@@ -29,6 +43,9 @@ export function useChatNotifications(activeChannelId?: string) {
   const debounceMs = 3000; // 3 second debounce to prevent notification spam
 
   const playNotificationSound = useCallback(() => {
+    const settings = getChatSettings();
+    if (!settings.soundEnabled) return;
+
     const now = Date.now();
     if (now - lastNotificationTime.current < debounceMs) {
       return; // Debounce
@@ -45,6 +62,8 @@ export function useChatNotifications(activeChannelId?: string) {
 
   const showSystemNotification = useCallback(
     (title: string, body: string, channelId?: string) => {
+      const settings = getChatSettings();
+      if (!settings.desktopNotifications) return;
       if (Notification.permission !== "granted") return;
       if (document.hasFocus() && activeChannelId === channelId) return;
 
