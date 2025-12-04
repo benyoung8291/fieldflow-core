@@ -58,8 +58,8 @@ export function MessageBubble({
     return (
       <div
         className={cn(
-          "group relative flex px-5 py-1 hover:bg-muted/30",
-          isContinuous ? "mt-0" : "mt-4"
+          "group relative flex px-5 py-0.5 hover:bg-muted/30",
+          isContinuous ? "mt-0" : "mt-1"
         )}
         id={`message-${message.id}`}
       >
@@ -92,8 +92,8 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "group relative flex px-5 py-1 hover:bg-muted/30 transition-colors",
-        isContinuous ? "mt-0" : "mt-4"
+        "group relative flex px-5 py-0.5 hover:bg-muted/30 transition-colors",
+        isContinuous ? "mt-0" : "mt-1"
       )}
       id={`message-${message.id}`}
     >

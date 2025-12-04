@@ -285,20 +285,20 @@ export function ChatChannelView({ channelId: propChannelId, className, isMobileF
         />
       )}
 
-      {/* Typing Indicator */}
-      <TypingIndicator typingUsers={typingUsers} />
-
-      {/* Message Input */}
-      <ChatInput 
-        channelId={channel.id}
-        channelName={displayName}
-        onTyping={broadcastTyping}
-        editingMessage={editingMessage}
-        replyingTo={replyingTo}
-        onCancelEdit={handleCancelEdit}
-        onCancelReply={handleCancelReply}
-        isMobileFullScreen={isMobileFullScreen}
-      />
+      {/* Fixed bottom area - Typing + Input */}
+      <div className="flex-shrink-0 border-t">
+        <TypingIndicator typingUsers={typingUsers} />
+        <ChatInput 
+          channelId={channel.id}
+          channelName={displayName}
+          onTyping={broadcastTyping}
+          editingMessage={editingMessage}
+          replyingTo={replyingTo}
+          onCancelEdit={handleCancelEdit}
+          onCancelReply={handleCancelReply}
+          isMobileFullScreen={isMobileFullScreen}
+        />
+      </div>
 
       {/* Channel Settings Dialog */}
       <ChannelSettingsDialog
