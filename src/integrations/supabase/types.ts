@@ -646,7 +646,7 @@ export type Database = {
           created_at: string | null
           id: string
           tenant_id: string
-          worker_id: string
+          worker_id: string | null
         }
         Insert: {
           appointment_id: string
@@ -654,7 +654,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           tenant_id: string
-          worker_id: string
+          worker_id?: string | null
         }
         Update: {
           appointment_id?: string
@@ -662,7 +662,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           tenant_id?: string
-          worker_id?: string
+          worker_id?: string | null
         }
         Relationships: [
           {
