@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -33,6 +34,7 @@ type SortField = "name" | "abn" | "created_at" | "payment_terms";
 type SortOrder = "asc" | "desc";
 
 export default function Suppliers() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -283,7 +285,7 @@ export default function Suppliers() {
                     <TableRow
                       key={vendor.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleEditVendor(vendor)}
+                      onClick={() => navigate(`/suppliers/${vendor.id}`)}
                     >
                       <TableCell>
                         <div>

@@ -28,12 +28,16 @@ interface ContactManagementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contact?: any;
+  defaultSupplierId?: string;
+  defaultCustomerId?: string;
 }
 
 export default function ContactManagementDialog({
   open,
   onOpenChange,
   contact,
+  defaultSupplierId,
+  defaultCustomerId,
 }: ContactManagementDialogProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -170,12 +174,12 @@ export default function ContactManagementDialog({
         phone: "",
         mobile: "",
         position: "",
-        contactType: "prospect",
+        contactType: defaultSupplierId ? "supplier_contact" : defaultCustomerId ? "customer" : "prospect",
         status: "active",
         source: "",
         companyName: "",
-        customerId: "",
-        supplierId: "",
+        customerId: defaultCustomerId || "",
+        supplierId: defaultSupplierId || "",
         leadId: "",
         assignedTo: "",
         isPrimary: false,
@@ -191,7 +195,7 @@ export default function ContactManagementDialog({
         workerState: "",
       });
     }
-  }, [contact, open]);
+  }, [contact, open, defaultSupplierId, defaultCustomerId]);
 
   const handleAddressSelect = (address: any) => {
     setFormData({

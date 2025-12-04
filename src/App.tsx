@@ -67,6 +67,7 @@ const HelpDesk = lazy(() => import("./pages/HelpDesk"));
 const HelpdeskAnalytics = lazy(() => import("./pages/HelpdeskAnalytics"));
 const CRMHub = lazy(() => import("./pages/CRMHub"));
 const Suppliers = lazy(() => import("@/pages/Suppliers"));
+const SupplierDetails = lazy(() => import("@/pages/SupplierDetails"));
 const PurchaseOrders = lazy(() => import("@/pages/PurchaseOrders"));
 const PurchaseOrderDetails = lazy(() => import("@/pages/PurchaseOrderDetails"));
 const Expenses = lazy(() => import("@/pages/Expenses"));
@@ -387,6 +388,7 @@ const App = () => {
             <Route path="/recurring-invoices" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><RecurringInvoices /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/recurring-invoices/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/invoices")}><RecurringInvoiceDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/suppliers" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/suppliers")}><Suppliers /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/suppliers/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/suppliers")}><SupplierDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/purchase-orders")}><PurchaseOrders /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/purchase-orders/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/purchase-orders")}><PurchaseOrderDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/expenses" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/expenses")}><Expenses /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
