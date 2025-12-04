@@ -61,7 +61,20 @@ export default function ContactManagementDialog({
     state: "",
     postcode: "",
     tags: [] as string[],
+    isAssignableWorker: false,
+    workerState: "",
   });
+
+  const AUSTRALIAN_STATES = [
+    { value: "VIC", label: "Victoria" },
+    { value: "NSW", label: "New South Wales" },
+    { value: "QLD", label: "Queensland" },
+    { value: "SA", label: "South Australia" },
+    { value: "WA", label: "Western Australia" },
+    { value: "TAS", label: "Tasmania" },
+    { value: "NT", label: "Northern Territory" },
+    { value: "ACT", label: "Australian Capital Territory" },
+  ];
 
   // Fetch customers for linking
   const { data: customers } = useQuery({
@@ -146,6 +159,8 @@ export default function ContactManagementDialog({
         state: contact.state || "",
         postcode: contact.postcode || "",
         tags: contact.tags || [],
+        isAssignableWorker: contact.is_assignable_worker || false,
+        workerState: contact.worker_state || "",
       });
     } else {
       setFormData({
@@ -172,6 +187,8 @@ export default function ContactManagementDialog({
         state: "",
         postcode: "",
         tags: [],
+        isAssignableWorker: false,
+        workerState: "",
       });
     }
   }, [contact, open]);
@@ -227,6 +244,8 @@ export default function ContactManagementDialog({
         state: formData.state || null,
         postcode: formData.postcode || null,
         tags: formData.tags,
+        is_assignable_worker: formData.supplierId ? formData.isAssignableWorker : false,
+        worker_state: formData.supplierId && formData.isAssignableWorker ? (formData.workerState || null) : null,
       };
 
       if (contact) {
@@ -607,6 +626,60 @@ export default function ContactManagementDialog({
               <Label htmlFor="isPrimary">Set as Primary Contact</Label>
             </div>
           </div>
+
+          {/* Subcontractor Worker Settings - Only show when linked to a supplier */}
+          {formData.supplierId && (
+            <div className="space-y-4 p-4 rounded-lg border border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/20">
+              <h3 className="font-semibold flex items-center gap-2 text-violet-700 dark:text-violet-300">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+                Subcontractor Worker Settings
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Enable this contact to be assigned to appointments as a subcontractor worker for scheduling purposes.
+              </p>
+              
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="isAssignableWorker"
+                  checked={formData.isAssignableWorker}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, isAssignableWorker: checked })
+                  }
+                />
+                <Label htmlFor="isAssignableWorker" className="text-sm">Enable as Assignable Worker</Label>
+              </div>
+
+              {formData.isAssignableWorker && (
+                <div className="space-y-2">
+                  <Label htmlFor="workerState">Worker State *</Label>
+                  <Select
+                    value={formData.workerState || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, workerState: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select state...</SelectItem>
+                      {AUSTRALIAN_STATES.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label} ({state.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    The state where this subcontractor operates
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">
