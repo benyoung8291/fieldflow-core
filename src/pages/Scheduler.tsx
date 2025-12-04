@@ -844,17 +844,28 @@ export default function Scheduler() {
   const removeWorkerFromAppointmentMutation = useMutation({
     mutationFn: async ({
       appointmentId, 
-      workerId 
+      workerId,
+      contactId
     }: { 
       appointmentId: string; 
-      workerId: string;
+      workerId: string | null;
+      contactId: string | null;
     }) => {
-      const { error } = await supabase
+      let deleteQuery = supabase
         .from("appointment_workers")
         .delete()
-        .eq("appointment_id", appointmentId)
-        .eq("worker_id", workerId);
+        .eq("appointment_id", appointmentId);
 
+      // Delete by worker_id OR contact_id depending on which is set
+      if (workerId) {
+        deleteQuery = deleteQuery.eq("worker_id", workerId);
+      } else if (contactId) {
+        deleteQuery = deleteQuery.eq("contact_id", contactId);
+      } else {
+        throw new Error("Either workerId or contactId must be provided");
+      }
+
+      const { error } = await deleteQuery;
       if (error) throw error;
 
       const { data: remainingWorkers } = await supabase
@@ -869,7 +880,7 @@ export default function Scheduler() {
           .eq("id", appointmentId);
       }
     },
-    onMutate: async ({ appointmentId, workerId }) => {
+    onMutate: async ({ appointmentId, workerId, contactId }) => {
       await queryClient.cancelQueries({ queryKey: ["appointments"] });
       const previousAppointments = queryClient.getQueryData(["appointments"]);
 
@@ -877,7 +888,11 @@ export default function Scheduler() {
         return (old || []).map((apt: any) => {
           if (apt.id === appointmentId) {
             const updatedWorkers = (apt.appointment_workers || []).filter(
-              (w: any) => w.worker_id !== workerId
+              (w: any) => {
+                if (workerId) return w.worker_id !== workerId;
+                if (contactId) return w.contact_id !== contactId;
+                return true;
+              }
             );
             return {
               ...apt,
@@ -891,13 +906,13 @@ export default function Scheduler() {
 
       return { previousAppointments };
     },
-    onSuccess: (_, { appointmentId, workerId }) => {
+    onSuccess: (_, { appointmentId, workerId, contactId }) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       
       // Add to undo stack
       setUndoStack(prev => [...prev.slice(-4), {
         type: 'worker-remove' as const,
-        data: { appointmentId, workerId }
+        data: { appointmentId, workerId, contactId }
       }]);
       
       toast.success("Worker removed", {
@@ -990,8 +1005,8 @@ export default function Scheduler() {
     },
   });
 
-  const handleRemoveWorker = (appointmentId: string, workerId: string) => {
-    removeWorkerFromAppointmentMutation.mutate({ appointmentId, workerId });
+  const handleRemoveWorker = (appointmentId: string, workerId: string | null, contactId: string | null) => {
+    removeWorkerFromAppointmentMutation.mutate({ appointmentId, workerId, contactId });
   };
 
   const handleDeleteAppointment = (appointmentId: string) => {
