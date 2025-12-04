@@ -169,6 +169,42 @@ export default function AppointmentDetails() {
   // Get appointment location state
   const appointmentLocationState = appointment?.service_orders?.customer_locations?.state || null;
 
+  // Get assigned worker/contact IDs (needed before early returns for useMemo)
+  const assignedWorkers = appointment?.appointment_workers || [];
+  const assignedWorkerIds = assignedWorkers.filter((aw: any) => aw.worker_id).map((aw: any) => aw.worker_id);
+  const assignedContactIds = assignedWorkers.filter((aw: any) => aw.contact_id).map((aw: any) => aw.contact_id);
+
+  // Build sorted list of available workers - MUST be before early returns
+  const sortedAvailableWorkers = useMemo(() => {
+    const sameStateWorkers = internalWorkers.filter(
+      w => !assignedWorkerIds.includes(w.id) && appointmentLocationState && w.worker_state === appointmentLocationState
+    );
+    const otherStateWorkers = internalWorkers.filter(
+      w => !assignedWorkerIds.includes(w.id) && (!appointmentLocationState || w.worker_state !== appointmentLocationState)
+    );
+    const availableSubcontractors = subcontractorWorkers.filter(
+      s => !assignedContactIds.includes(s.id)
+    );
+
+    type SortedWorker = {
+      id: string;
+      first_name: string;
+      last_name: string;
+      worker_state: string | null;
+      type: 'sameState' | 'other' | 'subcontractor';
+      isSubcontractor: boolean;
+      supplier_name?: string;
+    };
+
+    const result: SortedWorker[] = [
+      ...sameStateWorkers.map(w => ({ id: w.id, first_name: w.first_name, last_name: w.last_name, worker_state: w.worker_state, type: 'sameState' as const, isSubcontractor: false })),
+      ...otherStateWorkers.map(w => ({ id: w.id, first_name: w.first_name, last_name: w.last_name, worker_state: w.worker_state, type: 'other' as const, isSubcontractor: false })),
+      ...availableSubcontractors.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, worker_state: s.worker_state, type: 'subcontractor' as const, isSubcontractor: true, supplier_name: s.supplier_name })),
+    ];
+
+    return result;
+  }, [internalWorkers, subcontractorWorkers, assignedWorkerIds, assignedContactIds, appointmentLocationState]);
+
   // Fetch field reports
   const { data: fieldReports = [] } = useQuery({
     queryKey: ['field-reports', id],
@@ -339,40 +375,6 @@ export default function AppointmentDetails() {
     );
   }
 
-  const assignedWorkers = appointment.appointment_workers || [];
-  const assignedWorkerIds = assignedWorkers.filter((aw: any) => aw.worker_id).map((aw: any) => aw.worker_id);
-  const assignedContactIds = assignedWorkers.filter((aw: any) => aw.contact_id).map((aw: any) => aw.contact_id);
-
-  // Build sorted list: same-state workers first, then other workers, then subcontractors
-  const sortedAvailableWorkers = useMemo(() => {
-    const sameStateWorkers = internalWorkers.filter(
-      w => !assignedWorkerIds.includes(w.id) && appointmentLocationState && w.worker_state === appointmentLocationState
-    );
-    const otherStateWorkers = internalWorkers.filter(
-      w => !assignedWorkerIds.includes(w.id) && (!appointmentLocationState || w.worker_state !== appointmentLocationState)
-    );
-    const availableSubcontractors = subcontractorWorkers.filter(
-      s => !assignedContactIds.includes(s.id)
-    );
-
-    type SortedWorker = {
-      id: string;
-      first_name: string;
-      last_name: string;
-      worker_state: string | null;
-      type: 'sameState' | 'other' | 'subcontractor';
-      isSubcontractor: boolean;
-      supplier_name?: string;
-    };
-
-    const result: SortedWorker[] = [
-      ...sameStateWorkers.map(w => ({ id: w.id, first_name: w.first_name, last_name: w.last_name, worker_state: w.worker_state, type: 'sameState' as const, isSubcontractor: false })),
-      ...otherStateWorkers.map(w => ({ id: w.id, first_name: w.first_name, last_name: w.last_name, worker_state: w.worker_state, type: 'other' as const, isSubcontractor: false })),
-      ...availableSubcontractors.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, worker_state: s.worker_state, type: 'subcontractor' as const, isSubcontractor: true, supplier_name: s.supplier_name })),
-    ];
-
-    return result;
-  }, [internalWorkers, subcontractorWorkers, assignedWorkerIds, assignedContactIds, appointmentLocationState]);
 
   // MOBILE LAYOUT
   if (isMobile) {
