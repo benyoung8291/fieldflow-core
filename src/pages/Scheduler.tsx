@@ -205,13 +205,15 @@ export default function Scheduler() {
         }
       }
       
-      // Then fetch all appointment_workers with profiles
+      // Then fetch all appointment_workers with profiles AND contacts (for subcontractors)
       const { data: appointmentWorkersData, error: workersError } = await supabase
         .from("appointment_workers")
         .select(`
           appointment_id,
           worker_id,
-          profiles(first_name, last_name)
+          contact_id,
+          profiles(first_name, last_name),
+          contacts(first_name, last_name, supplier_id, suppliers(name))
         `);
       
       if (workersError) {
@@ -1780,6 +1782,7 @@ export default function Scheduler() {
                     currentDate={currentDate}
                     appointments={appointments}
                     workers={workers}
+                    subcontractors={subcontractorWorkers}
                     onAppointmentClick={setViewDetailsAppointmentId}
                     onEditAppointment={(id) => {
                       setEditingAppointmentId(id);
@@ -1795,6 +1798,7 @@ export default function Scheduler() {
                     currentDate={currentDate}
                     appointments={appointments}
                     workers={workers}
+                    subcontractors={subcontractorWorkers}
                     onAppointmentClick={setViewDetailsAppointmentId}
                     onRemoveWorker={handleRemoveWorker}
                     onResizeAppointment={(appointmentId, newStartTime, newEndTime) => {
@@ -1949,9 +1953,17 @@ export default function Scheduler() {
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Users className="h-3 w-3" />
                           <span className="truncate">
-                            {appointment.appointment_workers.map((aw: any) => 
-                              `${aw.profiles?.first_name || ''} ${aw.profiles?.last_name || ''}`
-                            ).join(', ')}
+                            {appointment.appointment_workers.map((aw: any) => {
+                              if (aw.worker_id && aw.profiles) {
+                                return `${aw.profiles.first_name || ''} ${aw.profiles.last_name || ''}`.trim();
+                              }
+                              if (aw.contact_id && aw.contacts) {
+                                const name = `${aw.contacts.first_name || ''} ${aw.contacts.last_name || ''}`.trim();
+                                const company = aw.contacts.suppliers?.name || aw.contacts.supplier_name;
+                                return company ? `${name} (${company})` : name;
+                              }
+                              return '';
+                            }).filter(Boolean).join(', ')}
                           </span>
                         </div>
                       )}

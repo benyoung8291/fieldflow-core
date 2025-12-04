@@ -143,9 +143,17 @@ export default function DraggableAppointment({
                 <div className="flex items-center gap-1 text-[10px]">
                   <Users className="h-3 w-3" />
                   <span className="truncate">
-                    {appointment.appointment_workers.map((aw: any) => 
-                      `${aw.profiles?.first_name || ''} ${aw.profiles?.last_name || ''}`
-                    ).join(', ')}
+                    {appointment.appointment_workers.map((aw: any) => {
+                      if (aw.worker_id && aw.profiles) {
+                        return `${aw.profiles.first_name || ''} ${aw.profiles.last_name || ''}`.trim();
+                      }
+                      if (aw.contact_id && aw.contacts) {
+                        const name = `${aw.contacts.first_name || ''} ${aw.contacts.last_name || ''}`.trim();
+                        const company = aw.contacts.suppliers?.name || aw.contacts.supplier_name;
+                        return company ? `${name} (${company})` : name;
+                      }
+                      return '';
+                    }).filter(Boolean).join(', ')}
                   </span>
                 </div>
               )}
