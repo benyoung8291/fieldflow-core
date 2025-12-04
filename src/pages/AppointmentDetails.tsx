@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,8 @@ import { DocumentNotes } from "@/components/notes/DocumentNotes";
 import { AppointmentAttachments } from "@/components/appointments/AppointmentAttachments";
 import { CreateTimeLogDialog } from "@/components/appointments/CreateTimeLogDialog";
 import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+import { useAssignableWorkers } from "@/hooks/useAssignableWorkers";
+import { useSubcontractorWorkers } from "@/hooks/useSubcontractorWorkers";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground border-muted",
@@ -89,7 +91,7 @@ export default function AppointmentDetails() {
     },
   });
 
-  // Fetch appointment details
+  // Fetch appointment details with location state and subcontractor workers
   const { data: appointment, isLoading, refetch: refetchAppointment } = useQuery({
     queryKey: ["appointment", id],
     queryFn: async () => {
@@ -106,6 +108,10 @@ export default function AppointmentDetails() {
             order_number,
             title,
             customer_id,
+            location_id,
+            customer_locations!service_orders_location_id_fkey (
+              state
+            ),
             customers (
               name,
               email,
@@ -115,12 +121,26 @@ export default function AppointmentDetails() {
           appointment_workers (
             id,
             worker_id,
+            contact_id,
             profiles (
               id,
               first_name,
               last_name,
               email,
-              phone
+              phone,
+              worker_state
+            ),
+            contacts (
+              id,
+              first_name,
+              last_name,
+              email,
+              phone,
+              worker_state,
+              suppliers (
+                id,
+                name
+              )
             )
           )
         `)
@@ -140,30 +160,14 @@ export default function AppointmentDetails() {
     documentName: appointment?.title ? `Appointment: ${appointment.title}` : undefined,
   });
 
-  // Fetch available workers
-  const { data: availableWorkers = [] } = useQuery({
-    queryKey: ['available-workers'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile) return [];
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, phone')
-        .eq('tenant_id', profile.tenant_id)
-        .order('first_name');
-
-      return data || [];
-    },
-  });
+  // Fetch assignable workers (internal workers with 'worker' role only)
+  const { data: internalWorkers = [] } = useAssignableWorkers();
+  
+  // Fetch subcontractor workers
+  const { data: subcontractorWorkers = [] } = useSubcontractorWorkers();
+  
+  // Get appointment location state
+  const appointmentLocationState = appointment?.service_orders?.customer_locations?.state || null;
 
   // Fetch field reports
   const { data: fieldReports = [] } = useQuery({
@@ -181,9 +185,9 @@ export default function AppointmentDetails() {
     enabled: !!id,
   });
 
-  // Add worker mutation
+  // Add worker mutation - handles both internal workers and subcontractors
   const addWorkerMutation = useMutation({
-    mutationFn: async (workerId: string) => {
+    mutationFn: async ({ workerId, contactId }: { workerId?: string; contactId?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -193,13 +197,22 @@ export default function AppointmentDetails() {
         .eq('id', user.id)
         .single();
 
+      const insertData: any = {
+        appointment_id: id,
+        tenant_id: profile?.tenant_id
+      };
+
+      if (workerId) {
+        insertData.worker_id = workerId;
+      } else if (contactId) {
+        insertData.contact_id = contactId;
+      } else {
+        throw new Error('Either workerId or contactId must be provided');
+      }
+
       const { error } = await supabase
         .from('appointment_workers')
-        .insert({
-          appointment_id: id,
-          worker_id: workerId,
-          tenant_id: profile?.tenant_id
-        });
+        .insert(insertData);
 
       if (error) throw error;
     },
@@ -214,15 +227,23 @@ export default function AppointmentDetails() {
     }
   });
 
-  // Remove worker mutation
+  // Remove worker mutation - handles both internal workers and subcontractors
   const removeWorkerMutation = useMutation({
-    mutationFn: async (workerId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ workerId, contactId }: { workerId?: string | null; contactId?: string | null }) => {
+      let deleteQuery = supabase
         .from('appointment_workers')
         .delete()
-        .eq('appointment_id', id)
-        .eq('worker_id', workerId);
+        .eq('appointment_id', id!);
+      
+      if (workerId) {
+        deleteQuery = deleteQuery.eq('worker_id', workerId);
+      } else if (contactId) {
+        deleteQuery = deleteQuery.eq('contact_id', contactId);
+      } else {
+        throw new Error('Either workerId or contactId must be provided');
+      }
 
+      const { error } = await deleteQuery;
       if (error) throw error;
     },
     onSuccess: () => {
@@ -319,9 +340,39 @@ export default function AppointmentDetails() {
   }
 
   const assignedWorkers = appointment.appointment_workers || [];
-  const unassignedWorkers = availableWorkers.filter(
-    w => !assignedWorkers.some(aw => aw.profiles?.id === w.id)
-  );
+  const assignedWorkerIds = assignedWorkers.filter((aw: any) => aw.worker_id).map((aw: any) => aw.worker_id);
+  const assignedContactIds = assignedWorkers.filter((aw: any) => aw.contact_id).map((aw: any) => aw.contact_id);
+
+  // Build sorted list: same-state workers first, then other workers, then subcontractors
+  const sortedAvailableWorkers = useMemo(() => {
+    const sameStateWorkers = internalWorkers.filter(
+      w => !assignedWorkerIds.includes(w.id) && appointmentLocationState && w.worker_state === appointmentLocationState
+    );
+    const otherStateWorkers = internalWorkers.filter(
+      w => !assignedWorkerIds.includes(w.id) && (!appointmentLocationState || w.worker_state !== appointmentLocationState)
+    );
+    const availableSubcontractors = subcontractorWorkers.filter(
+      s => !assignedContactIds.includes(s.id)
+    );
+
+    type SortedWorker = {
+      id: string;
+      first_name: string;
+      last_name: string;
+      worker_state: string | null;
+      type: 'sameState' | 'other' | 'subcontractor';
+      isSubcontractor: boolean;
+      supplier_name?: string;
+    };
+
+    const result: SortedWorker[] = [
+      ...sameStateWorkers.map(w => ({ id: w.id, first_name: w.first_name, last_name: w.last_name, worker_state: w.worker_state, type: 'sameState' as const, isSubcontractor: false })),
+      ...otherStateWorkers.map(w => ({ id: w.id, first_name: w.first_name, last_name: w.last_name, worker_state: w.worker_state, type: 'other' as const, isSubcontractor: false })),
+      ...availableSubcontractors.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, worker_state: s.worker_state, type: 'subcontractor' as const, isSubcontractor: true, supplier_name: s.supplier_name })),
+    ];
+
+    return result;
+  }, [internalWorkers, subcontractorWorkers, assignedWorkerIds, assignedContactIds, appointmentLocationState]);
 
   // MOBILE LAYOUT
   if (isMobile) {
@@ -497,9 +548,24 @@ export default function AppointmentDetails() {
                         <SelectValue placeholder="Select worker..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {unassignedWorkers.map((worker) => (
-                          <SelectItem key={worker.id} value={worker.id}>
-                            {worker.first_name} {worker.last_name}
+                        {sortedAvailableWorkers.map((worker) => (
+                          <SelectItem 
+                            key={worker.id} 
+                            value={`${worker.isSubcontractor ? 'sub:' : 'worker:'}${worker.id}`}
+                            className={cn(
+                              worker.type === 'sameState' && "ring-2 ring-green-500 bg-green-50 dark:bg-green-950/30",
+                              worker.type === 'subcontractor' && "ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-950/30"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{worker.first_name} {worker.last_name}</span>
+                              {worker.isSubcontractor && (
+                                <span className="text-xs text-violet-600 dark:text-violet-400">({worker.supplier_name})</span>
+                              )}
+                              {worker.worker_state && (
+                                <Badge variant="outline" className="text-xs px-1.5 py-0">{worker.worker_state}</Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -509,7 +575,12 @@ export default function AppointmentDetails() {
                         size="sm"
                         onClick={() => {
                           if (selectedWorkerToAdd) {
-                            addWorkerMutation.mutate(selectedWorkerToAdd);
+                            const [type, workerId] = selectedWorkerToAdd.split(':');
+                            if (type === 'sub') {
+                              addWorkerMutation.mutate({ contactId: workerId });
+                            } else {
+                              addWorkerMutation.mutate({ workerId });
+                            }
                           }
                         }}
                         disabled={!selectedWorkerToAdd || addWorkerMutation.isPending}
@@ -540,20 +611,45 @@ export default function AppointmentDetails() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {assignedWorkers.map((aw: any) => (
-                      aw.profiles && (
-                        <div key={aw.id} className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
-                          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-semibold text-primary">
-                              {aw.profiles.first_name?.[0]}{aw.profiles.last_name?.[0]}
+                    {assignedWorkers.map((aw: any) => {
+                      const isSubcontractor = !aw.worker_id && aw.contact_id;
+                      const workerData = isSubcontractor ? aw.contacts : aw.profiles;
+                      if (!workerData) return null;
+                      
+                      const isSameState = !isSubcontractor && appointmentLocationState && workerData.worker_state === appointmentLocationState;
+                      
+                      return (
+                        <div 
+                          key={aw.id} 
+                          className={cn(
+                            "flex items-center gap-3 p-2.5 rounded-lg",
+                            isSubcontractor ? "bg-violet-50 ring-2 ring-violet-200 dark:bg-violet-950/30 dark:ring-violet-800" :
+                            isSameState ? "bg-green-50 ring-2 ring-green-200 dark:bg-green-950/30 dark:ring-green-800" :
+                            "bg-muted/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "h-9 w-9 rounded-full flex items-center justify-center shrink-0",
+                            isSubcontractor ? "bg-violet-200 dark:bg-violet-900" : "bg-primary/20"
+                          )}>
+                            <span className={cn(
+                              "text-xs font-semibold",
+                              isSubcontractor ? "text-violet-700 dark:text-violet-300" : "text-primary"
+                            )}>
+                              {workerData.first_name?.[0]}{workerData.last_name?.[0]}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">
-                              {aw.profiles.first_name} {aw.profiles.last_name}
-                            </p>
-                            {aw.profiles.email && (
-                              <p className="text-xs text-muted-foreground truncate">{aw.profiles.email}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">
+                                {workerData.first_name} {workerData.last_name}
+                              </p>
+                              {isSubcontractor && aw.contacts?.suppliers?.name && (
+                                <span className="text-xs text-violet-600 dark:text-violet-400">({aw.contacts.suppliers.name})</span>
+                              )}
+                            </div>
+                            {workerData.email && (
+                              <p className="text-xs text-muted-foreground truncate">{workerData.email}</p>
                             )}
                           </div>
                           {isSupervisorOrAdmin && (
@@ -561,14 +657,17 @@ export default function AppointmentDetails() {
                               size="icon"
                               variant="ghost"
                               className="h-7 w-7 shrink-0"
-                              onClick={() => removeWorkerMutation.mutate(aw.worker_id)}
+                              onClick={() => removeWorkerMutation.mutate({ 
+                                workerId: aw.worker_id, 
+                                contactId: aw.contact_id 
+                              })}
                             >
                               <X className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
-                      )
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -1024,9 +1123,24 @@ export default function AppointmentDetails() {
                         <SelectValue placeholder="Select worker..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {unassignedWorkers.map((worker) => (
-                          <SelectItem key={worker.id} value={worker.id}>
-                            {worker.first_name} {worker.last_name}
+                        {sortedAvailableWorkers.map((worker) => (
+                          <SelectItem 
+                            key={worker.id} 
+                            value={`${worker.isSubcontractor ? 'sub:' : 'worker:'}${worker.id}`}
+                            className={cn(
+                              worker.type === 'sameState' && "ring-2 ring-green-500 bg-green-50 dark:bg-green-950/30",
+                              worker.type === 'subcontractor' && "ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-950/30"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{worker.first_name} {worker.last_name}</span>
+                              {worker.isSubcontractor && worker.supplier_name && (
+                                <span className="text-xs text-violet-600 dark:text-violet-400">({worker.supplier_name})</span>
+                              )}
+                              {worker.worker_state && (
+                                <Badge variant="outline" className="text-xs px-1.5 py-0">{worker.worker_state}</Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1036,7 +1150,12 @@ export default function AppointmentDetails() {
                         size="sm"
                         onClick={() => {
                           if (selectedWorkerToAdd) {
-                            addWorkerMutation.mutate(selectedWorkerToAdd);
+                            const [type, workerId] = selectedWorkerToAdd.split(':');
+                            if (type === 'sub') {
+                              addWorkerMutation.mutate({ contactId: workerId });
+                            } else {
+                              addWorkerMutation.mutate({ workerId });
+                            }
                           }
                         }}
                         disabled={!selectedWorkerToAdd || addWorkerMutation.isPending}
@@ -1068,31 +1187,53 @@ export default function AppointmentDetails() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {assignedWorkers.map((aw: any) => (
-                      aw.profiles && (
+                    {assignedWorkers.map((aw: any) => {
+                      const isSubcontractor = !aw.worker_id && aw.contact_id;
+                      const workerData = isSubcontractor ? aw.contacts : aw.profiles;
+                      if (!workerData) return null;
+                      
+                      const isSameState = !isSubcontractor && appointmentLocationState && workerData.worker_state === appointmentLocationState;
+                      
+                      return (
                         <div
                           key={aw.id}
-                          className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors group"
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg transition-colors group",
+                            isSubcontractor ? "bg-violet-50 ring-2 ring-violet-200 dark:bg-violet-950/30 dark:ring-violet-800" :
+                            isSameState ? "bg-green-50 ring-2 ring-green-200 dark:bg-green-950/30 dark:ring-green-800 hover:bg-green-100 dark:hover:bg-green-950/50" :
+                            "bg-muted/30 hover:bg-muted/50"
+                          )}
                         >
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                            <span className="text-sm font-semibold text-primary">
-                              {aw.profiles.first_name?.[0]}{aw.profiles.last_name?.[0]}
+                          <div className={cn(
+                            "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                            isSubcontractor ? "bg-violet-200 dark:bg-violet-900" : "bg-primary/20"
+                          )}>
+                            <span className={cn(
+                              "text-sm font-semibold",
+                              isSubcontractor ? "text-violet-700 dark:text-violet-300" : "text-primary"
+                            )}>
+                              {workerData.first_name?.[0]}{workerData.last_name?.[0]}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold">
-                              {aw.profiles.first_name} {aw.profiles.last_name}
-                            </p>
-                            {aw.profiles.email && (
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold">
+                                {workerData.first_name} {workerData.last_name}
+                              </p>
+                              {isSubcontractor && aw.contacts?.suppliers?.name && (
+                                <span className="text-xs text-violet-600 dark:text-violet-400">({aw.contacts.suppliers.name})</span>
+                              )}
+                            </div>
+                            {workerData.email && (
                               <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
                                 <Mail className="h-3 w-3" />
-                                {aw.profiles.email}
+                                {workerData.email}
                               </p>
                             )}
-                            {aw.profiles.phone && (
+                            {workerData.phone && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                                 <Phone className="h-3 w-3" />
-                                {aw.profiles.phone}
+                                {workerData.phone}
                               </p>
                             )}
                           </div>
@@ -1101,14 +1242,17 @@ export default function AppointmentDetails() {
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => removeWorkerMutation.mutate(aw.worker_id)}
+                              onClick={() => removeWorkerMutation.mutate({ 
+                                workerId: aw.worker_id, 
+                                contactId: aw.contact_id 
+                              })}
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
-                      )
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
