@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2, XCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Edit, Trash2, FileText, Clock, Calendar, CheckCircle, User, MapPin, Loader2, XCircle, ArrowUpDown, ArrowUp, ArrowDown, FileSignature, Users, ShoppingCart } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +28,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import AuditDrawer from "@/components/audit/AuditDrawer";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import PresenceIndicator from "@/components/presence/PresenceIndicator";
@@ -42,6 +48,7 @@ import { useGenericPresence } from "@/hooks/useGenericPresence";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -64,6 +71,49 @@ const priorityColors = {
   urgent: "bg-destructive/10 text-destructive",
 };
 
+// Currency formatter
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
+// Calculate hours and worker assignment status for a service order
+const calculateOrderMetrics = (order: any) => {
+  // Estimated hours from line items
+  const estimatedHours = order.service_order_line_items?.reduce(
+    (sum: number, item: any) => sum + (item.estimated_hours || 0), 0
+  ) || 0;
+  
+  // Scheduled hours from appointments
+  const appointments = order.full_appointments || [];
+  const scheduledHours = appointments.reduce((sum: number, apt: any) => {
+    if (!apt.start_time || !apt.end_time) return sum;
+    const start = new Date(apt.start_time);
+    const end = new Date(apt.end_time);
+    return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  }, 0);
+  
+  // Worker assignment status
+  const appointmentCount = appointments.length;
+  const appointmentsWithWorkers = appointments.filter(
+    (apt: any) => apt.appointment_workers && apt.appointment_workers.length > 0
+  ).length;
+  
+  let workerStatus: 'none' | 'partial' | 'full' = 'none';
+  if (appointmentCount > 0) {
+    if (appointmentsWithWorkers === appointmentCount) {
+      workerStatus = 'full';
+    } else if (appointmentsWithWorkers > 0) {
+      workerStatus = 'partial';
+    }
+  }
+  
+  return { estimatedHours, scheduledHours, appointmentCount, workerStatus };
+};
+
 export default function ServiceOrders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -77,6 +127,7 @@ export default function ServiceOrders() {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
@@ -94,7 +145,7 @@ export default function ServiceOrders() {
     numberField: "order_number",
   });
 
-  // Set up realtime updates for appointments and service orders to refresh counts and status
+  // Set up realtime updates for appointments, appointment_workers, and service orders
   useEffect(() => {
     const appointmentsChannel = supabase
       .channel('service-orders-appointments-updates')
@@ -107,6 +158,23 @@ export default function ServiceOrders() {
         },
         () => {
           console.log('[ServiceOrders] Appointment changed, refreshing service orders');
+          queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+        }
+      )
+      .subscribe();
+
+    // Add subscription for appointment_workers changes
+    const workersChannel = supabase
+      .channel('service-orders-workers-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointment_workers'
+        },
+        () => {
+          console.log('[ServiceOrders] Appointment workers changed, refreshing service orders');
           queryClient.invalidateQueries({ queryKey: ["service_orders"] });
         }
       )
@@ -130,12 +198,13 @@ export default function ServiceOrders() {
 
     return () => {
       supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(workersChannel);
       supabase.removeChannel(serviceOrdersChannel);
     };
   }, [queryClient]);
 
   const { data: ordersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["service_orders", searchTerm, statusFilter, priorityFilter, customerFilter, sortField, sortDirection, pagination.currentPage, pagination.pageSize],
+    queryKey: ["service_orders", debouncedSearch, statusFilter, priorityFilter, customerFilter, sortField, sortDirection, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       
@@ -146,6 +215,7 @@ export default function ServiceOrders() {
           order_number,
           work_order_number,
           title,
+          description,
           customer_id,
           location_id,
           status,
@@ -154,11 +224,24 @@ export default function ServiceOrders() {
           completed_date,
           created_at,
           preferred_date,
+          contract_id,
           customers!service_orders_customer_id_fkey(name),
           customer_locations!service_orders_customer_location_id_fkey(name),
           appointments(count),
+          full_appointments:appointments(
+            id,
+            start_time,
+            end_time,
+            status,
+            appointment_workers(id, worker_id, contact_id)
+          ),
           purchase_orders(count),
-          invoices(count)
+          invoices(count),
+          service_order_line_items(
+            id,
+            estimated_hours,
+            description
+          )
         `, { count: 'exact' });
 
       // Apply sorting - special handling for customer name
@@ -179,10 +262,10 @@ export default function ServiceOrders() {
         query = query.eq("customer_id", customerFilter);
       }
 
-      // Apply search filter across all records
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase();
-        query = query.or(`order_number.ilike.%${searchLower}%,title.ilike.%${searchLower}%,work_order_number.ilike.%${searchLower}%`);
+      // Apply basic search filter (title, order_number, work_order_number, description)
+      if (debouncedSearch.trim()) {
+        const searchLower = debouncedSearch.toLowerCase();
+        query = query.or(`order_number.ilike.%${searchLower}%,title.ilike.%${searchLower}%,work_order_number.ilike.%${searchLower}%,description.ilike.%${searchLower}%`);
       }
 
       // Apply pagination after filters
@@ -197,7 +280,35 @@ export default function ServiceOrders() {
     },
   });
 
-  const orders = ordersResponse?.orders || [];
+  // Client-side filtering for line items and customer name (after database query)
+  const filteredOrders = useMemo(() => {
+    const orders = ordersResponse?.orders || [];
+    if (!debouncedSearch.trim()) return orders;
+    
+    const searchLower = debouncedSearch.toLowerCase();
+    
+    return orders.filter((order: any) => {
+      // Already matched by DB query for order_number, title, work_order_number, description
+      // Additional client-side matching for customer name and line items
+      const customerMatch = order.customers?.name?.toLowerCase().includes(searchLower);
+      const lineItemMatch = order.service_order_line_items?.some(
+        (item: any) => item.description?.toLowerCase().includes(searchLower)
+      );
+      
+      // If already matched by DB (order_number, title, work_order_number, description contains search)
+      // or matches customer/line items
+      return (
+        order.order_number?.toLowerCase().includes(searchLower) ||
+        order.title?.toLowerCase().includes(searchLower) ||
+        order.work_order_number?.toLowerCase().includes(searchLower) ||
+        order.description?.toLowerCase().includes(searchLower) ||
+        customerMatch ||
+        lineItemMatch
+      );
+    });
+  }, [ordersResponse?.orders, debouncedSearch]);
+
+  const orders = filteredOrders;
   const totalCount = ordersResponse?.count || 0;
   const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
@@ -240,8 +351,6 @@ export default function ServiceOrders() {
     },
   });
 
-  // No need for client-side filtering since we're filtering in the database query
-
   const handleDelete = async () => {
     if (!orderToDelete) return;
 
@@ -280,6 +389,83 @@ export default function ServiceOrders() {
       setEditingOrderId(undefined);
     }
   }, [dialogOpen]);
+
+  // Appointment column component with color coding
+  const AppointmentCell = ({ order }: { order: any }) => {
+    const { estimatedHours, scheduledHours, appointmentCount, workerStatus } = calculateOrderMetrics(order);
+    
+    const bgColor = appointmentCount === 0 
+      ? "bg-muted" 
+      : workerStatus === 'full' 
+        ? "bg-success/10" 
+        : workerStatus === 'partial'
+          ? "bg-warning/10"
+          : "bg-destructive/10";
+    
+    const textColor = appointmentCount === 0 
+      ? "text-muted-foreground" 
+      : workerStatus === 'full' 
+        ? "text-success" 
+        : workerStatus === 'partial'
+          ? "text-warning"
+          : "text-destructive";
+    
+    const statusText = workerStatus === 'full' 
+      ? "All workers assigned" 
+      : workerStatus === 'partial' 
+        ? "Some appointments need workers" 
+        : workerStatus === 'none' && appointmentCount > 0
+          ? "No workers assigned"
+          : "No appointments";
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={cn("flex flex-col items-center gap-0.5 px-2 py-1 rounded-md", bgColor)}>
+              <div className="flex items-center gap-1">
+                <Users className={cn("h-3 w-3", textColor)} />
+                <span className={cn("text-sm font-medium", textColor)}>
+                  {appointmentCount}
+                </span>
+              </div>
+              {(estimatedHours > 0 || scheduledHours > 0) && (
+                <span className="text-xs text-muted-foreground">
+                  {scheduledHours.toFixed(1)}h / {estimatedHours.toFixed(1)}h
+                </span>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-xs space-y-1">
+              <p><strong>{appointmentCount}</strong> appointment{appointmentCount !== 1 ? 's' : ''}</p>
+              <p>Scheduled: <strong>{scheduledHours.toFixed(1)}h</strong></p>
+              <p>Estimated: <strong>{estimatedHours.toFixed(1)}h</strong></p>
+              <p className={textColor}>{statusText}</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
+  // PO column component with color coding
+  const POCell = ({ order }: { order: any }) => {
+    const poCount = order.purchase_orders?.[0]?.count || 0;
+    const hasPOs = poCount > 0;
+    
+    return (
+      <div className={cn(
+        "flex items-center justify-center gap-1 px-2 py-1 rounded-md",
+        hasPOs ? "bg-info/10" : "bg-muted"
+      )}>
+        <ShoppingCart className={cn("h-3 w-3", hasPOs ? "text-info" : "text-muted-foreground")} />
+        <span className={cn("text-sm font-medium", hasPOs ? "text-info" : "text-muted-foreground")}>
+          {poCount}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -434,7 +620,7 @@ export default function ServiceOrders() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search orders by number, customer, or title..."
+                placeholder="Search orders, customers, titles, descriptions, line items..."
                 className="pl-10 h-11 border-none bg-muted/50"
                 value={searchTerm}
                 onChange={(e) => {
@@ -583,33 +769,38 @@ export default function ServiceOrders() {
                 </CardContent>
               </Card>
             ) : (
-              orders.map((order: any) => (
-                <MobileDocumentCard
-                  key={order.id}
-                  title={`#${order.order_number}`}
-                  subtitle={order.title}
-                  status={statusLabels[order.status as keyof typeof statusLabels] || order.status}
-                  statusColor={
-                    order.status === 'draft' ? 'bg-muted-foreground' :
-                    order.status === 'scheduled' ? 'bg-info' :
-                    order.status === 'in_progress' ? 'bg-warning' :
-                    'bg-success'
-                  }
-                  badge={order.priority}
-                  badgeVariant={
-                    order.priority === 'urgent' ? 'destructive' :
-                    order.priority === 'high' ? 'default' :
-                    'secondary'
-                  }
-                  metadata={[
-                    { label: 'Customer', value: order.customers?.name || '-' },
-                    { label: 'Location', value: order.customer_locations?.name || '-' },
-                    ...(order.work_order_number ? [{ label: 'WO#', value: order.work_order_number }] : []),
-                    { label: 'Total', value: `$${order.subtotal?.toFixed(2) || '0.00'}` },
-                  ]}
-                  to={`/service-orders/${order.id}`}
-                />
-              ))
+              orders.map((order: any) => {
+                const { estimatedHours, scheduledHours, appointmentCount } = calculateOrderMetrics(order);
+                return (
+                  <MobileDocumentCard
+                    key={order.id}
+                    title={`#${order.order_number}`}
+                    subtitle={order.title}
+                    status={statusLabels[order.status as keyof typeof statusLabels] || order.status}
+                    statusColor={
+                      order.status === 'draft' ? 'bg-muted-foreground' :
+                      order.status === 'scheduled' ? 'bg-info' :
+                      order.status === 'in_progress' ? 'bg-warning' :
+                      'bg-success'
+                    }
+                    badge={order.priority}
+                    badgeVariant={
+                      order.priority === 'urgent' ? 'destructive' :
+                      order.priority === 'high' ? 'default' :
+                      'secondary'
+                    }
+                    metadata={[
+                      { label: 'Customer', value: order.customers?.name || '-' },
+                      { label: 'Location', value: order.customer_locations?.name || '-' },
+                      ...(order.work_order_number ? [{ label: 'WO#', value: order.work_order_number }] : []),
+                      { label: 'Appts', value: `${appointmentCount} (${scheduledHours.toFixed(1)}h/${estimatedHours.toFixed(1)}h)` },
+                      { label: 'Total', value: formatCurrency(order.subtotal || 0) },
+                      ...(order.contract_id ? [{ label: 'Source', value: '📄 Contract' }] : []),
+                    ]}
+                    to={`/service-orders/${order.id}`}
+                  />
+                );
+              })
             )}
           </div>
         ) : (
@@ -640,10 +831,26 @@ export default function ServiceOrders() {
                         className="table-row hover:bg-muted/50 cursor-pointer transition-colors"
                       >
                         <td className="p-3">
-                          <div className="text-sm font-semibold text-foreground">#{order.order_number}</div>
-                          {order.work_order_number && (
-                            <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {order.contract_id && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FileSignature className="h-4 w-4 text-info flex-shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Generated from contract</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <div>
+                              <div className="text-sm font-semibold text-foreground">#{order.order_number}</div>
+                              {order.work_order_number && (
+                                <div className="text-xs text-muted-foreground">WO: {order.work_order_number}</div>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td className="p-3">
                           <div className="text-sm font-medium text-foreground truncate max-w-[400px]" title={order.title}>{order.title}</div>
@@ -656,15 +863,15 @@ export default function ServiceOrders() {
                             {order.customer_locations?.name || '-'}
                           </div>
                         </td>
-                        <td className="p-3 text-center">
-                          <Badge variant="secondary" className="text-xs">
-                            {order.appointments?.[0]?.count || 0}
-                          </Badge>
+                        <td className="p-3">
+                          <div className="flex justify-center">
+                            <AppointmentCell order={order} />
+                          </div>
                         </td>
-                        <td className="p-3 text-center">
-                          <Badge variant="secondary" className="text-xs">
-                            {order.purchase_orders?.[0]?.count || 0}
-                          </Badge>
+                        <td className="p-3">
+                          <div className="flex justify-center">
+                            <POCell order={order} />
+                          </div>
                         </td>
                         <td className="p-3 text-center">
                           {(order.invoices?.[0]?.count || 0) > 0 ? (
@@ -684,7 +891,7 @@ export default function ServiceOrders() {
                           </Badge>
                         </td>
                         <td className="p-3 text-right">
-                          <div className="text-sm font-bold">${(order.subtotal || 0).toFixed(2)}</div>
+                          <div className="text-sm font-bold">{formatCurrency(order.subtotal || 0)}</div>
                         </td>
                       </Link>
                     ))}
