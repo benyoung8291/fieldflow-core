@@ -27,7 +27,7 @@ interface ServiceOrdersCalendarViewProps {
   stateFilter?: string;
   onAppointmentClick: (id: string) => void;
   onCreateAppointment: (serviceOrderId: string, date: Date, startTime: string, endTime: string) => void;
-  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string | null, contactId: string | null) => void;
 }
 
 type SortOption = "requires_appointment" | "name" | "number";
@@ -263,7 +263,7 @@ export default function ServiceOrdersCalendarView({
                             appointment={apt}
                             lineItemsSummary={order.lineItemsSummary}
                             estimatedHours={order.estimated_hours}
-                            onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
+                            onRemoveWorker={(workerId, contactId) => onRemoveWorker(apt.id, workerId, contactId)}
                             onClick={() => onAppointmentClick(apt.id)}
                           />
                         ))

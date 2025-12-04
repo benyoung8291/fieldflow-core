@@ -16,7 +16,7 @@ interface SchedulerMonthViewProps {
   appointments: any[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment: (id: string) => void;
-  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string | null, contactId: string | null) => void;
   onGPSCheckIn: (appointment: any) => void;
 }
 

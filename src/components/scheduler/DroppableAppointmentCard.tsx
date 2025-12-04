@@ -12,7 +12,7 @@ interface DroppableAppointmentCardProps {
   appointment: any;
   lineItemsSummary?: string;
   estimatedHours?: number;
-  onRemoveWorker: (workerId: string) => void;
+  onRemoveWorker: (workerId: string | null, contactId: string | null) => void;
   onClick: () => void;
 }
 
@@ -137,25 +137,41 @@ export default function DroppableAppointmentCard({
               <span>Workers ({workers.length})</span>
             </div>
             <div className="flex flex-col gap-1">
-              {workers.map((w: any) => (
-                <Badge key={w.worker_id} variant="secondary" className="text-xs pr-1 flex items-center justify-between gap-1 w-full">
-                  <span className="truncate">
-                    {w.profiles?.first_name} {w.profiles?.last_name}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-3 w-3 p-0 hover:bg-destructive/20 flex-shrink-0"
-                    data-no-click
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveWorker(w.worker_id);
-                    }}
+              {workers.map((w: any) => {
+                const isSubcontractor = !w.worker_id && w.contact_id;
+                const uniqueKey = w.worker_id || w.contact_id;
+                const name = isSubcontractor
+                  ? `${w.contacts?.first_name || ''} ${w.contacts?.last_name || ''}`.trim()
+                  : `${w.profiles?.first_name || ''} ${w.profiles?.last_name || ''}`.trim();
+                const companyName = isSubcontractor ? w.contacts?.suppliers?.name : null;
+
+                return (
+                  <Badge 
+                    key={uniqueKey} 
+                    variant={isSubcontractor ? "outline" : "secondary"}
+                    className={cn(
+                      "text-xs pr-1 flex items-center justify-between gap-1 w-full",
+                      isSubcontractor && "bg-violet-100 border-violet-300 text-violet-800 dark:bg-violet-950 dark:border-violet-700 dark:text-violet-200"
+                    )}
                   >
-                    <X className="h-2 w-2" />
-                  </Button>
-                </Badge>
-              ))}
+                    <span className="truncate">
+                      {name}{companyName && ` (${companyName})`}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-3 w-3 p-0 hover:bg-destructive/20 flex-shrink-0"
+                      data-no-click
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveWorker(w.worker_id, w.contact_id);
+                      }}
+                    >
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                );
+              })}
             </div>
           </div>
         )}

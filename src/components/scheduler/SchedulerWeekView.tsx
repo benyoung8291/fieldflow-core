@@ -36,7 +36,7 @@ interface SchedulerWeekViewProps {
   subcontractors?: SubcontractorWorker[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment: (id: string) => void;
-  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string | null, contactId: string | null) => void;
   onGPSCheckIn: (appointment: any) => void;
   checkAvailability?: (workerId: string, startTime: Date, endTime: Date) => { isAvailable: boolean; reason?: string; availablePeriods?: string[] };
 }

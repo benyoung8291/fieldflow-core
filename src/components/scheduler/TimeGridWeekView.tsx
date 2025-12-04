@@ -15,7 +15,7 @@ interface TimeGridWeekViewProps {
   workers: any[];
   subcontractors?: SubcontractorWorker[];
   onAppointmentClick: (id: string) => void;
-  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string | null, contactId: string | null) => void;
   onResizeAppointment: (appointmentId: string, newStartTime: Date, newEndTime: Date) => void;
   onCreateAppointment: (workerId: string | null, date: Date, hour: number) => void;
 }

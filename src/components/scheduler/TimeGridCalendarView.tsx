@@ -11,7 +11,7 @@ interface TimeGridCalendarViewProps {
   currentDate: Date;
   appointments: any[];
   onAppointmentClick: (id: string) => void;
-  onRemoveWorker: (appointmentId: string, workerId: string) => void;
+  onRemoveWorker: (appointmentId: string, workerId: string | null, contactId: string | null) => void;
   onResizeAppointment: (appointmentId: string, newStartTime: Date, newEndTime: Date) => void;
   onCreateAppointment: (serviceOrderId: string, date: Date, hour: number) => void;
 }
@@ -181,7 +181,7 @@ export default function TimeGridCalendarView({
                               appointment={apt}
                               lineItemsSummary={order.lineItemsSummary}
                               estimatedHours={order.estimated_hours}
-                              onRemoveWorker={(workerId) => onRemoveWorker(apt.id, workerId)}
+                              onRemoveWorker={(workerId, contactId) => onRemoveWorker(apt.id, workerId, contactId)}
                               onClick={() => onAppointmentClick(apt.id)}
                               onResize={onResizeAppointment}
                               pixelsPerHour={PIXELS_PER_HOUR}

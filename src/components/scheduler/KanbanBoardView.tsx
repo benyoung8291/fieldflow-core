@@ -22,7 +22,7 @@ interface KanbanBoardViewProps {
   appointments: any[];
   onAppointmentClick: (id: string) => void;
   onEditAppointment?: (id: string) => void;
-  onRemoveWorker?: (appointmentId: string, workerId: string) => void;
+  onRemoveWorker?: (appointmentId: string, workerId: string | null, contactId: string | null) => void;
   onGPSCheckIn?: (appointment: any) => void;
   onDeleteAppointment?: (id: string) => void;
 }
@@ -127,7 +127,7 @@ export default function KanbanBoardView({
                   appointment={appointment}
                   onClick={() => onAppointmentClick(appointment.id)}
                   onEdit={() => onEditAppointment?.(appointment.id)}
-                  onRemoveWorker={(workerId) => onRemoveWorker?.(appointment.id, workerId)}
+                  onRemoveWorker={(workerId, contactId) => onRemoveWorker?.(appointment.id, workerId, contactId)}
                   onGPSCheckIn={() => onGPSCheckIn?.(appointment)}
                   onDelete={appointment.status === "draft" ? () => onDeleteAppointment?.(appointment.id) : undefined}
                 />
@@ -157,7 +157,7 @@ interface AppointmentCardProps {
   appointment: any;
   onClick?: () => void;
   onEdit?: () => void;
-  onRemoveWorker?: (workerId: string) => void;
+  onRemoveWorker?: (workerId: string | null, contactId: string | null) => void;
   onGPSCheckIn?: () => void;
   onDelete?: () => void;
 }
@@ -218,9 +218,16 @@ function AppointmentCard({
             <div className="flex items-center gap-1.5 text-[10px]">
               <User className="h-3 w-3" />
               <span className="truncate">
-                {appointment.appointment_workers.map((aw: any) => 
-                  aw.profiles ? `${aw.profiles.first_name} ${aw.profiles.last_name}` : ''
-                ).filter(Boolean).join(', ')}
+                {appointment.appointment_workers.map((aw: any) => {
+                  if (aw.worker_id && aw.profiles) {
+                    return `${aw.profiles.first_name} ${aw.profiles.last_name}`;
+                  } else if (aw.contact_id && aw.contacts) {
+                    const name = `${aw.contacts.first_name || ''} ${aw.contacts.last_name || ''}`.trim();
+                    const company = aw.contacts.suppliers?.name;
+                    return company ? `${name} (${company})` : name;
+                  }
+                  return '';
+                }).filter(Boolean).join(', ')}
               </span>
             </div>
           )}

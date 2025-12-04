@@ -11,7 +11,7 @@ interface ResizableAppointmentCardProps {
   appointment: any;
   lineItemsSummary?: string;
   estimatedHours?: number;
-  onRemoveWorker: (workerId: string) => void;
+  onRemoveWorker: (workerId: string | null, contactId: string | null) => void;
   onClick: () => void;
   onResize: (appointmentId: string, newStartTime: Date, newEndTime: Date) => void;
   pixelsPerHour: number;
@@ -168,22 +168,37 @@ export default function ResizableAppointmentCard({
                   <span>Workers ({workers.length})</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {workers.map((w: any) => (
-                    <Badge key={w.worker_id} variant="secondary" className="text-xs pr-1">
-                      {w.profiles?.first_name?.[0]}{w.profiles?.last_name?.[0]}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-3 w-3 p-0 ml-1 hover:bg-destructive/20"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveWorker(w.worker_id);
-                        }}
+                  {workers.map((w: any) => {
+                    const isSubcontractor = !w.worker_id && w.contact_id;
+                    const uniqueKey = w.worker_id || w.contact_id;
+                    const initials = isSubcontractor
+                      ? `${w.contacts?.first_name?.[0] || ''}${w.contacts?.last_name?.[0] || ''}`
+                      : `${w.profiles?.first_name?.[0] || ''}${w.profiles?.last_name?.[0] || ''}`;
+
+                    return (
+                      <Badge 
+                        key={uniqueKey} 
+                        variant={isSubcontractor ? "outline" : "secondary"}
+                        className={cn(
+                          "text-xs pr-1",
+                          isSubcontractor && "bg-violet-100 border-violet-300 text-violet-800 dark:bg-violet-950 dark:border-violet-700 dark:text-violet-200"
+                        )}
                       >
-                        <X className="h-2 w-2" />
-                      </Button>
-                    </Badge>
-                  ))}
+                        {initials}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-3 w-3 p-0 ml-1 hover:bg-destructive/20"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveWorker(w.worker_id, w.contact_id);
+                          }}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
             )}
