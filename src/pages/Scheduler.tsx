@@ -31,8 +31,10 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, DragCancelEvent, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import ServiceOrdersSidebar from "@/components/scheduler/ServiceOrdersSidebar";
 import DraggableWorker from "@/components/scheduler/DraggableWorker";
+import DraggableSubcontractor from "@/components/scheduler/DraggableSubcontractor";
 import { CapacityPlanningViewLazy } from "@/components/scheduler/CapacityPlanningViewLazy";
 import { useAppointmentConflicts } from "@/hooks/useAppointmentConflicts";
+import { useSubcontractorWorkers } from "@/hooks/useSubcontractorWorkers";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -73,6 +75,9 @@ export default function Scheduler() {
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
   const { checkConflict, checkAvailability } = useAppointmentConflicts();
+  
+  // Fetch subcontractor workers
+  const { data: subcontractorWorkers = [] } = useSubcontractorWorkers(stateFilter);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -751,8 +756,91 @@ export default function Scheduler() {
     },
   });
 
-  const removeWorkerFromAppointmentMutation = useMutation({
+  // Mutation for adding subcontractor (contact) to appointment
+  const addSubcontractorToAppointmentMutation = useMutation({
     mutationFn: async ({ 
+      appointmentId, 
+      contactId 
+    }: { 
+      appointmentId: string; 
+      contactId: string;
+    }) => {
+      const { data: currentUser } = await supabase.auth.getUser();
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", currentUser.user?.id)
+        .maybeSingle();
+
+      const { error } = await supabase
+        .from("appointment_workers")
+        .insert({
+          tenant_id: currentProfile?.tenant_id,
+          appointment_id: appointmentId,
+          contact_id: contactId,
+        } as any);
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error("Subcontractor already assigned to this appointment");
+        }
+        throw error;
+      }
+
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("first_name, last_name, suppliers(name)")
+        .eq("id", contactId)
+        .maybeSingle();
+
+      return { contactId, contact };
+    },
+    onMutate: async ({ appointmentId, contactId }) => {
+      await queryClient.cancelQueries({ queryKey: ["appointments"] });
+      const previousAppointments = queryClient.getQueryData(["appointments"]);
+
+      // Find subcontractor name from existing data
+      const subcontractor = subcontractorWorkers.find(s => s.id === contactId);
+
+      queryClient.setQueryData(["appointments"], (old: any) => {
+        return (old || []).map((apt: any) => {
+          if (apt.id === appointmentId) {
+            return {
+              ...apt,
+              appointment_workers: [
+                ...(apt.appointment_workers || []),
+                {
+                  appointment_id: appointmentId,
+                  contact_id: contactId,
+                  contacts: subcontractor ? { 
+                    first_name: subcontractor.first_name, 
+                    last_name: subcontractor.last_name,
+                    supplier_name: subcontractor.supplier_name
+                  } : null,
+                }
+              ]
+            };
+          }
+          return apt;
+        });
+      });
+
+      return { previousAppointments };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Subcontractor added");
+    },
+    onError: (error: any, variables, context) => {
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(["appointments"], context.previousAppointments);
+      }
+      toast.error(error.message || "Failed to add subcontractor");
+    },
+  });
+
+  const removeWorkerFromAppointmentMutation = useMutation({
+    mutationFn: async ({
       appointmentId, 
       workerId 
     }: { 
@@ -1162,6 +1250,14 @@ export default function Scheduler() {
       const workerId = draggedItem.worker.id;
       const appointmentId = dropTarget.appointmentId;
       addWorkerToAppointmentMutation.mutate({ appointmentId, workerId });
+      return;
+    }
+
+    // Handle dropping subcontractor onto appointment card
+    if (draggedItem?.type === "subcontractor" && dropTarget?.type === "appointment-card") {
+      const contactId = draggedItem.subcontractor.id;
+      const appointmentId = dropTarget.appointmentId;
+      addSubcontractorToAppointmentMutation.mutate({ appointmentId, contactId });
       return;
     }
 
@@ -1774,10 +1870,36 @@ export default function Scheduler() {
                     </CardHeader>
                     <CardContent className="p-0 flex-1 overflow-hidden">
                       <ScrollArea className="h-full px-2 pb-2">
-                        <div className="space-y-2">
-                          {workers.map(worker => (
-                            <DraggableWorker key={worker.id} worker={worker} />
-                          ))}
+                        <div className="space-y-3">
+                          {/* Internal Workers Section */}
+                          {workers.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-1">
+                                Internal Workers ({workers.length})
+                              </p>
+                              {workers.map(worker => (
+                                <DraggableWorker key={worker.id} worker={worker} />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Subcontractors Section */}
+                          {subcontractorWorkers.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wide px-1">
+                                Subcontractors ({subcontractorWorkers.length})
+                              </p>
+                              {subcontractorWorkers.map(subcontractor => (
+                                <DraggableSubcontractor key={subcontractor.id} subcontractor={subcontractor} />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {workers.length === 0 && subcontractorWorkers.length === 0 && (
+                            <p className="text-xs text-muted-foreground text-center py-4">
+                              No workers available
+                            </p>
+                          )}
                         </div>
                       </ScrollArea>
                     </CardContent>
@@ -1844,6 +1966,14 @@ export default function Scheduler() {
               const worker = workers.find(w => w.id === workerId);
               if (worker) {
                 return <DraggableWorker worker={worker} isDragOverlay />;
+              }
+            }
+            // Subcontractor being dragged
+            if (activeId.toString().startsWith('subcontractor-')) {
+              const contactId = activeId.toString().replace('subcontractor-', '');
+              const subcontractor = subcontractorWorkers.find(s => s.id === contactId);
+              if (subcontractor) {
+                return <DraggableSubcontractor subcontractor={subcontractor} isDragOverlay />;
               }
             }
             // Service order being dragged

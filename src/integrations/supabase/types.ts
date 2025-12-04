@@ -642,6 +642,7 @@ export type Database = {
       appointment_workers: {
         Row: {
           appointment_id: string
+          contact_id: string | null
           created_at: string | null
           id: string
           tenant_id: string
@@ -649,6 +650,7 @@ export type Database = {
         }
         Insert: {
           appointment_id: string
+          contact_id?: string | null
           created_at?: string | null
           id?: string
           tenant_id: string
@@ -656,6 +658,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string
+          contact_id?: string | null
           created_at?: string | null
           id?: string
           tenant_id?: string
@@ -667,6 +670,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_workers_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -1456,7 +1466,9 @@ export type Database = {
           customer_id: string | null
           email: string | null
           first_name: string
+          future_worker_user_id: string | null
           id: string
+          is_assignable_worker: boolean | null
           is_primary: boolean | null
           last_contacted_at: string | null
           last_name: string
@@ -1475,6 +1487,7 @@ export type Database = {
           tenant_id: string
           updated_at: string
           website: string | null
+          worker_state: string | null
         }
         Insert: {
           address?: string | null
@@ -1486,7 +1499,9 @@ export type Database = {
           customer_id?: string | null
           email?: string | null
           first_name: string
+          future_worker_user_id?: string | null
           id?: string
+          is_assignable_worker?: boolean | null
           is_primary?: boolean | null
           last_contacted_at?: string | null
           last_name: string
@@ -1505,6 +1520,7 @@ export type Database = {
           tenant_id: string
           updated_at?: string
           website?: string | null
+          worker_state?: string | null
         }
         Update: {
           address?: string | null
@@ -1516,7 +1532,9 @@ export type Database = {
           customer_id?: string | null
           email?: string | null
           first_name?: string
+          future_worker_user_id?: string | null
           id?: string
+          is_assignable_worker?: boolean | null
           is_primary?: boolean | null
           last_contacted_at?: string | null
           last_name?: string
@@ -1535,6 +1553,7 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
           website?: string | null
+          worker_state?: string | null
         }
         Relationships: [
           {
