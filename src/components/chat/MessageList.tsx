@@ -166,7 +166,7 @@ export function MessageList({
           return (
             <div key={message.id}>
               {showDateSeparator && (
-                <div className="my-4 flex items-center gap-4">
+                <div className="my-2 flex items-center gap-4">
                   <Separator className="flex-1" />
                   <span className="text-xs font-medium text-muted-foreground">
                     {formatDateSeparator(new Date(message.created_at))}
