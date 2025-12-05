@@ -77,10 +77,11 @@ serve(async (req) => {
           
           // Skip update if already synced (duplicate prevention returned early)
           if (!result.already_synced) {
-            // Update invoice with Acumatica details
+            // Update invoice with Acumatica details and align invoice_number
             await supabaseClient
               .from("invoices")
               .update({
+                invoice_number: result.acumatica_reference_nbr, // Align with Acumatica number
                 acumatica_invoice_id: result.acumatica_invoice_id,
                 acumatica_reference_nbr: result.acumatica_reference_nbr,
                 acumatica_status: result.acumatica_status,
