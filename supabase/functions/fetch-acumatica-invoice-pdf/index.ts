@@ -72,7 +72,7 @@ serve(async (req) => {
       throw new Error("Failed to retrieve Acumatica credentials");
     }
 
-    const baseUrl = integration.acumatica_instance_url;
+    const baseUrl = integration.acumatica_instance_url.replace(/\/$/, '');
     const username = integration.acumatica_username;
     const password = passwordData;
     const companyName = integration.acumatica_company_name;
@@ -99,109 +99,119 @@ serve(async (req) => {
     const cookies = loginResponse.headers.get("set-cookie");
     console.log("Acumatica login successful");
 
-    // Determine the report screen ID based on invoice type
-    // AR641000 = AR Invoice/Memo
-    // AP621500 = AP Bill
-    const reportScreenId = invoice_type === "ap" ? "AP621500" : "AR641000";
+    // Determine the report parameters based on invoice type
+    // AR641000 = AR Invoice/Memo report
+    // AP621500 = AP Bill report  
+    const reportId = invoice_type === "ap" ? "AP621500" : "AR641000";
     const docType = invoice_type === "ap" ? "BIL" : "INV";
 
-    // Fetch the PDF report from Acumatica
-    // Using the Report API endpoint
-    const reportUrl = `${baseUrl}/entity/Default/23.200.001/Report/${reportScreenId}`;
-    console.log(`Fetching PDF from: ${reportUrl}`);
+    // Try multiple report URL formats
+    const reportUrls = [
+      // Format 1: ReportScreen.aspx with format=pdf
+      `${baseUrl}/ReportScreen.aspx?ReportID=${reportId}&DocType=${docType}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}&format=pdf`,
+      // Format 2: Report page export
+      `${baseUrl}/Report/ExportReport?reportId=${reportId}&format=pdf&DocType=${docType}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}`,
+      // Format 3: Frames/ReportLauncher
+      `${baseUrl}/Frames/ReportLauncher.aspx?ID=${reportId}&DocType=${docType}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}&_format=PDF`,
+    ];
 
-    const reportResponse = await fetch(reportUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/pdf",
-        Cookie: cookies || "",
-      },
-      body: JSON.stringify({
-        DocType: { value: docType },
-        RefNbr: { value: invoice.acumatica_reference_nbr },
-      }),
-    });
+    let pdfBlob: Blob | null = null;
+    let successUrl = "";
 
-    if (!reportResponse.ok) {
-      const errorText = await reportResponse.text();
-      console.error("Failed to fetch PDF report:", reportResponse.status, errorText);
-      
-      // Try alternative endpoint format
-      console.log("Trying alternative report endpoint...");
-      const altReportUrl = `${baseUrl}/Report/ExportReport?reportId=${reportScreenId}&format=pdf&DocType=${docType}&RefNbr=${invoice.acumatica_reference_nbr}`;
-      
-      const altReportResponse = await fetch(altReportUrl, {
-        method: "GET",
-        headers: {
-          "Accept": "application/pdf",
-          Cookie: cookies || "",
-        },
-      });
-
-      if (!altReportResponse.ok) {
-        const altErrorText = await altReportResponse.text();
-        console.error("Alternative PDF fetch also failed:", altReportResponse.status, altErrorText);
-        throw new Error(`Failed to fetch PDF from Acumatica: ${reportResponse.status}`);
-      }
-
-      // Use alternative response
-      const pdfBlob = await altReportResponse.blob();
-      const pdfArrayBuffer = await pdfBlob.arrayBuffer();
-      const pdfUint8Array = new Uint8Array(pdfArrayBuffer);
-
-      // Upload to Supabase Storage
-      const storagePath = `${invoice.tenant_id}/${invoice_type}/${invoice.id}.pdf`;
-      console.log(`Uploading PDF to storage: ${storagePath}`);
-
-      const { error: uploadError } = await supabase.storage
-        .from("invoice-pdfs")
-        .upload(storagePath, pdfUint8Array, {
-          contentType: "application/pdf",
-          upsert: true,
+    for (const reportUrl of reportUrls) {
+      console.log(`Trying report URL: ${reportUrl}`);
+      try {
+        const reportResponse = await fetch(reportUrl, {
+          method: "GET",
+          headers: {
+            "Accept": "application/pdf, */*",
+            "Cookie": cookies || "",
+          },
+          redirect: "follow",
         });
 
-      if (uploadError) {
-        console.error("Failed to upload PDF to storage:", uploadError);
-        throw new Error("Failed to store PDF");
+        console.log(`Response status: ${reportResponse.status}, content-type: ${reportResponse.headers.get('content-type')}`);
+
+        if (reportResponse.ok) {
+          const contentType = reportResponse.headers.get('content-type') || '';
+          if (contentType.includes('pdf') || contentType.includes('octet-stream')) {
+            pdfBlob = await reportResponse.blob();
+            successUrl = reportUrl;
+            console.log(`Successfully fetched PDF from: ${reportUrl}`);
+            break;
+          } else {
+            console.log(`Response was not a PDF (${contentType}), trying next URL...`);
+          }
+        } else {
+          console.log(`Failed with status ${reportResponse.status}, trying next URL...`);
+        }
+      } catch (fetchError) {
+        console.log(`Fetch error for ${reportUrl}:`, fetchError);
       }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("invoice-pdfs")
-        .getPublicUrl(storagePath);
-
-      const pdfUrl = urlData.publicUrl;
-      console.log(`PDF uploaded successfully: ${pdfUrl}`);
-
-      // Update invoice record with PDF URL
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({ pdf_url: pdfUrl })
-        .eq("id", invoice_id);
-
-      if (updateError) {
-        console.error("Failed to update invoice with PDF URL:", updateError);
-      }
-
-      // Logout from Acumatica
-      await fetch(`${baseUrl}/entity/auth/logout`, {
-        method: "POST",
-        headers: { Cookie: cookies || "" },
-      });
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          pdf_url: pdfUrl,
-          message: "PDF fetched and stored successfully",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
-    // Process successful response from primary endpoint
-    const pdfBlob = await reportResponse.blob();
+    if (!pdfBlob) {
+      // Try one more approach: using the REST API to get the invoice directly as PDF
+      console.log("Trying REST API file export...");
+      const invoiceType = invoice_type === "ap" ? "Bill" : "Invoice";
+      const fileUrl = `${baseUrl}/entity/Default/23.200.001/${invoiceType}/${invoice.acumatica_reference_nbr}/files`;
+      
+      try {
+        const filesResponse = await fetch(fileUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Cookie": cookies || "",
+          },
+        });
+        
+        if (filesResponse.ok) {
+          const files = await filesResponse.json();
+          console.log("Found files:", JSON.stringify(files));
+          
+          // Look for a PDF attachment
+          if (Array.isArray(files) && files.length > 0) {
+            for (const file of files) {
+              if (file.filename?.toLowerCase().endsWith('.pdf')) {
+                const fileDownloadUrl = `${baseUrl}/entity/Default/23.200.001/files/${file.id}`;
+                const fileResponse = await fetch(fileDownloadUrl, {
+                  method: "GET",
+                  headers: {
+                    "Accept": "application/pdf",
+                    "Cookie": cookies || "",
+                  },
+                });
+                
+                if (fileResponse.ok) {
+                  pdfBlob = await fileResponse.blob();
+                  successUrl = fileDownloadUrl;
+                  console.log("Successfully fetched PDF attachment");
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log("File API approach failed:", e);
+      }
+    }
+
+    // Logout from Acumatica
+    try {
+      await fetch(`${baseUrl}/entity/auth/logout`, {
+        method: "POST",
+        headers: { "Cookie": cookies || "" },
+      });
+      console.log("Logged out from Acumatica");
+    } catch (e) {
+      console.log("Logout error (non-critical):", e);
+    }
+
+    if (!pdfBlob) {
+      throw new Error("Could not retrieve PDF from Acumatica. The invoice may not have a PDF available or the report format may not be supported.");
+    }
+
     const pdfArrayBuffer = await pdfBlob.arrayBuffer();
     const pdfUint8Array = new Uint8Array(pdfArrayBuffer);
 
@@ -238,12 +248,6 @@ serve(async (req) => {
     if (updateError) {
       console.error("Failed to update invoice with PDF URL:", updateError);
     }
-
-    // Logout from Acumatica
-    await fetch(`${baseUrl}/entity/auth/logout`, {
-      method: "POST",
-      headers: { Cookie: cookies || "" },
-    });
 
     return new Response(
       JSON.stringify({
