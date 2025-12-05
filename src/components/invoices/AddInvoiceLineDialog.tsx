@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils";
 import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddInvoiceLineDialogProps {
   open: boolean;
@@ -23,6 +25,41 @@ export default function AddInvoiceLineDialog({
   const [unitPrice, setUnitPrice] = useState("0");
   const [accountCode, setAccountCode] = useState("");
   const [subAccount, setSubAccount] = useState("");
+
+  // Fetch default sales account from integration settings
+  const { data: integrationSettings } = useQuery({
+    queryKey: ["accounting-integration-defaults"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!profile?.tenant_id) return null;
+
+      const { data } = await supabase
+        .from("accounting_integrations")
+        .select("default_sales_account_code, default_sales_sub_account")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("provider", "myob_acumatica")
+        .eq("is_enabled", true)
+        .maybeSingle();
+      
+      return data;
+    },
+  });
+
+  // Apply defaults when dialog opens
+  useEffect(() => {
+    if (open && integrationSettings) {
+      setAccountCode(integrationSettings.default_sales_account_code || "");
+      setSubAccount(integrationSettings.default_sales_sub_account || "");
+    }
+  }, [open, integrationSettings]);
 
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
