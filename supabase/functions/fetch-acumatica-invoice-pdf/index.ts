@@ -98,106 +98,170 @@ serve(async (req) => {
     // Extract ALL session cookies properly using getSetCookie()
     const setCookieHeaders = loginResponse.headers.getSetCookie();
     const cookies = setCookieHeaders
-      .map(cookie => cookie.split(';')[0]) // Get just the cookie name=value part
+      .map(cookie => cookie.split(';')[0])
       .join('; ');
     
     console.log(`Acumatica login successful, got ${setCookieHeaders.length} cookies`);
 
     // Determine the report parameters based on invoice type
-    // AR641000 = AR Invoice/Memo report
-    // AP621500 = AP Bill report  
     const reportId = invoice_type === "ap" ? "AP621500" : "AR641000";
-    const docType = invoice_type === "ap" ? "BIL" : "INV";
-
-    // Try multiple report URL formats
-    const reportUrls = [
-      // Format 1: ReportScreen.aspx with format=pdf
-      `${baseUrl}/ReportScreen.aspx?ReportID=${reportId}&DocType=${docType}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}&format=pdf`,
-      // Format 2: Report page export
-      `${baseUrl}/Report/ExportReport?reportId=${reportId}&format=pdf&DocType=${docType}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}`,
-      // Format 3: Frames/ReportLauncher
-      `${baseUrl}/Frames/ReportLauncher.aspx?ID=${reportId}&DocType=${docType}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}&_format=PDF`,
-    ];
+    const docType = invoice_type === "ap" ? "Bill" : "Invoice";
 
     let pdfBlob: Blob | null = null;
-    let successUrl = "";
 
-    for (const reportUrl of reportUrls) {
-      console.log(`Trying report URL: ${reportUrl}`);
-      try {
-        const reportResponse = await fetch(reportUrl, {
-          method: "GET",
-          headers: {
-            "Accept": "application/pdf, */*",
-            "Cookie": cookies || "",
-          },
-          redirect: "follow",
-        });
-
-        console.log(`Response status: ${reportResponse.status}, content-type: ${reportResponse.headers.get('content-type')}`);
-
-        if (reportResponse.ok) {
-          const contentType = reportResponse.headers.get('content-type') || '';
-          if (contentType.includes('pdf') || contentType.includes('octet-stream')) {
-            pdfBlob = await reportResponse.blob();
-            successUrl = reportUrl;
-            console.log(`Successfully fetched PDF from: ${reportUrl}`);
-            break;
-          } else {
-            console.log(`Response was not a PDF (${contentType}), trying next URL...`);
-          }
-        } else {
-          console.log(`Failed with status ${reportResponse.status}, trying next URL...`);
+    // Method 1: Try REST API report print endpoint (Acumatica 2023 R1+)
+    console.log("Trying REST API report print endpoint...");
+    try {
+      const printReportUrl = `${baseUrl}/entity/Default/23.200.001/report/${reportId}`;
+      const reportParams = invoice_type === "ap" 
+        ? { DocType: "BIL", RefNbr: invoice.acumatica_reference_nbr }
+        : { DocType: "INV", RefNbr: invoice.acumatica_reference_nbr };
+      
+      const printResponse = await fetch(printReportUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/pdf",
+          "Cookie": cookies,
+        },
+        body: JSON.stringify({
+          parameters: reportParams,
+          format: "PDF"
+        }),
+      });
+      
+      console.log(`Report print response: ${printResponse.status}, content-type: ${printResponse.headers.get('content-type')}`);
+      
+      if (printResponse.ok) {
+        const contentType = printResponse.headers.get('content-type') || '';
+        if (contentType.includes('pdf') || contentType.includes('octet-stream')) {
+          pdfBlob = await printResponse.blob();
+          console.log("Successfully fetched PDF via report print endpoint");
         }
-      } catch (fetchError) {
-        console.log(`Fetch error for ${reportUrl}:`, fetchError);
       }
+    } catch (e) {
+      console.log("Report print endpoint error:", e);
     }
 
+    // Method 2: Try OData-style report export
     if (!pdfBlob) {
-      // Try one more approach: using the REST API to get the invoice directly as PDF
-      console.log("Trying REST API file export...");
-      const invoiceType = invoice_type === "ap" ? "Bill" : "Invoice";
-      const fileUrl = `${baseUrl}/entity/Default/23.200.001/${invoiceType}/${invoice.acumatica_reference_nbr}/files`;
-      
+      console.log("Trying OData report export...");
       try {
-        const filesResponse = await fetch(fileUrl, {
+        const odataReportUrl = `${baseUrl}/odata/${companyName}/${reportId}?$format=pdf&DocType=${invoice_type === "ap" ? "BIL" : "INV"}&RefNbr=${encodeURIComponent(invoice.acumatica_reference_nbr)}`;
+        
+        const odataResponse = await fetch(odataReportUrl, {
           method: "GET",
           headers: {
-            "Content-Type": "application/json",
-            "Cookie": cookies || "",
+            "Accept": "application/pdf",
+            "Cookie": cookies,
           },
         });
         
-        if (filesResponse.ok) {
-          const files = await filesResponse.json();
-          console.log("Found files:", JSON.stringify(files));
+        console.log(`OData response: ${odataResponse.status}, content-type: ${odataResponse.headers.get('content-type')}`);
+        
+        if (odataResponse.ok) {
+          const contentType = odataResponse.headers.get('content-type') || '';
+          if (contentType.includes('pdf') || contentType.includes('octet-stream')) {
+            pdfBlob = await odataResponse.blob();
+            console.log("Successfully fetched PDF via OData");
+          }
+        }
+      } catch (e) {
+        console.log("OData export error:", e);
+      }
+    }
+
+    // Method 3: Get the invoice entity and check for attached files
+    if (!pdfBlob) {
+      console.log("Checking for attached files on the invoice...");
+      try {
+        const entityUrl = `${baseUrl}/entity/Default/23.200.001/${docType}/${encodeURIComponent(invoice.acumatica_reference_nbr)}?$expand=files`;
+        
+        const entityResponse = await fetch(entityUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Cookie": cookies,
+          },
+        });
+        
+        console.log(`Entity response: ${entityResponse.status}`);
+        
+        if (entityResponse.ok) {
+          const entityData = await entityResponse.json();
+          console.log(`Entity has ${entityData.files?.length || 0} attached files`);
           
-          // Look for a PDF attachment
-          if (Array.isArray(files) && files.length > 0) {
-            for (const file of files) {
-              if (file.filename?.toLowerCase().endsWith('.pdf')) {
-                const fileDownloadUrl = `${baseUrl}/entity/Default/23.200.001/files/${file.id}`;
-                const fileResponse = await fetch(fileDownloadUrl, {
-                  method: "GET",
-                  headers: {
-                    "Accept": "application/pdf",
-                    "Cookie": cookies || "",
-                  },
-                });
+          if (entityData.files && entityData.files.length > 0) {
+            // Find PDF files
+            for (const file of entityData.files) {
+              const fileName = file.filename || file.name || '';
+              console.log(`Found file: ${fileName}`);
+              
+              if (fileName.toLowerCase().endsWith('.pdf')) {
+                const fileId = file.id || file.href;
+                let fileUrl = '';
                 
-                if (fileResponse.ok) {
-                  pdfBlob = await fileResponse.blob();
-                  successUrl = fileDownloadUrl;
-                  console.log("Successfully fetched PDF attachment");
-                  break;
+                if (file.href) {
+                  fileUrl = file.href.startsWith('http') ? file.href : `${baseUrl}${file.href}`;
+                } else if (fileId) {
+                  fileUrl = `${baseUrl}/entity/Default/23.200.001/files/${fileId}`;
+                }
+                
+                if (fileUrl) {
+                  console.log(`Downloading file from: ${fileUrl}`);
+                  const fileResponse = await fetch(fileUrl, {
+                    method: "GET",
+                    headers: {
+                      "Accept": "application/pdf, application/octet-stream, */*",
+                      "Cookie": cookies,
+                    },
+                  });
+                  
+                  console.log(`File download response: ${fileResponse.status}, content-type: ${fileResponse.headers.get('content-type')}`);
+                  
+                  if (fileResponse.ok) {
+                    pdfBlob = await fileResponse.blob();
+                    console.log(`Successfully downloaded attached PDF: ${fileName}`);
+                    break;
+                  }
                 }
               }
             }
           }
         }
       } catch (e) {
-        console.log("File API approach failed:", e);
+        console.log("Entity files check error:", e);
+      }
+    }
+
+    // Method 4: Try screen-based API print action
+    if (!pdfBlob) {
+      console.log("Trying screen-based print action...");
+      try {
+        const screenId = invoice_type === "ap" ? "AP301000" : "AR301000";
+        const actionUrl = `${baseUrl}/entity/Default/23.200.001/${docType}/${encodeURIComponent(invoice.acumatica_reference_nbr)}/print`;
+        
+        const printActionResponse = await fetch(actionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/pdf",
+            "Cookie": cookies,
+          },
+          body: JSON.stringify({}),
+        });
+        
+        console.log(`Print action response: ${printActionResponse.status}, content-type: ${printActionResponse.headers.get('content-type')}`);
+        
+        if (printActionResponse.ok) {
+          const contentType = printActionResponse.headers.get('content-type') || '';
+          if (contentType.includes('pdf') || contentType.includes('octet-stream')) {
+            pdfBlob = await printActionResponse.blob();
+            console.log("Successfully fetched PDF via print action");
+          }
+        }
+      } catch (e) {
+        console.log("Print action error:", e);
       }
     }
 
@@ -205,7 +269,7 @@ serve(async (req) => {
     try {
       await fetch(`${baseUrl}/entity/auth/logout`, {
         method: "POST",
-        headers: { "Cookie": cookies || "" },
+        headers: { "Cookie": cookies },
       });
       console.log("Logged out from Acumatica");
     } catch (e) {
@@ -213,7 +277,7 @@ serve(async (req) => {
     }
 
     if (!pdfBlob) {
-      throw new Error("Could not retrieve PDF from Acumatica. The invoice may not have a PDF available or the report format may not be supported.");
+      throw new Error("Could not retrieve PDF from Acumatica. The invoice may not have a PDF attachment. Try printing the invoice in Acumatica first to generate a PDF attachment.");
     }
 
     const pdfArrayBuffer = await pdfBlob.arrayBuffer();
