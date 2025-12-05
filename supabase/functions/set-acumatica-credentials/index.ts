@@ -55,8 +55,10 @@ serve(async (req) => {
       .single();
 
     if (!integration) {
-      throw new Error("Acumatica integration not found");
+      throw new Error("Acumatica integration not found. Please save integration settings first.");
     }
+
+    console.log("Storing credentials for integration:", integration.id);
 
     // Store credentials using vault encryption
     const { error: storeError } = await supabase
@@ -68,7 +70,21 @@ serve(async (req) => {
 
     if (storeError) {
       console.error("Error storing credentials:", storeError);
-      throw new Error("Failed to store credentials");
+      throw new Error("Failed to store credentials securely");
+    }
+
+    // Update the acumatica_password field to indicate encrypted storage
+    const { error: updateError } = await supabase
+      .from("accounting_integrations")
+      .update({ 
+        acumatica_password: "[ENCRYPTED]",
+        acumatica_username: username 
+      })
+      .eq("id", integration.id);
+
+    if (updateError) {
+      console.error("Error updating integration record:", updateError);
+      // Non-critical - credentials are stored in vault
     }
 
     console.log("Credentials stored securely in vault for tenant:", profile.tenant_id);
